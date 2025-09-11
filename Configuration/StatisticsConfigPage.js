@@ -52,7 +52,8 @@
                     dynamicbuttons.push({ id: id, info: v.ExtraInformation, title: v.Title });
                 }
                 if (v.Id !== undefined) {
-                    html += `<a is="emby-linkbutton" href="/item?id=` + v.Id + `&serverId=` + i + `"><img src="/Items/` + v.Id + `/Images/Primary" height="105px"></a>`
+                    var imageUrl = ApiClient.getImageUrl(v.Id, { type: "Primary", quality: 90 });
+                    html += `<a is="emby-linkbutton" href="/item?id=` + v.Id + `&serverId=` + i + `"><img src="` + imageUrl + `" height="105px"></a>`
                     html += `<div>`
                 }
 
