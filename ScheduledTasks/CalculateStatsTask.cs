@@ -77,6 +77,7 @@ namespace Statistics.ScheduledTasks
             var numComplete = 0;
 
             PluginConfiguration.LastUpdated = DateTime.Now.ToString("g");
+            PluginConfiguration.Version = Plugin.Instance.Version.ToString( 4 );
             PluginConfiguration.ServerId = _appHost.SystemId;
 
             numComplete++;
@@ -145,6 +146,7 @@ namespace Statistics.ScheduledTasks
                 calculator.SetUser(null);
                 PluginConfiguration.MovieQualities = calculator.CalculateMovieQualities();
                 PluginConfiguration.MovieCodecs = calculator.CalculateMovieCodecs();
+                PluginConfiguration.MovieDVProfiles = calculator.CalculateDVProfileInfo();
                 PluginConfiguration.MostActiveUsers = calculator.CalculateMostActiveUsers(activeUsers);
                 PluginConfiguration.TotalUsers = calculator.CalculateTotalUsers();
 

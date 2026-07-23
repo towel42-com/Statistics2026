@@ -93,12 +93,13 @@
                 } else {
                     view.querySelector(`#statsIntro`).innerHTML = (`This plugin will calculate overall and user-based statistics 
                     from this Emby server instance. Keep in mind that viewing an item multiple times will not increase the
-                    "watched" count. It will only count as 1. Last statistics finished at <b>` + config.LastUpdated + `</b>`);
+                    "watched" count. It will only count as 1. Last statistics finished at <b>` + config.LastUpdated + ` - Version ` + config.Version + `</b>`);
 
                     var generalStat = ``;
 
                     generalStat += createStat(config.MovieQualities, view);
                     generalStat += createStat(config.MovieCodecs, view);
+                    generalStat += createStat(config.MovieDVProfiles, view);
                     generalStat += createStat(config.MostActiveUsers, view);
                     generalStat += createStat(config.TotalUsers, view);
 
