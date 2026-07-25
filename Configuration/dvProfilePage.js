@@ -13,28 +13,22 @@
             Dashboard.showLoadingMsg();
 
             ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                for (var h = 0, len = config.MovieQualityItems.Count; h < len; h++) {
+                for (var h = 0, len = config.DVProfileItems.Count; h < len; h++) {
                     var innerText = ``
-                    var currMovieGroup = config.MovieQualityItems.Movies[h];
+                    var currMovieGroup = config.DVProfileItems.Movies[h];
 
                     currMovieGroup.Movies.forEach((v) => {
-                        innerText += makeTable(v, config.ServerId);
+                        var imageUrl = ApiClient.getImageUrl(v.Id, { type: "Primary", quality: 90 });
+                        innerText += `<a is="emby-linkbutton" href="/item?id=` + v.Id + `&serverId=` + config.ServerId + `"><img src="` + imageUrl + `" height="200px" alt="` + v.Name + `" /></a>`;
                     });
-                    
-                    var currHtml = `<h2 id = "` + currMovieGroup.Title + `Title">` + currMovieGroup.Title + `</h2><div><table id="` + currMovieGroup.Title + `">` + innerText + `</table></div>`;
-                    view.querySelector("#pagestart") .innerHTML += currHtml;
+
+                    var currHtml = `<h2 id = "` + currMovieGroup.Title + `Title">` + currMovieGroup.Title + `</h2><div id="` + currMovieGroup.Title + `">` + innerText + `</div>`;
+                    view.querySelector("#pagestart").innerHTML += currHtml;
                 }
 
                 Dashboard.hideLoadingMsg();
             });
         };
-
-        function makeTable(movie, serverId) {
-            var html = `<tr>`;
-            html += `<td><a is="emby-linkbutton" href="/item?id=` + movie.Id + `&serverId=` + serverId + `">` + movie.Name + `</a></td>`;
-            html += `<td>` + movie.Year + `</td>`;
-            return html + `</tr>`;
-        }
 
         Object.assign(View.prototype, BaseView.prototype);
 

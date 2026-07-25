@@ -13,16 +13,16 @@
             Dashboard.showLoadingMsg();
 
             ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                for (var h = 0, len = config.MovieQualityItems.Count; h < len; h++) {
+                for (var h = 0, len = config.DVProfileItems.Count; h < len; h++) {
                     var innerText = ``
-                    var currMovieGroup = config.MovieQualityItems.Movies[h];
+                    var currMovieGroup = config.DVProfileItems.Movies[h];
 
                     currMovieGroup.Movies.forEach((v) => {
                         innerText += makeTable(v, config.ServerId);
                     });
-                    
+
                     var currHtml = `<h2 id = "` + currMovieGroup.Title + `Title">` + currMovieGroup.Title + `</h2><div><table id="` + currMovieGroup.Title + `">` + innerText + `</table></div>`;
-                    view.querySelector("#pagestart") .innerHTML += currHtml;
+                    view.querySelector("#pagestart").innerHTML += currHtml;
                 }
 
                 Dashboard.hideLoadingMsg();
