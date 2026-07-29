@@ -492,7 +492,7 @@ namespace Statistics.Helpers
             else
                 dvProfiles[dvProfile].Episodes++;
 
-            _logger.Debug($"CalculateDVProfileInfo {mediaName} {dvProfile}");
+            _logger.Debug($"AddDolbyVisionProfile {mediaName} {dvProfile}");
 
             return true;
         }
