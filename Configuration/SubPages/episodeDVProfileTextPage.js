@@ -2,7 +2,7 @@
     function (BaseView) {
         `use strict`;
 
-        const pluginId = "291d866f-baad-464a-aed6-a4a8b95a8fd7";
+        const pluginId = "4BFE2894-AEA3-4D3C-A429-503B56D61711";
 
         function View(view, params) {
             BaseView.apply(this, arguments);
@@ -13,18 +13,21 @@
             Dashboard.showLoadingMsg();
 
             ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                for (var h = 0, len = config.EpisodeCodecItems.Count; h < len; h++) {
-                    var currGroup = config.EpisodeCodecItems.MediaItemGroups[h];
+                for (var h = 0, len = config.EpisodeDVProfileItems.Count; h < len; h++) {
+                    var currGroup = config.EpisodeDVProfileItems.MediaItemGroups[h];
+                    if (!config.showUnknownDVProfileCount && currGroup.IsUnknownDolbyProfile)
+                        continue;
 
-                    var innerText = ``
+                    var innerText = ``;
                     var prevGroup = ``;
                     currGroup.MediaItems.forEach((v) => {
                         innerText += makeTable(v, config.ServerId, prevGroup != v.GroupName);
+                        prevGroup = v.GroupName;
                     });
-                    
+
                     var currHtml = `<h2 id = "` + currGroup.Title + `Title">` + currGroup.Title + `</h2>` +
                                    `<div><table id="` + currGroup.Title + `">` + innerText + `</table></div>`;
-                    view.querySelector("#pagestart") .innerHTML += currHtml;
+                    view.querySelector("#pagestart").innerHTML += currHtml;
                 }
 
                 Dashboard.hideLoadingMsg();
@@ -33,7 +36,8 @@
 
         function makeTable(episode, serverId, newGroup) {
             var html = `<tr>`;
-            if (newGroup) {
+            if ( newGroup )
+            {
                 html += `<td colspan="3"><h3>` + episode.GroupName + `</h3></td>`;
                 html += `</tr><tr>`;
             }

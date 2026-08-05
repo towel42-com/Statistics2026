@@ -2,7 +2,7 @@
     function (BaseView) {
         `use strict`;
 
-        const pluginId = "291d866f-baad-464a-aed6-a4a8b95a8fd7";
+        const pluginId = "4BFE2894-AEA3-4D3C-A429-503B56D61711";
 
         function View(view, params) {
             BaseView.apply(this, arguments);
@@ -13,8 +13,8 @@
             Dashboard.showLoadingMsg();
 
             ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                for (var h = 0, len = config.EpisodeCodecItems.Count; h < len; h++) {
-                    var currGroup = config.EpisodeCodecItems.MediaItemGroups[h];
+                for (var h = 0, len = config.MovieCodecItems.Count; h < len; h++) {
+                    var currGroup = config.MovieCodecItems.MediaItemGroups[h];
 
                     var innerText = ``
                     currGroup.MediaItems.forEach((v) => {

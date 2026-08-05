@@ -12,13 +12,12 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using statistics;
-using statistics.Configuration;
-using statistics.Models.Configuration;
-using Statistics.Helpers;
-using Statistics.ViewModel;
+using CodecInfoPlugin;
+using CodecInfoPlugin.Configuration;
+using CodecInfoPlugin.Models.Configuration;
+using CodecInfoPlugin.Helpers;
 
-namespace Statistics.ScheduledTasks
+namespace CodecInfoPlugin.ScheduledTasks
 {
     public class CalculateMediaTask : IScheduledTask
     {
@@ -38,7 +37,7 @@ namespace Statistics.ScheduledTasks
             ILibraryManager libraryManager, IFileSystem fileSystem, IJsonSerializer jsonSerializer,
             IServerApplicationPaths serverApplicationPaths, IApplicationHost appHost, IProviderManager providerManager)
         {
-            _logger = logger.GetLogger("Statistics");
+            _logger = logger.GetLogger("CodecInfoPlugin");
             _libraryManager = libraryManager;
             _userManager = userManager;
             _userDataManager = userDataManager;
@@ -50,77 +49,56 @@ namespace Statistics.ScheduledTasks
         }
 
         private static PluginConfiguration PluginConfiguration => Plugin.Instance.Configuration;
-        string IScheduledTask.Name => "Calculate statistics all library media";
+        string IScheduledTask.Name => "Calculate Codec Information for all library media";
 
-        string IScheduledTask.Key => "StatisticsCalculateStatsTask";
+        string IScheduledTask.Key => "CodecInfoCalculateStatsTask";
 
-        string IScheduledTask.Description => "Task that will calculate statistics of all media in liberay. (Ideal for weekly/non-daily schedule)";
+        string IScheduledTask.Description => "Task that will calculate Codec Information of all media in library. (Ideal for weekly/non-daily schedule)";
 
-        string IScheduledTask.Category => "Statistics";
+        string IScheduledTask.Category => "CodecInfoPlugin";
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            PluginConfiguration.UserStats = Plugin.Instance.Configuration.UserStats ?? new List<UserStat>();
-
             // purely for progress reporting
-            var percentPerUser = 100 / 4;
-            var numComplete = 0;
-
             PluginConfiguration.LastUpdated = DateTime.Now.ToString("g");
             PluginConfiguration.Version = Plugin.Instance.Version.ToString( 4 );
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString();
             PluginConfiguration.ServerId = _appHost.SystemId;
 
-            numComplete++;
-            progress.Report(percentPerUser * numComplete);
+            var numSteps = 8;
+            var currStep = 0;
+            progress.Report(currStep/numSteps);
 
 
             var calculator = new Calculator(_userManager, _libraryManager, _userDataManager, _fileSystem, _logger, _providerManager, cancellationToken);
             using (calculator)
             {
-                calculator.SetUser(null);
-                PluginConfiguration.MovieQualities = calculator.CalculateMovieQualities();
-                PluginConfiguration.MovieCodecs = calculator.CalculateMovieCodecs();
+                PluginConfiguration.MediaInfoList = calculator.CalculateMediaInfo();
+                progress.Report((++currStep) / numSteps);
+
+                PluginConfiguration.MediaResolutions = calculator.CalculateMediaResolutions();
+                progress.Report((++currStep)/numSteps);
+
+                PluginConfiguration.MediaCodecs = calculator.CalculateMediaCodecs();
+                progress.Report((++currStep) / numSteps);
+
                 PluginConfiguration.DolbyVisionProfiles = calculator.CalculateDVProfileInfo( PluginConfiguration.showUnknownDVProfileCount );
-                PluginConfiguration.TotalUsers = calculator.CalculateTotalUsers();
-
-                numComplete++;
-                progress.Report(percentPerUser * numComplete);
-
-                PluginConfiguration.TotalMovies = calculator.CalculateTotalMovies();
-                PluginConfiguration.TotalBoxsets = calculator.CalculateTotalBoxsets();
-                PluginConfiguration.TotalMovieStudios = calculator.CalculateTotalMovieStudios();
-                PluginConfiguration.BiggestMovie = calculator.CalculateBiggestMovie();
-                PluginConfiguration.LongestMovie = calculator.CalculateLongestMovie();
-                PluginConfiguration.OldestMovie = calculator.CalculateOldestMovie();
-                PluginConfiguration.NewestMovie = calculator.CalculateNewestMovie();
-                PluginConfiguration.HighestRating = calculator.CalculateHighestRating();
-                PluginConfiguration.LowestRating = calculator.CalculateLowestRating();
-                PluginConfiguration.NewestAddedMovie = calculator.CalculateNewestAddedMovie();
-                PluginConfiguration.HighestBitrateMovie = calculator.CalculateHighestBitrateMovie();
-                PluginConfiguration.LowestBitrateMovie = calculator.CalculateLowestBitrateMovie();
-
-                numComplete++;
-                progress.Report(percentPerUser * numComplete);
-
-                PluginConfiguration.TotalShows = calculator.CalculateTotalShows();
-                PluginConfiguration.TotalShowStudios = calculator.CalculateTotalShowStudios();
-                PluginConfiguration.MostWatchedShows = calculator.CalculateMostWatchedShows();
-                PluginConfiguration.LeastWatchedShows = calculator.CalculateLeastWatchedShows();
-                PluginConfiguration.BiggestShow = calculator.CalculateBiggestShow();
-                PluginConfiguration.LongestShow = calculator.CalculateLongestShow();
-                PluginConfiguration.OldestShow = calculator.CalculateOldestShow();
-                PluginConfiguration.NewestShow = calculator.CalculateNewestShow();
-                PluginConfiguration.NewestAddedEpisode = calculator.CalculateNewestAddedEpisode();
+                progress.Report((++currStep) / numSteps);
 
                 PluginConfiguration.MovieCodecItems = calculator.CalculateMovieCodecItems();
+                progress.Report((++currStep) / numSteps);
+
                 PluginConfiguration.EpisodeCodecItems = calculator.CalculateEpisodeCodecItems();
+                progress.Report((++currStep) / numSteps);
+
                 PluginConfiguration.MovieDVProfileItems = calculator.CalculateMovieDVProfileList();
+                progress.Report((++currStep) / numSteps);
+
                 PluginConfiguration.EpisodeDVProfileItems = calculator.CalculateEpisodeDVProfileList();
+                progress.Report((++currStep) / numSteps);
             }
 
-            numComplete++;
-            progress.Report(percentPerUser * numComplete);
+            progress.Report(100);
 
             Plugin.Instance.SaveConfiguration();
             return Task.CompletedTask;

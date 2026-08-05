@@ -1,4 +1,4 @@
-﻿namespace statistics.Models.Configuration
+﻿namespace CodecInfoPlugin.Models.Configuration
 {
     public class ValueGroup
     {

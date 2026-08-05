@@ -1,5 +1,5 @@
-# Statistics plugin for Emby Server
-![alt text](https://raw.githubusercontent.com/hackthis02/statistics-for-emby-server-CORE/master/Images/statistics-thumb.png)
+# Codec Info plugin for Emby Server
+![alt text](https://raw.githubusercontent.com/hackthis02/CodeInfoPlugin/master/Images/plugin-thumb.png)
 
 This is a plugin for Emby server. If you do not already have Emby server installed please go to emby.media and download the server. Otherwise this plugin will be very useless for you.
 

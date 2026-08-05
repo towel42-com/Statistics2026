@@ -2,7 +2,7 @@
     function (BaseView) {
         `use strict`;
 
-        const pluginId = `291d866f-baad-464a-aed6-a4a8b95a8fd7`;
+        const pluginId = `4BFE2894-AEA3-4D3C-A429-503B56D61711`;
 
         function showInfo(text, title) {
             Dashboard.alert({ message: text, title: title });
@@ -18,7 +18,7 @@
 
             return element;
         }
-        
+
         function stupidSort(element, customSortFn) {
             var table = element.closest(`table`);
             var columnIndex = Array.from(element.parentElement.children).indexOf(element);
@@ -80,7 +80,7 @@
                         });
 
                         table.tBodies[0].append(...sortedRows);
-                        
+
                         table.querySelectorAll(`th`).forEach(function (th) {
                             th.dataset.sortDir = null;
                             th.classList.remove(`sorting-desc`, `sorting-asc`);
@@ -120,63 +120,60 @@
             },
         };
 
-        function loadStats(view, user) {
+        function loadStats(view) {
             Dashboard.showLoadingMsg();
             ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                var tbl = view.querySelector(`#ShowsTable > tbody`);
-                var userStat = config.UserStats.find(v => v.UserName === user);
+                var tbl = view.querySelector(`#MediaTable > tbody`);
+                var mediaStats = config.MediaInfoList;
 
                 for (var i = 0; i < tbl.rows.length;) {
                     tbl.deleteRow(i);
                 }
 
-                userStat.ShowProgresses.forEach((v) => {
+                mediaStats.forEach((video) => {
+                    if (video.IsEpisode) {
+                        return;
+                    }
 
                     var cell = 0;
                     var newRow = tbl.insertRow(-1);
                     var newCell = newRow.insertCell(cell++);
-                    if (config.enableHyperlinks) {
-                        var link = document.createElement("a");
-                        link.setAttribute("is", 'emby-linkbutton');
-                        link.setAttribute("href", '/item?id=' + v.Id + '&serverId=' + config.ServerId);
-                        var newText = document.createTextNode(v.Name);
-                        link.appendChild(newText);
-                        newCell.setAttribute("data-sort-value", v.SortName);
-                        newCell.appendChild(link);
-                    } else {
-                        newText = document.createTextNode(v.Name);
-                        newCell.setAttribute("data-sort-value", v.SortName);
-                        newCell.appendChild(newText);
-                    }
-                    
+                    var link = document.createElement("a");
+                    link.setAttribute("is", 'emby-linkbutton');
+                    link.setAttribute("href", '/item?id=' + video.Id + '&serverId=' + config.ServerId);
+                    var newText = document.createTextNode(video.PrimaryName);
+                    link.appendChild(newText);
+                    newCell.setAttribute("data-sort-value", video.SortName);
+                    newCell.appendChild(link);
+
                     newCell = newRow.insertCell(cell++);
                     newCell.className = (`center`);
-                    newText = document.createTextNode(v.StartYear);
-                    newCell.setAttribute("data-sort-value", v.StartYear);
-                    newCell.appendChild(newText);
-
-                    newCell = newRow.insertCell(cell++);
-                    newCell.className = (`center ` + calculateProgressClass(v.PercentSeen));
-                    newText = document.createTextNode(v.SeenEpisodes + ` / ` + v.CollectedEpisodes + ` (` + v.PercentSeen + ` %)` + (v.SeenSpecials > 0 ? ` +` + v.SeenSpecials + `/` + v.CollectedSpecials + ` sp` : ``));
-                    newCell.setAttribute("data-sort-value", v.PercentSeen);
-                    newCell.appendChild(newText);
-
-                    newCell = newRow.insertCell(cell++);
-                    newCell.className = (`center ` + calculateProgressClass(v.PercentCollected));
-                    newText = document.createTextNode(v.CollectedEpisodes + ` / ` + v.TotalEpisodes + ` (` + v.PercentCollected + `%)` + (v.CollectedSpecials > 0 ? ` +` + v.CollectedSpecials + `/` + v.TotalSpecials + ` sp` : ``));
-                    newCell.setAttribute("data-sort-value", v.PercentCollected);
+                    newText = document.createTextNode(video.StartYear);
+                    newCell.setAttribute("data-sort-value", video.StartYear);
                     newCell.appendChild(newText);
 
                     newCell = newRow.insertCell(cell++);
                     newCell.className = (`center`);
-                    newText = document.createTextNode(v.Score);
-                    newCell.setAttribute("data-sort-value", v.Score);
+                    newText = document.createTextNode(video.Resolution);
+                    newCell.setAttribute("data-sort-value", video.Resolution);
                     newCell.appendChild(newText);
 
                     newCell = newRow.insertCell(cell++);
                     newCell.className = (`center`);
-                    newText = document.createTextNode(v.Status);
-                    newCell.setAttribute("data-sort-value", v.Status);
+                    newText = document.createTextNode(video.CodecName);
+                    newCell.setAttribute("data-sort-value", video.CodecName);
+                    newCell.appendChild(newText);
+
+                    newCell = newRow.insertCell(cell++);
+                    newCell.className = (`center`);
+                    newText = document.createTextNode(video.DolbyVisionProfile);
+                    newCell.setAttribute("data-sort-value", video.DolbyVisionProfile);
+                    newCell.appendChild(newText);
+
+                    newCell = newRow.insertCell(cell++);
+                    newCell.className = (`center`);
+                    newText = document.createTextNode(video.ServerLocation);
+                    newCell.setAttribute("data-sort-value", video.ServerLocation);
                     newCell.appendChild(newText);
 
                     tbl.innerHTML += '';
@@ -185,28 +182,14 @@
                 Dashboard.hideLoadingMsg();
             });
         };
-        function calculateProgressClass(value) {
-            if (value == 0)
-                return ``;
-            else if (value < 40)
-                return `progress-20`;
-            else if (value < 60)
-                return `progress-40`;
-            else if (value < 80)
-                return `progress-60`;
-            else if (value < 100)
-                return `progress-80`;
-            else
-                return `progress-100`;
-        };
 
         function View(view, params) {
             BaseView.apply(this, arguments);
 
-            var table = stupidTable(view.querySelector(`#ShowsTable`));
+            var table = stupidTable(view.querySelector(`#MediaTable`));
 
-            view.querySelector(`#ShowsTable`).addEventListener(`aftertablesort`, function (event, data) {
-                var th = view.querySelector(`#ShowsTable`).getElementsByTagName(`th`);
+            view.querySelector(`#MediaTable`).addEventListener(`aftertablesort`, function (event, data) {
+                var th = view.querySelector(`#MediaTable`).getElementsByTagName(`th`);
                 for (var i = 0; i < th.length; i++) {
                     th[i].classList.remove(`selectLabelFocused`);
                 };
@@ -215,31 +198,7 @@
 
             stupidSort(view.querySelector(`#defaultColumn span`).parentElement, `asc`);
 
-            view.querySelector(`#selectUserShowProgress`).addEventListener(`change`, function () {
-                const user = this.options[this.selectedIndex].text;
-                loadStats(view, user);
-                stupidSort(view.querySelector(`#defaultColumn span`).parentElement, `asc`);
-            });
-
-            ApiClient.getUsers().then(function (users) {
-                
-                loadStats(view, users[0].Name);
-
-                var select = view.querySelector(`#selectUserShowProgress`);
-                users.forEach(function (user) {
-                    var option = document.createElement(`option`);
-                    option.value = user.Id;
-                    option.innerHTML = user.Name;
-                    select.appendChild(option);
-                });
-            });
-
-            view.querySelector("#watchedInfo").addEventListener(`click`, function () {
-                showInfo('This column displays the number of watched episodes and the number of collected episodes. You will have 100% when you viewed all normal episodes (no specials, only aired)<br/><br/>If any special episodes are watched it will be displayed as \'+1 sp\'. ', 'Watched episodes');
-            });
-            view.querySelector("#collectedInfo").addEventListener(`click`, function () {
-                showInfo('This column displays the number of collected episodes and the number of episodes aired on THETVDB. You will have 100% when you collected all normal episodes (no specials, only aired)<br/><br/>If any special episodes are collected it will be displayed as \'+1 sp\'. ', 'Collected episodes');
-            });
+            loadStats(view);
         };
 
         Object.assign(View.prototype, BaseView.prototype);

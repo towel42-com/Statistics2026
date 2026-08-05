@@ -2,7 +2,7 @@
     function (BaseView) {
         `use strict`;
 
-        const pluginId = "291d866f-baad-464a-aed6-a4a8b95a8fd7";
+        const pluginId = "4BFE2894-AEA3-4D3C-A429-503B56D61711";
 
         function View(view, params) {
             BaseView.apply(this, arguments);

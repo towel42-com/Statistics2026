@@ -2,7 +2,7 @@
     function (BaseView) {
         `use strict`;
 
-        const pluginId = "291d866f-baad-464a-aed6-a4a8b95a8fd7";
+        const pluginId = "4BFE2894-AEA3-4D3C-A429-503B56D61711";
 
         function View(view, params) {
             BaseView.apply(this, arguments);
@@ -13,20 +13,19 @@
             Dashboard.showLoadingMsg();
 
             ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                for (var h = 0, len = config.EpisodeDVProfileItems.Count; h < len; h++) {
-                    var currGroup = config.EpisodeDVProfileItems.MediaItemGroups[h];
+                for (var h = 0, len = config.MovieDVProfileItems.Count; h < len; h++) {
+                    var currGroup = config.MovieDVProfileItems.MediaItemGroups[h];
                     if (!config.showUnknownDVProfileCount && currGroup.IsUnknownDolbyProfile)
                         continue;
 
-                    var innerText = ``;
-                    var prevGroup = ``;
+                    var innerText = ``
                     currGroup.MediaItems.forEach((v) => {
-                        innerText += makeTable(v, config.ServerId, prevGroup != v.GroupName);
-                        prevGroup = v.GroupName;
+                        innerText += makeTable(v, config.ServerId);
                     });
 
                     var currHtml = `<h2 id = "` + currGroup.Title + `Title">` + currGroup.Title + `</h2>` +
                                    `<div><table id="` + currGroup.Title + `">` + innerText + `</table></div>`;
+
                     view.querySelector("#pagestart").innerHTML += currHtml;
                 }
 
@@ -34,15 +33,10 @@
             });
         };
 
-        function makeTable(episode, serverId, newGroup) {
+        function makeTable(movie, serverId) {
             var html = `<tr>`;
-            if ( newGroup )
-            {
-                html += `<td colspan="3"><h3>` + episode.GroupName + `</h3></td>`;
-                html += `</tr><tr>`;
-            }
-            html += `<td><a is="emby-linkbutton" href="/item?id=` + episode.Id + `&serverId=` + serverId + `">` + episode.Title + `</a></td>`;
-            html += `<td>` + episode.Year + `</td>`;
+            html += `<td><a is="emby-linkbutton" href="/item?id=` + movie.Id + `&serverId=` + serverId + `">` + movie.Title + `</a></td>`;
+            html += `<td>` + movie.Year + `</td>`;
             return html + `</tr>`;
         }
 

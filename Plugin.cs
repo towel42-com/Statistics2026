@@ -6,9 +6,9 @@ using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-using statistics.Configuration;
+using CodecInfoPlugin.Configuration;
 
-namespace statistics
+namespace CodecInfoPlugin
 {
     public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
@@ -24,110 +24,110 @@ namespace statistics
             {
                 new PluginPageInfo
                 {
-                    Name = "StatisticsConfigPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.StatisticsConfigPage.html",
+                    Name = "CodecInfoConfigPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.CodecInfoConfigPage.html",
                     EnableInMainMenu = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsConfigPageJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.StatisticsConfigPage.js"
+                    Name = "CodecInfoConfigPageJS",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.CodecInfoConfigPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsMovieCodec",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.movieCodecPage.html"
+                    Name = "AllCodecEpisodeInformationPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.AllCodecEpisodeInformation.html",
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsMovieCodecJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.movieCodecPage.js"
+                    Name = "AllCodecEpisodeInformationPageJS",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.AllCodecEpisodeInformation.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsEpisodeCodec",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.episodeCodecPage.html"
+                    Name = "AllCodecMovieInformationPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.AllCodecMovieInformation.html",
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsEpisodeCodecJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.episodeCodecPage.js"
+                    Name = "AllCodecMovieInformationPageJS",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.AllCodecMovieInformation.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsMovieCodecText",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.movieCodecTextPage.html"
+                    Name = "CodecInfoEpisodeCodecPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeCodecPage.html"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsMovieCodecTextJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.movieCodecTextPage.js"
+                    Name = "CodecInfoEpisodeCodecPageJS",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeCodecPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsEpisodeCodecText",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.episodeCodecTextPage.html"
+                    Name = "CodecInfoEpisodeCodecTextPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeCodecTextPage.html"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsEpisodeCodecTextJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.episodeCodecTextPage.js"
+                    Name = "CodecInfoEpisodeCodecTextPageJS",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeCodecTextPage.js"
+                },
+               new PluginPageInfo
+                {
+                    Name = "CodecInfoEpisodeDVProfileTextPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeDVProfileTextPage.html"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsMovieDVProfileText",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.movieDVProfileTextPage.html"
+                    Name = "CodecInfoEpisodeDVProfileTextPageJS",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeDVProfileTextPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsMovieDVProfileTextJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.movieDVProfileTextPage.js"
+                    Name = "CodecInfoMovieCodecPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieCodecPage.html"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsEpisodeDVProfileText",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.episodeDVProfileTextPage.html"
+                    Name = "CodecInfoMovieCodecPageJS",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieCodecPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsEpisodeDVProfileTextJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.episodeDVProfileTextPage.js"
+                    Name = "CodecInfoMovieCodecTextPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieCodecTextPage.html"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsShowOverview",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.showOverview.html"
-                },
-                 new PluginPageInfo
-                {
-                    Name = "StatisticsShowOverviewJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.showOverview.js"
+                    Name = "CodecInfoMovieCodecTextPageJS",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieCodecTextPage.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsUserBased",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.userBased.html"
+                    Name = "CodecInfoMovieDVProfileTextPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieDVProfileTextPage.html"
                 },
                 new PluginPageInfo
                 {
-                    Name = "StatisticsUserBasedJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.userBased.js"
+                    Name = "CodecInfoMovieDVProfileTextPageJS",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieDVProfileTextPage.js"
                 }
             };
         }
 
-        public override Guid Id => new Guid("291d866f-baad-464a-aed6-a4a8b95a8fd7");
+        public override Guid Id => new Guid("4BFE2894-AEA3-4D3C-A429-503B56D61711");
 
         public static Plugin Instance { get; private set; }
 
-        public override string Name => "Statistics";
+        public override string Name => "Codec Information";
 
-        public override string Description => "Get statistics from your collection";
+        public override string Description => "Get Codec Information from your collection";
 
         public Stream GetThumbImage()
         {
             var type = GetType();
-            return type.Assembly.GetManifestResourceStream(type.Namespace + ".Images.statistics-thumb.png");
+            return type.Assembly.GetManifestResourceStream(type.Namespace + ".Images.plugin-thumb.png");
         }
 
         public ImageFormat ThumbImageFormat

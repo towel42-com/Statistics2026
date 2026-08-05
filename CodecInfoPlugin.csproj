@@ -1,0 +1,65 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0;</TargetFrameworks>
+		<Version>0.0.0.3</Version>
+		<AssemblyVersion>0.0.0.3</AssemblyVersion>
+		<FileVersion>0.0.0.3</FileVersion>
+	</PropertyGroup>
+
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+		<Exec Command="echo killing current EmbyServer" />
+        <Exec Command="taskkill /IM EmbyServer.exe /F" IgnoreExitCode="true" />
+        <Exec Command="taskkill /IM embytray.exe /F" IgnoreExitCode="true" />
+		<Exec Command="echo copy $(TargetPath) C:\Users\scott.TOWEL42\Dropbox\home\bin\EmbyServer\programdata\plugins\" />
+		<Exec Command="copy $(TargetPath) C:\Users\scott.TOWEL42\Dropbox\home\bin\EmbyServer\programdata\plugins\" />
+        <Exec Command="echo Launching Emby Server" />
+        <Exec Command="C:\Users\scott.TOWEL42\Dropbox\home\bin\EmbyServer\system\EmbyServer.exe" />
+	</Target>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Configuration\PluginConfiguration.cs" />
+
+		<EmbeddedResource Include="Configuration\CodecInfoConfigPage.html" />
+		<EmbeddedResource Include="Configuration\CodecInfoConfigPage.js" />
+
+		<EmbeddedResource Include="Configuration\SubPages\AllCodecEpisodeInformation.html" />
+		<EmbeddedResource Include="Configuration\SubPages\AllCodecEpisodeInformation.js" />
+
+		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.html" />
+		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.js" />
+
+		<EmbeddedResource Include="Configuration\SubPages\movieDVProfileTextPage.html" />
+		<EmbeddedResource Include="Configuration\SubPages\movieDVProfileTextPage.js" />
+
+		<EmbeddedResource Include="Configuration\SubPages\episodeDVProfileTextPage.html" />
+		<EmbeddedResource Include="Configuration\SubPages\episodeDVProfileTextPage.js" />
+
+		<EmbeddedResource Include="Configuration\SubPages\movieCodecPage.html" />
+		<EmbeddedResource Include="Configuration\SubPages\movieCodecPage.js" />
+
+		<EmbeddedResource Include="Configuration\SubPages\movieCodecTextPage.html" />
+		<EmbeddedResource Include="Configuration\SubPages\movieCodecTextPage.js" />
+
+		<EmbeddedResource Include="Configuration\SubPages\episodeCodecPage.html" />
+		<EmbeddedResource Include="Configuration\SubPages\episodeCodecPage.js" />
+
+		<EmbeddedResource Include="Configuration\SubPages\episodeCodecTextPage.html" />
+		<EmbeddedResource Include="Configuration\SubPages\episodeCodecTextPage.js" />
+
+		<EmbeddedResource Include="Images\plugin-thumb.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="MediaBrowser.Server.Core" Version="4.8.11" />
+		<PackageReference Include="System.Memory" Version="4.5.5" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>BuildDate</_Parameter1>
+			<_Parameter2>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ssK"))</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+
+</Project>
