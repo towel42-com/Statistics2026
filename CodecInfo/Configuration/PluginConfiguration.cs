@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using MediaBrowser.Model.Plugins;
-using CodecInfo.Models;
-using CodecInfo.Models.Configuration;
+using CodecInfo.API;
 
 namespace CodecInfo.Configuration
 {
@@ -25,6 +24,7 @@ namespace CodecInfo.Configuration
         public ValueGroup MediaResolutions { get; set; }
         public ValueGroup MediaCodecs { get; set; }
         public ValueGroup DolbyVisionProfiles { get; set; }
+        public ValueGroup DolbyVisionProfilesWithUnknown { get; set; }
 
         // user for the icon/text list pages
         public MediaItemCollection MovieCodecItems { get; set; }

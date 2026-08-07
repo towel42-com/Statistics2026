@@ -10,12 +10,9 @@ using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
-using CodecInfo.Calculators;
-using CodecInfo.Models;
-using CodecInfo.Models.Configuration;
 using System.Net.Mime;
 
-namespace CodecInfo.Helpers
+namespace CodecInfo.API
 {
     public class Calculator : BaseCalculator
     {
@@ -39,7 +36,7 @@ namespace CodecInfo.Helpers
             var primaryName = video.Name;
             var secondaryName = video.Name;
             var descName = video.Name;
-            if (video is Episode episode )
+            if (video is Episode episode)
             {
                 primaryName = episode.SeriesName;
                 descName = primaryName + " - " + secondaryName;
@@ -112,7 +109,7 @@ namespace CodecInfo.Helpers
             return retVal;
         }
 
-        public Dictionary< string, MediaCountModel > CalculateMediaResolutions( bool episodes )
+        public Dictionary<string, MediaCount> CalculateMediaResolutions(bool episodes)
         {
             List<Video> videoList;
             if (episodes)
@@ -122,7 +119,7 @@ namespace CodecInfo.Helpers
 
             var mediaTypeName = episodes ? "Episode" : "Movie";
 
-            var qualityCounts = new Dictionary<string, MediaCountModel>();
+            var qualityCounts = new Dictionary<string, MediaCount>();
 
             _logger.Debug($"CalculateMediaResolutions - Starting {mediaTypeName} Analysis");
             foreach (var video in videoList.Where(w => w.Name != null).OrderBy(x => x.SortName))
@@ -134,10 +131,10 @@ namespace CodecInfo.Helpers
                     var quality = GetMediaResolution(video.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video), false).Trim();
                     if (!qualityCounts.TryGetValue(quality, out var qualityModel))
                     {
-                        qualityModel = new MediaCountModel { Name = quality, Movies = 0, Episodes = 0 };
+                        qualityModel = new MediaCount { Name = quality, Movies = 0, Episodes = 0 };
                         qualityCounts[quality] = qualityModel;
                     }
-                    if ( episodes)
+                    if (episodes)
                         qualityCounts[quality].Episodes++;
                     else
                         qualityCounts[quality].Movies++;
@@ -165,7 +162,7 @@ namespace CodecInfo.Helpers
             {
                 if (!qualityCounts.TryGetValue(kvp.Key, out var qualityModel))
                 {
-                    qualityModel = new MediaCountModel { Name = kvp.Key, Movies = 0, Episodes = 0 };
+                    qualityModel = new MediaCount { Name = kvp.Key, Movies = 0, Episodes = 0 };
                     qualityCounts[kvp.Key] = qualityModel;
                 }
                 qualityModel.Movies += kvp.Value.Movies;
@@ -201,7 +198,7 @@ namespace CodecInfo.Helpers
             if (width >= 3841 && width <= 7680) return "8K" + details;
             if (width >= 1921 && width <= 3840) return "4K" + details;
             if (width >= 1200 && width <= 1280) return "720p" + details;
-            //if (width < 1200) 
+            //if (width < 1200)
             return "SD" + details;
 
             //return "Resolution Not Available";
@@ -226,7 +223,7 @@ namespace CodecInfo.Helpers
             return dvProfile;
         }
 
-        private bool AddDolbyVisionProfile(ref MediaStream mediaStream, ref Dictionary<string, MediaCountModel> dvProfiles, string mediaName, bool isMovie)
+        private bool AddDolbyVisionProfile(ref MediaStream mediaStream, ref Dictionary<string, MediaCount> dvProfiles, string mediaName, bool isMovie)
         {
             var dvProfile = GetDolbyVisionProfile(mediaStream);
             if (dvProfile == null || dvProfile == "")
@@ -234,7 +231,7 @@ namespace CodecInfo.Helpers
 
             if (!dvProfiles.TryGetValue(dvProfile, out var model))
             {
-                model = new MediaCountModel { Name = dvProfile, Movies = 0, Episodes = 0 };
+                model = new MediaCount { Name = dvProfile, Movies = 0, Episodes = 0 };
                 dvProfiles[dvProfile] = model;
             }
             if (isMovie)
@@ -249,7 +246,7 @@ namespace CodecInfo.Helpers
 
         public ValueGroup CalculateDVProfileInfo(bool showUnknownDVProfileCount)
         {
-            var dvProfiles = new Dictionary<string, MediaCountModel>();
+            var dvProfiles = new Dictionary<string, MediaCount>();
 
             _logger.Debug($"CalculateDVProfileInfo - Starting Movie Analysis");
             foreach (var movie in _allMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
@@ -283,18 +280,21 @@ namespace CodecInfo.Helpers
 
             var tableValueString = $"<table><tr><td></td><td>Movies</td><td>Episodes</td></tr>";
 
-            bool foundUnknown = false;
-            foreach (var entry in dvProfiles)
+            if (showUnknownDVProfileCount)
             {
-                if (CodecInfo.Configuration.PluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
+                bool foundUnknown = false;
+                foreach (var entry in dvProfiles)
                 {
-                    foundUnknown = true;
-                    tableValueString += entry.Value.ToString();
+                    if (CodecInfo.Configuration.PluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
+                    {
+                        foundUnknown = true;
+                        tableValueString += entry.Value.ToString();
+                    }
                 }
-            }
-            if (!foundUnknown)
-            {
-                tableValueString += "<tr><td>Unknown Dolby Profile</td><td>0</td><td>0</td></tr>";
+                if (!foundUnknown)
+                {
+                    tableValueString += "<tr><td>Unknown Dolby Profile</td><td>0</td><td>0</td></tr>";
+                }
             }
 
             bool found50 = false;
@@ -336,7 +336,7 @@ namespace CodecInfo.Helpers
 
         public ValueGroup CalculateMediaCodecs()
         {
-            var codecCounts = new Dictionary<string, MediaCountModel>();
+            var codecCounts = new Dictionary<string, MediaCount>();
 
             _logger.Debug($"CalculateMediaCodecs - Starting Movie Analysis");
             foreach (var movie in _allMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
@@ -346,7 +346,7 @@ namespace CodecInfo.Helpers
                     var codec = movie.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video)?.Codec ?? "Unknown";
                     if (!codecCounts.TryGetValue(codec, out var codecModel))
                     {
-                        codecModel = new MediaCountModel { Name = codec, Movies = 0, Episodes = 0 };
+                        codecModel = new MediaCount { Name = codec, Movies = 0, Episodes = 0 };
                         codecCounts[codec] = codecModel;
                     }
                     codecCounts[codec].Movies++;
@@ -368,7 +368,7 @@ namespace CodecInfo.Helpers
                     var codec = episode.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video)?.Codec ?? "Unknown";
                     if (!codecCounts.TryGetValue(codec, out var codecModel))
                     {
-                        codecModel = new MediaCountModel { Name = codec, Movies = 0, Episodes = 0 };
+                        codecModel = new MediaCount { Name = codec, Movies = 0, Episodes = 0 };
                         codecCounts[codec] = codecModel;
                     }
                     codecCounts[codec].Episodes++;
@@ -394,7 +394,7 @@ namespace CodecInfo.Helpers
 
         public MediaItemCollection CalculateEpisodeCodecItems()
         {
-            var codecEpisodeMap = new Dictionary<string, List<CodecInfo.Models.MediaItem>>();
+            var codecEpisodeMap = new Dictionary<string, List<CodecInfo.API.MediaItem>>();
 
             foreach (var episode in _allEpisodes.Where(w => w.SortName != null).OrderBy(x => x.SortName))
             {
@@ -403,12 +403,12 @@ namespace CodecInfo.Helpers
 
                 if (!codecEpisodeMap.TryGetValue(codec, out var episodeList))
                 {
-                    episodeList = new List<CodecInfo.Models.MediaItem>();
+                    episodeList = new List<CodecInfo.API.MediaItem>();
                     codecEpisodeMap[codec] = episodeList;
                 }
 
                 var episodeName = "S" + episode.ParentIndexNumber.ToString().PadLeft(2, '0') + "E" + episode.IndexNumber.ToString().PadLeft(2, '0') + ": " + episode.Name;
-                var mediaItem = new CodecInfo.Models.MediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
+                var mediaItem = new CodecInfo.API.MediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
                 episodeList.Add(mediaItem);
 
                 if (codec == "Unknown")
@@ -431,7 +431,7 @@ namespace CodecInfo.Helpers
 
         public MediaItemCollection CalculateMovieCodecItems()
         {
-            var codecMovieMap = new Dictionary<string, List<CodecInfo.Models.MediaItem>>();
+            var codecMovieMap = new Dictionary<string, List<CodecInfo.API.MediaItem>>();
 
             foreach (var movie in _allMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
             {
@@ -440,10 +440,10 @@ namespace CodecInfo.Helpers
 
                 if (!codecMovieMap.TryGetValue(codec, out var movieList))
                 {
-                    movieList = new List<CodecInfo.Models.MediaItem>();
+                    movieList = new List<CodecInfo.API.MediaItem>();
                     codecMovieMap[codec] = movieList;
                 }
-                movieList.Add(new CodecInfo.Models.MediaItem { Id = movie.Id.ToString(), Title = movie.Name, Year = movie.ProductionYear });
+                movieList.Add(new CodecInfo.API.MediaItem { Id = movie.Id.ToString(), Title = movie.Name, Year = movie.ProductionYear });
                 _logger.Debug($"{codec} {codecMovieMap.Count}");
 
                 if (codec == "Unknown")
@@ -466,7 +466,7 @@ namespace CodecInfo.Helpers
 
         public MediaItemCollection CalculateEpisodeDVProfileList()
         {
-            var dvProfileMap = new Dictionary<string, List<CodecInfo.Models.MediaItem>>();
+            var dvProfileMap = new Dictionary<string, List<CodecInfo.API.MediaItem>>();
 
             foreach (var episode in _allEpisodes.Where(w => w.SortName != null).OrderBy(x => x.Series.SortName))
             {
@@ -481,12 +481,12 @@ namespace CodecInfo.Helpers
 
                 if (!dvProfileMap.TryGetValue(dvProfile, out var episodeList))
                 {
-                    episodeList = new List<CodecInfo.Models.MediaItem>();
+                    episodeList = new List<CodecInfo.API.MediaItem>();
                     dvProfileMap[dvProfile] = episodeList;
                 }
 
                 var episodeName = "S" + episode.ParentIndexNumber.ToString().PadLeft(2, '0') + "E" + episode.IndexNumber.ToString().PadLeft(2, '0') + ": " + episode.Name;
-                var mediaItem = new CodecInfo.Models.MediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
+                var mediaItem = new CodecInfo.API.MediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
 
                 episodeList.Add(mediaItem);
                 _logger.Debug($"CalculateEpisodeDVProfileList - {dvProfile} - '{episode.SeriesName}' - '{episode.Name}'");

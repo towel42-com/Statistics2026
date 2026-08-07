@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace CodecInfo.Models.Configuration
+namespace CodecInfo.API
 {
     public class MediaInfo
     {

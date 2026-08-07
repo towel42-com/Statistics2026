@@ -12,7 +12,7 @@
     </PropertyGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="call $(ProjectDir)InstallAndLaunch.bat -Build -TargetPath &quot;$(TargetPath)&quot;" />
+		<Exec Command="call $(SolutionDir)InstallAndLaunch.bat -Build -TargetPath &quot;$(TargetPath)&quot;" />
 	</Target>
 
 	<ItemGroup>
@@ -27,7 +27,7 @@
 		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.html" />
 		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.js" />
 
-		<EmbeddedResource Include="Images\plugin-thumb.png" />
+		<EmbeddedResource Include="thumb.png" />
 	</ItemGroup>
 
 	<ItemGroup>

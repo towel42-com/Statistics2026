@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace CodecInfo.Models
+namespace CodecInfo.API
 {
     public class MediaItem
     {

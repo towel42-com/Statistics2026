@@ -14,8 +14,7 @@ using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using CodecInfo;
 using CodecInfo.Configuration;
-using CodecInfo.Models.Configuration;
-using CodecInfo.Helpers;
+using CodecInfo.API;
 
 namespace CodecInfo.ScheduledTasks
 {
@@ -61,13 +60,13 @@ namespace CodecInfo.ScheduledTasks
         {
             // purely for progress reporting
             PluginConfiguration.LastUpdated = DateTime.Now.ToString("g");
-            PluginConfiguration.Version = Plugin.Instance.Version.ToString( 4 );
+            PluginConfiguration.Version = Plugin.Instance.Version.ToString(4);
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString();
             PluginConfiguration.ServerId = _appHost.SystemId;
 
             var numSteps = 4;
             var currStep = 0;
-            progress.Report(currStep/numSteps);
+            progress.Report(currStep / numSteps);
 
 
             var calculator = new Calculator(_userManager, _libraryManager, _userDataManager, _fileSystem, _logger, _providerManager, cancellationToken);
@@ -77,12 +76,15 @@ namespace CodecInfo.ScheduledTasks
                 progress.Report((++currStep) / numSteps);
 
                 PluginConfiguration.MediaResolutions = calculator.CalculateMediaResolutions();
-                progress.Report((++currStep)/numSteps);
+                progress.Report((++currStep) / numSteps);
 
                 PluginConfiguration.MediaCodecs = calculator.CalculateMediaCodecs();
                 progress.Report((++currStep) / numSteps);
 
-                PluginConfiguration.DolbyVisionProfiles = calculator.CalculateDVProfileInfo( PluginConfiguration.showUnknownDVProfileCount );
+                PluginConfiguration.DolbyVisionProfiles = calculator.CalculateDVProfileInfo(false);
+                progress.Report((++currStep) / numSteps);
+
+                PluginConfiguration.DolbyVisionProfilesWithUnknown = calculator.CalculateDVProfileInfo(true);
                 progress.Report((++currStep) / numSteps);
             }
 

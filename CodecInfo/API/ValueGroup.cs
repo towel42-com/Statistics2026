@@ -1,4 +1,4 @@
-﻿namespace CodecInfo.Models.Configuration
+﻿namespace CodecInfo.API
 {
     public class ValueGroup
     {

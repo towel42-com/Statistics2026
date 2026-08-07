@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "EmbyServer": {
-      "commandName": "Executable",
-      "executablePath": "%SystemRoot%\\System32\\cmd.exe",
-      "commandLineArgs": "/c $(ProjectDir)InstallAndLaunch.bat -Debug -TargetPath $(TargetPath)"
-    }
-  }
-}

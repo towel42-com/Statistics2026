@@ -81,9 +81,9 @@
                     view.querySelector(`#GotoAllCodecMovieInformationPage`).disabled = true;
                     view.querySelector(`#GotoAllCodecEpisodeInformationPage`).disabled = true;
                     view.querySelector(`#showUnknownDVProfileCount`).disabled = true;
-                    view.querySelector(`#lastRunInfo`).style.display = 'none'; 
+                    view.querySelector(`#lastRunInfo`).style.display = 'none';
 
-                    
+
                     Dashboard.hideLoadingMsg();
                 } else {
                     view.querySelector("#pageIntro").innerHTML = "This plugin will calculate codec and dolby profile information "
@@ -93,8 +93,11 @@
                     var mediaStats = "";
                     mediaStats += createStat(config.MediaCodecs, view);
                     mediaStats += createStat(config.MediaResolutions, view);
-                    mediaStats += createStat(config.DolbyVisionProfiles, view, undefined, "dvProfileStats");
-
+                    if (config.showUnknownDVProfileCount) {
+                        mediaStats += createStat(config.DolbyVisionProfilesWithUnknown, view, undefined, "dvProfileStats");
+                    } else {
+                        mediaStats += createStat(config.DolbyVisionProfiles, view, undefined, "dvProfileStats");
+                    }
                     view.querySelector("#mediaStats").innerHTML = (mediaStats);
 
                     Dashboard.hideLoadingMsg();
@@ -119,6 +122,7 @@
                     ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         config.showUnknownDVProfileCount = view.querySelector("#showUnknownDVProfileCount").checked;
                         ApiClient.updatePluginConfiguration(pluginId, config);
+                        loadStats(view);
                     });
                 }
             );

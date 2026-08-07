@@ -1,6 +1,6 @@
-﻿namespace CodecInfo.Models
+﻿namespace CodecInfo.API
 {
-    public class MediaCountModel
+    public class MediaCount
     {
         public string Name { get; set; }
         public int Movies { get; set; }
