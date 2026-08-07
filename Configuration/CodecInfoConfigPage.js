@@ -75,23 +75,27 @@
                 if (config.LastUpdated === undefined) {
                     Dashboard.alert({
                         message:
-                            "No configuration found, please run the Codec Info task on the Scheduled Tasks page and come back for the results."
+                            "No configuration found, please run the 'Media Codec Infromation' task on the Scheduled Tasks page and come back for the results."
                     });
+
+                    view.querySelector(`#GotoAllCodecMovieInformationPage`).disabled = true;
+                    view.querySelector(`#GotoAllCodecEpisodeInformationPage`).disabled = true;
+                    view.querySelector(`#showUnknownDVProfileCount`).disabled = true;
+                    view.querySelector(`#lastRunInfo`).style.display = 'none'; 
+
+                    
                     Dashboard.hideLoadingMsg();
                 } else {
                     view.querySelector("#pageIntro").innerHTML = "This plugin will calculate codec and dolby profile information "
                         + "from this Emby server instance.";
 
 
-                    var generalStat = "";
-                    generalStat += createStat(config.MediaResolutions, view);
-                    generalStat += createStat(config.MediaCodecs, view);
+                    var mediaStats = "";
+                    mediaStats += createStat(config.MediaCodecs, view);
+                    mediaStats += createStat(config.MediaResolutions, view);
+                    mediaStats += createStat(config.DolbyVisionProfiles, view, undefined, "dvProfileStats");
 
-                    view.querySelector("#generalStat").innerHTML = (generalStat);
-
-                    var dvProfileStats = "";
-                    dvProfileStats += createStat(config.DolbyVisionProfiles, view, undefined, "dvProfileStats");
-                    view.querySelector("#dvProfileStats").innerHTML = (dvProfileStats);
+                    view.querySelector("#mediaStats").innerHTML = (mediaStats);
 
                     Dashboard.hideLoadingMsg();
 
