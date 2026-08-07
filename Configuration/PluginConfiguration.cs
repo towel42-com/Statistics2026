@@ -10,7 +10,6 @@ namespace CodecInfoPlugin.Configuration
         public PluginConfiguration()
         {
             MediaInfoList = new List<MediaInfo>();
-            showUnknownDVProfileCount = true;
         }
 
         public string BuildDate { get; set; }
@@ -18,7 +17,7 @@ namespace CodecInfoPlugin.Configuration
         public string Version { get; set; }
         public string ServerId { get; set; }
 
-        public bool showUnknownDVProfileCount { get; set; }
+        public bool showUnknownDVProfileCount { get; set; } = true;
  
         public List<MediaInfo> MediaInfoList { get; set; }
 
@@ -30,8 +29,6 @@ namespace CodecInfoPlugin.Configuration
         // user for the icon/text list pages
         public MediaItemCollection MovieCodecItems { get; set; }
         public MediaItemCollection EpisodeCodecItems { get; set; }
-        public MediaItemCollection MovieDVProfileItems { get; set; }
-        public MediaItemCollection EpisodeDVProfileItems { get; set; }
 
         public static bool IsUnknownDolbyProfile(string profile)
         {
@@ -39,10 +36,10 @@ namespace CodecInfoPlugin.Configuration
                 return true;
             var unknownProfiles = new List<string>
             {
-                "Unknown Media",
-                "Unknown Dolby Profile",
-                "Non Dolby Vision Compatible Codec",
-                "No Dolby Profile"
+                Constants.MissingVideoStream,
+                Constants.UnknownDolbyProfile,
+                Constants.NonDolbyVisionCompatibleCodec,
+                Constants.NoDolbyProfile
             };
             return unknownProfiles.Contains(profile);
         }

@@ -210,18 +210,18 @@ namespace CodecInfoPlugin.Helpers
         private string GetDolbyVisionProfile(MediaStream mediaStream)
         {
             if (mediaStream == null)
-                return "Unknown Media";
+                return Constants.MissingVideoStream;
 
             if (mediaStream.Profile == null)
-                return "Unknown Dolby Profile";
+                return Constants.UnknownDolbyProfile;
 
             var codec = mediaStream.Codec.ToLower();
             if (codec != "hevc" && codec != "av1")
-                return "Non Dolby Vision Compatible Codec";
+                return Constants.NonDolbyVisionCompatibleCodec;
 
             var dvProfile = mediaStream.ExtendedVideoSubTypeDescription;
             if (dvProfile.ToLower() == "none")
-                return "No Dolby Profile";
+                return Constants.NoDolbyProfile;
 
             return dvProfile;
         }
@@ -283,21 +283,18 @@ namespace CodecInfoPlugin.Helpers
 
             var tableValueString = $"<table><tr><td></td><td>Movies</td><td>Episodes</td></tr>";
 
-            if (showUnknownDVProfileCount)
+            bool foundUnknown = false;
+            foreach (var entry in dvProfiles)
             {
-                bool foundUnknown = false;
-                foreach (var entry in dvProfiles)
+                if (CodecInfoPlugin.Configuration.PluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
                 {
-                    if (CodecInfoPlugin.Configuration.PluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
-                    {
-                        foundUnknown = true;
-                        tableValueString += entry.Value.ToString();
-                    }
+                    foundUnknown = true;
+                    tableValueString += entry.Value.ToString();
                 }
-                if (!foundUnknown)
-                {
-                    tableValueString += "<tr><td>Unknown Dolby Profile</td><td>0</td><td>0</td></tr>";
-                }
+            }
+            if (!foundUnknown)
+            {
+                tableValueString += "<tr><td>Unknown Dolby Profile</td><td>0</td><td>0</td></tr>";
             }
 
             bool found50 = false;
@@ -502,49 +499,6 @@ namespace CodecInfoPlugin.Helpers
                 MediaItems = pair.Value,
                 IsUnknownDolbyProfile = CodecInfoPlugin.Configuration.PluginConfiguration.IsUnknownDolbyProfile(pair.Key)
             }).ToList();
-
-            return new MediaItemCollection()
-            {
-                Count = list.Count(),
-                MediaItemGroups = list
-            };
-        }
-
-        public MediaItemCollection CalculateMovieDVProfileList()
-        {
-            var dvProfileMap = new Dictionary<string, List<CodecInfoPlugin.Models.MediaItem>>();
-
-            foreach (var movie in _allMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
-            {
-                _logger.Debug($"CalculateMovieDVProfileList {movie.Name}");
-                var mediaStream = movie.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video);
-
-                var dvProfile = GetDolbyVisionProfile(mediaStream);
-                if (dvProfile == null || dvProfile == "")
-                {
-                    continue;
-                }
-
-                if (!dvProfileMap.TryGetValue(dvProfile, out var movieList))
-                {
-                    movieList = new List<CodecInfoPlugin.Models.MediaItem>();
-                    dvProfileMap[dvProfile] = movieList;
-                }
-                movieList.Add(new CodecInfoPlugin.Models.MediaItem { Id = movie.Id.ToString(), Title = movie.Name, Year = movie.ProductionYear });
-                _logger.Debug($"CalculateMovieDVProfileList - {dvProfile} #{dvProfileMap[dvProfile].Count}");
-            }
-
-            var list = dvProfileMap.Select(pair => new MediaItemGroup
-            {
-                Title = pair.Key,
-                MediaItems = pair.Value,
-                IsUnknownDolbyProfile = CodecInfoPlugin.Configuration.PluginConfiguration.IsUnknownDolbyProfile(pair.Key)
-            }).ToList();
-
-            foreach (var obj in list)
-            {
-                _logger.Debug($"CalculateMovieDVProfileList - Post List created - {obj.Title} - {obj.IsUnknownDolbyProfile}");
-            }
 
             return new MediaItemCollection()
             {

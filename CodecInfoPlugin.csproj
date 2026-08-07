@@ -1,20 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0;</TargetFrameworks>
-		<Version>0.0.0.3</Version>
-		<AssemblyVersion>0.0.0.3</AssemblyVersion>
-		<FileVersion>0.0.0.3</FileVersion>
+		<Version>1.0.0.0</Version>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<FileVersion>1.0.0.0</FileVersion>
 	</PropertyGroup>
 
+    <PropertyGroup>
+      <OutputPath>build\$(Configuration)</OutputPath>
+      <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    </PropertyGroup>
+
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="echo killing current EmbyServer" />
-        <Exec Command="taskkill /IM EmbyServer.exe /F" IgnoreExitCode="true" />
-        <Exec Command="taskkill /IM embytray.exe /F" IgnoreExitCode="true" />
-		<Exec Command="echo copy $(TargetPath) C:\Users\scott.TOWEL42\Dropbox\home\bin\EmbyServer\programdata\plugins\" />
-		<Exec Command="copy $(TargetPath) C:\Users\scott.TOWEL42\Dropbox\home\bin\EmbyServer\programdata\plugins\" />
-        <Exec Command="echo Launching Emby Server" />
-        <Exec Command="C:\Users\scott.TOWEL42\Dropbox\home\bin\EmbyServer\system\EmbyServer.exe" />
+		<Exec Command="call $(ProjectDir)InstallAndLaunch.bat -Build -TargetPath &quot;$(TargetPath)&quot;" />
 	</Target>
 
 	<ItemGroup>
@@ -28,24 +26,6 @@
 
 		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.html" />
 		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.js" />
-
-		<EmbeddedResource Include="Configuration\SubPages\movieDVProfileTextPage.html" />
-		<EmbeddedResource Include="Configuration\SubPages\movieDVProfileTextPage.js" />
-
-		<EmbeddedResource Include="Configuration\SubPages\episodeDVProfileTextPage.html" />
-		<EmbeddedResource Include="Configuration\SubPages\episodeDVProfileTextPage.js" />
-
-		<EmbeddedResource Include="Configuration\SubPages\movieCodecPage.html" />
-		<EmbeddedResource Include="Configuration\SubPages\movieCodecPage.js" />
-
-		<EmbeddedResource Include="Configuration\SubPages\movieCodecTextPage.html" />
-		<EmbeddedResource Include="Configuration\SubPages\movieCodecTextPage.js" />
-
-		<EmbeddedResource Include="Configuration\SubPages\episodeCodecPage.html" />
-		<EmbeddedResource Include="Configuration\SubPages\episodeCodecPage.js" />
-
-		<EmbeddedResource Include="Configuration\SubPages\episodeCodecTextPage.html" />
-		<EmbeddedResource Include="Configuration\SubPages\episodeCodecTextPage.js" />
 
 		<EmbeddedResource Include="Images\plugin-thumb.png" />
 	</ItemGroup>

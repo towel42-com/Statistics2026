@@ -8,37 +8,21 @@
             </p>
 
             <div style="max-width: 900px; display: flex; gap: 10px;">
-                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GotoAllCodecMovieInformationPage" id="GotoAllCodecMovieInformationPage">View All Movie Information Page</button>
-                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GotoAllCodecEpisodeInformationPage" id="GotoAllCodecEpisodeInformationPage">View All TV Episode Information Page</button>
-            </div>
-
-            <h2>Dolby Vision Profile Information</h2>
-            <label class="emby-checkbox-label">
-                <input id="showUnknownDVProfileCount" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                <span class="checkboxLabel">Show non-HEVC Dolby Vision profiles? (requires re-running tasks to update results)</span>
-            </label>
-
-            <div class="statRow" name="dvProfileStats" id="dvProfileStats"></div>
-            <div style="max-width: 900px; display: flex; gap: 10px;">
-                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GoToMovieDVProfileTextList" id="GoToMovieDVProfileTextList">View Dolby Vision Profile list (Movies)</button>
-                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GoToEpisodeDVProfileTextList" id="GoToEpisodeDVProfileTextList">View Dolby Vision Profile list (TV Episodes)</button>
+                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GotoAllCodecMovieInformationPage" id="GotoAllCodecMovieInformationPage">View Movie Codec Information</button>
+                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GotoAllCodecEpisodeInformationPage" id="GotoAllCodecEpisodeInformationPage">View TV Episode Codec Information</button>
             </div>
 
             <h2>Movie Codec and Resolution statistics</h2>
             <div class="statRow" name="generalStat" id="generalStat"></div>
-            <h2>Movie Codecs</h2>
-            <div style="max-width: 900px; display: flex; gap: 10px; ">
-                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GoToMovieCodec" id="GoToMovieCodec">View Movie Codecs</button>
-                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GoToMovieCodecText" id="GoToMovieCodecText">View Movie Codecs (text-based)</button>
-            </div>
 
-            <div style="clear: both;"></div>
+            <h2>Dolby Vision Profile Information</h2>
+            <label class="emby-checkbox-label">
+                <input id="showUnknownDVProfileCount" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                <span class="checkboxLabel">Show non-HEVC Dolby Vision profiles?</span>
+            </label>
 
-            <h2>TV Episode Codecs</h2>
-            <div style="max-width: 900px; display: flex; gap: 10px; ">
-                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GoToEpisodeCodec" id="GoToEpisodeCodec">View Episode Codecs</button>
-                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GoToEpisodeCodecText" id="GoToEpisodeCodecText">View Episode Codecs (text-based)</button>
-            </div>
+            <div class="statRow" name="dvProfileStats" id="dvProfileStats"></div>
+
             <div style="clear: both;"></div>
         </div>
     </div>

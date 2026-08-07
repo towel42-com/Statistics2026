@@ -115,7 +115,6 @@
                     ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         config.showUnknownDVProfileCount = view.querySelector("#showUnknownDVProfileCount").checked;
                         ApiClient.updatePluginConfiguration(pluginId, config);
-
                     });
                 }
             );
@@ -129,42 +128,6 @@
             view.querySelector("#GotoAllCodecEpisodeInformationPage").addEventListener("click",
                 function () {
                     var href = Dashboard.getConfigurationPageUrl("AllCodecEpisodeInformationPage");
-                    Dashboard.navigate(href);
-                });
-
-            view.querySelector("#GoToMovieDVProfileTextList").addEventListener("click",
-                function () {
-                    var href = Dashboard.getConfigurationPageUrl("CodecInfoMovieDVProfileTextPage");
-                    Dashboard.navigate(href);
-                });
-
-            view.querySelector("#GoToEpisodeDVProfileTextList").addEventListener("click",
-                function () {
-                    var href = Dashboard.getConfigurationPageUrl("CodecInfoEpisodeDVProfileTextPage");
-                    Dashboard.navigate(href);
-                });
-
-            view.querySelector("#GoToMovieCodec").addEventListener("click",
-                function () {
-                    var href = Dashboard.getConfigurationPageUrl("CodecInfoMovieCodecPage");
-                    Dashboard.navigate(href);
-                });
-
-            view.querySelector("#GoToMovieCodecText").addEventListener("click",
-                function () {
-                    var href = Dashboard.getConfigurationPageUrl("CodecInfoMovieCodecTextPage");
-                    Dashboard.navigate(href);
-                });
-
-            view.querySelector("#GoToEpisodeCodec").addEventListener("click",
-                function () {
-                    var href = Dashboard.getConfigurationPageUrl("CodecInfoEpisodeCodecPage");
-                    Dashboard.navigate(href);
-                });
-
-            view.querySelector("#GoToEpisodeCodecText").addEventListener("click",
-                function () {
-                    var href = Dashboard.getConfigurationPageUrl("CodecInfoEpisodeCodecTextPage");
                     Dashboard.navigate(href);
                 });
         }
