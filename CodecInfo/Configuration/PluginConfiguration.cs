@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using MediaBrowser.Model.Plugins;
-using CodecInfoPlugin.Models;
-using CodecInfoPlugin.Models.Configuration;
+using CodecInfo.Models;
+using CodecInfo.Models.Configuration;
 
-namespace CodecInfoPlugin.Configuration
+namespace CodecInfo.Configuration
 {
     public class PluginConfiguration : BasePluginConfiguration
     {

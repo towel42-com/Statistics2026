@@ -1,4 +1,4 @@
-﻿namespace CodecInfoPlugin
+﻿namespace CodecInfo
 {
     internal static class Constants
     {

@@ -12,12 +12,12 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using CodecInfoPlugin;
-using CodecInfoPlugin.Configuration;
-using CodecInfoPlugin.Models.Configuration;
-using CodecInfoPlugin.Helpers;
+using CodecInfo;
+using CodecInfo.Configuration;
+using CodecInfo.Models.Configuration;
+using CodecInfo.Helpers;
 
-namespace CodecInfoPlugin.ScheduledTasks
+namespace CodecInfo.ScheduledTasks
 {
     public class CalculateMediaTask : IScheduledTask
     {
@@ -37,7 +37,7 @@ namespace CodecInfoPlugin.ScheduledTasks
             ILibraryManager libraryManager, IFileSystem fileSystem, IJsonSerializer jsonSerializer,
             IServerApplicationPaths serverApplicationPaths, IApplicationHost appHost, IProviderManager providerManager)
         {
-            _logger = logger.GetLogger("CodecInfoPlugin");
+            _logger = logger.GetLogger("CodecInfo");
             _libraryManager = libraryManager;
             _userManager = userManager;
             _userDataManager = userDataManager;

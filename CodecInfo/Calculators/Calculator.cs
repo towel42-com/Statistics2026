@@ -10,12 +10,12 @@ using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
-using CodecInfoPlugin.Calculators;
-using CodecInfoPlugin.Models;
-using CodecInfoPlugin.Models.Configuration;
+using CodecInfo.Calculators;
+using CodecInfo.Models;
+using CodecInfo.Models.Configuration;
 using System.Net.Mime;
 
-namespace CodecInfoPlugin.Helpers
+namespace CodecInfo.Helpers
 {
     public class Calculator : BaseCalculator
     {
@@ -286,7 +286,7 @@ namespace CodecInfoPlugin.Helpers
             bool foundUnknown = false;
             foreach (var entry in dvProfiles)
             {
-                if (CodecInfoPlugin.Configuration.PluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
+                if (CodecInfo.Configuration.PluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
                 {
                     foundUnknown = true;
                     tableValueString += entry.Value.ToString();
@@ -314,7 +314,7 @@ namespace CodecInfoPlugin.Helpers
 
             foreach (var entry in dvProfiles)
             {
-                if (CodecInfoPlugin.Configuration.PluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
+                if (CodecInfo.Configuration.PluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
                     continue;
 
                 if (entry.Value.Name != "Profile 5.0")
@@ -394,7 +394,7 @@ namespace CodecInfoPlugin.Helpers
 
         public MediaItemCollection CalculateEpisodeCodecItems()
         {
-            var codecEpisodeMap = new Dictionary<string, List<CodecInfoPlugin.Models.MediaItem>>();
+            var codecEpisodeMap = new Dictionary<string, List<CodecInfo.Models.MediaItem>>();
 
             foreach (var episode in _allEpisodes.Where(w => w.SortName != null).OrderBy(x => x.SortName))
             {
@@ -403,12 +403,12 @@ namespace CodecInfoPlugin.Helpers
 
                 if (!codecEpisodeMap.TryGetValue(codec, out var episodeList))
                 {
-                    episodeList = new List<CodecInfoPlugin.Models.MediaItem>();
+                    episodeList = new List<CodecInfo.Models.MediaItem>();
                     codecEpisodeMap[codec] = episodeList;
                 }
 
                 var episodeName = "S" + episode.ParentIndexNumber.ToString().PadLeft(2, '0') + "E" + episode.IndexNumber.ToString().PadLeft(2, '0') + ": " + episode.Name;
-                var mediaItem = new CodecInfoPlugin.Models.MediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
+                var mediaItem = new CodecInfo.Models.MediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
                 episodeList.Add(mediaItem);
 
                 if (codec == "Unknown")
@@ -431,7 +431,7 @@ namespace CodecInfoPlugin.Helpers
 
         public MediaItemCollection CalculateMovieCodecItems()
         {
-            var codecMovieMap = new Dictionary<string, List<CodecInfoPlugin.Models.MediaItem>>();
+            var codecMovieMap = new Dictionary<string, List<CodecInfo.Models.MediaItem>>();
 
             foreach (var movie in _allMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
             {
@@ -440,10 +440,10 @@ namespace CodecInfoPlugin.Helpers
 
                 if (!codecMovieMap.TryGetValue(codec, out var movieList))
                 {
-                    movieList = new List<CodecInfoPlugin.Models.MediaItem>();
+                    movieList = new List<CodecInfo.Models.MediaItem>();
                     codecMovieMap[codec] = movieList;
                 }
-                movieList.Add(new CodecInfoPlugin.Models.MediaItem { Id = movie.Id.ToString(), Title = movie.Name, Year = movie.ProductionYear });
+                movieList.Add(new CodecInfo.Models.MediaItem { Id = movie.Id.ToString(), Title = movie.Name, Year = movie.ProductionYear });
                 _logger.Debug($"{codec} {codecMovieMap.Count}");
 
                 if (codec == "Unknown")
@@ -466,7 +466,7 @@ namespace CodecInfoPlugin.Helpers
 
         public MediaItemCollection CalculateEpisodeDVProfileList()
         {
-            var dvProfileMap = new Dictionary<string, List<CodecInfoPlugin.Models.MediaItem>>();
+            var dvProfileMap = new Dictionary<string, List<CodecInfo.Models.MediaItem>>();
 
             foreach (var episode in _allEpisodes.Where(w => w.SortName != null).OrderBy(x => x.Series.SortName))
             {
@@ -481,12 +481,12 @@ namespace CodecInfoPlugin.Helpers
 
                 if (!dvProfileMap.TryGetValue(dvProfile, out var episodeList))
                 {
-                    episodeList = new List<CodecInfoPlugin.Models.MediaItem>();
+                    episodeList = new List<CodecInfo.Models.MediaItem>();
                     dvProfileMap[dvProfile] = episodeList;
                 }
 
                 var episodeName = "S" + episode.ParentIndexNumber.ToString().PadLeft(2, '0') + "E" + episode.IndexNumber.ToString().PadLeft(2, '0') + ": " + episode.Name;
-                var mediaItem = new CodecInfoPlugin.Models.MediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
+                var mediaItem = new CodecInfo.Models.MediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
 
                 episodeList.Add(mediaItem);
                 _logger.Debug($"CalculateEpisodeDVProfileList - {dvProfile} - '{episode.SeriesName}' - '{episode.Name}'");
@@ -497,7 +497,7 @@ namespace CodecInfoPlugin.Helpers
             {
                 Title = pair.Key,
                 MediaItems = pair.Value,
-                IsUnknownDolbyProfile = CodecInfoPlugin.Configuration.PluginConfiguration.IsUnknownDolbyProfile(pair.Key)
+                IsUnknownDolbyProfile = CodecInfo.Configuration.PluginConfiguration.IsUnknownDolbyProfile(pair.Key)
             }).ToList();
 
             return new MediaItemCollection()

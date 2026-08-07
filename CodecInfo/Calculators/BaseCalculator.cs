@@ -12,7 +12,7 @@ using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 
-namespace CodecInfoPlugin.Calculators
+namespace CodecInfo.Calculators
 {
     public abstract class BaseCalculator : IDisposable
     {

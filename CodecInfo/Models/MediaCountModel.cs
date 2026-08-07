@@ -1,4 +1,4 @@
-﻿namespace CodecInfoPlugin.Models
+﻿namespace CodecInfo.Models
 {
     public class MediaCountModel
     {

@@ -6,9 +6,9 @@ using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-using CodecInfoPlugin.Configuration;
+using CodecInfo.Configuration;
 
-namespace CodecInfoPlugin
+namespace CodecInfo
 {
     public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
