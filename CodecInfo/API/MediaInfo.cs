@@ -2,7 +2,7 @@
 
 namespace CodecInfo.API
 {
-    public class MediaInfo
+    public class CMediaInfo
     {
         public bool IsEpisode { get; set; }
 

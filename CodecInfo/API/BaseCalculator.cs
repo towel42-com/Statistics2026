@@ -1,51 +1,57 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using MediaBrowser.Controller.Dto;
+﻿using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CodecInfo.API
 {
-    public abstract class BaseCalculator : IDisposable
+    public abstract class IBaseCalculator : IDisposable
     {
-        private IEnumerable<Movie> _movieCache;
-        private IEnumerable<Episode> _episodeCache;
+        private IEnumerable<Movie> fMovieCache;
+        private IEnumerable<Episode> fEpisodeCache;
 
-        protected readonly IUserManager UserManager;
-        protected readonly ILibraryManager LibraryManager;
-        protected readonly IUserDataManager UserDataManager;
-        protected readonly IProviderManager ProviderManager;
-        protected readonly ILogger _logger;
+        protected readonly IUserManager fUserManager;
+        protected readonly ILibraryManager fLibraryManager;
+        protected readonly IUserDataManager fUserDataManager;
+        protected readonly IProviderManager fProviderManager;
+        protected readonly IFileSystem fFileSystem;
+        protected readonly ILogger fLogger;
+        protected readonly CancellationToken fCancellationToken;
 
 
-        protected BaseCalculator(IUserManager userManager, ILibraryManager libraryManager,
-            IUserDataManager userDataManager, IProviderManager providerManager, ILogger Logger, CancellationToken cancellationToken)
+        protected IBaseCalculator(IUserManager userManager, ILibraryManager libraryManager,
+            IUserDataManager userDataManager, IFileSystem fileSystem, ILogger logger,
+            IProviderManager providerManager, CancellationToken cancellationToken)
         {
-            UserManager = userManager;
-            LibraryManager = libraryManager;
-            UserDataManager = userDataManager;
-            ProviderManager = providerManager;
-            _logger = Logger;
+            fUserManager = userManager;
+            fLibraryManager = libraryManager;
+            fUserDataManager = userDataManager;
+            fProviderManager = providerManager;
+            fFileSystem = fileSystem;
+            fLogger = logger;
+            fCancellationToken = cancellationToken;
         }
 
         #region Helpers
 
         protected IEnumerable<Movie> GetAllMovies()
         {
-            return _movieCache ?? (_movieCache = GetItems<Movie>());
+            return fMovieCache ?? (fMovieCache = GetItems<Movie>());
         }
         
         protected IEnumerable<Episode> GetAllEpisodes()
         {
-            return _episodeCache ?? (_episodeCache = GetItems<Episode>());
+            return fEpisodeCache ?? (fEpisodeCache = GetItems<Episode>());
         }
 
         private IEnumerable<T> GetItems<T>()
@@ -61,7 +67,7 @@ namespace CodecInfo.API
                 }
             };
 
-            return LibraryManager.GetItemList(query).OfType<T>();
+            return fLibraryManager.GetItemList(query).OfType<T>();
         }
 
         #endregion
@@ -75,8 +81,8 @@ namespace CodecInfo.API
         {
             try
             {
-                _episodeCache = null;
-                _movieCache = null;
+                fEpisodeCache = null;
+                fMovieCache = null;
             }
             catch (Exception e)
             {

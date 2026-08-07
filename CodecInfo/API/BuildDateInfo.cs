@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Reflection;
 
-public static class BuildDateInfo
+public static class CBuildDateInfo
 {
     public static DateTime? GetBuildDate()
     {

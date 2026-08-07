@@ -12,17 +12,16 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using CodecInfo;
 using CodecInfo.Configuration;
 using CodecInfo.API;
 
 namespace CodecInfo.ScheduledTasks
 {
-    public class CalculateMediaTask : IScheduledTask
+    public class CCalculateMediaTask : IScheduledTask
     {
         private readonly IFileSystem _fileSystem;
         private readonly ILibraryManager _libraryManager;
-        private readonly ILogger _logger;
+        private readonly ILogger fLogger;
         private readonly IServerApplicationPaths _serverApplicationPaths;
         private readonly IUserDataManager _userDataManager;
         private readonly IUserManager _userManager;
@@ -30,13 +29,13 @@ namespace CodecInfo.ScheduledTasks
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IProviderManager _providerManager;
 
-        public CalculateMediaTask(ILogManager logger,
+        public CCalculateMediaTask(ILogManager logger,
             IUserManager userManager,
             IUserDataManager userDataManager,
             ILibraryManager libraryManager, IFileSystem fileSystem, IJsonSerializer jsonSerializer,
             IServerApplicationPaths serverApplicationPaths, IApplicationHost appHost, IProviderManager providerManager)
         {
-            _logger = logger.GetLogger("CodecInfo");
+            fLogger = logger.GetLogger("CodecInfo");
             _libraryManager = libraryManager;
             _userManager = userManager;
             _userDataManager = userDataManager;
@@ -47,7 +46,7 @@ namespace CodecInfo.ScheduledTasks
             _providerManager = providerManager;
         }
 
-        private static PluginConfiguration PluginConfiguration => Plugin.Instance.Configuration;
+        private static CPluginConfiguration PluginConfiguration => CPlugin.Instance.Configuration;
         string IScheduledTask.Name => "Calculate Codec Information for all library media";
 
         string IScheduledTask.Key => "CodecInfoCalculateStatsTask";
@@ -60,8 +59,8 @@ namespace CodecInfo.ScheduledTasks
         {
             // purely for progress reporting
             PluginConfiguration.LastUpdated = DateTime.Now.ToString("g");
-            PluginConfiguration.Version = Plugin.Instance.Version.ToString(4);
-            PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString();
+            PluginConfiguration.Version = CPlugin.Instance.Version.ToString(4);
+            PluginConfiguration.BuildDate = CBuildDateInfo.GetBuildDate().ToString();
             PluginConfiguration.ServerId = _appHost.SystemId;
 
             var numSteps = 4;
@@ -69,7 +68,7 @@ namespace CodecInfo.ScheduledTasks
             progress.Report(currStep / numSteps);
 
 
-            var calculator = new Calculator(_userManager, _libraryManager, _userDataManager, _fileSystem, _logger, _providerManager, cancellationToken);
+            var calculator = new CCalculator(_userManager, _libraryManager, _userDataManager, _fileSystem, fLogger, _providerManager, cancellationToken);
             using (calculator)
             {
                 PluginConfiguration.MediaInfoList = calculator.CalculateMediaInfo();
@@ -90,7 +89,7 @@ namespace CodecInfo.ScheduledTasks
 
             progress.Report(100);
 
-            Plugin.Instance.SaveConfiguration();
+            CPlugin.Instance.SaveConfiguration();
             return Task.CompletedTask;
         }
 

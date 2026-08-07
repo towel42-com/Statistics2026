@@ -1,6 +1,6 @@
 ﻿namespace CodecInfo.API
 {
-    public class ValueGroup
+    public class CValueGroup
     {
         public string Title { get; set; }
 
@@ -12,7 +12,7 @@
         public string ExtraInformation { get; set; }
         public string Id { get; set; }
 
-        public ValueGroup()
+        public CValueGroup()
         {
             Size = "small";
         }

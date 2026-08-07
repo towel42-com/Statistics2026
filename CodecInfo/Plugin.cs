@@ -10,9 +10,9 @@ using CodecInfo.Configuration;
 
 namespace CodecInfo
 {
-    public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
+    public class CPlugin : BasePlugin<CPluginConfiguration>, IHasWebPages, IHasThumbImage
     {
-        public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+        public CPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
             : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
@@ -118,7 +118,7 @@ namespace CodecInfo
 
         public override Guid Id => new Guid("4BFE2894-AEA3-4D3C-A429-503B56D61711");
 
-        public static Plugin Instance { get; private set; }
+        public static CPlugin Instance { get; private set; }
 
         public override string Name => "Codec Information";
 

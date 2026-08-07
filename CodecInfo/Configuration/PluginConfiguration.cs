@@ -4,11 +4,11 @@ using CodecInfo.API;
 
 namespace CodecInfo.Configuration
 {
-    public class PluginConfiguration : BasePluginConfiguration
+    public class CPluginConfiguration : BasePluginConfiguration
     {
-        public PluginConfiguration()
+        public CPluginConfiguration()
         {
-            MediaInfoList = new List<MediaInfo>();
+            MediaInfoList = new List<CMediaInfo>();
         }
 
         public string BuildDate { get; set; }
@@ -18,17 +18,17 @@ namespace CodecInfo.Configuration
 
         public bool showUnknownDVProfileCount { get; set; } = true;
  
-        public List<MediaInfo> MediaInfoList { get; set; }
+        public List<CMediaInfo> MediaInfoList { get; set; }
 
         // user for the summary tables
-        public ValueGroup MediaResolutions { get; set; }
-        public ValueGroup MediaCodecs { get; set; }
-        public ValueGroup DolbyVisionProfiles { get; set; }
-        public ValueGroup DolbyVisionProfilesWithUnknown { get; set; }
+        public CValueGroup MediaResolutions { get; set; }
+        public CValueGroup MediaCodecs { get; set; }
+        public CValueGroup DolbyVisionProfiles { get; set; }
+        public CValueGroup DolbyVisionProfilesWithUnknown { get; set; }
 
         // user for the icon/text list pages
-        public MediaItemCollection MovieCodecItems { get; set; }
-        public MediaItemCollection EpisodeCodecItems { get; set; }
+        public CMediaItemCollection MovieCodecItems { get; set; }
+        public CMediaItemCollection EpisodeCodecItems { get; set; }
 
         public static bool IsUnknownDolbyProfile(string profile)
         {

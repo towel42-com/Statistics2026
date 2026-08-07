@@ -11,24 +11,23 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using System.Net.Mime;
+using CodecInfo.Configuration;
 
 namespace CodecInfo.API
 {
-    public class Calculator : BaseCalculator
+    public class CCalculator : IBaseCalculator
     {
-        private readonly IFileSystem _fileSystem;
-        private readonly List<Movie> _allMovies;
-        private readonly List<Episode> _allEpisodes;
+        private readonly List<Movie> fAllMovies;
+        private readonly List<Episode> fAllEpisodes;
 
-        public Calculator(IUserManager userManager, ILibraryManager libraryManager,
+        public CCalculator(IUserManager userManager, ILibraryManager libraryManager,
             IUserDataManager userDataManager, IFileSystem fileSystem, ILogger logger,
             IProviderManager providerManager, CancellationToken cancellationToken)
-            : base(userManager, libraryManager, userDataManager, providerManager, logger, cancellationToken)
+            : base(userManager, libraryManager, userDataManager, fileSystem, logger, providerManager, cancellationToken)
         {
-            _fileSystem = fileSystem;
 
-            _allMovies = GetAllMovies().ToList();
-            _allEpisodes = GetAllEpisodes().ToList();
+            fAllMovies = GetAllMovies().ToList();
+            fAllEpisodes = GetAllEpisodes().ToList();
         }
 
         private (string primaryName, string secondaryName, string descName) GetDescName(Video video)
@@ -46,18 +45,18 @@ namespace CodecInfo.API
             return (primaryName, secondaryName, descName);
         }
 
-        private List<MediaInfo> CalculateMediaInfo(bool episodes)
+        private List<CMediaInfo> CalculateMediaInfo(bool episodes)
         {
             List<Video> videoList;
             if (episodes)
-                videoList = _allEpisodes.Cast<Video>().ToList();
+                videoList = fAllEpisodes.Cast<Video>().ToList();
             else
-                videoList = _allMovies.Cast<Video>().ToList();
+                videoList = fAllMovies.Cast<Video>().ToList();
 
             var mediaTypeName = episodes ? "Episode" : "Movie";
 
-            _logger.Debug($"CalculateMediaInfo - Starting {mediaTypeName} Analysis");
-            var retVal = new List<MediaInfo>();
+            fLogger.Debug($"CalculateMediaInfo - Starting {mediaTypeName} Analysis");
+            var retVal = new List<CMediaInfo>();
             foreach (var video in videoList)
             {
                 try
@@ -67,14 +66,14 @@ namespace CodecInfo.API
                     var mediaStream = video.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video);
                     if (!mediaStream?.Width.HasValue ?? true)
                     {
-                        _logger.Warn($"CalculateMediaInfo - {mediaTypeName} - {descName} has no video stream or width information.");
+                        fLogger.Warn($"CalculateMediaInfo - {mediaTypeName} - {descName} has no video stream or width information.");
                         continue;
                     }
 
                     var resolution = GetMediaResolution(mediaStream, true);
                     var codec = mediaStream?.Codec ?? "Unknown";
                     var dvProfile = GetDolbyVisionProfile(mediaStream);
-                    retVal.Add(new MediaInfo
+                    retVal.Add(new CMediaInfo
                     {
                         Id = video.Id.ToString(),
                         IsEpisode = episodes,
@@ -90,18 +89,18 @@ namespace CodecInfo.API
                         ServerLocation = video.Path ?? "Unknown"
                     });
 
-                    _logger.Debug($"CalculateMediaInfo -     Processed {mediaTypeName} - {descName} items processed");
+                    fLogger.Debug($"CalculateMediaInfo -     Processed {mediaTypeName} - {descName} items processed");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error($"CalculateMediaInfo {video.SortName}: {ex.Message}");
+                    fLogger.Error($"CalculateMediaInfo {video.SortName}: {ex.Message}");
                 }
             }
-            _logger.Debug($"CalculateMediaInfo - Finished {mediaTypeName} Analysis - {retVal.Count} items processed");
+            fLogger.Debug($"CalculateMediaInfo - Finished {mediaTypeName} Analysis - {retVal.Count} items processed");
             return retVal;
         }
 
-        public List<MediaInfo> CalculateMediaInfo()
+        public List<CMediaInfo> CalculateMediaInfo()
         {
             var retVal = CalculateMediaInfo(true);
             retVal.AddRange(CalculateMediaInfo(false));
@@ -109,19 +108,19 @@ namespace CodecInfo.API
             return retVal;
         }
 
-        public Dictionary<string, MediaCount> CalculateMediaResolutions(bool episodes)
+        public Dictionary<string, CMediaCount> CalculateMediaResolutions(bool episodes)
         {
             List<Video> videoList;
             if (episodes)
-                videoList = _allEpisodes.Cast<Video>().ToList();
+                videoList = fAllEpisodes.Cast<Video>().ToList();
             else
-                videoList = _allMovies.Cast<Video>().ToList();
+                videoList = fAllMovies.Cast<Video>().ToList();
 
             var mediaTypeName = episodes ? "Episode" : "Movie";
 
-            var qualityCounts = new Dictionary<string, MediaCount>();
+            var qualityCounts = new Dictionary<string, CMediaCount>();
 
-            _logger.Debug($"CalculateMediaResolutions - Starting {mediaTypeName} Analysis");
+            fLogger.Debug($"CalculateMediaResolutions - Starting {mediaTypeName} Analysis");
             foreach (var video in videoList.Where(w => w.Name != null).OrderBy(x => x.SortName))
             {
                 var (primaryName, secondaryName, descName) = GetDescName(video);
@@ -131,46 +130,46 @@ namespace CodecInfo.API
                     var quality = GetMediaResolution(video.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video), false).Trim();
                     if (!qualityCounts.TryGetValue(quality, out var qualityModel))
                     {
-                        qualityModel = new MediaCount { Name = quality, Movies = 0, Episodes = 0 };
+                        qualityModel = new CMediaCount { Name = quality, Movies = 0, Episodes = 0 };
                         qualityCounts[quality] = qualityModel;
                     }
                     if (episodes)
                         qualityCounts[quality].Episodes++;
                     else
                         qualityCounts[quality].Movies++;
-                    _logger.Debug($"CalculateMediaResolutions -    Processed - {mediaTypeName} - {descName} {quality}");
+                    fLogger.Debug($"CalculateMediaResolutions -    Processed - {mediaTypeName} - {descName} {quality}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Debug($"CalculateMediaResolutions - Error {descName}: {ex.Message}");
+                    fLogger.Debug($"CalculateMediaResolutions - Error {descName}: {ex.Message}");
                 }
             }
-            _logger.Debug($"CalculateMediaResolutions - Finished {mediaTypeName} Analysis");
+            fLogger.Debug($"CalculateMediaResolutions - Finished {mediaTypeName} Analysis");
             return qualityCounts;
         }
 
-        public ValueGroup CalculateMediaResolutions()
+        public CValueGroup CalculateMediaResolutions()
         {
             var qualityCounts = CalculateMediaResolutions(true); // Get episode resolutions
             var movieQualityCounts = CalculateMediaResolutions(false); // Get movie resolutions
 
-            _logger.Debug($"CalculateMediaResolutions - Finished all video Resolution Analysis");
+            fLogger.Debug($"CalculateMediaResolutions - Finished all video Resolution Analysis");
 
-            _logger.Debug($"CalculateMediaResolutions - Merging results");
+            fLogger.Debug($"CalculateMediaResolutions - Merging results");
             // Merge the two dictionaries
             foreach (var kvp in movieQualityCounts)
             {
                 if (!qualityCounts.TryGetValue(kvp.Key, out var qualityModel))
                 {
-                    qualityModel = new MediaCount { Name = kvp.Key, Movies = 0, Episodes = 0 };
+                    qualityModel = new CMediaCount { Name = kvp.Key, Movies = 0, Episodes = 0 };
                     qualityCounts[kvp.Key] = qualityModel;
                 }
                 qualityModel.Movies += kvp.Value.Movies;
                 qualityModel.Episodes += kvp.Value.Episodes;
             }
-            _logger.Debug($"CalculateMediaResolutions - Finished Merging results");
+            fLogger.Debug($"CalculateMediaResolutions - Finished Merging results");
 
-            return new ValueGroup
+            return new CValueGroup
             {
                 Title = Constants.MediaResolutions,
                 ValueLineOne = $"<table><tr><td></td><td>Movies</td><td>Episodes</td></tr>{string.Join("", qualityCounts.Values)}</table>",
@@ -223,7 +222,7 @@ namespace CodecInfo.API
             return dvProfile;
         }
 
-        private bool AddDolbyVisionProfile(ref MediaStream mediaStream, ref Dictionary<string, MediaCount> dvProfiles, string mediaName, bool isMovie)
+        private bool AddDolbyVisionProfile(ref MediaStream mediaStream, ref Dictionary<string, CMediaCount> dvProfiles, string mediaName, bool isMovie)
         {
             var dvProfile = GetDolbyVisionProfile(mediaStream);
             if (dvProfile == null || dvProfile == "")
@@ -231,7 +230,7 @@ namespace CodecInfo.API
 
             if (!dvProfiles.TryGetValue(dvProfile, out var model))
             {
-                model = new MediaCount { Name = dvProfile, Movies = 0, Episodes = 0 };
+                model = new CMediaCount { Name = dvProfile, Movies = 0, Episodes = 0 };
                 dvProfiles[dvProfile] = model;
             }
             if (isMovie)
@@ -239,17 +238,17 @@ namespace CodecInfo.API
             else
                 dvProfiles[dvProfile].Episodes++;
 
-            _logger.Debug($"AddDolbyVisionProfile - {mediaName}: {dvProfile}");
+            fLogger.Debug($"AddDolbyVisionProfile - {mediaName}: {dvProfile}");
 
             return true;
         }
 
-        public ValueGroup CalculateDVProfileInfo(bool showUnknownDVProfileCount)
+        public CValueGroup CalculateDVProfileInfo(bool showUnknownDVProfileCount)
         {
-            var dvProfiles = new Dictionary<string, MediaCount>();
+            var dvProfiles = new Dictionary<string, CMediaCount>();
 
-            _logger.Debug($"CalculateDVProfileInfo - Starting Movie Analysis");
-            foreach (var movie in _allMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
+            fLogger.Debug($"CalculateDVProfileInfo - Starting Movie Analysis");
+            foreach (var movie in fAllMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
             {
                 try
                 {
@@ -258,13 +257,13 @@ namespace CodecInfo.API
                 }
                 catch (Exception ex)
                 {
-                    _logger.Debug($"CalculateDVProfileInfo-Error {movie.SortName}: {ex.Message}");
+                    fLogger.Debug($"CalculateDVProfileInfo-Error {movie.SortName}: {ex.Message}");
                 }
             }
 
-            _logger.Debug($"CalculateDVProfileInfo - Finished Movie Analysis");
-            _logger.Debug($"CalculateDVProfileInfo - Starting Episode Analysis");
-            foreach (var episode in _allEpisodes.Where(w => w.SortName != null).OrderBy(x => x.SortName))
+            fLogger.Debug($"CalculateDVProfileInfo - Finished Movie Analysis");
+            fLogger.Debug($"CalculateDVProfileInfo - Starting Episode Analysis");
+            foreach (var episode in fAllEpisodes.Where(w => w.SortName != null).OrderBy(x => x.SortName))
             {
                 try
                 {
@@ -273,10 +272,10 @@ namespace CodecInfo.API
                 }
                 catch (Exception ex)
                 {
-                    _logger.Debug($"CalculateDVProfileInfo-episode-Error {episode.SortName}: {ex.Message}");
+                    fLogger.Debug($"CalculateDVProfileInfo-episode-Error {episode.SortName}: {ex.Message}");
                 }
             }
-            _logger.Debug($"CalculateDVProfileInfo - Finished Episode Analysis");
+            fLogger.Debug($"CalculateDVProfileInfo - Finished Episode Analysis");
 
             var tableValueString = $"<table><tr><td></td><td>Movies</td><td>Episodes</td></tr>";
 
@@ -285,7 +284,7 @@ namespace CodecInfo.API
                 bool foundUnknown = false;
                 foreach (var entry in dvProfiles)
                 {
-                    if (CodecInfo.Configuration.PluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
+                    if (CPluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
                     {
                         foundUnknown = true;
                         tableValueString += entry.Value.ToString();
@@ -314,7 +313,7 @@ namespace CodecInfo.API
 
             foreach (var entry in dvProfiles)
             {
-                if (CodecInfo.Configuration.PluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
+                if (CPluginConfiguration.IsUnknownDolbyProfile(entry.Value.Name))
                     continue;
 
                 if (entry.Value.Name != "Profile 5.0")
@@ -322,7 +321,7 @@ namespace CodecInfo.API
             }
             tableValueString += "</table>";
 
-            return new ValueGroup
+            return new CValueGroup
             {
                 Title = Constants.DolbyVisionProfiles,
                 ValueLineOne = tableValueString,
@@ -334,54 +333,54 @@ namespace CodecInfo.API
         }
 
 
-        public ValueGroup CalculateMediaCodecs()
+        public CValueGroup CalculateMediaCodecs()
         {
-            var codecCounts = new Dictionary<string, MediaCount>();
+            var codecCounts = new Dictionary<string, CMediaCount>();
 
-            _logger.Debug($"CalculateMediaCodecs - Starting Movie Analysis");
-            foreach (var movie in _allMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
+            fLogger.Debug($"CalculateMediaCodecs - Starting Movie Analysis");
+            foreach (var movie in fAllMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
             {
                 try
                 {
                     var codec = movie.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video)?.Codec ?? "Unknown";
                     if (!codecCounts.TryGetValue(codec, out var codecModel))
                     {
-                        codecModel = new MediaCount { Name = codec, Movies = 0, Episodes = 0 };
+                        codecModel = new CMediaCount { Name = codec, Movies = 0, Episodes = 0 };
                         codecCounts[codec] = codecModel;
                     }
                     codecCounts[codec].Movies++;
 
-                    _logger.Debug($"CalculateMediaCodecs {movie.SortName} {codec}");
+                    fLogger.Debug($"CalculateMediaCodecs {movie.SortName} {codec}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Debug($"CalculateMediaCodecs-Error {movie.SortName}: {ex.Message}");
+                    fLogger.Debug($"CalculateMediaCodecs-Error {movie.SortName}: {ex.Message}");
                 }
             }
 
-            _logger.Debug($"CalculateMediaCodecs - Finished Movie Analysis");
-            _logger.Debug($"CalculateMediaCodecs - Starting Episode Analysis");
-            foreach (var episode in _allEpisodes.Where(w => w.SortName != null).OrderBy(x => x.SortName))
+            fLogger.Debug($"CalculateMediaCodecs - Finished Movie Analysis");
+            fLogger.Debug($"CalculateMediaCodecs - Starting Episode Analysis");
+            foreach (var episode in fAllEpisodes.Where(w => w.SortName != null).OrderBy(x => x.SortName))
             {
                 try
                 {
                     var codec = episode.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video)?.Codec ?? "Unknown";
                     if (!codecCounts.TryGetValue(codec, out var codecModel))
                     {
-                        codecModel = new MediaCount { Name = codec, Movies = 0, Episodes = 0 };
+                        codecModel = new CMediaCount { Name = codec, Movies = 0, Episodes = 0 };
                         codecCounts[codec] = codecModel;
                     }
                     codecCounts[codec].Episodes++;
-                    _logger.Debug($"CalculateMediaCodecs-episode {(episode.Series?.SortName ?? "invalid name")}: {episode.SortName} {codec}");
+                    fLogger.Debug($"CalculateMediaCodecs-episode {(episode.Series?.SortName ?? "invalid name")}: {episode.SortName} {codec}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Debug($"CalculateMediaCodecs-episode-Error {episode.SortName}: {ex.Message}");
+                    fLogger.Debug($"CalculateMediaCodecs-episode-Error {episode.SortName}: {ex.Message}");
                 }
             }
 
-            _logger.Debug($"CalculateMediaCodecs - Finished Episode Analysis");
-            return new ValueGroup
+            fLogger.Debug($"CalculateMediaCodecs - Finished Episode Analysis");
+            return new CValueGroup
             {
                 Title = Constants.MediaCodecs,
                 ValueLineOne = $"<table><tr><td></td><td>Movies</td><td>Episodes</td></tr>{string.Join("", codecCounts.Values)}</table>",
@@ -392,85 +391,85 @@ namespace CodecInfo.API
             };
         }
 
-        public MediaItemCollection CalculateEpisodeCodecItems()
+        public CMediaItemCollection CalculateEpisodeCodecItems()
         {
-            var codecEpisodeMap = new Dictionary<string, List<CodecInfo.API.MediaItem>>();
+            var codecEpisodeMap = new Dictionary<string, List<CMediaItem>>();
 
-            foreach (var episode in _allEpisodes.Where(w => w.SortName != null).OrderBy(x => x.SortName))
+            foreach (var episode in fAllEpisodes.Where(w => w.SortName != null).OrderBy(x => x.SortName))
             {
-                _logger.Debug($"CalculateEpisodeCodecItems {episode.Name}");
+                fLogger.Debug($"CalculateEpisodeCodecItems {episode.Name}");
                 var codec = episode.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video)?.Codec ?? "Unknown";
 
                 if (!codecEpisodeMap.TryGetValue(codec, out var episodeList))
                 {
-                    episodeList = new List<CodecInfo.API.MediaItem>();
+                    episodeList = new List<CMediaItem>();
                     codecEpisodeMap[codec] = episodeList;
                 }
 
                 var episodeName = "S" + episode.ParentIndexNumber.ToString().PadLeft(2, '0') + "E" + episode.IndexNumber.ToString().PadLeft(2, '0') + ": " + episode.Name;
-                var mediaItem = new CodecInfo.API.MediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
+                var mediaItem = new CMediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
                 episodeList.Add(mediaItem);
 
                 if (codec == "Unknown")
-                    _logger.Debug($"CalculateEpisodeCodecItems-Unknown {episode.Name}");
+                    fLogger.Debug($"CalculateEpisodeCodecItems-Unknown {episode.Name}");
             }
 
-            var list = codecEpisodeMap.Select(pair => new MediaItemGroup
+            var list = codecEpisodeMap.Select(pair => new CMediaItemGroup
             {
                 Title = pair.Key,
                 MediaItems = pair.Value,
                 IsUnknownDolbyProfile = false
             }).ToList();
 
-            return new MediaItemCollection()
+            return new CMediaItemCollection()
             {
                 Count = list.Count(),
                 MediaItemGroups = list
             };
         }
 
-        public MediaItemCollection CalculateMovieCodecItems()
+        public CMediaItemCollection CalculateMovieCodecItems()
         {
-            var codecMovieMap = new Dictionary<string, List<CodecInfo.API.MediaItem>>();
+            var codecMovieMap = new Dictionary<string, List<CMediaItem>>();
 
-            foreach (var movie in _allMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
+            foreach (var movie in fAllMovies.Where(w => w.SortName != null).OrderBy(x => x.SortName))
             {
-                _logger.Debug($"CalculateMovieCodecItems {movie.Name}");
+                fLogger.Debug($"CalculateMovieCodecItems {movie.Name}");
                 var codec = movie.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video)?.Codec ?? "Unknown";
 
                 if (!codecMovieMap.TryGetValue(codec, out var movieList))
                 {
-                    movieList = new List<CodecInfo.API.MediaItem>();
+                    movieList = new List<CMediaItem>();
                     codecMovieMap[codec] = movieList;
                 }
-                movieList.Add(new CodecInfo.API.MediaItem { Id = movie.Id.ToString(), Title = movie.Name, Year = movie.ProductionYear });
-                _logger.Debug($"{codec} {codecMovieMap.Count}");
+                movieList.Add(new CMediaItem { Id = movie.Id.ToString(), Title = movie.Name, Year = movie.ProductionYear });
+                fLogger.Debug($"{codec} {codecMovieMap.Count}");
 
                 if (codec == "Unknown")
-                    _logger.Debug($"CalculateMovieCodecItems-Unknown {movie.Name}");
+                    fLogger.Debug($"CalculateMovieCodecItems-Unknown {movie.Name}");
             }
 
-            var list = codecMovieMap.Select(pair => new MediaItemGroup
+            var list = codecMovieMap.Select(pair => new CMediaItemGroup
             {
                 Title = pair.Key,
                 MediaItems = pair.Value,
                 IsUnknownDolbyProfile = false
             }).ToList();
 
-            return new MediaItemCollection()
+            return new CMediaItemCollection()
             {
                 Count = list.Count(),
                 MediaItemGroups = list
             };
         }
 
-        public MediaItemCollection CalculateEpisodeDVProfileList()
+        public CMediaItemCollection CalculateEpisodeDVProfileList()
         {
-            var dvProfileMap = new Dictionary<string, List<CodecInfo.API.MediaItem>>();
+            var dvProfileMap = new Dictionary<string, List<CMediaItem>>();
 
-            foreach (var episode in _allEpisodes.Where(w => w.SortName != null).OrderBy(x => x.Series.SortName))
+            foreach (var episode in fAllEpisodes.Where(w => w.SortName != null).OrderBy(x => x.Series.SortName))
             {
-                _logger.Debug($"CalculateEpisodeDVProfileList - '{episode.SeriesName} - {episode.Name}'");
+                fLogger.Debug($"CalculateEpisodeDVProfileList - '{episode.SeriesName} - {episode.Name}'");
                 var mediaStream = episode.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video);
 
                 var dvProfile = GetDolbyVisionProfile(mediaStream);
@@ -481,26 +480,26 @@ namespace CodecInfo.API
 
                 if (!dvProfileMap.TryGetValue(dvProfile, out var episodeList))
                 {
-                    episodeList = new List<CodecInfo.API.MediaItem>();
+                    episodeList = new List<CMediaItem>();
                     dvProfileMap[dvProfile] = episodeList;
                 }
 
                 var episodeName = "S" + episode.ParentIndexNumber.ToString().PadLeft(2, '0') + "E" + episode.IndexNumber.ToString().PadLeft(2, '0') + ": " + episode.Name;
-                var mediaItem = new CodecInfo.API.MediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
+                var mediaItem = new CMediaItem { Id = episode.Id.ToString(), GroupName = episode.SeriesName, Title = episodeName, Year = episode.ProductionYear };
 
                 episodeList.Add(mediaItem);
-                _logger.Debug($"CalculateEpisodeDVProfileList - {dvProfile} - '{episode.SeriesName}' - '{episode.Name}'");
+                fLogger.Debug($"CalculateEpisodeDVProfileList - {dvProfile} - '{episode.SeriesName}' - '{episode.Name}'");
             }
 
-            _logger.Debug($"CalculateEpisodeDVProfileList - Converting to Episode Collection");
-            var list = dvProfileMap.Select(pair => new MediaItemGroup
+            fLogger.Debug($"CalculateEpisodeDVProfileList - Converting to Episode Collection");
+            var list = dvProfileMap.Select(pair => new CMediaItemGroup
             {
                 Title = pair.Key,
                 MediaItems = pair.Value,
-                IsUnknownDolbyProfile = CodecInfo.Configuration.PluginConfiguration.IsUnknownDolbyProfile(pair.Key)
+                IsUnknownDolbyProfile = CPluginConfiguration.IsUnknownDolbyProfile(pair.Key)
             }).ToList();
 
-            return new MediaItemCollection()
+            return new CMediaItemCollection()
             {
                 Count = list.Count(),
                 MediaItemGroups = list

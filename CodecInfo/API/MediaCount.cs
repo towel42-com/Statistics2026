@@ -1,6 +1,6 @@
 ﻿namespace CodecInfo.API
 {
-    public class MediaCount
+    public class CMediaCount
     {
         public string Name { get; set; }
         public int Movies { get; set; }

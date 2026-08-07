@@ -2,7 +2,7 @@
 
 namespace CodecInfo.API
 {
-    public class MediaItem
+    public class CMediaItem
     {
         public string GroupName { get; set; }
         public string Title { get; set; }
@@ -10,16 +10,16 @@ namespace CodecInfo.API
         public int? Year { get; set; }
     }
 
-    public class MediaItemGroup
+    public class CMediaItemGroup
     {
-        public List<MediaItem> MediaItems { get; set; }
+        public List<CMediaItem> MediaItems { get; set; }
         public string Title { get; set; }
         public bool IsUnknownDolbyProfile { get; set; } = false;
     }
 
-    public class MediaItemCollection
+    public class CMediaItemCollection
     {
         public int Count { get; set; }
-        public List<MediaItemGroup> MediaItemGroups { get; set; }
+        public List<CMediaItemGroup> MediaItemGroups { get; set; }
     }
 }
