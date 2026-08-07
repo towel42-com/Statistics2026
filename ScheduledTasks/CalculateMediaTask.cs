@@ -55,7 +55,7 @@ namespace CodecInfoPlugin.ScheduledTasks
 
         string IScheduledTask.Description => "Task that will calculate Codec Information of all media in library. (Ideal for weekly/non-daily schedule)";
 
-        string IScheduledTask.Category => "CodecInfoPlugin";
+        string IScheduledTask.Category => "Media Codec Information";
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
@@ -65,7 +65,7 @@ namespace CodecInfoPlugin.ScheduledTasks
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString();
             PluginConfiguration.ServerId = _appHost.SystemId;
 
-            var numSteps = 8;
+            var numSteps = 4;
             var currStep = 0;
             progress.Report(currStep/numSteps);
 
@@ -83,18 +83,6 @@ namespace CodecInfoPlugin.ScheduledTasks
                 progress.Report((++currStep) / numSteps);
 
                 PluginConfiguration.DolbyVisionProfiles = calculator.CalculateDVProfileInfo( PluginConfiguration.showUnknownDVProfileCount );
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.MovieCodecItems = calculator.CalculateMovieCodecItems();
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.EpisodeCodecItems = calculator.CalculateEpisodeCodecItems();
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.MovieDVProfileItems = calculator.CalculateMovieDVProfileList();
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.EpisodeDVProfileItems = calculator.CalculateEpisodeDVProfileList();
                 progress.Report((++currStep) / numSteps);
             }
 
