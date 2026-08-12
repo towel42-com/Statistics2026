@@ -13,7 +13,7 @@ using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using CodecInfo.Configuration;
-using CodecInfo.API;
+using CodecInfo.Core;
 
 namespace CodecInfo.ScheduledTasks
 {

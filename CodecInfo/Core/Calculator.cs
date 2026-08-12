@@ -13,7 +13,7 @@ using MediaBrowser.Model.Logging;
 using System.Net.Mime;
 using CodecInfo.Configuration;
 
-namespace CodecInfo.API
+namespace CodecInfo.Core
 {
     public class CCalculator : IBaseCalculator
     {

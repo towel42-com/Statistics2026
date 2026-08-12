@@ -13,7 +13,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CodecInfo.API
+namespace CodecInfo.Core
 {
     public abstract class IBaseCalculator : IDisposable
     {

@@ -12,7 +12,7 @@
     </PropertyGroup>
 
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="call $(SolutionDir)InstallAndLaunch.bat -Build -TargetPath &quot;$(TargetPath)&quot;" />
+		<Exec Command="call C:\Users\scott.TOWEL42\Dropbox\home\bin\mediaScripts\InstallAndLaunch.bat -Build -TargetPath &quot;$(TargetPath)&quot; -EmbyRoot &quot;D:\Emby\EmbyServer&quot;" />
 	</Target>
 
 	<ItemGroup>

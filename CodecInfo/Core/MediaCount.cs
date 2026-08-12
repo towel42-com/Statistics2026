@@ -1,4 +1,4 @@
-﻿namespace CodecInfo.API
+﻿namespace CodecInfo.Core
 {
     public class CMediaCount
     {
