@@ -10,8 +10,8 @@ using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
-using System.Net.Mime;
 using CodecInfo.Configuration;
+using CodecInfo.Data;
 
 namespace CodecInfo.Core
 {

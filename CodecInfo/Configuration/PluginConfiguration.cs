@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using MediaBrowser.Model.Plugins;
-using CodecInfo.Core;
+using CodecInfo.Data;
 
 namespace CodecInfo.Configuration
 {

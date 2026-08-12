@@ -14,6 +14,7 @@ using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using CodecInfo.Configuration;
 using CodecInfo.Core;
+using CodecInfo.Data;
 
 namespace CodecInfo.ScheduledTasks
 {

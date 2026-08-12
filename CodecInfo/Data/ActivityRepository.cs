@@ -574,132 +574,132 @@ namespace playback_reporting.Data
             }
         }
 
-        public void AddPlaybackAction(PlaybackInfo play_info)
-        {
-            string sql_add = "INSERT INTO PlaybackActivity " +
-                "(DateCreated, " +
-                "UserId, " +
-                "ItemId, " +
-                "ItemType, " +
-                "ItemName, " +
-                "PlaybackMethod, " +
-                "ClientName, " +
-                "DeviceName, " +
-                "PlayDuration, " +
-                "PauseDuration, " +
-                "RemoteAddress, " +
-                "TranscodeReasons) " +
-                "VALUES " +
-                "(@DateCreated, " +
-                "@UserId, " +
-                "@ItemId, " +
-                "@ItemType, " +
-                "@ItemName, " +
-                "@PlaybackMethod, " +
-                "@ClientName, " +
-                "@DeviceName, " +
-                "@PlayDuration, " +
-                "@PauseDuration, " +
-                "@RemoteAddress, " +
-                "@TranscodeReasons)";
+        //public void AddPlaybackAction(PlaybackInfo play_info)
+        //{
+        //    string sql_add = "INSERT INTO PlaybackActivity " +
+        //        "(DateCreated, " +
+        //        "UserId, " +
+        //        "ItemId, " +
+        //        "ItemType, " +
+        //        "ItemName, " +
+        //        "PlaybackMethod, " +
+        //        "ClientName, " +
+        //        "DeviceName, " +
+        //        "PlayDuration, " +
+        //        "PauseDuration, " +
+        //        "RemoteAddress, " +
+        //        "TranscodeReasons) " +
+        //        "VALUES " +
+        //        "(@DateCreated, " +
+        //        "@UserId, " +
+        //        "@ItemId, " +
+        //        "@ItemType, " +
+        //        "@ItemName, " +
+        //        "@PlaybackMethod, " +
+        //        "@ClientName, " +
+        //        "@DeviceName, " +
+        //        "@PlayDuration, " +
+        //        "@PauseDuration, " +
+        //        "@RemoteAddress, " +
+        //        "@TranscodeReasons)";
 
-            lock (connection)
-            {
-                using (var statement = connection.PrepareStatement(sql_add))
-                {
-                    TryBind(statement, "@DateCreated", ToDateTimeParamValue(play_info.Date));
-                    TryBind(statement, "@UserId", play_info.UserId);
-                    TryBind(statement, "@ItemId", play_info.ItemId);
-                    TryBind(statement, "@ItemType", play_info.ItemType);
-                    TryBind(statement, "@ItemName", play_info.ItemName);
-                    TryBind(statement, "@PlaybackMethod", play_info.PlaybackMethod);
-                    TryBind(statement, "@ClientName", play_info.ClientName);
-                    TryBind(statement, "@DeviceName", play_info.DeviceName);
-                    TryBind(statement, "@PlayDuration", play_info.PlaybackDuration);
-                    TryBind(statement, "@PauseDuration", play_info.PausedDuration);
-                    TryBind(statement, "@RemoteAddress", play_info.RemoteAddress);
-                    TryBind(statement, "@TranscodeReasons", play_info.TranscodeReasons);
-                    statement.MoveNext();
-                }
-            }
-        }
+        //    lock (connection)
+        //    {
+        //        using (var statement = connection.PrepareStatement(sql_add))
+        //        {
+        //            TryBind(statement, "@DateCreated", ToDateTimeParamValue(play_info.Date));
+        //            TryBind(statement, "@UserId", play_info.UserId);
+        //            TryBind(statement, "@ItemId", play_info.ItemId);
+        //            TryBind(statement, "@ItemType", play_info.ItemType);
+        //            TryBind(statement, "@ItemName", play_info.ItemName);
+        //            TryBind(statement, "@PlaybackMethod", play_info.PlaybackMethod);
+        //            TryBind(statement, "@ClientName", play_info.ClientName);
+        //            TryBind(statement, "@DeviceName", play_info.DeviceName);
+        //            TryBind(statement, "@PlayDuration", play_info.PlaybackDuration);
+        //            TryBind(statement, "@PauseDuration", play_info.PausedDuration);
+        //            TryBind(statement, "@RemoteAddress", play_info.RemoteAddress);
+        //            TryBind(statement, "@TranscodeReasons", play_info.TranscodeReasons);
+        //            statement.MoveNext();
+        //        }
+        //    }
+        //}
 
-        public void UpdatePlaybackAction(PlaybackInfo play_info)
-        {
-            string sql_add = "update PlaybackActivity set PlayDuration = @PlayDuration, PauseDuration = @PauseDuration where DateCreated = @DateCreated and UserId = @UserId and ItemId = @ItemId";
-            lock (connection)
-            {
-                using (var statement = connection.PrepareStatement(sql_add))
-                {
-                    TryBind(statement, "@DateCreated", ToDateTimeParamValue(play_info.Date));
-                    TryBind(statement, "@UserId", play_info.UserId);
-                    TryBind(statement, "@ItemId", play_info.ItemId);
-                    TryBind(statement, "@PlayDuration", play_info.PlaybackDuration);
-                    TryBind(statement, "@PauseDuration", play_info.PausedDuration);
-                    statement.MoveNext();
-                }
-            }
-        }
+        //public void UpdatePlaybackAction(PlaybackInfo play_info)
+        //{
+        //    string sql_add = "update PlaybackActivity set PlayDuration = @PlayDuration, PauseDuration = @PauseDuration where DateCreated = @DateCreated and UserId = @UserId and ItemId = @ItemId";
+        //    lock (connection)
+        //    {
+        //        using (var statement = connection.PrepareStatement(sql_add))
+        //        {
+        //            TryBind(statement, "@DateCreated", ToDateTimeParamValue(play_info.Date));
+        //            TryBind(statement, "@UserId", play_info.UserId);
+        //            TryBind(statement, "@ItemId", play_info.ItemId);
+        //            TryBind(statement, "@PlayDuration", play_info.PlaybackDuration);
+        //            TryBind(statement, "@PauseDuration", play_info.PausedDuration);
+        //            statement.MoveNext();
+        //        }
+        //    }
+        //}
 
 
-        public List<Dictionary<string, object>> GetUserReport(int days, DateTime end_date)
-        {
-            List<Dictionary<string, object>> report = new List<Dictionary<string, object>>();
+        //public List<Dictionary<string, object>> GetUserReport(int days, DateTime end_date)
+        //{
+        //    List<Dictionary<string, object>> report = new List<Dictionary<string, object>>();
 
-            DateTime start_date = end_date.Subtract(new TimeSpan(days, 0, 0, 0));
-            Dictionary<String, Dictionary<string, int>> usage = new Dictionary<String, Dictionary<string, int>>();
+        //    DateTime start_date = end_date.Subtract(new TimeSpan(days, 0, 0, 0));
+        //    Dictionary<String, Dictionary<string, int>> usage = new Dictionary<String, Dictionary<string, int>>();
 
-            string sql = "";
-            sql += "SELECT x.latest_date, x.UserId, x.play_count, x.total_duarion, y.ItemName, y.DeviceName, y.ItemId ";
-            sql += "FROM( ";
-            sql += "SELECT MAX(DateCreated) AS latest_date, UserId, COUNT(1) AS play_count, SUM(PlayDuration - PauseDuration) AS total_duarion ";
-            sql += "FROM PlaybackActivity ";
-            sql += "WHERE DateCreated >= @start_date AND DateCreated <= @end_date ";
-            sql += "AND UserId not IN (select UserId from UserList) ";
-            sql += "GROUP BY UserId ";
-            sql += ") AS x ";
-            sql += "INNER JOIN PlaybackActivity AS y ON x.latest_date = y.DateCreated AND x.UserId = y.UserId ";
-            sql += "ORDER BY x.latest_date DESC";
+        //    string sql = "";
+        //    sql += "SELECT x.latest_date, x.UserId, x.play_count, x.total_duarion, y.ItemName, y.DeviceName, y.ItemId ";
+        //    sql += "FROM( ";
+        //    sql += "SELECT MAX(DateCreated) AS latest_date, UserId, COUNT(1) AS play_count, SUM(PlayDuration - PauseDuration) AS total_duarion ";
+        //    sql += "FROM PlaybackActivity ";
+        //    sql += "WHERE DateCreated >= @start_date AND DateCreated <= @end_date ";
+        //    sql += "AND UserId not IN (select UserId from UserList) ";
+        //    sql += "GROUP BY UserId ";
+        //    sql += ") AS x ";
+        //    sql += "INNER JOIN PlaybackActivity AS y ON x.latest_date = y.DateCreated AND x.UserId = y.UserId ";
+        //    sql += "ORDER BY x.latest_date DESC";
 
-            lock (connection)
-            {
-                using (var statement = connection.PrepareStatement(sql))
-                {
-                    TryBind(statement, "@start_date", start_date.ToString("yyyy-MM-dd 00:00:00"));
-                    TryBind(statement, "@end_date", end_date.ToString("yyyy-MM-dd 23:59:59"));
+        //    lock (connection)
+        //    {
+        //        using (var statement = connection.PrepareStatement(sql))
+        //        {
+        //            TryBind(statement, "@start_date", start_date.ToString("yyyy-MM-dd 00:00:00"));
+        //            TryBind(statement, "@end_date", end_date.ToString("yyyy-MM-dd 23:59:59"));
 
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        Dictionary<string, object> row_data = new Dictionary<string, object>();
+        //            while (statement.MoveNext())
+        //            {
+        //                var row = statement.Current;
+        //                Dictionary<string, object> row_data = new Dictionary<string, object>();
 
-                        DateTime latest_date = ReadDateTime(row.GetString(0)).ToLocalTime();
-                        row_data.Add("latest_date", latest_date);
+        //                DateTime latest_date = ReadDateTime(row.GetString(0)).ToLocalTime();
+        //                row_data.Add("latest_date", latest_date);
 
-                        string user_id = row.GetString(1);
-                        row_data.Add("user_id", user_id);
+        //                string user_id = row.GetString(1);
+        //                row_data.Add("user_id", user_id);
 
-                        int action_count = row.GetInt(2);
-                        int seconds_sum = row.GetInt(3);
-                        row_data.Add("total_count", action_count);
-                        row_data.Add("total_time", seconds_sum);
+        //                int action_count = row.GetInt(2);
+        //                int seconds_sum = row.GetInt(3);
+        //                row_data.Add("total_count", action_count);
+        //                row_data.Add("total_time", seconds_sum);
 
-                        string item_name = row.GetString(4);
-                        row_data.Add("item_name", item_name);
+        //                string item_name = row.GetString(4);
+        //                row_data.Add("item_name", item_name);
 
-                        string client_name = row.GetString(5);
-                        row_data.Add("client_name", client_name);
+        //                string client_name = row.GetString(5);
+        //                row_data.Add("client_name", client_name);
 
-                        int item_id = row.GetInt(6);
-                        row_data.Add("item_id", item_id);
+        //                int item_id = row.GetInt(6);
+        //                row_data.Add("item_id", item_id);
 
-                        report.Add(row_data);
-                    }
-                }
-            }
+        //                report.Add(row_data);
+        //            }
+        //        }
+        //    }
 
-            return report;
-        }
+        //    return report;
+        //}
 
     }
 }

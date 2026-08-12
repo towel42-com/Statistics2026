@@ -1,4 +1,4 @@
-﻿namespace CodecInfo.Core
+﻿namespace CodecInfo.Data
 {
     public class CValueGroup
     {
