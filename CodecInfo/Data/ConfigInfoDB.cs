@@ -10,9 +10,9 @@ using System.Linq;
 
 namespace CodecInfo.Data
 {
-    public sealed class ConfigInfoData
+    public sealed class CConfigInfoDB
     {
-        private static ConfigInfoData instance = null;
+        private static CConfigInfoDB instance = null;
         private static readonly object _padlock = new object();
 
         private static string[] _datetimeFormats = new string[] {
@@ -50,29 +50,42 @@ namespace CodecInfo.Data
         };
         private string _datetimeFormatUtc = _datetimeFormats[5];
         private string _datetimeFormatLocal = _datetimeFormats[19];
-        
+
         private ILogger _logger = null;
         private IDatabaseConnection connection = null;
 
-        public static ConfigInfoData GetInstance(string db_file, ILogger log)
+        public static CConfigInfoDB GetInstance(string db_file, ILogger log)
         {
             lock (_padlock)
             {
                 if (instance == null)
                 {
-                    instance = new ConfigInfoData(db_file, log);
+                    instance = new CConfigInfoDB(db_file, log);
                     log.Info("ConfigInfoData : New Instance Created : " + instance.GetHashCode());
                 }
                 return instance;
             }
         }
 
-        private ConfigInfoData()
+        public static CConfigInfoDB GetExistingInstance()
+        {
+            lock (_padlock)
+            {
+                if (instance == null)
+                {
+                    throw new InvalidOperationException("No existing instance found.");
+                }
+                return instance;
+            }
+        }
+
+
+        private CConfigInfoDB()
         {
 
         }
 
-        private ConfigInfoData(string db_path, ILogger l)
+        private CConfigInfoDB(string db_path, ILogger l)
         {
             _logger = l;
             _logger.Info("ConfigInfoData : Creating");
@@ -80,7 +93,7 @@ namespace CodecInfo.Data
             connection = CreateConnection(db_file_name);
         }
 
-        ~ConfigInfoData()
+        ~CConfigInfoDB()
         {
             _logger.Info("ConfigInfoData : Cleaning up");
             if (connection != null)
@@ -102,6 +115,23 @@ namespace CodecInfo.Data
             {
                 bindParam.Bind(value);
             }
+            else
+            {
+                _logger.Debug($"Error Binding {name} to {value}");
+            }
+        }
+
+        private void TryBind(IStatement statement, string name, bool value)
+        {
+            IBindParameter bindParam;
+            if (statement.BindParameters.TryGetValue(name, out bindParam))
+            {
+                bindParam.Bind(value);
+            }
+            else
+            {
+                _logger.Debug($"Error Binding {name} to {value}");
+            }
         }
 
         public void TryBind(IStatement statement, string name, string value)
@@ -118,6 +148,10 @@ namespace CodecInfo.Data
                     bindParam.Bind(value);
                 }
             }
+            else
+            {
+                _logger.Debug($"Error Binding {name} to {value}");
+            }
         }
 
         private string GetDateTimeKindFormat(DateTimeKind kind)
@@ -128,7 +162,7 @@ namespace CodecInfo.Data
         public DateTime ReadDateTime(string dateText)
         {
             return DateTime.ParseExact(
-                dateText, 
+                dateText,
                 _datetimeFormats,
                 DateTimeFormatInfo.InvariantInfo,
                 DateTimeStyles.None).ToUniversalTime();
@@ -187,78 +221,109 @@ namespace CodecInfo.Data
             {
                 // create tables if they dont already exist
                 // ROWID 
-                connection.Execute("create table if not exists PlaybackActivity (" +
-                                "DateCreated DATETIME NOT NULL, " +
-                                "UserId TEXT, " +
-                                "ItemId TEXT, " +
-                                "ItemType TEXT, " +
-                                "ItemName TEXT, " +
-                                "PlaybackMethod TEXT, " +
-                                "ClientName TEXT, " +
-                                "DeviceName TEXT, " +
-                                "PlayDuration INT, " +
-                                "PauseDuration INT, " +
-                                "RemoteAddress TEXT, " +
-                                "TranscodeReasons TEXT" +
+                connection.Execute("create table if not exists StatusInfo (" +
+                                "LastUpdated DATETIME NOT NULL, " +
+                                "Version TEXT, " +
+                                "BuildDate TEXT " +
                                 ")");
-                connection.Execute("create table if not exists UserList (UserId TEXT)");
 
-                // check schema on PlaybackActivity table
-                string sql_info = "pragma table_info('PlaybackActivity')";
-                HashSet<string> actual_cols = new HashSet<string>();
-                using (var statement = connection.PrepareStatement(sql_info))
+                connection.Execute("create table if not exists MediaInfo (" +
+                                "ItemId TEXT NOT NULL, " +
+                                "PrimaryName TEXT, " +
+                                "SortName TEXT, " +
+                                "SecondaryName, " +
+                                "StartYear INT, " +
+                                "IsEpisode BOOLEAN, " +
+                                "Season INT, " +
+                                "Episode INT, " +
+                                "Resolution TEXT, " +
+                                "CodecName TEXT, " +
+                                "DolbyVisionProfile TEXT, " +
+                                "ServerLocation TEXT" +
+                                ")");
+            }
+        }
+
+        public void UpdateLastUpdated(DateTime lastUpdate, DateTime buildDate, string version)
+        {
+            string sql = "delete from StatusInfo";
+            lock (connection)
+            {
+                connection.Execute(sql);
+            }
+            sql = "insert into StatusInfo (LastUpdated, BuildDate, Version) values (@LastUpdated, @BuildDate,@Version)";
+            lock (connection)
+            {
+                using (var statement = connection.PrepareStatement(sql))
                 {
-                    while(statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        string table_schema = row.GetString(1) + " " + row.GetString(2);
-                        actual_cols.Add(table_schema);
-                    }
+                    TryBind(statement, "@LastUpdated", ToDateTimeParamValue(lastUpdate));
+                    TryBind(statement, "@BuildDate", ToDateTimeParamValue(buildDate));
+                    TryBind(statement, "@Version", version);
+                    statement.MoveNext();
                 }
-                _logger.Info("Table Actual Cols : " + string.Join(", ", actual_cols));
+            }
+        }
 
-                HashSet<string> required_fields = new HashSet<string>();
-                required_fields.Add("DateCreated DATETIME");
-                required_fields.Add("UserId TEXT");
-                required_fields.Add("ItemId TEXT");
-                required_fields.Add("ItemType TEXT");
-                required_fields.Add("ItemName TEXT");
-                required_fields.Add("PlaybackMethod TEXT");
-                required_fields.Add("ClientName TEXT");
-                required_fields.Add("DeviceName TEXT");
-                required_fields.Add("PlayDuration INT");
-                required_fields.Add("PauseDuration INT");
-                required_fields.Add("RemoteAddress TEXT");
-                required_fields.Add("TranscodeReasons TEXT");
+        public void ClearMediaInfo()
+        {
+            string sql = "delete from MediaInfo";
+            lock (connection)
+            {
+                connection.Execute(sql);
+            }
+        }
 
-                string add_missing_sql = "";
-                foreach (var field in required_fields)
+        public void AddMediaInfo(CMediaInfo mediaInfo)
+        {
+            string sql = 
+                "insert into MediaInfo " + 
+                "(" + 
+                    "  ItemId" + 
+                    ", PrimaryName" + 
+                    ", SortName" + 
+                    ", SecondaryName" + 
+                    ", StartYear" + 
+                    ", IsEpisode" + 
+                    ", Season" + 
+                    ", Episode" + 
+                    ", Resolution" + 
+                    ", CodecName" + 
+                    ", DolbyVisionProfile" + 
+                    ", ServerLocation" +
+                ")" +
+                " values " + 
+                "(" + 
+                "  @ItemId" + 
+                ", @PrimaryName" + 
+                ", @SortName" + 
+                ", @SecondaryName" + 
+                ", @StartYear" + 
+                ", @IsEpisode" + 
+                ", @Season" + 
+                ", @Episode" + 
+                ", @Resolution" + 
+                ", @CodecName" + 
+                ", @DolbyVisionProfile" + 
+                ", @ServerLocation" +
+                ")";
+            lock (connection)
+            {
+                using (var statement = connection.PrepareStatement(sql))
                 {
-                    if(!actual_cols.Contains(field))
-                    {
-                        add_missing_sql += "ALTER TABLE PlaybackActivity ADD " + field + ";";
-                    }
+                    TryBind(statement, "@ItemId", mediaInfo.ItemId);
+                    TryBind(statement, "@PrimaryName", mediaInfo.PrimaryName);
+                    TryBind(statement, "@SortName", mediaInfo.SortName);
+                    TryBind(statement, "@SecondaryName", mediaInfo.SecondaryName);
+                    TryBind(statement, "@StartYear", mediaInfo.StartYear);
+                    TryBind(statement, "@IsEpisode", mediaInfo.IsEpisode);
+                    TryBind(statement, "@Season", mediaInfo.Season);
+                    TryBind(statement, "@Episode", mediaInfo.Episode);
+                    TryBind(statement, "@Resolution", mediaInfo.Resolution);
+                    TryBind(statement, "@CodecName", mediaInfo.CodecName);
+                    TryBind(statement, "@DolbyVisionProfile", mediaInfo.DolbyVisionProfile);
+                    TryBind(statement, "@ServerLocation", mediaInfo.ServerLocation);
+                    statement.MoveNext();
                 }
-                _logger.Info("Table Alter SQL : " + add_missing_sql);
-                if (!string.IsNullOrEmpty(add_missing_sql))
-                {
-                    connection.ExecuteAll(add_missing_sql);
-                }
-
-                // for now dont drop cols
-                //string drop_cols = "ALTER TABLE PlaybackActivity DROP COLUMN ClientName";
-                //connection.Execute(drop_cols);
-
-                // users cant handel using tables to import old data so dont rename the old table
-                //if (required_fields.Count != actual_cols.Count)
-                //{                       
-                //    string new_table_name = "PlaybackActivity_" + DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                //    try
-                //    {
-                //        connection.Execute("ALTER TABLE PlaybackActivity RENAME TO " + new_table_name);
-                //    }
-                //    catch{ }
-                //}
             }
         }
 
@@ -269,7 +334,7 @@ namespace CodecInfo.Data
                 "ItemId, " +
                 "DateCreated AS StartTime, " +
                 "PlayDuration, " +
-                "datetime(DateCreated, '+' || CAST(PlayDuration AS VARCHAR) || ' seconds') AS EndTime " + 
+                "datetime(DateCreated, '+' || CAST(PlayDuration AS VARCHAR) || ' seconds') AS EndTime " +
                 "FROM PlaybackActivity " +
                 "WHERE EndTime > @start_time";
 
@@ -307,7 +372,7 @@ namespace CodecInfo.Data
             List<string> keyList = actions.Keys.ToList();
             keyList.Sort();
             int count = 0;
-            foreach(string key in keyList)
+            foreach (string key in keyList)
             {
                 KeyValuePair<DateTime, int> data = actions[key];
                 if (data.Value == 1)
@@ -341,12 +406,12 @@ namespace CodecInfo.Data
                 {
                     using (var statement = connection.PrepareStatement(query_string))
                     {
-                        while(statement.MoveNext())
+                        while (statement.MoveNext())
                         {
                             int col_count = statement.Columns.Count;
                             var row = statement.Current;
                             List<object> row_date = new List<object>();
-                            for(int x = 0; x < col_count; x++)
+                            for (int x = 0; x < col_count; x++)
                             {
                                 string cell_data = row.GetString(x);
                                 row_date.Add(cell_data);
@@ -362,14 +427,14 @@ namespace CodecInfo.Data
                         change_count = connection.Changes;
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     message = "Error Running Query</br>" + e.Message;
                     message += "<pre>" + e.ToString() + "</pre>";
                 }
             }
 
-            if(string.IsNullOrEmpty(message) && col_names.Count == 0 && results.Count == 0)
+            if (string.IsNullOrEmpty(message) && col_names.Count == 0 && results.Count == 0)
             {
                 message = "Query executed, no data returned.";
                 message += "</br>Number of rows effected : " + change_count;
@@ -396,7 +461,7 @@ namespace CodecInfo.Data
         public void ManageUserList(string action, string id)
         {
             string sql = "";
-            if(action == "add")
+            if (action == "add")
             {
                 sql = "insert into UserList (UserId) values (@id)";
             }
@@ -541,7 +606,7 @@ namespace CodecInfo.Data
             lock (connection)
             {
                 using (var statement = connection.PrepareStatement(sql_raw))
-                {                      
+                {
                     while (statement.MoveNext())
                     {
                         var row = statement.Current;
@@ -1092,7 +1157,7 @@ namespace CodecInfo.Data
         //    }
 
         //    sql += "FROM PlaybackActivity ";
-            
+
         //    sql += "WHERE DateCreated >= @start_date AND DateCreated <= @end_date ";
 
         //    if (!string.IsNullOrEmpty(user_id))

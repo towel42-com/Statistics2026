@@ -6,7 +6,7 @@ namespace CodecInfo.Data
 {
     public static class CBuildDateInfo
     {
-        public static DateTime? GetBuildDate()
+        public static DateTime GetBuildDate()
         {
             var attribute = Assembly.GetExecutingAssembly()
                 .GetCustomAttributes<AssemblyMetadataAttribute>()
@@ -17,7 +17,7 @@ namespace CodecInfo.Data
                 return buildDate;
             }
 
-            return null;
+            return DateTime.MinValue;
         }
     }
 }

@@ -8,7 +8,7 @@ namespace CodecInfo.Configuration
     {
         public CPluginConfiguration()
         {
-            MediaInfoList = new List<CMediaInfo>();
+            //MediaInfoList = new List<CMediaInfo>();
         }
 
         public string BuildDate { get; set; }

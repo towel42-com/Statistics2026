@@ -4,14 +4,14 @@ namespace CodecInfo.Data
 {
     public class CMediaInfo
     {
-        public bool IsEpisode { get; set; }
+        public string ItemId { get; set; }
 
-        public string Id { get; set; }
         public string PrimaryName { get; set; } // movie title or series name
         public string SortName { get; set; } 
         public string SecondaryName { get; set; } // episode name
         public string StartYear { get; set; } // release year for movies, year of the of the first season of the TV show
 
+        public bool IsEpisode { get; set; }
         public int Season { get; set; }
         public int Episode { get; set; }
 

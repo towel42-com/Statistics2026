@@ -45,7 +45,7 @@ namespace CodecInfo.Core
             return (primaryName, secondaryName, descName);
         }
 
-        private List<CMediaInfo> CalculateMediaInfo(bool episodes)
+        public void CalculateMediaInfo(bool episodes)
         {
             List<Video> videoList;
             if (episodes)
@@ -54,6 +54,8 @@ namespace CodecInfo.Core
                 videoList = fAllMovies.Cast<Video>().ToList();
 
             var mediaTypeName = episodes ? "Episode" : "Movie";
+
+            var db = CConfigInfoDB.GetExistingInstance();
 
             fLogger.Debug($"CalculateMediaInfo - Starting {mediaTypeName} Analysis");
             var retVal = new List<CMediaInfo>();
@@ -73,9 +75,10 @@ namespace CodecInfo.Core
                     var resolution = GetMediaResolution(mediaStream, true);
                     var codec = mediaStream?.Codec ?? "Unknown";
                     var dvProfile = GetDolbyVisionProfile(mediaStream);
-                    retVal.Add(new CMediaInfo
+
+                    var mediaInfo = new CMediaInfo
                     {
-                        Id = video.Id.ToString(),
+                        ItemId = video.Id.ToString(),
                         IsEpisode = episodes,
                         PrimaryName = primaryName,
                         SortName = video.SortName,
@@ -87,8 +90,9 @@ namespace CodecInfo.Core
                         CodecName = codec,
                         DolbyVisionProfile = dvProfile,
                         ServerLocation = video.Path ?? "Unknown"
-                    });
+                    };
 
+                    db.AddMediaInfo(mediaInfo);
                     fLogger.Debug($"CalculateMediaInfo -     Processed {mediaTypeName} - {descName} items processed");
                 }
                 catch (Exception ex)
@@ -97,15 +101,6 @@ namespace CodecInfo.Core
                 }
             }
             fLogger.Debug($"CalculateMediaInfo - Finished {mediaTypeName} Analysis - {retVal.Count} items processed");
-            return retVal;
-        }
-
-        public List<CMediaInfo> CalculateMediaInfo()
-        {
-            var retVal = CalculateMediaInfo(true);
-            retVal.AddRange(CalculateMediaInfo(false));
-
-            return retVal;
         }
 
         public Dictionary<string, CMediaCount> CalculateMediaResolutions(bool episodes)
