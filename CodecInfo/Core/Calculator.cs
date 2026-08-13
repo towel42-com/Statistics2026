@@ -180,7 +180,7 @@ namespace CodecInfo.Core
         string GetMediaResolution(MediaStream typeInfo, bool includeDetails)
         {
             if (typeInfo == null || typeInfo.Width == null)
-                return "Resolution Not Available";
+                return Constants.NoResolution;
 
             int width = typeInfo.Width.Value;
 
@@ -190,12 +190,12 @@ namespace CodecInfo.Core
                 details = $" ({typeInfo.Width}x{typeInfo.Height})";
             }
 
-            if (width >= 1281 && width <= 1920) return "1080p" + details;
-            if (width >= 3841 && width <= 7680) return "8K" + details;
-            if (width >= 1921 && width <= 3840) return "4K" + details;
-            if (width >= 1200 && width <= 1280) return "720p" + details;
+            if (width >= 1281 && width <= 1920) return Constants.HD + details;
+            if (width >= 3841 && width <= 7680) return Constants._8k + details;
+            if (width >= 1921 && width <= 3840) return Constants._4k + details;
+            if (width >= 1200 && width <= 1280) return Constants._720p + details;
             //if (width < 1200)
-            return "SD" + details;
+            return Constants.SD + details;
 
             //return "Resolution Not Available";
         }

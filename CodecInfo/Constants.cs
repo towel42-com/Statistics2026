@@ -15,5 +15,12 @@
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";
         internal const string NonDolbyVisionCompatibleCodec = "Non Dolby Vision Compatible Codec";
         internal const string NoDolbyProfile = "No Dolby Profile";
+
+        internal const string NoResolution = "Resolution Not Available";
+        internal const string HD = "1080p";
+        internal const string _4k = "4K";
+        internal const string _8k = "8K";
+        internal const string _720p = "720p";
+        internal const string SD = "SD";
     }
 }
