@@ -8,6 +8,7 @@ namespace CodecInfo.Configuration
     {
         public CPluginConfiguration()
         {
+            MediaInfoList = new List<CMediaInfo>();
         }
 
         public string BuildDate { get; set; }
@@ -16,7 +17,7 @@ namespace CodecInfo.Configuration
         public string ServerId { get; set; }
 
         public bool showUnknownDVProfileCount { get; set; } = true;
- 
+
         // user for the summary tables
         public CValueGroup MediaResolutions { get; set; }
         public CValueGroup MediaCodecs { get; set; }
@@ -26,20 +27,7 @@ namespace CodecInfo.Configuration
         // user for the icon/text list pages
         public CMediaItemCollection MovieCodecItems { get; set; }
         public CMediaItemCollection EpisodeCodecItems { get; set; }
-
-        public static bool IsUnknownDolbyProfile(string profile)
-        {
-            if (string.IsNullOrEmpty(profile))
-                return true;
-            var unknownProfiles = new List<string>
-            {
-                Constants.MissingVideoStream,
-                Constants.UnknownDolbyProfile,
-                Constants.NonDolbyVisionCompatibleCodec,
-                Constants.NoDolbyProfile
-            };
-            return unknownProfiles.Contains(profile);
-        }
+        public List<CMediaInfo> MediaInfoList { get; set; }
     }
 }
 

@@ -30,7 +30,7 @@ namespace CodecInfo
                 },
                 new PluginPageInfo
                 {
-                    Name = "CodecInfoConfigPageJS",
+                    Name = "CodecInfoConfigPage.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.CodecInfoConfigPage.js"
                 },
                 new PluginPageInfo
@@ -40,7 +40,7 @@ namespace CodecInfo
                 },
                 new PluginPageInfo
                 {
-                    Name = "AllCodecEpisodeInformationPageJS",
+                    Name = "AllCodecEpisodeInformationPage.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.AllCodecEpisodeInformation.js"
                 },
                 new PluginPageInfo
@@ -50,69 +50,30 @@ namespace CodecInfo
                 },
                 new PluginPageInfo
                 {
-                    Name = "AllCodecMovieInformationPageJS",
+                    Name = "AllCodecMovieInformationPage.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.AllCodecMovieInformation.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "CodecInfoEpisodeCodecPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeCodecPage.html"
+                    Name = "AllCodecEpisodeInformationPage.new",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Episodes.html",
+                    EnableInMainMenu = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "CodecInfoEpisodeCodecPageJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeCodecPage.js"
+                    Name = "AllCodecEpisodeInformationPage.js.new",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Episodes.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "CodecInfoEpisodeCodecTextPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeCodecTextPage.html"
+                    Name = "AllCodecMovieInformationPage.new",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Movies.html",
                 },
                 new PluginPageInfo
                 {
-                    Name = "CodecInfoEpisodeCodecTextPageJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeCodecTextPage.js"
+                    Name = "AllCodecMovieInformationPage.js.new",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Movies.js"
                 },
-               new PluginPageInfo
-                {
-                    Name = "CodecInfoEpisodeDVProfileTextPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeDVProfileTextPage.html"
-                },
-                new PluginPageInfo
-                {
-                    Name = "CodecInfoEpisodeDVProfileTextPageJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.episodeDVProfileTextPage.js"
-                },
-                new PluginPageInfo
-                {
-                    Name = "CodecInfoMovieCodecPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieCodecPage.html"
-                },
-                new PluginPageInfo
-                {
-                    Name = "CodecInfoMovieCodecPageJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieCodecPage.js"
-                },
-                new PluginPageInfo
-                {
-                    Name = "CodecInfoMovieCodecTextPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieCodecTextPage.html"
-                },
-                new PluginPageInfo
-                {
-                    Name = "CodecInfoMovieCodecTextPageJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieCodecTextPage.js"
-                },
-                new PluginPageInfo
-                {
-                    Name = "CodecInfoMovieDVProfileTextPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieDVProfileTextPage.html"
-                },
-                new PluginPageInfo
-                {
-                    Name = "CodecInfoMovieDVProfileTextPageJS",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.movieDVProfileTextPage.js"
-                }
             };
         }
 

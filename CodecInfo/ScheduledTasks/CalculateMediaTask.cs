@@ -80,7 +80,7 @@ namespace CodecInfo.ScheduledTasks
             db.Initialize();
 
             db.UpdateLastUpdated(now, CBuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
-            var numSteps = 2;
+            var numSteps = 4;
             var currStep = 0;
             progress.Report(currStep / numSteps);
 
@@ -89,23 +89,26 @@ namespace CodecInfo.ScheduledTasks
             var calculator = new CCalculator(_userManager, _libraryManager, _userDataManager, _fileSystem, fLogger, _providerManager, cancellationToken);
             using (calculator)
             {
+                PluginConfiguration.MediaInfoList = calculator.CalculateMediaInfo();
+                progress.Report((++currStep) / numSteps);
+
                 calculator.CalculateMediaInfo(true);
                 progress.Report((++currStep) / numSteps);
 
                 calculator.CalculateMediaInfo(false);
                 progress.Report((++currStep) / numSteps);
 
-                //PluginConfiguration.MediaResolutions = calculator.CalculateMediaResolutions();
-                //progress.Report((++currStep) / numSteps);
+                PluginConfiguration.MediaResolutions = db.CalculateMediaResolutions();
+                progress.Report((++currStep) / numSteps);
 
-                //PluginConfiguration.MediaCodecs = calculator.CalculateMediaCodecs();
-                //progress.Report((++currStep) / numSteps);
+                PluginConfiguration.MediaCodecs = db.CalculateMediaCodecs();
+                progress.Report((++currStep) / numSteps);
 
-                //PluginConfiguration.DolbyVisionProfiles = calculator.CalculateDVProfileInfo(false);
-                //progress.Report((++currStep) / numSteps);
+                PluginConfiguration.DolbyVisionProfiles = db.CalculateDVProfileInfo(false);
+                progress.Report((++currStep) / numSteps);
 
-                //PluginConfiguration.DolbyVisionProfilesWithUnknown = calculator.CalculateDVProfileInfo(true);
-                //progress.Report((++currStep) / numSteps);
+                PluginConfiguration.DolbyVisionProfilesWithUnknown = db.CalculateDVProfileInfo(true);
+                progress.Report((++currStep) / numSteps);
             }
 
             progress.Report(100);

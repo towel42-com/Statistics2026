@@ -1,4 +1,8 @@
-﻿using MediaBrowser.Controller.LiveTv;
+﻿using CodecInfo;
+using CodecInfo.Configuration;
+using CodecInfo.Data;
+using MediaBrowser.Controller.LiveTv;
+using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
 using SQLitePCL.pretty;
 using System;
@@ -233,13 +237,12 @@ namespace CodecInfo.Data
                                 "SortName TEXT, " +
                                 "SecondaryName, " +
                                 "StartYear INT, " +
-                                "IsMovie BOOLEAN, " +
                                 "IsEpisode BOOLEAN, " +
                                 "Season INT, " +
                                 "Episode INT, " +
                                 "ResolutionBase TEXT, " +
                                 "ResolutionDetail TEXT, " +
-                                "CodecName TEXT, " +
+                                "Codec TEXT, " +
                                 "DolbyVisionProfile TEXT, " +
                                 "ServerLocation TEXT" +
                                 ")");
@@ -277,39 +280,37 @@ namespace CodecInfo.Data
 
         public void AddMediaInfo(CMediaInfo mediaInfo)
         {
-            string sql = 
-                "insert into MediaInfo " + 
-                "(" + 
-                    "  ItemId" + 
-                    ", PrimaryName" + 
-                    ", SortName" + 
-                    ", SecondaryName" + 
-                    ", StartYear" + 
-                    ", IsMovie" +
+            string sql =
+                "insert into MediaInfo " +
+                "(" +
+                    "  ItemId" +
+                    ", PrimaryName" +
+                    ", SortName" +
+                    ", SecondaryName" +
+                    ", StartYear" +
                     ", IsEpisode" +
-                    ", Season" + 
-                    ", Episode" + 
+                    ", Season" +
+                    ", Episode" +
                     ", ResolutionBase" +
                     ", ResolutionDetail" +
-                    ", CodecName" + 
-                    ", DolbyVisionProfile" + 
+                    ", Codec" +
+                    ", DolbyVisionProfile" +
                     ", ServerLocation" +
                 ")" +
-                " values " + 
-                "(" + 
-                "  @ItemId" + 
-                ", @PrimaryName" + 
-                ", @SortName" + 
-                ", @SecondaryName" + 
+                " values " +
+                "(" +
+                "  @ItemId" +
+                ", @PrimaryName" +
+                ", @SortName" +
+                ", @SecondaryName" +
                 ", @StartYear" +
-                ", @IsMovie" +
-                ", @IsEpisode" + 
-                ", @Season" + 
-                ", @Episode" + 
+                ", @IsEpisode" +
+                ", @Season" +
+                ", @Episode" +
                 ", @ResolutionBase" +
                 ", @ResolutionDetail" +
-                ", @CodecName" + 
-                ", @DolbyVisionProfile" + 
+                ", @Codec" +
+                ", @DolbyVisionProfile" +
                 ", @ServerLocation" +
                 ")";
             lock (connection)
@@ -321,19 +322,135 @@ namespace CodecInfo.Data
                     TryBind(statement, "@SortName", mediaInfo.SortName);
                     TryBind(statement, "@SecondaryName", mediaInfo.SecondaryName);
                     TryBind(statement, "@StartYear", mediaInfo.StartYear);
-                    TryBind(statement, "@IsMovie", !mediaInfo.IsEpisode);
                     TryBind(statement, "@IsEpisode", mediaInfo.IsEpisode);
                     TryBind(statement, "@Season", mediaInfo.Season);
                     TryBind(statement, "@Episode", mediaInfo.Episode);
                     TryBind(statement, "@ResolutionBase", mediaInfo.ResolutionBase);
                     TryBind(statement, "@ResolutionDetail", mediaInfo.ResolutionDetail);
-                    TryBind(statement, "@CodecName", mediaInfo.CodecName);
+                    TryBind(statement, "@Codec", mediaInfo.Codec);
                     TryBind(statement, "@DolbyVisionProfile", mediaInfo.DolbyVisionProfile);
                     TryBind(statement, "@ServerLocation", mediaInfo.ServerLocation);
                     statement.MoveNext();
                 }
             }
         }
+        public CValueGroup CalculateMediaResolutions()
+        {
+            string sql =
+                "SELECT " +
+                "ResolutionBase as Resolution, " +
+                "sum(IsEpisode) AS Episodes, " +
+                "sum(NOT IsEpisode) AS Movies " +
+                "FROM MediaInfo " +
+                "GROUP BY Resolution " +
+                "ORDER BY Resolution ASC"
+                ;
+
+            var retVal = new CValueGroup(Constants.MediaResolutions, Constants.HelpMediaResolutions);
+
+            lock (connection)
+            {
+                using (var statement = connection.PrepareStatement(sql))
+                {
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        var resolution = row.GetString(0);
+                        var episodeCount = row.GetInt(1);
+                        var movieCount = row.GetInt(2);
+                        retVal.addRow(resolution, episodeCount, movieCount);
+                    }
+                }
+            }
+
+            retVal.endTable();
+            return retVal;
+        }
+
+        public CValueGroup CalculateMediaCodecs()
+        {
+            string sql =
+                "SELECT " +
+                "Codec as Resolution, " +
+                "sum(IsEpisode) AS Episodes, " +
+                "sum(NOT IsEpisode) AS Movies " +
+                "FROM MediaInfo " +
+                "GROUP BY Codec " +
+                "ORDER BY Codec ASC"
+                ;
+
+            var retVal = new CValueGroup(Constants.MediaCodecs, Constants.HelpMediaCodecs);
+            lock (connection)
+            {
+                using (var statement = connection.PrepareStatement(sql))
+                {
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        var codec = row.GetString(0);
+                        var episodeCount = row.GetInt(1);
+                        var movieCount = row.GetInt(2);
+                        retVal.addRow(codec, episodeCount, movieCount);
+                    }
+                }
+            }
+            retVal.endTable();
+            return retVal;
+        }
+
+        public CValueGroup CalculateDVProfileInfo(bool showUnknownDVProfileCount)
+        {
+            string sql =
+                "SELECT " +
+                "DolbyVisionProfile as DVProfile, " +
+                "sum(IsEpisode) AS Episodes, " +
+                "sum(NOT IsEpisode) AS Movies " +
+                "FROM MediaInfo ";
+
+            if (!showUnknownDVProfileCount)
+                sql += $"WHERE DolbyVisionProfile NOT IN ({string.Join(",", Constants.UnknownDolbyProfiles.Select(p => $"'{p}'"))}) ";
+
+            sql += "GROUP BY DolbyVisionProfile " +
+                   "ORDER BY DolbyVisionProfile ASC"
+                   ;
+
+            var retVal = new CValueGroup(Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile);
+            bool foundUnknown = false;
+            bool found50 = false;
+            lock (connection)
+            {
+                using (var statement = connection.PrepareStatement(sql))
+                {
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        var dvProfile = row.GetString(0);
+                        if (Constants.IsUnknownDolbyProfile(dvProfile))
+                            foundUnknown = true;
+                        if (Constants.IsDolbyVision50(dvProfile))
+                            found50 = true;
+
+                        var episodeCount = row.GetInt(1);
+                        var movieCount = row.GetInt(2);
+                        retVal.addRow(dvProfile, episodeCount, movieCount);
+                    }
+                }
+            }
+
+            if (showUnknownDVProfileCount && !foundUnknown)
+            {
+                retVal.addRow("Unknown Dolby Profile", 0, 0);
+            }
+
+            if (!found50)
+            {
+                retVal.addRow("Profile 5.0", 0, 0);
+            }
+
+            retVal.endTable();
+            return retVal;
+        }
+
 
         public List<KeyValuePair<string, int>> GetPlayActivityCounts(int hours)
         {

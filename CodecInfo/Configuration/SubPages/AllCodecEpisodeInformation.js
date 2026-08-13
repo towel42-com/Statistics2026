@@ -131,7 +131,7 @@
                 }
 
                 mediaStats.forEach((video) => {
-                    if (video.IsEpisode == false) {
+                    if (!video.IsEpisode) {
                         return;
                     }
 
@@ -178,8 +178,8 @@
 
                     newCell = newRow.insertCell(cell++);
                     newCell.className = (`center`);
-                    newText = document.createTextNode(video.CodecName);
-                    newCell.setAttribute("data-sort-value", video.CodecName);
+                    newText = document.createTextNode(video.Codec);
+                    newCell.setAttribute("data-sort-value", video.Codec);
                     newCell.appendChild(newText);
 
                     newCell = newRow.insertCell(cell++);

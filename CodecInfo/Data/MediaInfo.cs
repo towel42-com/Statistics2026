@@ -17,7 +17,7 @@ namespace CodecInfo.Data
 
         public string ResolutionBase { get; set; } // just SD/HD/4k/8k etc
         public string ResolutionDetail { get; set; } // includes details of resolution
-        public string CodecName { get; set; }
+        public string Codec { get; set; }
         public string DolbyVisionProfile { get; set; }
         public string ServerLocation { get; set; }
     }

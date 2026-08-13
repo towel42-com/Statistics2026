@@ -43,8 +43,8 @@
                 html += "<div style=\"width: 100%;\">";
                 html += `<div class="statCard-stats-title">${valueGroup.Title}</div>`;
             }
-            if (valueGroup.ValueLineOne !== undefined) {
-                html += `<div class="statCard-stats-number">${valueGroup.ValueLineOne}</div>`
+            if (valueGroup.TableInfo !== undefined) {
+                html += `<div class="statCard-stats-number">${valueGroup.TableInfo}</div>`
             }
 
             if (valueGroup.ValueLineTwo !== undefined) {

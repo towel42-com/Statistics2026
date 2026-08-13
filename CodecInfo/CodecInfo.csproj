@@ -27,6 +27,14 @@
 		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.html" />
 		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.js" />
 
+		<EmbeddedResource Include="Pages\Movies.html" />
+		<EmbeddedResource Include="Pages\Movies.js" />
+
+		<EmbeddedResource Include="Pages\Helpers.js" />
+
+		<EmbeddedResource Include="Pages\Episodes.html" />
+		<EmbeddedResource Include="Pages\Episodes.js" />
+
 		<EmbeddedResource Include="thumb.png" />
 	</ItemGroup>
 
