@@ -8,7 +8,6 @@ namespace CodecInfo.Configuration
     {
         public CPluginConfiguration()
         {
-            //MediaInfoList = new List<CMediaInfo>();
         }
 
         public string BuildDate { get; set; }
@@ -18,8 +17,6 @@ namespace CodecInfo.Configuration
 
         public bool showUnknownDVProfileCount { get; set; } = true;
  
-        public List<CMediaInfo> MediaInfoList { get; set; }
-
         // user for the summary tables
         public CValueGroup MediaResolutions { get; set; }
         public CValueGroup MediaCodecs { get; set; }

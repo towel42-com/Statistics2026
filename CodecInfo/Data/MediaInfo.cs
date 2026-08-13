@@ -15,7 +15,8 @@ namespace CodecInfo.Data
         public int Season { get; set; }
         public int Episode { get; set; }
 
-        public string Resolution { get; set; }
+        public string ResolutionBase { get; set; } // just SD/HD/4k/8k etc
+        public string ResolutionDetail { get; set; } // includes details of resolution
         public string CodecName { get; set; }
         public string DolbyVisionProfile { get; set; }
         public string ServerLocation { get; set; }

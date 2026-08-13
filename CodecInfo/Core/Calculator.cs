@@ -72,7 +72,8 @@ namespace CodecInfo.Core
                         continue;
                     }
 
-                    var resolution = GetMediaResolution(mediaStream, true);
+                    var resolutionBase = GetMediaResolution(mediaStream, false);
+                    var resolutionDetail = GetMediaResolution(mediaStream, true);
                     var codec = mediaStream?.Codec ?? "Unknown";
                     var dvProfile = GetDolbyVisionProfile(mediaStream);
 
@@ -86,7 +87,8 @@ namespace CodecInfo.Core
                         StartYear = video.ProductionYear?.ToString() ?? "Unknown",
                         Season = video.ParentIndexNumber ?? -1,
                         Episode = video.IndexNumber ?? -1,
-                        Resolution = resolution,
+                        ResolutionDetail = resolutionDetail,
+                        ResolutionBase = resolutionBase,
                         CodecName = codec,
                         DolbyVisionProfile = dvProfile,
                         ServerLocation = video.Path ?? "Unknown"

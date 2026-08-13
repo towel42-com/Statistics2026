@@ -233,10 +233,12 @@ namespace CodecInfo.Data
                                 "SortName TEXT, " +
                                 "SecondaryName, " +
                                 "StartYear INT, " +
+                                "IsMovie BOOLEAN, " +
                                 "IsEpisode BOOLEAN, " +
                                 "Season INT, " +
                                 "Episode INT, " +
-                                "Resolution TEXT, " +
+                                "ResolutionBase TEXT, " +
+                                "ResolutionDetail TEXT, " +
                                 "CodecName TEXT, " +
                                 "DolbyVisionProfile TEXT, " +
                                 "ServerLocation TEXT" +
@@ -283,10 +285,12 @@ namespace CodecInfo.Data
                     ", SortName" + 
                     ", SecondaryName" + 
                     ", StartYear" + 
-                    ", IsEpisode" + 
+                    ", IsMovie" +
+                    ", IsEpisode" +
                     ", Season" + 
                     ", Episode" + 
-                    ", Resolution" + 
+                    ", ResolutionBase" +
+                    ", ResolutionDetail" +
                     ", CodecName" + 
                     ", DolbyVisionProfile" + 
                     ", ServerLocation" +
@@ -297,11 +301,13 @@ namespace CodecInfo.Data
                 ", @PrimaryName" + 
                 ", @SortName" + 
                 ", @SecondaryName" + 
-                ", @StartYear" + 
+                ", @StartYear" +
+                ", @IsMovie" +
                 ", @IsEpisode" + 
                 ", @Season" + 
                 ", @Episode" + 
-                ", @Resolution" + 
+                ", @ResolutionBase" +
+                ", @ResolutionDetail" +
                 ", @CodecName" + 
                 ", @DolbyVisionProfile" + 
                 ", @ServerLocation" +
@@ -315,10 +321,12 @@ namespace CodecInfo.Data
                     TryBind(statement, "@SortName", mediaInfo.SortName);
                     TryBind(statement, "@SecondaryName", mediaInfo.SecondaryName);
                     TryBind(statement, "@StartYear", mediaInfo.StartYear);
+                    TryBind(statement, "@IsMovie", !mediaInfo.IsEpisode);
                     TryBind(statement, "@IsEpisode", mediaInfo.IsEpisode);
                     TryBind(statement, "@Season", mediaInfo.Season);
                     TryBind(statement, "@Episode", mediaInfo.Episode);
-                    TryBind(statement, "@Resolution", mediaInfo.Resolution);
+                    TryBind(statement, "@ResolutionBase", mediaInfo.ResolutionBase);
+                    TryBind(statement, "@ResolutionDetail", mediaInfo.ResolutionDetail);
                     TryBind(statement, "@CodecName", mediaInfo.CodecName);
                     TryBind(statement, "@DolbyVisionProfile", mediaInfo.DolbyVisionProfile);
                     TryBind(statement, "@ServerLocation", mediaInfo.ServerLocation);
