@@ -1,5 +1,4 @@
 ﻿using CodecInfo.Configuration;
-using CodecInfo.Core;
 using CodecInfo.Data;
 using MediaBrowser.Common;
 using MediaBrowser.Controller;
@@ -24,7 +23,7 @@ namespace CodecInfo.ScheduledTasks
     {
         private readonly IFileSystem _fileSystem;
         private readonly ILibraryManager _libraryManager;
-        private readonly ILogger fLogger;
+        private readonly ILogger _logger;
         private readonly IServerApplicationPaths _serverApplicationPaths;
         private readonly IUserDataManager _userDataManager;
         private readonly IUserManager _userManager;
@@ -45,7 +44,7 @@ namespace CodecInfo.ScheduledTasks
             IApplicationHost appHost,
             IProviderManager providerManager)
         {
-            fLogger = logger.GetLogger("CodecInfo");
+            _logger = logger.GetLogger("CodecInfo");
             _libraryManager = libraryManager;
             _userManager = userManager;
             _userDataManager = userDataManager;
@@ -68,7 +67,7 @@ namespace CodecInfo.ScheduledTasks
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            fLogger.Info("CodecInfo : Starting CodecInfo calculation task");
+            _logger.Info("CodecInfo : Starting CodecInfo calculation task");
             // purely for progress reporting
             var now = DateTime.Now;
             PluginConfiguration.LastUpdated = now.ToString("g");
@@ -76,41 +75,19 @@ namespace CodecInfo.ScheduledTasks
             PluginConfiguration.BuildDate = CBuildDateInfo.GetBuildDate().ToString();
             PluginConfiguration.ServerId = _appHost.SystemId;
 
-            var db = CConfigInfoDB.GetInstance(_appConfig.ApplicationPaths.DataPath, fLogger);
+            var db = CConfigInfoDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
             db.Initialize();
 
+            progress.Report(0);
             db.UpdateLastUpdated(now, CBuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
-            var numSteps = 4;
-            var currStep = 0;
-            progress.Report(currStep / numSteps);
+            progress.Report(100);
 
-
+            progress.Report(0);
             db.ClearMediaInfo();
-            var calculator = new CCalculator(_userManager, _libraryManager, _userDataManager, _fileSystem, fLogger, _providerManager, cancellationToken);
-            using (calculator)
-            {
-                PluginConfiguration.MediaInfoList = calculator.CalculateMediaInfo();
-                progress.Report((++currStep) / numSteps);
+            progress.Report(100);
 
-                calculator.CalculateMediaInfo(true);
-                progress.Report((++currStep) / numSteps);
-
-                calculator.CalculateMediaInfo(false);
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.MediaResolutions = db.CalculateMediaResolutions();
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.MediaCodecs = db.CalculateMediaCodecs();
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.DolbyVisionProfiles = db.CalculateDVProfileInfo(false);
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.DolbyVisionProfilesWithUnknown = db.CalculateDVProfileInfo(true);
-                progress.Report((++currStep) / numSteps);
-            }
-
+            progress.Report(0);
+            db.CalculateMediaInfo(_libraryManager, progress);
             progress.Report(100);
 
             CPlugin.Instance.SaveConfiguration();

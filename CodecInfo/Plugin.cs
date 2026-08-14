@@ -26,7 +26,7 @@ namespace CodecInfo
                 {
                     Name = "CodecInfoConfigPage",
                     EmbeddedResourcePath = GetType().Namespace + ".Configuration.CodecInfoConfigPage.html",
-                    EnableInMainMenu = true
+                    EnableInMainMenu = false
                 },
                 new PluginPageInfo
                 {
@@ -55,25 +55,51 @@ namespace CodecInfo
                 },
                 new PluginPageInfo
                 {
-                    Name = "AllCodecEpisodeInformationPage.new",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Episodes.html",
+                    Name = "Summary",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Summary.html",
                     EnableInMainMenu = true
                 },
                 new PluginPageInfo
                 {
-                    Name = "AllCodecEpisodeInformationPage.js.new",
+                    Name = "Summary.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Summary.js"
+                },
+                new PluginPageInfo
+                {
+                    Name = "Episodes",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Episodes.html",
+                },
+                new PluginPageInfo
+                {
+                    Name = "Episodes.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.Episodes.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "AllCodecMovieInformationPage.new",
+                    Name = "Movies",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.Movies.html",
                 },
                 new PluginPageInfo
                 {
-                    Name = "AllCodecMovieInformationPage.js.new",
+                    Name = "Movies.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.Movies.js"
                 },
+                new PluginPageInfo
+                {
+                    Name = "Settings",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Settings.html",
+                },
+                new PluginPageInfo
+                {
+                    Name = "Settings.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Settings.js"
+                },
+                new PluginPageInfo
+                {
+                    Name = "Helpers.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Helpers.js"
+                }
+
             };
         }
 

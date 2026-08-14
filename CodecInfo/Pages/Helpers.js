@@ -21,17 +21,22 @@ function getDefautColours() {
 function getTabs() {
     var tabs = [
         {
-            href: Dashboard.getConfigurationPageUrl('AllCodecEpisodeInformationPage.new'),
-            name: 'Active'
+            href: Dashboard.getConfigurationPageUrl('Summary'),
+            name: 'Summary'
         }
-        ,{
-            href: Dashboard.getConfigurationPageUrl('AllCodecMovieInformationPage.new'),
-            name: 'Playback'
+        , {
+            href: Dashboard.getConfigurationPageUrl('Episodes'),
+            name: 'Episodes'
         }
-        // {
-        //     href: Dashboard.getConfigurationPageUrl('playback_report_settings'),
-        //     name: 'Settings'
-        ];
+        , {
+            href: Dashboard.getConfigurationPageUrl('Movies'),
+            name: 'Movies'
+        }
+        , {
+            href: Dashboard.getConfigurationPageUrl('Settings'),
+            name: 'Settings'
+        }
+    ];
     return tabs;
 }
 

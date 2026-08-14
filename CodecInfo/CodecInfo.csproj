@@ -18,22 +18,19 @@
 	<ItemGroup>
 		<EmbeddedResource Include="Configuration\PluginConfiguration.cs" />
 
-		<EmbeddedResource Include="Configuration\CodecInfoConfigPage.html" />
-		<EmbeddedResource Include="Configuration\CodecInfoConfigPage.js" />
-
-		<EmbeddedResource Include="Configuration\SubPages\AllCodecEpisodeInformation.html" />
-		<EmbeddedResource Include="Configuration\SubPages\AllCodecEpisodeInformation.js" />
-
-		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.html" />
-		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.js" />
+		<EmbeddedResource Include="Pages\Summary.html" />
+		<EmbeddedResource Include="Pages\Summary.js" />
 
 		<EmbeddedResource Include="Pages\Movies.html" />
 		<EmbeddedResource Include="Pages\Movies.js" />
 
-		<EmbeddedResource Include="Pages\Helpers.js" />
-
 		<EmbeddedResource Include="Pages\Episodes.html" />
 		<EmbeddedResource Include="Pages\Episodes.js" />
+
+		<EmbeddedResource Include="Pages\Settings.html" />
+		<EmbeddedResource Include="Pages\Settings.js" />
+
+		<EmbeddedResource Include="Pages\Helpers.js" />
 
 		<EmbeddedResource Include="thumb.png" />
 	</ItemGroup>

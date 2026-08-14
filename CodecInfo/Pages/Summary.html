@@ -1,26 +1,15 @@
-﻿﻿<div data-role="page" class="page type-interior pluginConfigurationPage CodecInfoConfigPage" data-require="emby-button,emby-select" data-controller="__plugin/CodecInfoConfigPage.js">
+﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/Summary.js">
     <div data-role="content">
-        <div class="content-primary">
-            <h1>Codec Information</h1>
-            <p name="pageIntro" id="pageIntro">
-            </p>
-            <p name="lastRunInfo" id="lastRunInfo">
-            </p>
+        <div class="content-primary" style="padding-top:2px;">
+            <h2 style="margin-top: 0px;margin-bottom: 0px;">Codec Information</h2>
 
-            <div style="max-width: 900px; display: flex; gap: 10px;">
-                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GotoAllCodecMovieInformationPage" id="GotoAllCodecMovieInformationPage">View Movie Codec Information</button>
-                <button is="emby-button" type="button" class="raised button-cancel block emby-button" name="GotoAllCodecEpisodeInformationPage" id="GotoAllCodecEpisodeInformationPage">View TV Episode Codec Information</button>
-            </div>
-
-            <h2>Movie Codec, Resolution and Dolby Vision Profile statistics</h2>
-            <label class="emby-checkbox-label">
-                <input id="showUnknownDVProfileCount" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                <span class="checkboxLabel">Show non-HEVC Dolby Vision profiles?</span>
-            </label>
+            <p name="pageIntro" id="pageIntro" />
+            <p name="lastRunInfo" id="lastRunInfo" />
 
             <div class="statRow" name="mediaStats" id="mediaStats"></div>
 
-            <div style="clear: both;"></div>
         </div>
     </div>
 

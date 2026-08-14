@@ -6,9 +6,21 @@
         public int Movies { get; set; }
         public int Episodes { get; set; }
 
+        public string ToString(int depth = 0)
+        {
+            var retVal = CValueGroupResponse._addToHtml(depth++, "<tr>");
+
+            retVal += CValueGroupResponse._addToHtml(depth, $"<td>{Name}</td>");
+            retVal += CValueGroupResponse._addToHtml(depth, $"<td>{Movies}</td>");
+            retVal += CValueGroupResponse._addToHtml(depth, $"<td>{Episodes}</td>");
+            retVal += CValueGroupResponse._addToHtml(--depth, "</tr>");
+
+            return retVal;
+        }
+    
         public override string ToString()
         {
-            return $"<tr><td>{Name}</td><td>{Movies}</td><td>{Episodes}</td></tr>";
+            return ToString(0);
         }
     }
 }

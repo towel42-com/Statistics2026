@@ -8,7 +8,6 @@ namespace CodecInfo.Configuration
     {
         public CPluginConfiguration()
         {
-            MediaInfoList = new List<CMediaInfo>();
         }
 
         public string BuildDate { get; set; }
@@ -17,17 +16,6 @@ namespace CodecInfo.Configuration
         public string ServerId { get; set; }
 
         public bool showUnknownDVProfileCount { get; set; } = true;
-
-        // user for the summary tables
-        public CValueGroup MediaResolutions { get; set; }
-        public CValueGroup MediaCodecs { get; set; }
-        public CValueGroup DolbyVisionProfiles { get; set; }
-        public CValueGroup DolbyVisionProfilesWithUnknown { get; set; }
-
-        // user for the icon/text list pages
-        public CMediaItemCollection MovieCodecItems { get; set; }
-        public CMediaItemCollection EpisodeCodecItems { get; set; }
-        public List<CMediaInfo> MediaInfoList { get; set; }
     }
 }
 

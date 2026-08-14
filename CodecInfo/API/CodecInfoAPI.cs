@@ -1,0 +1,222 @@
+﻿using CodecInfo;
+using CodecInfo.Data;
+using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Dto;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Net;
+using MediaBrowser.Controller.Session;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.IO;
+using MediaBrowser.Model.Logging;
+using MediaBrowser.Model.Querying;
+using MediaBrowser.Model.Serialization;
+using MediaBrowser.Model.Services;
+using MediaBrowser.Model.Users;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+namespace CodecInfo.Api
+{
+    // http://localhost:8096/emby/codec_info/episode_list
+    [Route("/codec_info/episode_list", "GET", Summary = "Gets Codec Info for Episodes")]
+    [Authenticated(Roles = "admin")]
+    public class GetEpisodeList : IReturn<Object>
+    {
+
+    }
+
+    // http://localhost:8096/emby/codec_info/movie_list
+    [Route("/codec_info/movie_list", "GET", Summary = "Gets Codec Info for Movies")]
+    [Authenticated(Roles = "admin")]
+    public class GetMovieList : IReturn<Object>
+    {
+
+    }
+
+    [Route("/codec_info/codec_summary", "GET", Summary = "Gets Codec Summary for Library")]
+    [Authenticated(Roles = "admin")]
+    public class GetCodecSummary : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; }
+
+
+        [ApiMember(Name = "rootDivName", Description = "Root Division Name", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string rootDivName { get; set; }
+    }
+
+    [Route("/codec_info/resolution_summary", "GET", Summary = "Gets Resolution Summary for Library")]
+    [Authenticated(Roles = "admin")]
+    public class GetResolutionSummary : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; }
+
+
+        [ApiMember(Name = "rootDivName", Description = "Root Division Name", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string rootDivName { get; set; }
+    }
+
+    [Route("/codec_info/dvprofile_summary", "GET", Summary = "Gets Dolby Vision Profile Summary for Library")]
+    [Authenticated(Roles = "admin")]
+    public class GetDVProfileSummary : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; }
+
+
+        [ApiMember(Name = "rootDivName", Description = "Root Division Name", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string rootDivName { get; set; }
+
+        [ApiMember(Name = "show_unknown_dv_profile_count", Description = "Show Unknown Dolby Vision Profile Count", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string showUnknownDVProfileCount { get; set; }
+    }
+
+    [Route("/CustomEndpoint", "GET")]
+    public class GetCustomData : IReturn<CustomDataResponse>
+    {
+        [ApiMember(Name = "Param", Description = "Description of parameter", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string Param { get; set; }
+    }
+
+    public class CustomDataResponse
+    {
+        public string Result { get; set; }
+    }
+
+    public class CodecInfoAPI : IService, IRequiresRequest
+    {
+        private readonly ISessionManager _sessionManager;
+        private readonly ILogger _logger;
+        private readonly IFileSystem _fileSystem;
+        private readonly IServerConfigurationManager _config;
+        private readonly IUserManager _userManager;
+        private readonly IUserDataManager _userDataManager;
+        private readonly ILibraryManager _libraryManager;
+
+        public CodecInfoAPI(ILogManager logger,
+            IFileSystem fileSystem,
+            IServerConfigurationManager config,
+            IUserManager userManager,
+            ILibraryManager libraryManager,
+            ISessionManager sessionManager,
+            IUserDataManager userDataManager)
+        {
+            _logger = logger.GetLogger("CodecInfo - CodecInfoAPI");
+            _fileSystem = fileSystem;
+            _config = config;
+            _userManager = userManager;
+            _libraryManager = libraryManager;
+            _sessionManager = sessionManager;
+            _userDataManager = userDataManager;
+        }
+
+        public IRequest Request { get; set; }
+
+        private IEnumerable<T> GetItems<T>()
+        {
+            var query = new InternalItemsQuery(null)
+            {
+                IncludeItemTypes = new[] { typeof(T).Name },
+                Recursive = true,
+                IsVirtualItem = false,
+                DtoOptions = new DtoOptions(true)
+                {
+                    EnableImages = false
+                }
+            };
+
+            return _libraryManager.GetItemList(query).OfType<T>();
+        }
+
+        private List<CMediaInfo> GetVideos<T>() where T : Video
+        {
+            List<CMediaInfo> mediaInfos = new List<CMediaInfo>();
+            var items = GetItems<T>();
+            foreach (var item in items)
+            {
+                mediaInfos.Add(new CMediaInfo(item));
+            }
+            return mediaInfos;
+        }
+
+        public object Get(GetEpisodeList request)
+        {
+            _logger.Info("GetEpisodeList");
+            var retVal = GetVideos<Episode>();
+            retVal = retVal.OrderBy(x => x.SortName).ThenBy(x => x.Season).ThenBy(x => x.Episode).ToList();
+            return retVal;
+        }
+
+        public object Get(GetMovieList request)
+        {
+            _logger.Info("GetMovieList");
+            var retVal = GetVideos<Movie>();
+            retVal = retVal.OrderBy(x => x.SortName).ThenBy(x => x.StartYear).ToList();
+            return retVal;
+        }
+
+        public object Get(GetCodecSummary request)
+        {
+            _logger.Info("GetCodecSummary");
+
+            var db = CConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var groupData = db.CalculateMediaCodecs();
+
+            var serverId = request.serverId ?? "";
+            var rootDivName = request.rootDivName ?? "";
+            var vgReponse = groupData.createStat(serverId, rootDivName);
+
+            return vgReponse;
+        }
+
+        public object Get(GetResolutionSummary request)
+        {
+            _logger.Info("GetResolutionSummary");
+
+            var db = CConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var groupData = db.CalculateMediaResolutions();
+
+            var serverId = request.serverId ?? "";
+            var rootDivName = request.rootDivName ?? "";
+            var vgReponse = groupData.createStat(serverId, rootDivName);
+
+            return vgReponse;
+        }
+
+        public object Get(GetDVProfileSummary request)
+        {
+            _logger.Info("GetDVProfileSummary");
+
+            var db = CConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+
+            var showUnknownDVProfileCount = request.showUnknownDVProfileCount == "true";
+            var serverId = request.serverId ?? "";
+            var rootDivName = request.rootDivName ?? "";
+
+            _logger.Debug("GetDVProfileSummary: showUnknownDVProfileCount={0}, showUnknownDVProfileCount={1}, serverId={2}, rootDivName={3}"
+                , showUnknownDVProfileCount
+                , request.showUnknownDVProfileCount
+                , serverId
+                , rootDivName);
+
+            var groupData = db.CalculateDVProfileInfo(showUnknownDVProfileCount);
+
+            var vgReponse = groupData.createStat(serverId, rootDivName);
+
+            return vgReponse;
+        }
+        public object Get(GetCustomData request)
+        {
+            // Process request.Param and build response
+            return new CustomDataResponse { Result = "Hello, " + request.Param };
+        }
+    }
+}

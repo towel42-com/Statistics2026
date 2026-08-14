@@ -1,24 +1,129 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using MediaBrowser.Model.IO;
+using CodecInfo.Data;
+
+
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Providers;
+
+using MediaBrowser.Model.Entities;
+
+using MediaBrowser.Model.Logging;
+using System.Net.Mime;
 
 namespace CodecInfo.Data
 {
     public class CMediaInfo
     {
-        public string ItemId { get; set; }
+        public CMediaInfo() { }
+        public CMediaInfo(Video video)
+        {
+            var (primaryName, secondaryName, descName) = GetDescName(video);
 
-        public string PrimaryName { get; set; } // movie title or series name
-        public string SortName { get; set; } 
-        public string SecondaryName { get; set; } // episode name
-        public string StartYear { get; set; } // release year for movies, year of the of the first season of the TV show
+            var mediaStream = video.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video);
+            if (!mediaStream?.Width.HasValue ?? true)
+            {
+                return;
+            }
 
-        public bool IsEpisode { get; set; }
-        public int Season { get; set; }
-        public int Episode { get; set; }
+            var resolutionBase = GetMediaResolution(mediaStream, false);
+            var resolutionDetail = GetMediaResolution(mediaStream, true);
+            var codec = mediaStream?.Codec ?? "Unknown";
+            var dvProfile = GetDolbyVisionProfile(mediaStream);
 
-        public string ResolutionBase { get; set; } // just SD/HD/4k/8k etc
-        public string ResolutionDetail { get; set; } // includes details of resolution
-        public string Codec { get; set; }
-        public string DolbyVisionProfile { get; set; }
-        public string ServerLocation { get; set; }
+            ItemId = video.Id.ToString();
+            IsEpisode = video is Episode;
+            DescriptiveName = descName;
+            PrimaryName = primaryName;
+            SortName = video.SortName;
+            SecondaryName = secondaryName;
+            StartYear = video.ProductionYear?.ToString() ?? "Unknown";
+            Season = video.ParentIndexNumber ?? -1;
+            Episode = video.IndexNumber ?? -1;
+            ResolutionDetail = resolutionDetail;
+            ResolutionBase = resolutionBase;
+            Codec = codec;
+            DolbyVisionProfile = dvProfile;
+            ServerLocation = video.Path ?? "Unknown";
+        }
+
+        public (string primaryName, string secondaryName, string descName) GetDescName(Video video)
+        {
+            var primaryName = video.Name;
+            var secondaryName = video.Name;
+            var descName = video.Name;
+            if (video is Episode episode)
+            {
+                primaryName = episode.SeriesName;
+                descName = primaryName + " - " + secondaryName;
+            }
+            else
+                secondaryName = "";
+            return (primaryName, secondaryName, descName);
+        }
+
+        string GetMediaResolution(MediaStream typeInfo, bool includeDetails)
+        {
+            if (typeInfo == null || typeInfo.Width == null)
+                return Constants.NoResolution;
+
+            int width = typeInfo.Width.Value;
+
+            var details = string.Empty;
+            if (includeDetails)
+            {
+                details = $" ({typeInfo.Width}x{typeInfo.Height})";
+            }
+
+            if (width >= 1281 && width <= 1920) return Constants.HD + details;
+            if (width >= 3841 && width <= 7680) return Constants._8k + details;
+            if (width >= 1921 && width <= 3840) return Constants._4k + details;
+            if (width >= 1200 && width <= 1280) return Constants._720p + details;
+            //if (width < 1200)
+            return Constants.SD + details;
+        }
+
+
+        private string GetDolbyVisionProfile(MediaStream mediaStream)
+        {
+            if (mediaStream == null)
+                return Constants.MissingVideoStream;
+
+            if (mediaStream.Profile == null)
+                return Constants.UnknownDolbyProfile;
+
+            var codec = mediaStream.Codec.ToUpper();
+            if (codec != Constants.HEVC && codec != Constants.AV1)
+                return Constants.NonDolbyVisionCompatibleCodec;
+
+            var dvProfile = mediaStream.ExtendedVideoSubTypeDescription;
+            if (dvProfile.ToLower() == "none")
+                return Constants.NoDolbyProfile;
+
+            return dvProfile;
+        }
+
+        public string ItemId { get;  set; }
+        public string DescriptiveName { get;  set; }
+        public string PrimaryName { get;  set; } // movie title or series name
+        public string SortName { get;  set; }
+        public string SecondaryName { get;  set; } // episode name
+        public string StartYear { get;  set; } // release year for movies, year of the of the first season of the TV show
+
+        public bool IsEpisode { get;  set; }
+        public int Season { get;  set; }
+        public int Episode { get;  set; }
+
+        public string ResolutionBase { get;  set; } // just SD/HD/4k/8k etc
+        public string ResolutionDetail { get;  set; } // includes details of resolution
+        public string Codec { get;  set; }
+        public string DolbyVisionProfile { get;  set; }
+        public string ServerLocation { get;  set; }
     }
 }
