@@ -50,6 +50,10 @@ namespace CodecInfo.Api
 
         [ApiMember(Name = "rootDivName", Description = "Root Division Name", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string rootDivName { get; set; }
+
+        [ApiMember(Name = "showAllCodecs", Description = "Show All Codecs", IsRequired = true, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool showAllCodecs { get; set; }
+
     }
 
     [Route("/codec_info/resolution_summary", "GET", Summary = "Gets Resolution Summary for Library")]
@@ -62,6 +66,10 @@ namespace CodecInfo.Api
 
         [ApiMember(Name = "rootDivName", Description = "Root Division Name", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string rootDivName { get; set; }
+
+        [ApiMember(Name = "showAllResolutions", Description = "Show All Resolutions", IsRequired = true, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool showAllResolutions { get; set; }
+
     }
 
     [Route("/codec_info/dvprofile_summary", "GET", Summary = "Gets Dolby Vision Profile Summary for Library")]
@@ -75,8 +83,10 @@ namespace CodecInfo.Api
         [ApiMember(Name = "rootDivName", Description = "Root Division Name", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string rootDivName { get; set; }
 
-        [ApiMember(Name = "show_unknown_dv_profile_count", Description = "Show Unknown Dolby Vision Profile Count", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "GET")]
-        public string showUnknownDVProfileCount { get; set; }
+        [ApiMember(Name = "showUnknownDVProfiles", Description = "Show Unknown Dolby Vision Profile", IsRequired = true, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool showUnknownDVProfiles { get; set; }
+        [ApiMember(Name = "showAllDVProfiles", Description = "Show All Dolby Vision Profiles", IsRequired = true, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool showAllDVProfiles { get; set; }
     }
 
     [Route("/CustomEndpoint", "GET")]
@@ -168,10 +178,13 @@ namespace CodecInfo.Api
             _logger.Info("GetCodecSummary");
 
             var db = CConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var groupData = db.CalculateMediaCodecs();
 
             var serverId = request.serverId ?? "";
             var rootDivName = request.rootDivName ?? "";
+            var showAllResolutions = request.showAllCodecs;
+
+            var groupData = db.CalculateMediaCodecs(showAllResolutions);
+
             var vgReponse = groupData.createStat(serverId, rootDivName);
 
             return vgReponse;
@@ -182,10 +195,12 @@ namespace CodecInfo.Api
             _logger.Info("GetResolutionSummary");
 
             var db = CConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var groupData = db.CalculateMediaResolutions();
-
             var serverId = request.serverId ?? "";
             var rootDivName = request.rootDivName ?? "";
+            var showAllResolutions = request.showAllResolutions;
+
+            var groupData = db.CalculateMediaResolutions(showAllResolutions);
+
             var vgReponse = groupData.createStat(serverId, rootDivName);
 
             return vgReponse;
@@ -197,17 +212,12 @@ namespace CodecInfo.Api
 
             var db = CConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
-            var showUnknownDVProfileCount = request.showUnknownDVProfileCount == "true";
             var serverId = request.serverId ?? "";
             var rootDivName = request.rootDivName ?? "";
+            var showUnknownDVProfiles = request.showUnknownDVProfiles;
+            var showAllDVProfiles = request.showAllDVProfiles;
 
-            _logger.Debug("GetDVProfileSummary: showUnknownDVProfileCount={0}, showUnknownDVProfileCount={1}, serverId={2}, rootDivName={3}"
-                , showUnknownDVProfileCount
-                , request.showUnknownDVProfileCount
-                , serverId
-                , rootDivName);
-
-            var groupData = db.CalculateDVProfileInfo(showUnknownDVProfileCount);
+            var groupData = db.CalculateDVProfileInfo(showUnknownDVProfiles, showAllDVProfiles);
 
             var vgReponse = groupData.createStat(serverId, rootDivName);
 

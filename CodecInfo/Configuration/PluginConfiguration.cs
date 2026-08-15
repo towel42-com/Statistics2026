@@ -15,7 +15,10 @@ namespace CodecInfo.Configuration
         public string Version { get; set; }
         public string ServerId { get; set; }
 
-        public bool showUnknownDVProfileCount { get; set; } = true;
+        public bool showAllCodecs { get; set; } = false;
+        public bool showUnknownDVProfiles { get; set; } = false;
+        public bool showAllDVProfiles { get; set; } = false;
+        public bool showAllResolutions { get; set; } = false;
     }
 }
 

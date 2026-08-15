@@ -390,7 +390,7 @@ namespace CodecInfo.Data
                 }
             }
         }
-        public CValueGroup CalculateMediaResolutions()
+        public CValueGroup CalculateMediaResolutions( bool showAllResolutions )
         {
             string sql =
                 "SELECT " +
@@ -403,6 +403,15 @@ namespace CodecInfo.Data
                 ;
 
             var retVal = new CValueGroup(Constants.MediaResolutions, Constants.HelpMediaResolutions);
+
+            if (showAllResolutions)
+            {
+                retVal.addRow(Constants.HD, 0, 0);
+                retVal.addRow(Constants._4k, 0, 0);
+                retVal.addRow(Constants._8k, 0, 0);
+                retVal.addRow(Constants._720p, 0, 0);
+                retVal.addRow(Constants.SD, 0, 0);
+            }
 
             lock (connection)
             {
@@ -422,11 +431,11 @@ namespace CodecInfo.Data
             return retVal;
         }
 
-        public CValueGroup CalculateMediaCodecs()
+        public CValueGroup CalculateMediaCodecs( bool showAllCodecs )
         {
             string sql =
                 "SELECT " +
-                "Codec as Resolution, " +
+                "Codec as Codec, " +
                 "sum(IsEpisode) AS Episodes, " +
                 "sum(NOT IsEpisode) AS Movies " +
                 "FROM MediaInfo " +
@@ -435,6 +444,18 @@ namespace CodecInfo.Data
                 ;
 
             var retVal = new CValueGroup(Constants.MediaCodecs, Constants.HelpMediaCodecs);
+            if (showAllCodecs)
+            {
+                retVal.addRow("av1", 0, 0);
+                retVal.addRow("h264", 0, 0);
+                retVal.addRow("hevc", 0, 0);
+                retVal.addRow("mpeg2video", 0, 0);
+                retVal.addRow("mpeg4", 0, 0);
+                retVal.addRow("msmpeg4v3", 0, 0);
+                retVal.addRow("prores", 0, 0);
+                retVal.addRow("vc1", 0, 0);
+            }
+
             lock (connection)
             {
                 using (var statement = connection.PrepareStatement(sql))
@@ -453,7 +474,7 @@ namespace CodecInfo.Data
             return retVal;
         }
 
-        public CValueGroup CalculateDVProfileInfo(bool showUnknownDVProfileCount)
+        public CValueGroup CalculateDVProfileInfo(bool showUnknownDVProfiles, bool showAllDVProfiles)
         {
             string sql =
                 "SELECT " +
@@ -462,7 +483,7 @@ namespace CodecInfo.Data
                 "sum(NOT IsEpisode) AS Movies " +
                 "FROM MediaInfo ";
 
-            if (!showUnknownDVProfileCount)
+            if (!showUnknownDVProfiles)
                 sql += $"WHERE DolbyVisionProfile NOT IN ({string.Join(",", Constants.UnknownDolbyProfiles.Select(p => $"'{p}'"))}) ";
 
             sql += "GROUP BY DolbyVisionProfile " +
@@ -470,8 +491,19 @@ namespace CodecInfo.Data
                    ;
 
             var retVal = new CValueGroup(Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile);
-            bool foundUnknown = false;
-            bool found50 = false;
+            if (showUnknownDVProfiles)
+                retVal.addRow("Unknown Dolby Profile", 0, 0);
+            if (showAllDVProfiles)
+            {
+                retVal.addRow("Profile 5.0", 0, 0);
+                retVal.addRow("Profile 7.0", 0, 0);
+                retVal.addRow("Profile 8.0", 0, 0);
+                retVal.addRow("Profile 8.1", 0, 0);
+                retVal.addRow("Profile 8.2", 0, 0);
+                retVal.addRow("Profile 8.4", 0, 0);
+                retVal.addRow("Profile 9.0", 0, 0);
+                retVal.addRow("Profile 20.0", 0, 0);
+            }
             lock (connection)
             {
                 using (var statement = connection.PrepareStatement(sql))
@@ -480,26 +512,11 @@ namespace CodecInfo.Data
                     {
                         var row = statement.Current;
                         var dvProfile = row.GetString(0);
-                        if (Constants.IsUnknownDolbyProfile(dvProfile))
-                            foundUnknown = true;
-                        if (Constants.IsDolbyVision50(dvProfile))
-                            found50 = true;
-
                         var episodeCount = row.GetInt(1);
                         var movieCount = row.GetInt(2);
                         retVal.addRow(dvProfile, episodeCount, movieCount);
                     }
                 }
-            }
-
-            if (showUnknownDVProfileCount && !foundUnknown)
-            {
-                retVal.addRow("Unknown Dolby Profile", 0, 0);
-            }
-
-            if (!found50)
-            {
-                retVal.addRow("Profile 5.0", 0, 0);
             }
 
             return retVal;

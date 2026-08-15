@@ -77,9 +77,23 @@ namespace CodecInfo.Data
             ValueLineThree = null;
         }
 
+        private int findRow( string category)
+        {
+            for (int i = 0; i < MediaCounts.Count; i++)
+            {
+                if (MediaCounts[i].Name == category)
+                    return i;
+            }
+            return -1;
+        }
+
         public void addRow(string category, int episodeCount, int movieCount)
         {
-            MediaCounts.Add(new CMediaCount() { Name = category, Movies = movieCount, Episodes = episodeCount });
+            int currRow = findRow( category);
+            if ( currRow == -1 )
+                MediaCounts.Add(new CMediaCount() { Name = category, Movies = movieCount, Episodes = episodeCount });
+            else
+                MediaCounts[currRow].setCount(episodeCount, movieCount);
         }
         public override string ToString()
         {

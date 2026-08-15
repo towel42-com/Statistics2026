@@ -12,9 +12,6 @@
 
     const pluginId = "4BFE2894-AEA3-4D3C-A429-503B56D61711";
 
-    function showInfo(text, title) {
-        Dashboard.alert({ message: text, title: title });
-    }
     function getSummaryInfo(view, whichSummary, parameters="") {
         var url = ApiClient.getUrl( "/emby/codec_info/" + whichSummary+parameters);
 
@@ -55,9 +52,9 @@
 
                 var mediaStats = "";
 
-                mediaStats += getSummaryInfo(view, "codec_summary");
-                mediaStats += getSummaryInfo(view, "resolution_summary");
-                mediaStats += getSummaryInfo(view, "dvprofile_summary","?showUnknownDVProfileCount=" + config.showUnknownDVProfileCount);
+                mediaStats += getSummaryInfo(view, "codec_summary", "?showAllCodecs=" + config.showAllCodecs);
+                mediaStats += getSummaryInfo(view, "resolution_summary", "?showAllResolutions=" + config.showAllResolutions);
+                mediaStats += getSummaryInfo(view, "dvprofile_summary", "?showUnknownDVProfiles=" + config.showUnknownDVProfiles + "&showAllDVProfiles=" + config.showAllDVProfiles);
 
                 view.querySelector("#mediaStats").innerHTML = (mediaStats);
 

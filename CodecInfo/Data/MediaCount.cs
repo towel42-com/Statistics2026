@@ -6,6 +6,12 @@
         public int Movies { get; set; }
         public int Episodes { get; set; }
 
+        public void setCount( int episodeCount, int movieCount)
+        {
+            Episodes = episodeCount;
+            Movies = movieCount;
+        }
+
         public string ToString(int depth = 0)
         {
             var retVal = CValueGroupResponse._addToHtml(depth++, "<tr>");

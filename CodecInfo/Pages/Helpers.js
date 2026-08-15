@@ -86,4 +86,7 @@ Date.daysBetween = function (date1, date2) {
 };
 
 
+function showInfo(text, title) {
+    Dashboard.alert({ message: text, title: title });
+}
 
