@@ -14,9 +14,9 @@
 
         public string ToString(int depth = 0)
         {
-            var retVal = CValueGroupResponse._addToHtml(depth++, "<tr>");
+            var retVal = CValueGroupResponse._addToHtml(depth++, "<tr style=\"white-space: nowrap;\">");
 
-            retVal += CValueGroupResponse._addToHtml(depth, $"<td>{Name}</td>");
+            retVal += CValueGroupResponse._addToHtml(depth, $"<td style=\"text-align: left; white-space: nowrap;\">{Name}</td>");
             retVal += CValueGroupResponse._addToHtml(depth, $"<td>{Movies}</td>");
             retVal += CValueGroupResponse._addToHtml(depth, $"<td>{Episodes}</td>");
             retVal += CValueGroupResponse._addToHtml(--depth, "</tr>");
