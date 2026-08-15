@@ -1,0 +1,43 @@
+﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/Settings.js">
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <h2 style="margin-top: 0px;margin-bottom: 0px;">Codec Information Settings</h2>
+
+            <h3 style="margin-top: 10px;">Codec Settings</h3>
+            <label class="emby-checkbox-label">
+                <input style="margin-top: 10px;" id="showAllCodecs" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                <span class="checkboxLabel">Show all Codecs?</span>
+                <div id="showAllCodecsDiv">
+                    <i class="md-icon">info</i>
+                </div>
+            </label>
+            <div>
+                <h3 style="margin-top: 10px;">Dolby Vision Profile Settings</h3>
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showUnknownDVProfiles" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show non-HEVC/Unknown Dolby Vision profiles?</span>
+                    <div id="showUnknownDVProfilesDiv">
+                        <i class="md-icon">info</i>
+                    </div>
+                </label>
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showAllDVProfiles" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show all Dolby Vision profiles?</span>
+                    <div id="showAllDVProfilesDiv">
+                        <i class="md-icon">info</i>
+                    </div>
+                </label>
+            </div>
+            <h3 style="margin-top: 10px;">Resolution Settings</h3>
+            <label class="emby-checkbox-label">
+                <input style="margin-top: 10px;" id="showAllResolutions" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                <span class="checkboxLabel">Show all Resolutions?</span>
+                <div id="showAllResolutionsDiv">
+                    <i class="md-icon">info</i>
+                </div>
+            </label>
+        </div>
+    </div>
+</div>

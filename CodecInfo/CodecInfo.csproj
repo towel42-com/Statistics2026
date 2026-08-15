@@ -18,21 +18,27 @@
 	<ItemGroup>
 		<EmbeddedResource Include="Configuration\PluginConfiguration.cs" />
 
-		<EmbeddedResource Include="Configuration\CodecInfoConfigPage.html" />
-		<EmbeddedResource Include="Configuration\CodecInfoConfigPage.js" />
+		<EmbeddedResource Include="Pages\Summary.html" />
+		<EmbeddedResource Include="Pages\Summary.js" />
 
-		<EmbeddedResource Include="Configuration\SubPages\AllCodecEpisodeInformation.html" />
-		<EmbeddedResource Include="Configuration\SubPages\AllCodecEpisodeInformation.js" />
+		<EmbeddedResource Include="Pages\Movies.html" />
+		<EmbeddedResource Include="Pages\Movies.js" />
 
-		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.html" />
-		<EmbeddedResource Include="Configuration\SubPages\AllCodecMovieInformation.js" />
+		<EmbeddedResource Include="Pages\Episodes.html" />
+		<EmbeddedResource Include="Pages\Episodes.js" />
+
+		<EmbeddedResource Include="Pages\Settings.html" />
+		<EmbeddedResource Include="Pages\Settings.js" />
+
+		<EmbeddedResource Include="Pages\Helpers.js" />
 
 		<EmbeddedResource Include="thumb.png" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="MediaBrowser.Server.Core" Version="4.8.11" />
-		<PackageReference Include="System.Memory" Version="4.5.5" />
+		<PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90" />
+		<PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2" />
+		<PackageReference Include="System.Memory" Version="4.6.3" />
 	</ItemGroup>
 
 	<ItemGroup>

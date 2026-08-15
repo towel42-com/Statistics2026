@@ -1,19 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using CodecInfo.Configuration;
+using CodecInfo.Data;
 using MediaBrowser.Common;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.Activity;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using CodecInfo.Configuration;
-using CodecInfo.Core;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CodecInfo.ScheduledTasks
 {
@@ -21,21 +23,28 @@ namespace CodecInfo.ScheduledTasks
     {
         private readonly IFileSystem _fileSystem;
         private readonly ILibraryManager _libraryManager;
-        private readonly ILogger fLogger;
+        private readonly ILogger _logger;
         private readonly IServerApplicationPaths _serverApplicationPaths;
         private readonly IUserDataManager _userDataManager;
         private readonly IUserManager _userManager;
         private IApplicationHost _appHost;
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IProviderManager _providerManager;
+        private readonly IServerConfigurationManager _appConfig;
 
-        public CCalculateMediaTask(ILogManager logger,
+        public CCalculateMediaTask(
+            ILogManager logger,
+            IServerConfigurationManager config,
             IUserManager userManager,
             IUserDataManager userDataManager,
-            ILibraryManager libraryManager, IFileSystem fileSystem, IJsonSerializer jsonSerializer,
-            IServerApplicationPaths serverApplicationPaths, IApplicationHost appHost, IProviderManager providerManager)
+            ILibraryManager libraryManager,
+            IFileSystem fileSystem,
+            IJsonSerializer jsonSerializer,
+            IServerApplicationPaths serverApplicationPaths,
+            IApplicationHost appHost,
+            IProviderManager providerManager)
         {
-            fLogger = logger.GetLogger("CodecInfo");
+            _logger = logger.GetLogger("CodecInfo");
             _libraryManager = libraryManager;
             _userManager = userManager;
             _userDataManager = userDataManager;
@@ -44,6 +53,7 @@ namespace CodecInfo.ScheduledTasks
             _serverApplicationPaths = serverApplicationPaths;
             _appHost = appHost;
             _providerManager = providerManager;
+            _appConfig = config;
         }
 
         private static CPluginConfiguration PluginConfiguration => CPlugin.Instance.Configuration;
@@ -57,36 +67,27 @@ namespace CodecInfo.ScheduledTasks
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
+            _logger.Info("CodecInfo : Starting CodecInfo calculation task");
             // purely for progress reporting
-            PluginConfiguration.LastUpdated = DateTime.Now.ToString("g");
+            var now = DateTime.Now;
+            PluginConfiguration.LastUpdated = now.ToString("g");
             PluginConfiguration.Version = CPlugin.Instance.Version.ToString(4);
             PluginConfiguration.BuildDate = CBuildDateInfo.GetBuildDate().ToString();
             PluginConfiguration.ServerId = _appHost.SystemId;
 
-            var numSteps = 4;
-            var currStep = 0;
-            progress.Report(currStep / numSteps);
+            var db = CConfigInfoDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
+            db.Initialize();
 
+            progress.Report(0);
+            db.UpdateLastUpdated(now, CBuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
+            progress.Report(100);
 
-            var calculator = new CCalculator(_userManager, _libraryManager, _userDataManager, _fileSystem, fLogger, _providerManager, cancellationToken);
-            using (calculator)
-            {
-                PluginConfiguration.MediaInfoList = calculator.CalculateMediaInfo();
-                progress.Report((++currStep) / numSteps);
+            progress.Report(0);
+            db.ClearMediaInfo();
+            progress.Report(100);
 
-                PluginConfiguration.MediaResolutions = calculator.CalculateMediaResolutions();
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.MediaCodecs = calculator.CalculateMediaCodecs();
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.DolbyVisionProfiles = calculator.CalculateDVProfileInfo(false);
-                progress.Report((++currStep) / numSteps);
-
-                PluginConfiguration.DolbyVisionProfilesWithUnknown = calculator.CalculateDVProfileInfo(true);
-                progress.Report((++currStep) / numSteps);
-            }
-
+            progress.Report(0);
+            db.CalculateMediaInfo(_libraryManager, progress);
             progress.Report(100);
 
             CPlugin.Instance.SaveConfiguration();
