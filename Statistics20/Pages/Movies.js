@@ -1,8 +1,8 @@
 ﻿define(['mainTabsManager', 'appRouter', 'emby-linkbutton', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, appRouter) {
     'use strict';
 
-    ApiClient.getCodecInfoURL = function (url_to_get) {
-        console.log("getCodecInfoURL Url = " + url_to_get);
+    ApiClient.getStatistics20URL = function (url_to_get) {
+        console.log("getStatistics20URL Url = " + url_to_get);
         return this.ajax({
             type: "GET",
             url: url_to_get,
@@ -10,12 +10,26 @@
         });
     };
 
+    function displayTime(ticks) {
+        var ticksInSeconds = ticks / 10000000;
+        var hh = Math.floor(ticksInSeconds / 3600);
+        var mm = Math.floor((ticksInSeconds % 3600) / 60);
+        var ss = Math.floor(ticksInSeconds % 60);
+
+        return pad(hh, 2) + ":" + pad(mm, 2) + ":" + pad(ss, 2);
+    }
+
+    function pad(n, width) {
+        n = n + '';
+        return n.length >= width ? n : new Array(width - n.length + 1).join('0') + n;
+    }
+
     return function (view, params) {
 
         // init code here
         view.addEventListener('viewshow', function (e) {
 
-            mainTabsManager.setTabs(this, getTabIndex("Episodes"), getTabs);
+            mainTabsManager.setTabs(this, getTabIndex("Movies"), getTabs);
 
             var style = document.createElement('style');
             style.innerHTML =
@@ -31,17 +45,17 @@
 
             function process_click() {
 
-                var url = "codec_info/episode_list";
+                var url = "codec_info/movie_list";
                 url = ApiClient.getUrl(url);
 
-                var load_status = view.querySelector('#episode_results_status');
+                var load_status = view.querySelector('#movie_results_status');
                 load_status.innerHTML = "Loading Data...";
 
-                ApiClient.getCodecInfoURL(url).then(function (videoData) {
+                ApiClient.getStatistics20URL(url).then(function (videoData) {
                     load_status.innerHTML = "&nbsp;";
                     console.log("videoData: " + JSON.stringify(videoData));
 
-                    var table_body = view.querySelector('#episode_results');
+                    var table_body = view.querySelector('#movie_results');
                     var row_html = "";
 
                     for (var index = 0; index < videoData.length; ++index) {
@@ -54,8 +68,7 @@
 
                         row_html += "<tr style='background:" + row_bg_col + ";'>";
 
-                            var episodeName = info.PrimaryName + " - S" + String(info.Season).padStart(2, '0') + "E" + String(info.Episode).padStart(2, '0') + " - " + info.SecondaryName;
-                            row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + episodeName + "</td>";
+                            row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.PrimaryName + "</td>";
                             row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='right'>" + info.StartYear + "</td>";
                             row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.ResolutionDetail + "</td>";
                             row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Codec + "</td>";
@@ -67,10 +80,7 @@
 
                     table_body.innerHTML = row_html;
 
-                },
-                function (response) {
-                    load_status.innerHTML = response.status + ":" + response.statusText;
-                });
+                }, function (response) { load_status.innerHTML = response.status + ":" + response.statusText; });
             }
         });
 

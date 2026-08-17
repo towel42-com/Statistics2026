@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace CodecInfo
+namespace Statistics20
 {
     internal static class Constants
     {

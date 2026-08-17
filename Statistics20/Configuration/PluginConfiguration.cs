@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 using MediaBrowser.Model.Plugins;
-using CodecInfo.Data;
+using Statistics20.Data;
 
-namespace CodecInfo.Configuration
+namespace Statistics20.Configuration
 {
-    public class CPluginConfiguration : BasePluginConfiguration
+    public class PluginConfiguration : BasePluginConfiguration
     {
-        public CPluginConfiguration()
+        public PluginConfiguration()
         {
         }
 

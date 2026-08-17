@@ -1,8 +1,8 @@
 ﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager) {
     'use strict';
 
-    ApiClient.getCodecInfoURL = function (url_to_get) {
-        console.log("getCodecInfoURL Url = " + url_to_get);
+    ApiClient.getStatistics20URL = function (url_to_get) {
+        console.log("getStatistics20URL Url = " + url_to_get);
         return this.ajax({
             type: "GET",
             url: url_to_get,

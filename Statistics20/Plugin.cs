@@ -6,13 +6,13 @@ using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-using CodecInfo.Configuration;
+using Statistics20.Configuration;
 
-namespace CodecInfo
+namespace Statistics20
 {
-    public class CPlugin : BasePlugin<CPluginConfiguration>, IHasWebPages, IHasThumbImage
+    public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
-        public CPlugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+        public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
             : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
@@ -24,14 +24,14 @@ namespace CodecInfo
             {
                 new PluginPageInfo
                 {
-                    Name = "CodecInfoConfigPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.CodecInfoConfigPage.html",
+                    Name = "Statistics20ConfigPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.Statistics20ConfigPage.html",
                     EnableInMainMenu = false
                 },
                 new PluginPageInfo
                 {
-                    Name = "CodecInfoConfigPage.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.CodecInfoConfigPage.js"
+                    Name = "Statistics20ConfigPage.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.Statistics20ConfigPage.js"
                 },
                 new PluginPageInfo
                 {
@@ -105,7 +105,7 @@ namespace CodecInfo
 
         public override Guid Id => new Guid("4BFE2894-AEA3-4D3C-A429-503B56D61711");
 
-        public static CPlugin Instance { get; private set; }
+        public static Plugin Instance { get; private set; }
 
         public override string Name => "Codec Information";
 

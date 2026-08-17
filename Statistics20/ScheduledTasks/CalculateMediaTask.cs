@@ -1,5 +1,5 @@
-﻿using CodecInfo.Configuration;
-using CodecInfo.Data;
+﻿using Statistics20.Configuration;
+using Statistics20.Data;
 using MediaBrowser.Common;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
@@ -17,9 +17,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CodecInfo.ScheduledTasks
+namespace Statistics20.ScheduledTasks
 {
-    public class CCalculateMediaTask : IScheduledTask
+    public class CalculateMediaTask : IScheduledTask
     {
         private readonly IFileSystem _fileSystem;
         private readonly ILibraryManager _libraryManager;
@@ -32,7 +32,7 @@ namespace CodecInfo.ScheduledTasks
         private readonly IProviderManager _providerManager;
         private readonly IServerConfigurationManager _appConfig;
 
-        public CCalculateMediaTask(
+        public CalculateMediaTask(
             ILogManager logger,
             IServerConfigurationManager config,
             IUserManager userManager,
@@ -44,7 +44,7 @@ namespace CodecInfo.ScheduledTasks
             IApplicationHost appHost,
             IProviderManager providerManager)
         {
-            _logger = logger.GetLogger("CodecInfo");
+            _logger = logger.GetLogger("Statistics20");
             _libraryManager = libraryManager;
             _userManager = userManager;
             _userDataManager = userDataManager;
@@ -56,10 +56,10 @@ namespace CodecInfo.ScheduledTasks
             _appConfig = config;
         }
 
-        private static CPluginConfiguration PluginConfiguration => CPlugin.Instance.Configuration;
+        private static PluginConfiguration PluginConfiguration => Plugin.Instance.Configuration;
         string IScheduledTask.Name => "Calculate Codec Information for all library media";
 
-        string IScheduledTask.Key => "CodecInfoCalculateStatsTask";
+        string IScheduledTask.Key => "Statistics20CalculateStatsTask";
 
         string IScheduledTask.Description => "Task that will calculate Codec Information of all media in library. (Ideal for weekly/non-daily schedule)";
 
@@ -67,19 +67,19 @@ namespace CodecInfo.ScheduledTasks
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info("CodecInfo : Starting CodecInfo calculation task");
+            _logger.Info("Statistics20 : Starting Statistics20 calculation task");
             // purely for progress reporting
             var now = DateTime.Now;
             PluginConfiguration.LastUpdated = now.ToString("g");
-            PluginConfiguration.Version = CPlugin.Instance.Version.ToString(4);
-            PluginConfiguration.BuildDate = CBuildDateInfo.GetBuildDate().ToString();
+            PluginConfiguration.Version = Plugin.Instance.Version.ToString(4);
+            PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString();
             PluginConfiguration.ServerId = _appHost.SystemId;
 
-            var db = CConfigInfoDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
+            var db = ConfigInfoDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
             db.Initialize();
 
             progress.Report(0);
-            db.UpdateLastUpdated(now, CBuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
+            db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
             progress.Report(100);
 
             progress.Report(0);
@@ -90,7 +90,7 @@ namespace CodecInfo.ScheduledTasks
             db.CalculateMediaInfo(_libraryManager, progress);
             progress.Report(100);
 
-            CPlugin.Instance.SaveConfiguration();
+            Plugin.Instance.SaveConfiguration();
             return Task.CompletedTask;
         }
 

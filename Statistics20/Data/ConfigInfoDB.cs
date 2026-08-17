@@ -1,6 +1,6 @@
-﻿using CodecInfo;
-using CodecInfo.Configuration;
-using CodecInfo.Data;
+﻿using Statistics20;
+using Statistics20.Configuration;
+using Statistics20.Data;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
@@ -18,11 +18,11 @@ using System.IO;
 using System.Linq;
 
 
-namespace CodecInfo.Data
+namespace Statistics20.Data
 {
-    public sealed class CConfigInfoDB
+    public sealed class ConfigInfoDB
     {
-        private static CConfigInfoDB instance = null;
+        private static ConfigInfoDB instance = null;
         private static readonly object _padlock = new object();
 
         private static string[] _datetimeFormats = new string[] {
@@ -64,20 +64,20 @@ namespace CodecInfo.Data
         private ILogger _logger = null;
         private IDatabaseConnection connection = null;
 
-        public static CConfigInfoDB GetInstance(string db_file, ILogger log)
+        public static ConfigInfoDB GetInstance(string db_file, ILogger log)
         {
             lock (_padlock)
             {
                 if (instance == null)
                 {
-                    instance = new CConfigInfoDB(db_file, log);
+                    instance = new ConfigInfoDB(db_file, log);
                     log.Info("ConfigInfoData : New Instance Created : " + instance.GetHashCode());
                 }
                 return instance;
             }
         }
 
-        public static CConfigInfoDB GetExistingInstance()
+        public static ConfigInfoDB GetExistingInstance()
         {
             lock (_padlock)
             {
@@ -90,12 +90,12 @@ namespace CodecInfo.Data
         }
 
 
-        private CConfigInfoDB()
+        private ConfigInfoDB()
         {
 
         }
 
-        private CConfigInfoDB(string db_path, ILogger l)
+        private ConfigInfoDB(string db_path, ILogger l)
         {
             _logger = l;
             _logger.Info("ConfigInfoData : Creating");
@@ -103,7 +103,7 @@ namespace CodecInfo.Data
             connection = CreateConnection(db_file_name);
         }
 
-        ~CConfigInfoDB()
+        ~ConfigInfoDB()
         {
             _logger.Info("ConfigInfoData : Cleaning up");
             if (connection != null)
@@ -308,7 +308,7 @@ namespace CodecInfo.Data
             videoList.AddRange(GetItems<Movie>(libMananger).Cast<Video>().ToList());
             progress.Report(100);
 
-            var db = CConfigInfoDB.GetExistingInstance();
+            var db = ConfigInfoDB.GetExistingInstance();
 
             _logger.Debug($"CalculateMediaInfo - Starting Video Analysis");
             var count = videoList.Count;
@@ -320,7 +320,7 @@ namespace CodecInfo.Data
                 progress.Report((++curr)/count);
                 try
                 {
-                    var mediaInfo = new CMediaInfo(video);
+                    var mediaInfo = new MediaInfo(video);
 
                     db.AddMediaInfo(mediaInfo);
                     _logger.Debug($"CalculateMediaInfo -     Processed Video - {mediaInfo.DescriptiveName} items processed");
@@ -334,7 +334,7 @@ namespace CodecInfo.Data
         }
 
 
-        public void AddMediaInfo(CMediaInfo mediaInfo)
+        public void AddMediaInfo(MediaInfo mediaInfo)
         {
             string sql =
                 "insert into MediaInfo " +
@@ -390,7 +390,7 @@ namespace CodecInfo.Data
                 }
             }
         }
-        public CValueGroup CalculateMediaResolutions( bool showAllResolutions )
+        public ValueGroup CalculateMediaResolutions( bool showAllResolutions )
         {
             string sql =
                 "SELECT " +
@@ -402,7 +402,7 @@ namespace CodecInfo.Data
                 "ORDER BY Resolution ASC"
                 ;
 
-            var retVal = new CValueGroup(Constants.MediaResolutions, Constants.HelpMediaResolutions);
+            var retVal = new ValueGroup(Constants.MediaResolutions, Constants.HelpMediaResolutions);
 
             if (showAllResolutions)
             {
@@ -431,7 +431,7 @@ namespace CodecInfo.Data
             return retVal;
         }
 
-        public CValueGroup CalculateMediaCodecs( bool showAllCodecs )
+        public ValueGroup CalculateMediaCodecs( bool showAllCodecs )
         {
             string sql =
                 "SELECT " +
@@ -443,7 +443,7 @@ namespace CodecInfo.Data
                 "ORDER BY Codec ASC"
                 ;
 
-            var retVal = new CValueGroup(Constants.MediaCodecs, Constants.HelpMediaCodecs);
+            var retVal = new ValueGroup(Constants.MediaCodecs, Constants.HelpMediaCodecs);
             if (showAllCodecs)
             {
                 retVal.addRow("av1", 0, 0);
@@ -474,7 +474,7 @@ namespace CodecInfo.Data
             return retVal;
         }
 
-        public CValueGroup CalculateDVProfileInfo(bool showUnknownDVProfiles, bool showAllDVProfiles)
+        public ValueGroup CalculateDVProfileInfo(bool showUnknownDVProfiles, bool showAllDVProfiles)
         {
             string sql =
                 "SELECT " +
@@ -490,7 +490,7 @@ namespace CodecInfo.Data
                    "ORDER BY DolbyVisionProfile ASC"
                    ;
 
-            var retVal = new CValueGroup(Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile);
+            var retVal = new ValueGroup(Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile);
             if (showUnknownDVProfiles)
                 retVal.addRow("Unknown Dolby Profile", 0, 0);
             if (showAllDVProfiles)

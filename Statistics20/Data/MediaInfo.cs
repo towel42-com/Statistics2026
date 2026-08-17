@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using MediaBrowser.Model.IO;
-using CodecInfo.Data;
+using Statistics20.Data;
 
 
 using MediaBrowser.Controller.Entities;
@@ -17,12 +17,12 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
 using System.Net.Mime;
 
-namespace CodecInfo.Data
+namespace Statistics20.Data
 {
-    public class CMediaInfo
+    public class MediaInfo
     {
-        public CMediaInfo() { }
-        public CMediaInfo(Video video)
+        public MediaInfo() { }
+        public MediaInfo(Video video)
         {
             var (primaryName, secondaryName, descName) = GetDescName(video);
 

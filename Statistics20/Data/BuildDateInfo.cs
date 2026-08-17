@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Reflection;
 
-namespace CodecInfo.Data
+namespace Statistics20.Data
 {
-    public static class CBuildDateInfo
+    public static class BuildDateInfo
     {
         public static DateTime GetBuildDate()
         {

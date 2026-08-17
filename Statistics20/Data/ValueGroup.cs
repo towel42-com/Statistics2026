@@ -6,21 +6,21 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 
-namespace CodecInfo.Data
+namespace Statistics20.Data
 {
-    public class CDynamicButton
+    public class DynamicButton
     {
         public string id { get; set; }
         public string info { get; set; }
         public string title { get; set; }
     };
 
-    public class CValueGroupResponse
+    public class ValueGroupResponse
     {
         public string html { get; set; }
-        public CDynamicButton[] dynamicButtons { get; set; } = new CDynamicButton[] { };
+        public DynamicButton[] dynamicButtons { get; set; } = new DynamicButton[] { };
 
-        public void addDynamicButton(CDynamicButton button)
+        public void addDynamicButton(DynamicButton button)
         {
             var local = dynamicButtons;
             Array.Resize(ref local, local.Length + 1);
@@ -45,12 +45,12 @@ namespace CodecInfo.Data
         }
     };
 
-    public class CValueGroup
+    public class ValueGroup
     {
         public string Title { get; set; }
 
         //public string TableInfo { get; set; }
-        public List<CMediaCount> MediaCounts;
+        public List<MediaCount> MediaCounts;
 
         public string ValueLineTwo { get; set; }
         public string ValueLineThree { get; set; }
@@ -59,15 +59,15 @@ namespace CodecInfo.Data
         public string ExtraInformation { get; set; }
         public string Id { get; set; }
 
-        public CValueGroup()
+        public ValueGroup()
         {
             Size = "small";
-            MediaCounts = new List<CMediaCount>();
+            MediaCounts = new List<MediaCount>();
         }
 
-        public CValueGroup(string title, string extraInformation, string size = "half")
+        public ValueGroup(string title, string extraInformation, string size = "half")
         {
-            MediaCounts = new List<CMediaCount>();
+            MediaCounts = new List<MediaCount>();
 
             Title = title;
             ExtraInformation = extraInformation;
@@ -91,7 +91,7 @@ namespace CodecInfo.Data
         {
             int currRow = findRow( category);
             if ( currRow == -1 )
-                MediaCounts.Add(new CMediaCount() { Name = category, Movies = movieCount, Episodes = episodeCount });
+                MediaCounts.Add(new MediaCount() { Name = category, Movies = movieCount, Episodes = episodeCount });
             else
                 MediaCounts[currRow].setCount(episodeCount, movieCount);
         }
@@ -102,25 +102,25 @@ namespace CodecInfo.Data
 
         public string ToString(int depth = 0)
         {
-            var retVal = CValueGroupResponse._addToHtml(depth++, "<table>");
+            var retVal = ValueGroupResponse._addToHtml(depth++, "<table>");
 
-            retVal += CValueGroupResponse._addToHtml(depth++, "<tr>");
-            retVal += CValueGroupResponse._addToHtml(depth, "<td></td>");
-            retVal += CValueGroupResponse._addToHtml(depth, "<td>Movies</td>");
-            retVal += CValueGroupResponse._addToHtml(depth, "<td>Episodes</td>");
-            retVal += CValueGroupResponse._addToHtml(--depth, "</tr>");
+            retVal += ValueGroupResponse._addToHtml(depth++, "<tr>");
+            retVal += ValueGroupResponse._addToHtml(depth, "<td></td>");
+            retVal += ValueGroupResponse._addToHtml(depth, "<td>Movies</td>");
+            retVal += ValueGroupResponse._addToHtml(depth, "<td>Episodes</td>");
+            retVal += ValueGroupResponse._addToHtml(--depth, "</tr>");
 
             foreach (var mediaCount in MediaCounts)
             {
                 retVal += mediaCount.ToString(depth);
             }
-            retVal += CValueGroupResponse._addToHtml(--depth, "</table>");
+            retVal += ValueGroupResponse._addToHtml(--depth, "</table>");
             return retVal;
         }
 
         public object createStat(string serverId = "", string rootDivName = "")
         {
-            var retVal = new CValueGroupResponse();
+            var retVal = new ValueGroupResponse();
 
             if (rootDivName != "")
             {
@@ -138,7 +138,7 @@ namespace CodecInfo.Data
 
                 retVal.addToHtml(depth, $"<div id=\"{id}\" class=\"infoBlock\"><i class=\"md-icon\">info</i></div>");
 
-                retVal.addDynamicButton(new CDynamicButton { id = id, info = ExtraInformation, title = Title });
+                retVal.addDynamicButton(new DynamicButton { id = id, info = ExtraInformation, title = Title });
             }
 
             var showImage = (serverId != "") && (Id != "");

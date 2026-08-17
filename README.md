@@ -1,5 +1,5 @@
 # Codec Info plugin for Emby Server
-![alt text]( https://github.com/towel42-com/CodecInfo/blob/492065e733cee0eb2570f959ae8835671528fdc6/CodecInfo/thumb.png)
+![alt text]( https://github.com/towel42-com/Statistics2.0/blob/492065e733cee0eb2570f959ae8835671528fdc6/Statistics2.0/thumb.png)
 
 This is a plugin for Emby server. If you do not already have Emby server installed please go to emby.media and download the server. Otherwise this plugin will be very useless for you.
 

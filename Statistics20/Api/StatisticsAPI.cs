@@ -1,5 +1,5 @@
-﻿using CodecInfo;
-using CodecInfo.Data;
+﻿using Statistics20;
+using Statistics20.Data;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
@@ -22,7 +22,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace CodecInfo.Api
+namespace Statistics20.Api
 {
     // http://localhost:8096/emby/codec_info/episode_list
     [Route("/codec_info/episode_list", "GET", Summary = "Gets Codec Info for Episodes")]
@@ -89,19 +89,7 @@ namespace CodecInfo.Api
         public bool showAllDVProfiles { get; set; }
     }
 
-    [Route("/CustomEndpoint", "GET")]
-    public class GetCustomData : IReturn<CustomDataResponse>
-    {
-        [ApiMember(Name = "Param", Description = "Description of parameter", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "GET")]
-        public string Param { get; set; }
-    }
-
-    public class CustomDataResponse
-    {
-        public string Result { get; set; }
-    }
-
-    public class CodecInfoAPI : IService, IRequiresRequest
+    public class Statistics20API : IService, IRequiresRequest
     {
         private readonly ISessionManager _sessionManager;
         private readonly ILogger _logger;
@@ -111,7 +99,7 @@ namespace CodecInfo.Api
         private readonly IUserDataManager _userDataManager;
         private readonly ILibraryManager _libraryManager;
 
-        public CodecInfoAPI(ILogManager logger,
+        public Statistics20API(ILogManager logger,
             IFileSystem fileSystem,
             IServerConfigurationManager config,
             IUserManager userManager,
@@ -119,7 +107,7 @@ namespace CodecInfo.Api
             ISessionManager sessionManager,
             IUserDataManager userDataManager)
         {
-            _logger = logger.GetLogger("CodecInfo - CodecInfoAPI");
+            _logger = logger.GetLogger("Statistics20 - Statistics20API");
             _fileSystem = fileSystem;
             _config = config;
             _userManager = userManager;
@@ -146,13 +134,13 @@ namespace CodecInfo.Api
             return _libraryManager.GetItemList(query).OfType<T>();
         }
 
-        private List<CMediaInfo> GetVideos<T>() where T : Video
+        private List<MediaInfo> GetVideos<T>() where T : Video
         {
-            List<CMediaInfo> mediaInfos = new List<CMediaInfo>();
+            List<MediaInfo> mediaInfos = new List<MediaInfo>();
             var items = GetItems<T>();
             foreach (var item in items)
             {
-                mediaInfos.Add(new CMediaInfo(item));
+                mediaInfos.Add(new MediaInfo(item));
             }
             return mediaInfos;
         }
@@ -177,7 +165,7 @@ namespace CodecInfo.Api
         {
             _logger.Info("GetCodecSummary");
 
-            var db = CConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var db = ConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
             var serverId = request.serverId ?? "";
             var rootDivName = request.rootDivName ?? "";
@@ -194,7 +182,7 @@ namespace CodecInfo.Api
         {
             _logger.Info("GetResolutionSummary");
 
-            var db = CConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var db = ConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
             var serverId = request.serverId ?? "";
             var rootDivName = request.rootDivName ?? "";
             var showAllResolutions = request.showAllResolutions;
@@ -210,7 +198,7 @@ namespace CodecInfo.Api
         {
             _logger.Info("GetDVProfileSummary");
 
-            var db = CConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var db = ConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
             var serverId = request.serverId ?? "";
             var rootDivName = request.rootDivName ?? "";
@@ -222,11 +210,6 @@ namespace CodecInfo.Api
             var vgReponse = groupData.createStat(serverId, rootDivName);
 
             return vgReponse;
-        }
-        public object Get(GetCustomData request)
-        {
-            // Process request.Param and build response
-            return new CustomDataResponse { Result = "Hello, " + request.Param };
         }
     }
 }
