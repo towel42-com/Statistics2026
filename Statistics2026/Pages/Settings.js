@@ -5,6 +5,8 @@
 
     function loadPage(view, params) {
         ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            
+            view.querySelector("#hasConnectUserID").checked = config.hasConnectUserID;
             view.querySelector("#showAllCodecs").checked = config.showAllCodecs;
             view.querySelector("#showUnknownDVProfiles").checked = config.showUnknownDVProfiles;
             view.querySelector("#showAllDVProfiles").checked = config.showAllDVProfiles;
@@ -30,6 +32,15 @@
         view.addEventListener('viewdestroy', function (e) {
 
         });
+
+        view.querySelector("#hasConnectUserID").addEventListener("click",
+            function () {
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    config.hasConnectUserID = view.querySelector("#hasConnectUserID").checked;
+                    ApiClient.updatePluginConfiguration(pluginId, config);
+                });
+            }
+        );
 
         view.querySelector("#showAllCodecs").addEventListener("click",
             function () {
@@ -65,6 +76,10 @@
             }
         );
 
+        view.querySelector("#hasConnectUserIDDiv").addEventListener("click",
+            function () {
+                showInfo("Normally all users are shown, checking this option will display only users with a Connect User ID.", "Show Users with Connect User ID");
+            });
         view.querySelector("#showAllCodecsDiv").addEventListener("click",
             function () {
                 showInfo("Normally only codecs found in use are shown, checking this option will display all codecs.", "Show All Codecs");

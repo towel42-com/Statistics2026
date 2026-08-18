@@ -1,4 +1,4 @@
-﻿namespace Statistics20.Data
+﻿namespace Statistics2026.Data
 {
     public class MediaCount
     {

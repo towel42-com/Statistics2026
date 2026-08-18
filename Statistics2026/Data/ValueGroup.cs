@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 
-namespace Statistics20.Data
+namespace Statistics2026.Data
 {
     public class DynamicButton
     {
@@ -30,6 +30,9 @@ namespace Statistics20.Data
 
         public static string _addToHtml(int depth, string _html)
         {
+            if ( _html == null || _html == "")
+                return ""; 
+
             var retVal = "";
             if (depth > 0)
                 retVal += new string(' ', 4 * depth);
@@ -48,6 +51,8 @@ namespace Statistics20.Data
     public class ValueGroup
     {
         public string Title { get; set; }
+
+        public string SubTitle { get; set; }
 
         //public string TableInfo { get; set; }
         public List<MediaCount> MediaCounts;
@@ -77,7 +82,7 @@ namespace Statistics20.Data
             ValueLineThree = null;
         }
 
-        private int findRow( string category)
+        private int findRow(string category)
         {
             for (int i = 0; i < MediaCounts.Count; i++)
             {
@@ -89,8 +94,8 @@ namespace Statistics20.Data
 
         public void addRow(string category, int episodeCount, int movieCount)
         {
-            int currRow = findRow( category);
-            if ( currRow == -1 )
+            int currRow = findRow(category);
+            if (currRow == -1)
                 MediaCounts.Add(new MediaCount() { Name = category, Movies = movieCount, Episodes = episodeCount });
             else
                 MediaCounts[currRow].setCount(episodeCount, movieCount);
@@ -102,7 +107,11 @@ namespace Statistics20.Data
 
         public string ToString(int depth = 0)
         {
-            var retVal = ValueGroupResponse._addToHtml(depth++, "<table>");
+            var retVal = ValueGroupResponse._addToHtml(depth, SubTitle);
+            if (MediaCounts.Count == 0)
+                return retVal;
+
+            retVal = ValueGroupResponse._addToHtml(depth++, "<table>");
 
             retVal += ValueGroupResponse._addToHtml(depth++, "<tr>");
             retVal += ValueGroupResponse._addToHtml(depth, "<td></td>");
@@ -115,6 +124,7 @@ namespace Statistics20.Data
                 retVal += mediaCount.ToString(depth);
             }
             retVal += ValueGroupResponse._addToHtml(--depth, "</table>");
+
             return retVal;
         }
 
@@ -122,7 +132,7 @@ namespace Statistics20.Data
         {
             var retVal = new ValueGroupResponse();
 
-            if (rootDivName != "")
+            if (rootDivName != "" && rootDivName != null )
             {
                 rootDivName = $" id=\"{rootDivName}\"";
             }
@@ -141,7 +151,7 @@ namespace Statistics20.Data
                 retVal.addDynamicButton(new DynamicButton { id = id, info = ExtraInformation, title = Title });
             }
 
-            var showImage = (serverId != "") && (Id != "");
+            var showImage = (serverId != null && serverId != "") && (Id != null && Id != "");
             if (showImage)
             {
                 //var imageUrl = ApiClient.getImageUrl(Id, { type: "Primary", quality: 90 });

@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using MediaBrowser.Model.Plugins;
-using Statistics20.Data;
+using Statistics2026.Data;
 
-namespace Statistics20.Configuration
+namespace Statistics2026.Configuration
 {
     public class PluginConfiguration : BasePluginConfiguration
     {
@@ -14,6 +14,8 @@ namespace Statistics20.Configuration
         public string LastUpdated { get; set; }
         public string Version { get; set; }
         public string ServerId { get; set; }
+
+        public bool hasConnectUserID { get; set; } = false;
 
         public bool showAllCodecs { get; set; } = false;
         public bool showUnknownDVProfiles { get; set; } = false;
