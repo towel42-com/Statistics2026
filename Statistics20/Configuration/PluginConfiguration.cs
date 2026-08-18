@@ -15,6 +15,8 @@ namespace Statistics20.Configuration
         public string Version { get; set; }
         public string ServerId { get; set; }
 
+        public bool hasConnectUserID { get; set; } = false;
+
         public bool showAllCodecs { get; set; } = false;
         public bool showUnknownDVProfiles { get; set; } = false;
         public bool showAllDVProfiles { get; set; } = false;

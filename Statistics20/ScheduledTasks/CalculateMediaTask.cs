@@ -1,6 +1,4 @@
-﻿using Statistics20.Configuration;
-using Statistics20.Data;
-using MediaBrowser.Common;
+﻿using MediaBrowser.Common;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Library;
@@ -11,8 +9,11 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
+using Statistics20.Configuration;
+using Statistics20.Data;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,25 +58,25 @@ namespace Statistics20.ScheduledTasks
         }
 
         private static PluginConfiguration PluginConfiguration => Plugin.Instance.Configuration;
-        string IScheduledTask.Name => "Calculate Codec Information for all library media";
+        string IScheduledTask.Name => "Extract necessary Media and User Information for all library media and users";
 
         string IScheduledTask.Key => "Statistics20CalculateStatsTask";
 
-        string IScheduledTask.Description => "Task that will calculate Codec Information of all media in library. (Ideal for weekly/non-daily schedule)";
+        string IScheduledTask.Description => "Task that will calculate Statistics for all media in library.";
 
-        string IScheduledTask.Category => "Media Codec Information";
+        string IScheduledTask.Category => "Statistics 2.0";
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info("Statistics20 : Starting Statistics20 calculation task");
+            _logger.Info("Statistics 2.0 : Starting Statistics 2.0 calculation task");
             // purely for progress reporting
             var now = DateTime.Now;
-            PluginConfiguration.LastUpdated = now.ToString("g");
+            PluginConfiguration.LastUpdated = now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
             PluginConfiguration.Version = Plugin.Instance.Version.ToString(4);
-            PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString();
+            PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
             PluginConfiguration.ServerId = _appHost.SystemId;
 
-            var db = ConfigInfoDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
+            var db = StatisticsDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
             db.Initialize();
 
             progress.Report(0);
@@ -88,6 +89,10 @@ namespace Statistics20.ScheduledTasks
 
             progress.Report(0);
             db.CalculateMediaInfo(_libraryManager, progress);
+            progress.Report(100);
+
+            progress.Report(0);
+            db.CalculateUserInfo(_userManager, progress);
             progress.Report(100);
 
             Plugin.Instance.SaveConfiguration();

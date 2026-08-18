@@ -1,7 +1,4 @@
-﻿using Statistics20;
-using Statistics20.Configuration;
-using Statistics20.Data;
-using MediaBrowser.Controller.Dto;
+﻿using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
@@ -9,8 +6,12 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.LiveTv;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
-
+using MediaBrowser.Model.Querying;
+using MediaBrowser.Model.Services;
 using SQLitePCL.pretty;
+using Statistics20;
+using Statistics20.Configuration;
+using Statistics20.Data;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -20,9 +21,9 @@ using System.Linq;
 
 namespace Statistics20.Data
 {
-    public sealed class ConfigInfoDB
+    public sealed class StatisticsDB
     {
-        private static ConfigInfoDB instance = null;
+        private static StatisticsDB instance = null;
         private static readonly object _padlock = new object();
 
         private static string[] _datetimeFormats = new string[] {
@@ -64,20 +65,20 @@ namespace Statistics20.Data
         private ILogger _logger = null;
         private IDatabaseConnection connection = null;
 
-        public static ConfigInfoDB GetInstance(string db_file, ILogger log)
+        public static StatisticsDB GetInstance(string db_file, ILogger log)
         {
             lock (_padlock)
             {
                 if (instance == null)
                 {
-                    instance = new ConfigInfoDB(db_file, log);
-                    log.Info("ConfigInfoData : New Instance Created : " + instance.GetHashCode());
+                    instance = new StatisticsDB(db_file, log);
+                    log.Info("StatisticsData : New Instance Created : " + instance.GetHashCode());
                 }
                 return instance;
             }
         }
 
-        public static ConfigInfoDB GetExistingInstance()
+        public static StatisticsDB GetExistingInstance()
         {
             lock (_padlock)
             {
@@ -90,32 +91,34 @@ namespace Statistics20.Data
         }
 
 
-        private ConfigInfoDB()
+        private StatisticsDB()
         {
 
         }
 
-        private ConfigInfoDB(string db_path, ILogger l)
+        private StatisticsDB(string db_path, ILogger l)
         {
             _logger = l;
-            _logger.Info("ConfigInfoData : Creating");
-            string db_file_name = Path.Combine(db_path, "ConfigInfo.db");
+            _logger.Info("StatisticsData : Creating");
+            string db_file_name = Path.Combine(db_path, "Statistics20.db");
             connection = CreateConnection(db_file_name);
         }
 
-        ~ConfigInfoDB()
+        ~StatisticsDB()
         {
-            _logger.Info("ConfigInfoData : Cleaning up");
+            _logger.Info("StatisticsData : Cleaning up");
             if (connection != null)
             {
                 connection.Close();
-                _logger.Info("ConfigInfoData : DB Connection Closed");
+                _logger.Info("StatisticsData : DB Connection Closed");
             }
         }
 
         public void Initialize()
         {
             InitializeInternal();
+            ClearMediaInfo();
+            ClearUserInfo();
         }
 
         private void TryBind(IStatement statement, string name, int value)
@@ -193,7 +196,7 @@ namespace Statistics20.Data
 
         private IDatabaseConnection CreateConnection(string db_file)
         {
-            _logger.Info("ConfigInfoData : CreateConnection : " + db_file);
+            _logger.Info("StatisticsData : CreateConnection : " + db_file);
             ConnectionFlags connectionFlags;
 
             //Logger.Info("Opening write connection");
@@ -221,7 +224,7 @@ namespace Statistics20.Data
                 throw;
             }
 
-            _logger.Info("ConfigInfoData : ConnectionCreated : " + db.GetHashCode());
+            _logger.Info("StatisticsData : ConnectionCreated : " + db.GetHashCode());
             return db;
         }
 
@@ -252,6 +255,52 @@ namespace Statistics20.Data
                                 "DolbyVisionProfile TEXT, " +
                                 "ServerLocation TEXT" +
                                 ")");
+
+                connection.Execute("create table if not exists UserInfo (" +
+                    "UserId TEXT NOT NULL, " +
+                    "UserName TEXT NOT NULL, " +
+                    "ConnectUserId TEXT, " +
+                    "TotalTimeWatched INT, " +
+                    "TotalWatchableTime INT, " +
+                    "TotalMovies INT, " +
+                    "TotalCollections INT, " +
+                    "TotalMoviesWatched INT, " +
+                    "FavoriteMovieYears TEXT, " +
+                    "FavoriteMovieGenres TEXT, " +
+                    "TotalMovieTimeWatched INT, " +
+                    "TotalMovieWatchableTime INT, " +
+                    "LastSeenMovies TEXT, " +
+                    "TotalTVSeries INT, " +
+                    "TotalEpisodes INT, " +
+                    "TotalEpisodesWatched INT, " +
+                    "TotalSeriesFinished INT, " +
+                    "FavoriteShowGenres TEXT, " +
+                    "TotalTVTimeWatched INT, " +
+                    "TotalTVWatchableTime INT, " +
+                    "LastSeenShows TEXT " +
+                    ")"
+                );
+                connection.Execute("create index if not exists idx_UserInfo_UserId on UserInfo (UserId)");
+
+                connection.Execute("create table if not exists ShowProgress (" +
+                    "ShowID TEXT NOT NULL, " +
+                    "UserId TEXT NOT NULL, " +
+                    "Name TEXT NOT NULL, " +
+                    "SortName TEXT, " +
+                    "StartYear INT, " +
+                    "Watched INT, " +
+                    "Score REAL, " +
+                    "Status TEXT, " +
+                    "TotalEpisodes INT, " +
+                    "CollectedEpisodes INT, " +
+                    "SeenEpisodes INT, " +
+                    "TotalSpecials INT, " +
+                    "CollectedSpecials INT, " +
+                    "SeenSpecials INT, " +
+                    "PercentSeen INT, " +
+                    "PercentCollected INT " +
+                    ")"
+                );
             }
         }
 
@@ -275,6 +324,77 @@ namespace Statistics20.Data
             }
         }
 
+        public void ClearUserInfo()
+        {
+            string sql = "delete from UserInfo";
+            lock (connection)
+            {
+                connection.Execute(sql);
+            }
+
+            sql = "delete from ShowProgress";
+            lock (connection)
+            {
+                connection.Execute(sql);
+            }
+        }
+
+        public void CalculateUserInfo(IUserManager userManager, IProgress<double> progress)
+        {
+            progress.Report(0);
+            var users = userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
+            progress.Report(100);
+
+            _logger.Debug($"CalculateUserInfo - Starting User Analysis");
+            var count = users.Count;
+            var curr = 0;
+
+            progress.Report(0);
+            foreach (var user in users)
+            {
+                progress.Report((++curr) / count);
+                try
+                {
+                    var userInfo = new UserInfo(user);
+
+                    AddUserInfo(userInfo);
+                    _logger.Debug($"CalculateUserInfo -     Processed User - {userInfo.UserName}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"CalculateUserInfo {user.SortName}: {ex.Message}");
+                }
+            }
+            _logger.Debug($"CalculateUserInfo - Finished User Analysis");
+        }
+
+        public void AddUserInfo(UserInfo userInfo)
+        {
+            string sql =
+                "insert into UserInfo " +
+                "(" +
+                    "  UserId" +
+                    ", UserName" +
+                    ", ConnectUserId" +
+                ")" +
+                " values " +
+                "(" +
+                "  @UserId" +
+                ", @UserName" +
+                ", @ConnectUserId" +
+                ")";
+            lock (connection)
+            {
+                using (var statement = connection.PrepareStatement(sql))
+                {
+                    TryBind(statement, "@UserId", userInfo.UserId);
+                    TryBind(statement, "@UserName", userInfo.UserName);
+                    TryBind(statement, "@ConnectUserId", userInfo.ConnectUserId);
+                    statement.MoveNext();
+                }
+            }
+        }
+
         public void ClearMediaInfo()
         {
             string sql = "delete from MediaInfo";
@@ -284,7 +404,7 @@ namespace Statistics20.Data
             }
         }
 
-        private IEnumerable<T> GetItems<T>(ILibraryManager libMananger )
+        private IEnumerable<T> GetLibraryItems<T>(ILibraryManager libMananger)
         {
             var query = new InternalItemsQuery(null)
             {
@@ -300,15 +420,13 @@ namespace Statistics20.Data
             return libMananger.GetItemList(query).OfType<T>();
         }
 
-        public void CalculateMediaInfo( ILibraryManager libMananger, IProgress<double> progress)
+        public void CalculateMediaInfo(ILibraryManager libMananger, IProgress<double> progress)
         {
             progress.Report(0);
-            var videoList = GetItems<Episode>(libMananger).Cast<Video>().ToList();
+            var videoList = GetLibraryItems<Episode>(libMananger).Cast<Video>().ToList();
             progress.Report(50);
-            videoList.AddRange(GetItems<Movie>(libMananger).Cast<Video>().ToList());
+            videoList.AddRange(GetLibraryItems<Movie>(libMananger).Cast<Video>().ToList());
             progress.Report(100);
-
-            var db = ConfigInfoDB.GetExistingInstance();
 
             _logger.Debug($"CalculateMediaInfo - Starting Video Analysis");
             var count = videoList.Count;
@@ -317,12 +435,12 @@ namespace Statistics20.Data
             progress.Report(0);
             foreach (var video in videoList)
             {
-                progress.Report((++curr)/count);
+                progress.Report((++curr) / count);
                 try
                 {
                     var mediaInfo = new MediaInfo(video);
 
-                    db.AddMediaInfo(mediaInfo);
+                    AddMediaInfo(mediaInfo);
                     _logger.Debug($"CalculateMediaInfo -     Processed Video - {mediaInfo.DescriptiveName} items processed");
                 }
                 catch (Exception ex)
@@ -390,7 +508,7 @@ namespace Statistics20.Data
                 }
             }
         }
-        public ValueGroup CalculateMediaResolutions( bool showAllResolutions )
+        public ValueGroup CalculateMediaResolutions(bool showAllResolutions)
         {
             string sql =
                 "SELECT " +
@@ -431,7 +549,7 @@ namespace Statistics20.Data
             return retVal;
         }
 
-        public ValueGroup CalculateMediaCodecs( bool showAllCodecs )
+        public ValueGroup CalculateMediaCodecs(bool showAllCodecs)
         {
             string sql =
                 "SELECT " +
@@ -521,5 +639,29 @@ namespace Statistics20.Data
 
             return retVal;
         }
+
+        public ValueGroup CalculateUserCount(bool hasConnectUserID, IUserManager userManager)
+        {
+            var users = userManager.GetUserList(new UserQuery() { HasConnectUserId = true }).ToList();
+            if (!hasConnectUserID)
+            {
+                users = users
+                    .Union(userManager.GetUserList(new UserQuery() { HasConnectUserId = false }))
+                    .Union(userManager.GetUserList(new UserQuery() { HasConnectUserId = null })).ToList();
+            }
+
+            var groupData = new ValueGroup(Constants.TotalUsers, null, "small");
+            groupData.ValueLineTwo = users.Count.ToString();
+
+            return groupData;
+        }
+
+        public ValueGroup CalculateMostActiveUsers(bool hasConnectUserID, IUserManager userManager)
+        {
+            var groupData = new ValueGroup(Constants.MostActiveUsers, Constants.HelpMostActiveUsers);
+
+            return groupData;
+        }
+
     }
 }

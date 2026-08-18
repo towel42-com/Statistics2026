@@ -24,37 +24,6 @@ namespace Statistics20
             {
                 new PluginPageInfo
                 {
-                    Name = "Statistics20ConfigPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.Statistics20ConfigPage.html",
-                    EnableInMainMenu = false
-                },
-                new PluginPageInfo
-                {
-                    Name = "Statistics20ConfigPage.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.Statistics20ConfigPage.js"
-                },
-                new PluginPageInfo
-                {
-                    Name = "AllCodecEpisodeInformationPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.AllCodecEpisodeInformation.html",
-                },
-                new PluginPageInfo
-                {
-                    Name = "AllCodecEpisodeInformationPage.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.AllCodecEpisodeInformation.js"
-                },
-                new PluginPageInfo
-                {
-                    Name = "AllCodecMovieInformationPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.AllCodecMovieInformation.html",
-                },
-                new PluginPageInfo
-                {
-                    Name = "AllCodecMovieInformationPage.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Configuration.SubPages.AllCodecMovieInformation.js"
-                },
-                new PluginPageInfo
-                {
                     Name = "Summary",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.Summary.html",
                     EnableInMainMenu = true
@@ -107,9 +76,9 @@ namespace Statistics20
 
         public static Plugin Instance { get; private set; }
 
-        public override string Name => "Codec Information";
+        public override string Name => "Statistics 2.0";
 
-        public override string Description => "Get Codec Information from your collection";
+        public override string Description => "Get the statistics for your media collection";
 
         public Stream GetThumbImage()
         {

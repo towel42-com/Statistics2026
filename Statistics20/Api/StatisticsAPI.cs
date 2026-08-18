@@ -89,6 +89,22 @@ namespace Statistics20.Api
         public bool showAllDVProfiles { get; set; }
     }
 
+    [Route("/codec_info/user_count", "GET", Summary = "Gets the total User Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetUserCount : IReturn<Object>
+    {
+        [ApiMember(Name = "hasConnectUserID", Description = "Include only if HasConnectUserId = true", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool hasConnectUserID { get; set; } = false;
+    }
+
+    [Route("/codec_info/most_active_users", "GET", Summary = "Gets the top 5 most active users")]
+    [Authenticated(Roles = "admin")]
+    public class GetMostActiveUsers : IReturn<Object>
+    {
+        [ApiMember(Name = "hasConnectUserID", Description = "Include only if HasConnectUserId = true", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool hasConnectUserID { get; set; } = false;
+    }
+
     public class Statistics20API : IService, IRequiresRequest
     {
         private readonly ISessionManager _sessionManager;
@@ -165,7 +181,7 @@ namespace Statistics20.Api
         {
             _logger.Info("GetCodecSummary");
 
-            var db = ConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
             var serverId = request.serverId ?? "";
             var rootDivName = request.rootDivName ?? "";
@@ -182,7 +198,7 @@ namespace Statistics20.Api
         {
             _logger.Info("GetResolutionSummary");
 
-            var db = ConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
             var serverId = request.serverId ?? "";
             var rootDivName = request.rootDivName ?? "";
             var showAllResolutions = request.showAllResolutions;
@@ -198,7 +214,7 @@ namespace Statistics20.Api
         {
             _logger.Info("GetDVProfileSummary");
 
-            var db = ConfigInfoDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
             var serverId = request.serverId ?? "";
             var rootDivName = request.rootDivName ?? "";
@@ -209,6 +225,38 @@ namespace Statistics20.Api
 
             var vgReponse = groupData.createStat(serverId, rootDivName);
 
+            return vgReponse;
+        }
+
+        public object Get(GetUserCount request)
+        {
+            _logger.Info("GetUserCount");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var hasConnectUserID = request.hasConnectUserID;
+
+            var groupData = db.CalculateUserCount(hasConnectUserID, _userManager );
+
+            var vgReponse = groupData.createStat(null, null);
+            return vgReponse;
+        }
+
+        public object Get(GetMostActiveUsers request)
+        {
+            _logger.Info("GetUserCount");
+
+            var users = _userManager.GetUserList(new UserQuery() { HasConnectUserId = true }).ToList();
+            if (!request.hasConnectUserID)
+            {
+                users = users
+                    .Union(_userManager.GetUserList(new UserQuery() { HasConnectUserId = false }))
+                    .Union(_userManager.GetUserList(new UserQuery() { HasConnectUserId = null })).ToList();
+            }
+
+            var groupData = new ValueGroup(Constants.TotalUsers, null, "small");
+            groupData.ValueLineTwo = users.Count.ToString();
+
+            var vgReponse = groupData.createStat(null, null);
             return vgReponse;
         }
     }
