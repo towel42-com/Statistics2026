@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using MediaBrowser.Model.Plugins;
-using Statistics20.Data;
+using Statistics2026.Data;
 
-namespace Statistics20.Configuration
+namespace Statistics2026.Configuration
 {
     public class PluginConfiguration : BasePluginConfiguration
     {

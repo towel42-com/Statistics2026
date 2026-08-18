@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 
-namespace Statistics20.Data
+namespace Statistics2026.Data
 {
     public class DynamicButton
     {

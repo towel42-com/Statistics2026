@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Statistics20
+namespace Statistics2026
 {
     internal static class Constants
     {

@@ -6,9 +6,9 @@ using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-using Statistics20.Configuration;
+using Statistics2026.Configuration;
 
-namespace Statistics20
+namespace Statistics2026
 {
     public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
@@ -76,7 +76,7 @@ namespace Statistics20
 
         public static Plugin Instance { get; private set; }
 
-        public override string Name => "Statistics 2.0";
+        public override string Name => "Statistics 2026";
 
         public override string Description => "Get the statistics for your media collection";
 

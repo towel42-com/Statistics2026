@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Reflection;
 
-namespace Statistics20.Data
+namespace Statistics2026.Data
 {
     public static class BuildDateInfo
     {

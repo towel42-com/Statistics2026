@@ -1,8 +1,8 @@
 ﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager) {
     'use strict';
 
-    ApiClient.getStatistics20URL = function (url_to_get) {
-        console.log("getStatistics20URL Url = " + url_to_get);
+    ApiClient.getStatistics2026URL = function (url_to_get) {
+        console.log("getStatistics2026URL Url = " + url_to_get);
         return this.ajax({
             type: "GET",
             url: url_to_get,
@@ -63,7 +63,7 @@
             if (config.LastUpdated === undefined) {
                 Dashboard.alert({
                     message:
-                        "No configuration found, please run the 'Statistics 2.0' task on the Scheduled Tasks page and come back for the results."
+                        "No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results."
                 });
 
                 view.querySelector(`#lastRunInfo`).style.display = 'none';

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using MediaBrowser.Model.IO;
-using Statistics20.Data;
+using Statistics2026.Data;
 
 
 using MediaBrowser.Controller.Entities;
@@ -17,7 +17,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
 using System.Net.Mime;
 
-namespace Statistics20.Data
+namespace Statistics2026.Data
 {
     public class MediaInfo
     {

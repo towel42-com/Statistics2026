@@ -9,9 +9,9 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Services;
 using SQLitePCL.pretty;
-using Statistics20;
-using Statistics20.Configuration;
-using Statistics20.Data;
+using Statistics2026;
+using Statistics2026.Configuration;
+using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -19,7 +19,7 @@ using System.IO;
 using System.Linq;
 
 
-namespace Statistics20.Data
+namespace Statistics2026.Data
 {
     public sealed class StatisticsDB
     {
@@ -100,7 +100,7 @@ namespace Statistics20.Data
         {
             _logger = l;
             _logger.Info("StatisticsData : Creating");
-            string db_file_name = Path.Combine(db_path, "Statistics20.db");
+            string db_file_name = Path.Combine(db_path, "Statistics2026.db");
             connection = CreateConnection(db_file_name);
         }
 

@@ -1,5 +1,5 @@
-﻿using Statistics20;
-using Statistics20.Data;
+﻿using Statistics2026;
+using Statistics2026.Data;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
@@ -22,7 +22,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace Statistics20.Api
+namespace Statistics2026.Api
 {
     // http://localhost:8096/emby/codec_info/episode_list
     [Route("/codec_info/episode_list", "GET", Summary = "Gets Codec Info for Episodes")]
@@ -105,7 +105,7 @@ namespace Statistics20.Api
         public bool hasConnectUserID { get; set; } = false;
     }
 
-    public class Statistics20API : IService, IRequiresRequest
+    public class Statistics2026API : IService, IRequiresRequest
     {
         private readonly ISessionManager _sessionManager;
         private readonly ILogger _logger;
@@ -115,7 +115,7 @@ namespace Statistics20.Api
         private readonly IUserDataManager _userDataManager;
         private readonly ILibraryManager _libraryManager;
 
-        public Statistics20API(ILogManager logger,
+        public Statistics2026API(ILogManager logger,
             IFileSystem fileSystem,
             IServerConfigurationManager config,
             IUserManager userManager,
@@ -123,7 +123,7 @@ namespace Statistics20.Api
             ISessionManager sessionManager,
             IUserDataManager userDataManager)
         {
-            _logger = logger.GetLogger("Statistics20 - Statistics20API");
+            _logger = logger.GetLogger("Statistics2026 - Statistics2026API");
             _fileSystem = fileSystem;
             _config = config;
             _userManager = userManager;

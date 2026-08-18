@@ -9,8 +9,8 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using Statistics20.Configuration;
-using Statistics20.Data;
+using Statistics2026.Configuration;
+using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -18,9 +18,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Statistics20.ScheduledTasks
+namespace Statistics2026.ScheduledTasks
 {
-    public class CalculateMediaTask : IScheduledTask
+    public class CalculateDataTask : IScheduledTask
     {
         private readonly IFileSystem _fileSystem;
         private readonly ILibraryManager _libraryManager;
@@ -33,7 +33,7 @@ namespace Statistics20.ScheduledTasks
         private readonly IProviderManager _providerManager;
         private readonly IServerConfigurationManager _appConfig;
 
-        public CalculateMediaTask(
+        public CalculateDataTask(
             ILogManager logger,
             IServerConfigurationManager config,
             IUserManager userManager,
@@ -45,7 +45,7 @@ namespace Statistics20.ScheduledTasks
             IApplicationHost appHost,
             IProviderManager providerManager)
         {
-            _logger = logger.GetLogger("Statistics20");
+            _logger = logger.GetLogger("Statistics2026 - CalculateMediaTask");
             _libraryManager = libraryManager;
             _userManager = userManager;
             _userDataManager = userDataManager;
@@ -60,15 +60,15 @@ namespace Statistics20.ScheduledTasks
         private static PluginConfiguration PluginConfiguration => Plugin.Instance.Configuration;
         string IScheduledTask.Name => "Extract necessary Media and User Information for all library media and users";
 
-        string IScheduledTask.Key => "Statistics20CalculateStatsTask";
+        string IScheduledTask.Key => "Statistics2026CalculateStatsTask";
 
         string IScheduledTask.Description => "Task that will calculate Statistics for all media in library.";
 
-        string IScheduledTask.Category => "Statistics 2.0";
+        string IScheduledTask.Category => "Statistics 2026";
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info("Statistics 2.0 : Starting Statistics 2.0 calculation task");
+            _logger.Info("Statistics 2026 : Starting Statistics 2026 calculation task");
             // purely for progress reporting
             var now = DateTime.Now;
             PluginConfiguration.LastUpdated = now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
