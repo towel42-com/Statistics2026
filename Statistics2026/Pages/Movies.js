@@ -45,7 +45,7 @@
 
             function process_click() {
 
-                var url = "codec_info/movie_list";
+                var url = "Statistics2026/movie_list";
                 url = ApiClient.getUrl(url);
 
                 var load_status = view.querySelector('#movie_results_status');

@@ -24,23 +24,23 @@ using System.Text;
 
 namespace Statistics2026.Api
 {
-    // http://localhost:8096/emby/codec_info/episode_list
-    [Route("/codec_info/episode_list", "GET", Summary = "Gets Codec Info for Episodes")]
+    // http://localhost:8096/emby/Statistics2026/episode_list
+    [Route("/Statistics2026/episode_list", "GET", Summary = "Gets Codec Info for Episodes")]
     [Authenticated(Roles = "admin")]
     public class GetEpisodeList : IReturn<Object>
     {
 
     }
 
-    // http://localhost:8096/emby/codec_info/movie_list
-    [Route("/codec_info/movie_list", "GET", Summary = "Gets Codec Info for Movies")]
+    // http://localhost:8096/emby/Statistics2026/movie_list
+    [Route("/Statistics2026/movie_list", "GET", Summary = "Gets Codec Info for Movies")]
     [Authenticated(Roles = "admin")]
     public class GetMovieList : IReturn<Object>
     {
 
     }
 
-    [Route("/codec_info/codec_summary", "GET", Summary = "Gets Codec Summary for Library")]
+    [Route("/Statistics2026/codec_summary", "GET", Summary = "Gets Codec Summary for Library")]
     [Authenticated(Roles = "admin")]
     public class GetCodecSummary : IReturn<Object>
     {
@@ -56,7 +56,7 @@ namespace Statistics2026.Api
 
     }
 
-    [Route("/codec_info/resolution_summary", "GET", Summary = "Gets Resolution Summary for Library")]
+    [Route("/Statistics2026/resolution_summary", "GET", Summary = "Gets Resolution Summary for Library")]
     [Authenticated(Roles = "admin")]
     public class GetResolutionSummary : IReturn<Object>
     {
@@ -72,7 +72,7 @@ namespace Statistics2026.Api
 
     }
 
-    [Route("/codec_info/dvprofile_summary", "GET", Summary = "Gets Dolby Vision Profile Summary for Library")]
+    [Route("/Statistics2026/dvprofile_summary", "GET", Summary = "Gets Dolby Vision Profile Summary for Library")]
     [Authenticated(Roles = "admin")]
     public class GetDVProfileSummary : IReturn<Object>
     {
@@ -89,7 +89,7 @@ namespace Statistics2026.Api
         public bool showAllDVProfiles { get; set; }
     }
 
-    [Route("/codec_info/user_count", "GET", Summary = "Gets the total User Count")]
+    [Route("/Statistics2026/user_count", "GET", Summary = "Gets the total User Count")]
     [Authenticated(Roles = "admin")]
     public class GetUserCount : IReturn<Object>
     {
@@ -100,7 +100,7 @@ namespace Statistics2026.Api
         public bool excludeAdmin { get; set; } = true;
     }
 
-    [Route("/codec_info/most_active_users", "GET", Summary = "Gets the top 5 most active users")]
+    [Route("/Statistics2026/most_active_users", "GET", Summary = "Gets the top 5 most active users")]
     [Authenticated(Roles = "admin")]
     public class GetMostActiveUsers : IReturn<Object>
     {
@@ -114,19 +114,19 @@ namespace Statistics2026.Api
         public bool excludeAdmin { get; set; } = true;
     }
 
-    [Route("/codec_info/total_movie_count", "GET", Summary = "Get the total Movie Count")]
+    [Route("/Statistics2026/total_movie_count", "GET", Summary = "Get the total Movie Count")]
     [Authenticated(Roles = "admin")]
     public class GetTotalMovieCount : IReturn<Object>
     {
     }
 
-    [Route("/codec_info/total_collection_count", "GET", Summary = "Get the total Collection Count")]
+    [Route("/Statistics2026/total_collection_count", "GET", Summary = "Get the total Collection Count")]
     [Authenticated(Roles = "admin")]
     public class GetTotalCollectionCount : IReturn<Object>
     {
     }
 
-    [Route("/codec_info/total_studio_count", "GET", Summary = "Get the total Studio Count")]
+    [Route("/Statistics2026/total_studio_count", "GET", Summary = "Get the total Studio Count")]
     [Authenticated(Roles = "admin")]
     public class GetTotalStudioCount : IReturn<Object>
     {

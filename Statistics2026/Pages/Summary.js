@@ -13,7 +13,7 @@
     const pluginId = "4BFE2894-AEA3-4D3C-A429-503B56D61711";
 
     function getSummaryInfo(view, whichSummary, parameters = "") {
-        var url = ApiClient.getUrl("/emby/codec_info/" + whichSummary + parameters);
+        var url = ApiClient.getUrl("/emby/Statistics2026/" + whichSummary + parameters);
 
         ApiClient.getJSON(url).then(response => {
             view.querySelector("#" + whichSummary).innerHTML = response.html;

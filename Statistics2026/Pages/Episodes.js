@@ -31,7 +31,7 @@
 
             function process_click() {
 
-                var url = "codec_info/episode_list";
+                var url = "Statistics2026/episode_list";
                 url = ApiClient.getUrl(url);
 
                 var load_status = view.querySelector('#episode_results_status');
