@@ -50,6 +50,7 @@ namespace Statistics2026.Data
             ResolutionBase = resolutionBase;
             Codec = codec;
             DolbyVisionProfile = dvProfile;
+            StudioNames = video.Studios;
             ServerLocation = video.Path ?? "Unknown";
         }
 
@@ -109,21 +110,22 @@ namespace Statistics2026.Data
             return dvProfile;
         }
 
-        public string ItemId { get;  set; }
-        public string DescriptiveName { get;  set; }
-        public string PrimaryName { get;  set; } // movie title or series name
-        public string SortName { get;  set; }
-        public string SecondaryName { get;  set; } // episode name
-        public string StartYear { get;  set; } // release year for movies, year of the of the first season of the TV show
+        public string ItemId { get; set; }
+        public string DescriptiveName { get; set; }
+        public string PrimaryName { get; set; } // movie title or series name
+        public string SortName { get; set; }
+        public string SecondaryName { get; set; } // episode name
+        public string StartYear { get; set; } // release year for movies, year of the of the first season of the TV show
 
-        public bool IsEpisode { get;  set; }
-        public int Season { get;  set; }
-        public int Episode { get;  set; }
+        public bool IsEpisode { get; set; }
+        public int Season { get; set; }
+        public int Episode { get; set; }
 
-        public string ResolutionBase { get;  set; } // just SD/HD/4k/8k etc
-        public string ResolutionDetail { get;  set; } // includes details of resolution
-        public string Codec { get;  set; }
-        public string DolbyVisionProfile { get;  set; }
-        public string ServerLocation { get;  set; }
+        public string ResolutionBase { get; set; } // just SD/HD/4k/8k etc
+        public string ResolutionDetail { get; set; } // includes details of resolution
+        public string Codec { get; set; }
+        public string DolbyVisionProfile { get; set; }
+        public string[] StudioNames { get; set; }
+        public string ServerLocation { get; set; }
     }
 }

@@ -1,10 +1,14 @@
 ﻿using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Services;
+using Emby.ApiClient; // Namespace containing the ApiClient
+using MediaBrowser.Model.Dto;     // Namespace containing BaseItemDto
+using MediaBrowser.Model.Entities;// Namespace containing ImageType
 using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace Statistics2026.Data
 {
@@ -30,8 +34,8 @@ namespace Statistics2026.Data
 
         public static string _addToHtml(int depth, string _html)
         {
-            if ( _html == null || _html == "")
-                return ""; 
+            if (_html == null || _html == "")
+                return "";
 
             var retVal = "";
             if (depth > 0)
@@ -51,55 +55,66 @@ namespace Statistics2026.Data
     public class ValueGroup
     {
         public string Title { get; set; }
+        public List<string> Headers { get; private set; }
 
         public string SubTitle { get; set; }
 
         //public string TableInfo { get; set; }
-        public List<MediaCount> MediaCounts;
+        private List<ValueGroupRow> Values;
 
         public string ValueLineTwo { get; set; }
         public string ValueLineThree { get; set; }
         public string Size { get; set; }
-        public object Raw { get; set; }
-        public string ExtraInformation { get; set; }
-        public string Id { get; set; }
+        public string HelpText { get; set; }
+        private string ImageId { get; set; }
+
+        public string ServerId {  get; set; }
+        public string HtmlDivId { get; set; }
+        public bool SortByKey {  get; set; }
 
         public ValueGroup()
         {
             Size = "small";
-            MediaCounts = new List<MediaCount>();
+            Values = new List<ValueGroupRow>();
         }
 
-        public ValueGroup(string title, string extraInformation, string size = "half")
+        public ValueGroup(string title, string helpText, List<string> headers, string size = "half")
         {
-            MediaCounts = new List<MediaCount>();
+            Values = new List<ValueGroupRow>();
+            Headers = headers;
 
             Title = title;
-            ExtraInformation = extraInformation;
+            HelpText = helpText;
             Size = size;
 
             ValueLineTwo = null;
             ValueLineThree = null;
         }
 
-        private int findRow(string category)
+        private int findRow(string name)
         {
-            for (int i = 0; i < MediaCounts.Count; i++)
+            for (int i = 0; i < Values.Count; i++)
             {
-                if (MediaCounts[i].Name == category)
+                if (Values[i].Name == name)
                     return i;
             }
             return -1;
         }
 
-        public void addRow(string category, int episodeCount, int movieCount)
+        public void addRow(string category, List<int> values)
         {
             int currRow = findRow(category);
+            ValueGroupRow row = null;
             if (currRow == -1)
-                MediaCounts.Add(new MediaCount() { Name = category, Movies = movieCount, Episodes = episodeCount });
+            {
+                row = new ValueGroupRow(category, null);
+                Values.Add(row);
+            }
             else
-                MediaCounts[currRow].setCount(episodeCount, movieCount);
+                row = Values[currRow];
+            row.setValues(values);
         }
+
         public override string ToString()
         {
             return ToString(0);
@@ -108,20 +123,28 @@ namespace Statistics2026.Data
         public string ToString(int depth = 0)
         {
             var retVal = ValueGroupResponse._addToHtml(depth, SubTitle);
-            if (MediaCounts.Count == 0)
+            if (Values.Count == 0)
                 return retVal;
 
             retVal = ValueGroupResponse._addToHtml(depth++, "<table>");
 
             retVal += ValueGroupResponse._addToHtml(depth++, "<tr>");
-            retVal += ValueGroupResponse._addToHtml(depth, "<td></td>");
-            retVal += ValueGroupResponse._addToHtml(depth, "<td>Movies</td>");
-            retVal += ValueGroupResponse._addToHtml(depth, "<td>Episodes</td>");
+            retVal += ValueGroupResponse._addToHtml(depth, "<td>&nbsp;</td>");
+            foreach (var header in Headers)
+            {
+                retVal += ValueGroupResponse._addToHtml(depth, $"<td>{header}</td>");
+            }
             retVal += ValueGroupResponse._addToHtml(--depth, "</tr>");
 
-            foreach (var mediaCount in MediaCounts)
+            List<ValueGroupRow> valuesToUse = Values;
+            if (SortByKey)
             {
-                retVal += mediaCount.ToString(depth);
+                valuesToUse = valuesToUse.OrderBy(row => row.Name).ToList();
+            }
+
+            foreach (var row in valuesToUse)
+            {
+                retVal += row.ToString(depth);
             }
             retVal += ValueGroupResponse._addToHtml(--depth, "</table>");
 
@@ -132,7 +155,7 @@ namespace Statistics2026.Data
         {
             var retVal = new ValueGroupResponse();
 
-            if (rootDivName != "" && rootDivName != null )
+            if (rootDivName != "" && rootDivName != null)
             {
                 rootDivName = $" id=\"{rootDivName}\"";
             }
@@ -142,21 +165,23 @@ namespace Statistics2026.Data
             retVal.addToHtml(depth++, "<div class=\"statCard\">");
             retVal.addToHtml(depth++, "<div class=\"statCard-content\">");
 
-            if (ExtraInformation != null && ExtraInformation != "")
+            if (HelpText != null && HelpText != "")
             {
                 string id = Regex.Replace(Title, @"\s", string.Empty);
 
                 retVal.addToHtml(depth, $"<div id=\"{id}\" class=\"infoBlock\"><i class=\"md-icon\">info</i></div>");
 
-                retVal.addDynamicButton(new DynamicButton { id = id, info = ExtraInformation, title = Title });
+                retVal.addDynamicButton(new DynamicButton { id = id, info = HelpText, title = Title });
             }
 
-            var showImage = (serverId != null && serverId != "") && (Id != null && Id != "");
+            var showImage = (serverId != null && serverId != "") && (ImageId != null && ImageId != "");
             if (showImage)
             {
-                //var imageUrl = ApiClient.getImageUrl(Id, { type: "Primary", quality: 90 });
+                //var apiClient = ApiClientHandler.GetApiClient();// ($"Items/{episodeId}");
+
+                //var imageUrl = ApiClient.getImageUrl(ImageId, { type: "Primary", quality: 90 });
                 string imageUrl = "";
-                retVal.addToHtml(depth, $"<a is=\"emby-linkbutton\" href=\"/item?id={Id}&serverId={serverId}\"><img src=\"{imageUrl}\" height=\"105px\"/></a>");
+                retVal.addToHtml(depth, $"<a is=\"emby-linkbutton\" href=\"/item?id={ImageId}&serverId={serverId}\"><img src=\"{imageUrl}\" height=\"105px\"/></a>");
                 retVal.addToHtml(depth++, "<div>");
 
                 if (Title != "")

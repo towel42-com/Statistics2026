@@ -6,10 +6,13 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.LiveTv;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
+using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Services;
+using MediaBrowser.Model.Users;
 using SQLitePCL.pretty;
 using Statistics2026;
+using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Data;
 using System;
@@ -102,6 +105,7 @@ namespace Statistics2026.Data
             _logger.Info("StatisticsData : Creating");
             string db_file_name = Path.Combine(db_path, "Statistics2026.db");
             connection = CreateConnection(db_file_name);
+            _logger.Info("StatisticsData : Finished Creating");
         }
 
         ~StatisticsDB()
@@ -130,7 +134,20 @@ namespace Statistics2026.Data
             }
             else
             {
-                _logger.Debug($"Error Binding {name} to {value}");
+                _logger.Error($"Error Binding {name} to {value}");
+            }
+        }
+
+        private void TryBind(IStatement statement, string name, long value)
+        {
+            IBindParameter bindParam;
+            if (statement.BindParameters.TryGetValue(name, out bindParam))
+            {
+                bindParam.Bind(value);
+            }
+            else
+            {
+                _logger.Error($"Error Binding {name} to {value}");
             }
         }
 
@@ -143,7 +160,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                _logger.Debug($"Error Binding {name} to {value}");
+                _logger.Error($"Error Binding {name} to {value}");
             }
         }
 
@@ -163,7 +180,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                _logger.Debug($"Error Binding {name} to {value}");
+                _logger.Error($"Error Binding {name} to {value}");
             }
         }
 
@@ -196,7 +213,7 @@ namespace Statistics2026.Data
 
         private IDatabaseConnection CreateConnection(string db_file)
         {
-            _logger.Info("StatisticsData : CreateConnection : " + db_file);
+            _logger.Info("CreateConnection : " + db_file);
             ConnectionFlags connectionFlags;
 
             //Logger.Info("Opening write connection");
@@ -224,7 +241,7 @@ namespace Statistics2026.Data
                 throw;
             }
 
-            _logger.Info("StatisticsData : ConnectionCreated : " + db.GetHashCode());
+            _logger.Info("ConnectionCreated : " + db.GetHashCode());
             return db;
         }
 
@@ -253,6 +270,8 @@ namespace Statistics2026.Data
                                 "ResolutionDetail TEXT, " +
                                 "Codec TEXT, " +
                                 "DolbyVisionProfile TEXT, " +
+                                //"CollectionName TEXT, " +
+                                "StudioNames TEXT, " +
                                 "ServerLocation TEXT" +
                                 ")");
 
@@ -260,6 +279,7 @@ namespace Statistics2026.Data
                     "UserId TEXT NOT NULL, " +
                     "UserName TEXT NOT NULL, " +
                     "ConnectUserId TEXT, " +
+                    "IsAdministrator BOOLEAN, " +
                     "TotalTimeWatched INT, " +
                     "TotalWatchableTime INT, " +
                     "TotalMovies INT, " +
@@ -339,57 +359,96 @@ namespace Statistics2026.Data
             }
         }
 
-        public void CalculateUserInfo(IUserManager userManager, IProgress<double> progress)
+        public void CalculateUserInfo(IUserManager userManager, IUserDataManager userDataManager, ILibraryManager libraryManager, IProgress<double> progress)
         {
             progress.Report(0);
             var users = userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
             progress.Report(100);
 
-            _logger.Debug($"CalculateUserInfo - Starting User Analysis");
-            var count = users.Count;
-            var curr = 0;
+            _logger.Info($"CalculateUserInfo - Starting User Analysis");
+            double count = users.Count;
+            double curr = 0;
 
             progress.Report(0);
             foreach (var user in users)
             {
-                progress.Report((++curr) / count);
+                progress.Report(100.0 * (++curr) / count);
                 try
                 {
-                    var userInfo = new UserInfo(user);
-
-                    AddUserInfo(userInfo);
-                    _logger.Debug($"CalculateUserInfo -     Processed User - {userInfo.UserName}");
+                    AddUserInfo(user, userDataManager, libraryManager);
+                    _logger.Info($"CalculateUserInfo -     Processed User ({curr} of {count}) - {user.Name}");
                 }
                 catch (Exception ex)
                 {
                     _logger.Error($"CalculateUserInfo {user.SortName}: {ex.Message}");
+                    throw ex;
                 }
             }
-            _logger.Debug($"CalculateUserInfo - Finished User Analysis");
+            _logger.Info($"CalculateUserInfo - Finished User Analysis");
         }
 
-        public void AddUserInfo(UserInfo userInfo)
+        long CaclulateOverallTime(User user, bool onlyPlayed, IUserDataManager userDataManager, ILibraryManager libraryManager, List<User> allUsers = null)
         {
+            if (user == null && allUsers == null)
+                throw new ArgumentException("Either user or allUsers must be provided.");
+
+            var allVideos = Statistics2026API.GetAllEpisodesAndMovies(user, libraryManager);
+            var totalTicks = (user == null
+                    ? allVideos.Where(m => allUsers.Any(u => !onlyPlayed || userDataManager.GetUserData(u, m).Played))
+                    : allVideos.Where(m => (!onlyPlayed || userDataManager.GetUserData(user, m).Played) && m.IsVisible(user)))
+                .Sum(item => item.RunTimeTicks ?? 0);
+
+            return totalTicks;
+        }
+
+
+        public void AddUserInfo(User user, IUserDataManager userDataManager, ILibraryManager libraryManager)
+        {
+            if (user.Id == null)
+            {
+                _logger.Error($"AddUserInfo {user.Name}: is missing Id");
+                return;
+            }
+
+            if (user.Name == null)
+            {
+                _logger.Error($"AddUserInfo {user.Id.ToString()}: is missing Name");
+                return;
+            }
+
+            var totalWatchableTime = CaclulateOverallTime(user, false, userDataManager, libraryManager);
+            var totalTimeWatched = CaclulateOverallTime(user, true, userDataManager, libraryManager);
+            var isAdmin = user.Policy.IsAdministrator;
             string sql =
                 "insert into UserInfo " +
                 "(" +
                     "  UserId" +
                     ", UserName" +
                     ", ConnectUserId" +
+                    ", IsAdministrator" +
+                    ", TotalTimeWatched" +
+                    ", TotalWatchableTime" +
                 ")" +
                 " values " +
                 "(" +
                 "  @UserId" +
                 ", @UserName" +
                 ", @ConnectUserId" +
+                ", @IsAdministrator" +
+                ", @TotalTimeWatched" +
+                ", @TotalWatchableTime" +
                 ")";
             lock (connection)
             {
                 using (var statement = connection.PrepareStatement(sql))
                 {
-                    TryBind(statement, "@UserId", userInfo.UserId);
-                    TryBind(statement, "@UserName", userInfo.UserName);
-                    TryBind(statement, "@ConnectUserId", userInfo.ConnectUserId);
+                    TryBind(statement, "@UserId", user.Id.ToString());
+                    TryBind(statement, "@UserName", user.Name);
+                    TryBind(statement, "@ConnectUserId", user.ConnectUserId);
+                    TryBind(statement, "@IsAdministrator", isAdmin);
+
+                    TryBind(statement, "@TotalTimeWatched", totalTimeWatched);
+                    TryBind(statement, "@TotalWatchableTime", totalWatchableTime);
                     statement.MoveNext();
                 }
             }
@@ -428,32 +487,42 @@ namespace Statistics2026.Data
             videoList.AddRange(GetLibraryItems<Movie>(libMananger).Cast<Video>().ToList());
             progress.Report(100);
 
-            _logger.Debug($"CalculateMediaInfo - Starting Video Analysis");
-            var count = videoList.Count;
-            var curr = 0;
+            _logger.Info($"CalculateMediaInfo - Starting Video Analysis");
+            double count = videoList.Count;
+            double curr = 0.0;
 
             progress.Report(0);
             foreach (var video in videoList)
             {
-                progress.Report((++curr) / count);
+                progress.Report(100.0 * (++curr) / count);
                 try
                 {
                     var mediaInfo = new MediaInfo(video);
 
                     AddMediaInfo(mediaInfo);
-                    _logger.Debug($"CalculateMediaInfo -     Processed Video - {mediaInfo.DescriptiveName} items processed");
+                    _logger.Info($"CalculateMediaInfo -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName} items processed");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error($"CalculateMediaInfo {video.SortName}: {ex.Message}");
+                    _logger.Error($"CalculateMediaInfo {video.SortName}:");
+                    var path = video.Path ?? "Unknown";
+                    _logger.Error($"CalculateMediaInfo {path}:");
+                    _logger.Error($"CalculateMediaInfo {ex.Message}");
+                    throw ex;
                 }
             }
-            _logger.Debug($"CalculateMediaInfo - Finished Video Analysis");
+            _logger.Info($"CalculateMediaInfo - Finished Video Analysis");
         }
 
 
         public void AddMediaInfo(MediaInfo mediaInfo)
         {
+            if (mediaInfo.ItemId == null)
+            {
+                _logger.Error($"AddMediaInfo {mediaInfo.SortName}: is missing ItemId");
+                return;
+            }
+
             string sql =
                 "insert into MediaInfo " +
                 "(" +
@@ -469,6 +538,8 @@ namespace Statistics2026.Data
                     ", ResolutionDetail" +
                     ", Codec" +
                     ", DolbyVisionProfile" +
+                    //", CollectionName " +
+                    ", StudioNames " +
                     ", ServerLocation" +
                 ")" +
                 " values " +
@@ -485,6 +556,8 @@ namespace Statistics2026.Data
                 ", @ResolutionDetail" +
                 ", @Codec" +
                 ", @DolbyVisionProfile" +
+                //", @CollectionName " +
+                ", @StudioNames " +
                 ", @ServerLocation" +
                 ")";
             lock (connection)
@@ -503,6 +576,8 @@ namespace Statistics2026.Data
                     TryBind(statement, "@ResolutionDetail", mediaInfo.ResolutionDetail);
                     TryBind(statement, "@Codec", mediaInfo.Codec);
                     TryBind(statement, "@DolbyVisionProfile", mediaInfo.DolbyVisionProfile);
+                    //TryBind(statement, "@CollectionName", mediaInfo.BoxSet);
+                    TryBind(statement, "@StudioNames", string.Join( ";", mediaInfo.StudioNames ));
                     TryBind(statement, "@ServerLocation", mediaInfo.ServerLocation);
                     statement.MoveNext();
                 }
@@ -520,15 +595,15 @@ namespace Statistics2026.Data
                 "ORDER BY Resolution ASC"
                 ;
 
-            var retVal = new ValueGroup(Constants.MediaResolutions, Constants.HelpMediaResolutions);
+            var retVal = new ValueGroup(Constants.MediaResolutions, Constants.HelpMediaResolutions, new List<string> { "Movies", "Episodes" });
 
             if (showAllResolutions)
             {
-                retVal.addRow(Constants.HD, 0, 0);
-                retVal.addRow(Constants._4k, 0, 0);
-                retVal.addRow(Constants._8k, 0, 0);
-                retVal.addRow(Constants._720p, 0, 0);
-                retVal.addRow(Constants.SD, 0, 0);
+                retVal.addRow(Constants.HD, new List<int> { 0, 0 });
+                retVal.addRow(Constants._4k, new List<int> { 0, 0 });
+                retVal.addRow(Constants._8k, new List<int> { 0, 0 });
+                retVal.addRow(Constants._720p, new List<int> { 0, 0 });
+                retVal.addRow(Constants.SD, new List<int> { 0, 0 });
             }
 
             lock (connection)
@@ -541,7 +616,7 @@ namespace Statistics2026.Data
                         var resolution = row.GetString(0);
                         var episodeCount = row.GetInt(1);
                         var movieCount = row.GetInt(2);
-                        retVal.addRow(resolution, episodeCount, movieCount);
+                        retVal.addRow(resolution, new List<int> { movieCount, episodeCount });
                     }
                 }
             }
@@ -561,17 +636,17 @@ namespace Statistics2026.Data
                 "ORDER BY Codec ASC"
                 ;
 
-            var retVal = new ValueGroup(Constants.MediaCodecs, Constants.HelpMediaCodecs);
+            var retVal = new ValueGroup(Constants.MediaCodecs, Constants.HelpMediaCodecs, new List<string> { "Movies", "Episodes" });
             if (showAllCodecs)
             {
-                retVal.addRow("av1", 0, 0);
-                retVal.addRow("h264", 0, 0);
-                retVal.addRow("hevc", 0, 0);
-                retVal.addRow("mpeg2video", 0, 0);
-                retVal.addRow("mpeg4", 0, 0);
-                retVal.addRow("msmpeg4v3", 0, 0);
-                retVal.addRow("prores", 0, 0);
-                retVal.addRow("vc1", 0, 0);
+                retVal.addRow("av1", new List<int> { 0, 0 });
+                retVal.addRow("h264", new List<int> { 0, 0 });
+                retVal.addRow("hevc", new List<int> { 0, 0 });
+                retVal.addRow("mpeg2video", new List<int> { 0, 0 });
+                retVal.addRow("mpeg4", new List<int> { 0, 0 });
+                retVal.addRow("msmpeg4v3", new List<int> { 0, 0 });
+                retVal.addRow("prores", new List<int> { 0, 0 });
+                retVal.addRow("vc1", new List<int> { 0, 0 });
             }
 
             lock (connection)
@@ -584,7 +659,7 @@ namespace Statistics2026.Data
                         var codec = row.GetString(0);
                         var episodeCount = row.GetInt(1);
                         var movieCount = row.GetInt(2);
-                        retVal.addRow(codec, episodeCount, movieCount);
+                        retVal.addRow(codec, new List<int> { movieCount, episodeCount });
                     }
                 }
             }
@@ -608,19 +683,19 @@ namespace Statistics2026.Data
                    "ORDER BY DolbyVisionProfile ASC"
                    ;
 
-            var retVal = new ValueGroup(Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile);
+            var retVal = new ValueGroup(Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile, new List<string> { "Movies", "Episodes" });
             if (showUnknownDVProfiles)
-                retVal.addRow("Unknown Dolby Profile", 0, 0);
+                retVal.addRow("Unknown Dolby Profile", new List<int> { 0, 0 });
             if (showAllDVProfiles)
             {
-                retVal.addRow("Profile 5.0", 0, 0);
-                retVal.addRow("Profile 7.0", 0, 0);
-                retVal.addRow("Profile 8.0", 0, 0);
-                retVal.addRow("Profile 8.1", 0, 0);
-                retVal.addRow("Profile 8.2", 0, 0);
-                retVal.addRow("Profile 8.4", 0, 0);
-                retVal.addRow("Profile 9.0", 0, 0);
-                retVal.addRow("Profile 20.0", 0, 0);
+                retVal.addRow("Profile 5.0", new List<int> { 0, 0 });
+                retVal.addRow("Profile 7.0", new List<int> { 0, 0 });
+                retVal.addRow("Profile 8.0", new List<int> { 0, 0 });
+                retVal.addRow("Profile 8.1", new List<int> { 0, 0 });
+                retVal.addRow("Profile 8.2", new List<int> { 0, 0 });
+                retVal.addRow("Profile 8.4", new List<int> { 0, 0 });
+                retVal.addRow("Profile 9.0", new List<int> { 0, 0 });
+                retVal.addRow("Profile 20.0", new List<int> { 0, 0 });
             }
             lock (connection)
             {
@@ -632,7 +707,7 @@ namespace Statistics2026.Data
                         var dvProfile = row.GetString(0);
                         var episodeCount = row.GetInt(1);
                         var movieCount = row.GetInt(2);
-                        retVal.addRow(dvProfile, episodeCount, movieCount);
+                        retVal.addRow(dvProfile, new List<int> { movieCount, episodeCount });
                     }
                 }
             }
@@ -640,28 +715,139 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public ValueGroup CalculateUserCount(bool hasConnectUserID, IUserManager userManager)
+        public ValueGroup CalculateUserCount(bool hasConnectUserID, bool excludeAdmin, IUserManager userManager)
         {
-            var users = userManager.GetUserList(new UserQuery() { HasConnectUserId = true }).ToList();
+            var users = userManager.GetUserList(new UserQuery() { HasConnectUserId = true, IsAdministrator = false }).ToList();
             if (!hasConnectUserID)
             {
                 users = users
                     .Union(userManager.GetUserList(new UserQuery() { HasConnectUserId = false }))
                     .Union(userManager.GetUserList(new UserQuery() { HasConnectUserId = null })).ToList();
             }
+            if (!excludeAdmin)
+            {
+                users = users
+                    .Union(userManager.GetUserList(new UserQuery() { IsAdministrator = true }))
+                    .Union(userManager.GetUserList(new UserQuery() { IsAdministrator = null })).ToList();
+            }
 
-            var groupData = new ValueGroup(Constants.TotalUsers, null, "small");
+            var groupData = new ValueGroup(Constants.TotalUsers, null, null, "small");
             groupData.ValueLineTwo = users.Count.ToString();
 
             return groupData;
         }
 
-        public ValueGroup CalculateMostActiveUsers(bool hasConnectUserID, IUserManager userManager)
+        public ValueGroup CalculateMostActiveUsers(bool hasConnectUserID, int numUsers, bool excludeAdmin, IUserManager userManager)
         {
-            var groupData = new ValueGroup(Constants.MostActiveUsers, Constants.HelpMostActiveUsers);
+            string sql =
+                "SELECT " +
+                "UserName, " +
+                "TotalTimeWatched " +
+                "FROM UserInfo ";
+            List<string> conditions = new List<string>();
+
+            if (hasConnectUserID)
+                conditions.Add("( ConnectUserId <> \"\" AND ConnectUserId IS NOT NULL )");
+
+            if (excludeAdmin)
+                conditions.Add("( NOT IsAdministrator )");
+            if (conditions.Count > 0)
+                sql += "WHERE " + string.Join(" AND ", conditions) + " ";
+
+            sql +=
+                "ORDER BY TotalTimeWatched DESC " +
+                $"LIMIT {numUsers} "
+                ;
+
+            var help = Constants.HelpMostActiveUsers;
+            help = help.Replace("<numUsers>", numUsers.ToString());
+            var groupData = new ValueGroup(Constants.MostActiveUsers, help, new List<string> { "Days", "Hours", "Minutes" });
+            lock (connection)
+            {
+                using (var statement = connection.PrepareStatement(sql))
+                {
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        var userName = row.GetString(0);
+                        var runtime = new RunTime(row.GetInt64(1));
+
+
+                        groupData.addRow(userName, new List<int> { runtime.Days, runtime.Hours, runtime.Minutes });
+                    }
+                }
+            }
 
             return groupData;
         }
 
+        public ValueGroup CalculateTotalMovieCount(User user)
+        {
+            string sql = "SELECT SUM(NOT IsEpisode) FROM MEDIAINFO";
+
+            var retVal = new ValueGroup(Constants.TotalMovies, Constants.HelpTotalMovies, null, "small");
+            lock (connection)
+            {
+                using (var statement = connection.PrepareStatement(sql))
+                {
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        var count = row.GetInt(0);
+                        retVal.ValueLineTwo = count.ToString();
+                        break;
+                    }
+                }
+            }
+
+            return retVal;
+        }
+
+        public ValueGroup CalculateTotalCollectionCount(User user)
+        {
+            string sql = "SELECT COUNT( DISTINCT CollectionName ) FROM MEDIAINFO WHERE CollectionName IS NOT NULL AND CollectionName<>\"\"";
+
+            var retVal = new ValueGroup(Constants.TotalCollections, Constants.HelpTotalCollections, null, "small");
+            lock (connection)
+            {
+                using (var statement = connection.PrepareStatement(sql))
+                {
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        var count = row.GetInt(0);
+                        retVal.ValueLineTwo = count.ToString();
+                        break;
+                    }
+                }
+            }
+
+            return retVal;
+        }
+
+        public ValueGroup CalculateTotalMovieStudioCount(User user)
+        {
+            string sql = "SELECT DISTINCT StudioNames FROM MEDIAINFO WHERE NOT IsEpisode AND StudioNames IS NOT NULL AND StudioNames<>\"\"";
+
+            var retVal = new ValueGroup(Constants.TotalStudios, Constants.HelpTotalStudios, null, "small");
+            // Create an unordered set of strings
+            HashSet<string> studios = new HashSet<string>();
+
+            lock (connection)
+            {
+                using (var statement = connection.PrepareStatement(sql))
+                {
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        var currStudios = row.GetString(0).Split(';');
+                        studios.UnionWith(currStudios);
+                    }
+                }
+            }
+            retVal.ValueLineTwo = studios.Count().ToString();
+
+            return retVal;
+        }
     }
 }
