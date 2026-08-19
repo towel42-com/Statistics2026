@@ -95,6 +95,9 @@ namespace Statistics2026.Api
     {
         [ApiMember(Name = "hasConnectUserID", Description = "Include only if HasConnectUserId = true", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
         public bool hasConnectUserID { get; set; } = false;
+
+        [ApiMember(Name = "excludeAdmin", Description = "Exclude Administrators from analysis", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool excludeAdmin { get; set; } = true;
     }
 
     [Route("/codec_info/most_active_users", "GET", Summary = "Gets the top 5 most active users")]
@@ -103,6 +106,30 @@ namespace Statistics2026.Api
     {
         [ApiMember(Name = "hasConnectUserID", Description = "Include only if HasConnectUserId = true", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
         public bool hasConnectUserID { get; set; } = false;
+
+        [ApiMember(Name = "numUsers", Description = "Show the top X users", IsRequired = false, DataType = "int", ParameterType = "query", Verb = "GET")]
+        public int numUsers { get; set; } = 0;
+
+        [ApiMember(Name = "excludeAdmin", Description = "Exclude Administrators from analysis", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool excludeAdmin { get; set; } = true;
+    }
+
+    [Route("/codec_info/total_movie_count", "GET", Summary = "Get the total Movie Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalMovieCount : IReturn<Object>
+    {
+    }
+
+    [Route("/codec_info/total_collection_count", "GET", Summary = "Get the total Collection Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalCollectionCount : IReturn<Object>
+    {
+    }
+
+    [Route("/codec_info/total_studio_count", "GET", Summary = "Get the total Studio Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalStudioCount : IReturn<Object>
+    {
     }
 
     public class Statistics2026API : IService, IRequiresRequest
@@ -134,9 +161,9 @@ namespace Statistics2026.Api
 
         public IRequest Request { get; set; }
 
-        private IEnumerable<T> GetItems<T>()
+        static public IEnumerable<T> GetItems<T>(User user, ILibraryManager libraryManager)
         {
-            var query = new InternalItemsQuery(null)
+            var query = new InternalItemsQuery(user)
             {
                 IncludeItemTypes = new[] { typeof(T).Name },
                 Recursive = true,
@@ -147,13 +174,39 @@ namespace Statistics2026.Api
                 }
             };
 
-            return _libraryManager.GetItemList(query).OfType<T>();
+            return libraryManager.GetItemList(query).OfType<T>();
         }
 
-        private List<MediaInfo> GetVideos<T>() where T : Video
+        private IEnumerable<T> GetItems<T>(User user)
+        {
+            return GetItems<T>(user, _libraryManager);
+        }
+
+        static public IEnumerable<Video> GetAllEpisodesAndMovies(User user, ILibraryManager libraryManager)
+        {
+            var episodes = GetItems<Episode>(user, libraryManager).OfType<Video>().ToList();
+            var movies = GetItems<Movie>(user, libraryManager).OfType<Video>().ToList();
+            return episodes.Concat(movies);
+        }
+
+        static public IEnumerable<BoxSet> GetAllBoxSets(User user, ILibraryManager libraryManager)
+        {
+            var boxSets = GetItems<BoxSet>(user, libraryManager).OfType<BoxSet>().ToList();
+            return boxSets;
+        }
+
+
+        private IEnumerable<Video> GetAllEpisodesAndMovies(User user)
+        {
+            var episodes = GetItems<Episode>(user).OfType<Video>().ToList();
+            var movies = GetItems<Movie>(user).OfType<Video>().ToList();
+            return episodes.Concat(movies);
+        }
+
+        private List<MediaInfo> GetVideos<T>(User user) where T : Video
         {
             List<MediaInfo> mediaInfos = new List<MediaInfo>();
-            var items = GetItems<T>();
+            var items = GetItems<T>(user);
             foreach (var item in items)
             {
                 mediaInfos.Add(new MediaInfo(item));
@@ -163,23 +216,23 @@ namespace Statistics2026.Api
 
         public object Get(GetEpisodeList request)
         {
-            _logger.Info("GetEpisodeList");
-            var retVal = GetVideos<Episode>();
+            _logger.Debug("Request: GetEpisodeList");
+            var retVal = GetVideos<Episode>(null);
             retVal = retVal.OrderBy(x => x.SortName).ThenBy(x => x.Season).ThenBy(x => x.Episode).ToList();
             return retVal;
         }
 
         public object Get(GetMovieList request)
         {
-            _logger.Info("GetMovieList");
-            var retVal = GetVideos<Movie>();
+            _logger.Debug("Request: GetMovieList");
+            var retVal = GetVideos<Movie>(null);
             retVal = retVal.OrderBy(x => x.SortName).ThenBy(x => x.StartYear).ToList();
             return retVal;
         }
 
         public object Get(GetCodecSummary request)
         {
-            _logger.Info("GetCodecSummary");
+            _logger.Debug("Request: GetCodecSummary");
 
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
@@ -188,15 +241,17 @@ namespace Statistics2026.Api
             var showAllResolutions = request.showAllCodecs;
 
             var groupData = db.CalculateMediaCodecs(showAllResolutions);
-
-            var vgReponse = groupData.createStat(serverId, rootDivName);
+            groupData.ServerId = serverId;
+            groupData.HtmlDivId = rootDivName;
+            groupData.SortByKey = true;
+            var vgReponse = groupData.createStat();
 
             return vgReponse;
         }
 
         public object Get(GetResolutionSummary request)
         {
-            _logger.Info("GetResolutionSummary");
+            _logger.Debug("Request: GetResolutionSummary");
 
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
             var serverId = request.serverId ?? "";
@@ -204,15 +259,17 @@ namespace Statistics2026.Api
             var showAllResolutions = request.showAllResolutions;
 
             var groupData = db.CalculateMediaResolutions(showAllResolutions);
-
-            var vgReponse = groupData.createStat(serverId, rootDivName);
+            groupData.ServerId = serverId;
+            groupData.HtmlDivId = rootDivName;
+            groupData.SortByKey = false;
+            var vgReponse = groupData.createStat();
 
             return vgReponse;
         }
 
         public object Get(GetDVProfileSummary request)
         {
-            _logger.Info("GetDVProfileSummary");
+            _logger.Debug("Request: GetDVProfileSummary");
 
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
@@ -222,41 +279,73 @@ namespace Statistics2026.Api
             var showAllDVProfiles = request.showAllDVProfiles;
 
             var groupData = db.CalculateDVProfileInfo(showUnknownDVProfiles, showAllDVProfiles);
-
-            var vgReponse = groupData.createStat(serverId, rootDivName);
+            groupData.ServerId = serverId;
+            groupData.HtmlDivId = rootDivName;
+            groupData.SortByKey = true;
+            var vgReponse = groupData.createStat();
 
             return vgReponse;
         }
 
         public object Get(GetUserCount request)
         {
-            _logger.Info("GetUserCount");
+            _logger.Debug("Request: GetUserCount");
 
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
             var hasConnectUserID = request.hasConnectUserID;
+            var excludeAdmin = request.excludeAdmin;
 
-            var groupData = db.CalculateUserCount(hasConnectUserID, _userManager );
-
-            var vgReponse = groupData.createStat(null, null);
+            var groupData = db.CalculateUserCount(hasConnectUserID, excludeAdmin, _userManager);
+            var vgReponse = groupData.createStat();
             return vgReponse;
         }
 
         public object Get(GetMostActiveUsers request)
         {
-            _logger.Info("GetUserCount");
+            _logger.Debug("Request: GetMostActiveUsers");
 
-            var users = _userManager.GetUserList(new UserQuery() { HasConnectUserId = true }).ToList();
-            if (!request.hasConnectUserID)
-            {
-                users = users
-                    .Union(_userManager.GetUserList(new UserQuery() { HasConnectUserId = false }))
-                    .Union(_userManager.GetUserList(new UserQuery() { HasConnectUserId = null })).ToList();
-            }
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var hasConnectUserID = request.hasConnectUserID;
+            var numUsers = request.numUsers;
+            var excludeAdmin = request.excludeAdmin;
 
-            var groupData = new ValueGroup(Constants.TotalUsers, null, "small");
-            groupData.ValueLineTwo = users.Count.ToString();
+            var groupData = db.CalculateMostActiveUsers(hasConnectUserID, numUsers, excludeAdmin, _userManager);
+            groupData.SortByKey = false;
+            var vgReponse = groupData.createStat();
 
-            var vgReponse = groupData.createStat(null, null);
+            return vgReponse;
+        }
+
+        public object Get(GetTotalMovieCount request)
+        {
+            _logger.Debug("Request: GetTotalMovieCount");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+
+            var groupData = db.CalculateTotalMovieCount(null);
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+
+        public object Get(GetTotalCollectionCount request)
+        {
+            _logger.Debug("Request: GetTotalCollectionCount");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+
+            //var groupData = db.CalculateTotalCollectionCount(null);
+            //var vgReponse = groupData.createStat();
+            return "";
+        }
+
+        public object Get(GetTotalStudioCount request)
+        {
+            _logger.Debug("Request: GetTotalStudioCount ");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+
+            var groupData = db.CalculateTotalMovieStudioCount(null);
+            var vgReponse = groupData.createStat();
             return vgReponse;
         }
     }

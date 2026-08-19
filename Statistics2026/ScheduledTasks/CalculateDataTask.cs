@@ -9,6 +9,7 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
+
 using Statistics2026.Configuration;
 using Statistics2026.Data;
 using System;
@@ -58,7 +59,7 @@ namespace Statistics2026.ScheduledTasks
         }
 
         private static PluginConfiguration PluginConfiguration => Plugin.Instance.Configuration;
-        string IScheduledTask.Name => "Extract necessary Media and User Information for all library media and users";
+        string IScheduledTask.Name => "Calculate Media and User Information for all library media and users";
 
         string IScheduledTask.Key => "Statistics2026CalculateStatsTask";
 
@@ -92,7 +93,7 @@ namespace Statistics2026.ScheduledTasks
             progress.Report(100);
 
             progress.Report(0);
-            db.CalculateUserInfo(_userManager, progress);
+            db.CalculateUserInfo(_userManager, _userDataManager, _libraryManager, progress);
             progress.Report(100);
 
             Plugin.Instance.SaveConfiguration();
@@ -109,6 +110,25 @@ namespace Statistics2026.ScheduledTasks
                     TimeOfDayTicks = TimeSpan.FromMinutes(30).Ticks
                 }
             };
+        }
+
+        public string getImageUrl( string imageId )
+        {
+            return "";
+            //// 2. Fetch the local loopback port configuration from the server
+
+            //int localPort = _appConfig.Configuration.HttpServerPortNumber;
+            //string localBaseUrl = $"http://localhost:{localPort}";
+
+            //// 3. Construct the official Emby REST endpoint manually
+            //string imageTypeString = ImageType.Primary.ToString(); // Primary, Backdrop, Logo, etc.
+
+            //// Append parameters to ensure caching optimizations remain intact
+            //string completedImageUrl = $"{localBaseUrl}/emby/Items/{itemId}/Images/{imageTypeString}?maxWidth=400&quality=90&tag={imageTag}";
+
+            //_logger.Info($"Successfully constructed internal absolute URL: {completedImageUrl}");
+
+
         }
     }
 }

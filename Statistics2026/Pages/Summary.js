@@ -31,7 +31,7 @@
         return `<div name="${whichSummary}" id="${whichSummary}"></div>`;
     }
 
-    function loadDebugInfo( view ) {
+    function loadDebugInfo(view) {
         var url = ApiClient.getUrl("/emby/System/Configuration");
         ApiClient.getJSON(url).then(response => {
 
@@ -58,7 +58,7 @@
 
             view.querySelector("#lastRunInfo").innerHTML = lastRunInfo;
             view.querySelector(`#debugInfo`).style.display = 'none';
-            loadDebugInfo( view );
+            loadDebugInfo(view);
 
             if (config.LastUpdated === undefined) {
                 Dashboard.alert({
@@ -74,17 +74,23 @@
                     + "from this Emby server instance.";
 
 
-                var userStats = "";
-                userStats += getSummaryInfo(view, "most_active_users", "?hasConnectUserID=" + config.hasConnectUserID);
-                userStats += getSummaryInfo(view, "user_count", "?hasConnectUserID=" + config.hasConnectUserID);
-                view.querySelector("#userStats").innerHTML = (userStats);
+                var userInfo = "";
+                userInfo += getSummaryInfo(view, "most_active_users", "?hasConnectUserID=" + config.hasConnectUserID + "&numUsers=" + config.numMostActiveUsers + "&excludeAdmin=" + config.excludeAdmin);
+                userInfo += getSummaryInfo(view, "user_count", "?hasConnectUserID=" + config.hasConnectUserID + "&excludeAdmin=" + config.excludeAdmin);
+                view.querySelector("#userInfo").innerHTML = (userInfo);
 
-                var mediaStats = "";
-                mediaStats += getSummaryInfo(view, "codec_summary", "?showAllCodecs=" + config.showAllCodecs);
-                mediaStats += getSummaryInfo(view, "resolution_summary", "?showAllResolutions=" + config.showAllResolutions);
-                mediaStats += getSummaryInfo(view, "dvprofile_summary", "?showUnknownDVProfiles=" + config.showUnknownDVProfiles + "&showAllDVProfiles=" + config.showAllDVProfiles);
+                var mediaInfo = "";
+                mediaInfo += getSummaryInfo(view, "codec_summary", "?showAllCodecs=" + config.showAllCodecs);
+                mediaInfo += getSummaryInfo(view, "resolution_summary", "?showAllResolutions=" + config.showAllResolutions);
+                mediaInfo += getSummaryInfo(view, "dvprofile_summary", "?showUnknownDVProfiles=" + config.showUnknownDVProfiles + "&showAllDVProfiles=" + config.showAllDVProfiles);
+                view.querySelector("#mediaInfo").innerHTML = mediaInfo;
 
-                view.querySelector("#mediaStats").innerHTML = (mediaStats);
+                var movieStats = "";
+                movieStats += getSummaryInfo(view, "total_movie_count");
+                // movieStats += getSummaryInfo(view, "total_collection_count");
+                // movieStats += getSummaryInfo(view, "total_collections");
+                movieStats += getSummaryInfo(view, "total_studio_count");
+                view.querySelector("#movieStats").innerHTML = movieStats;
 
                 Dashboard.hideLoadingMsg();
             }

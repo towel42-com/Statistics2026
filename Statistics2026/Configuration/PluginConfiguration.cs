@@ -16,6 +16,8 @@ namespace Statistics2026.Configuration
         public string ServerId { get; set; }
 
         public bool hasConnectUserID { get; set; } = false;
+        public int numMostActiveUsers { get; set; } = 5;
+        public bool excludeAdmin { get; set; } = true;
 
         public bool showAllCodecs { get; set; } = false;
         public bool showUnknownDVProfiles { get; set; } = false;

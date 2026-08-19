@@ -5,12 +5,15 @@
 
     function loadPage(view, params) {
         ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-            
+
             view.querySelector("#hasConnectUserID").checked = config.hasConnectUserID;
             view.querySelector("#showAllCodecs").checked = config.showAllCodecs;
             view.querySelector("#showUnknownDVProfiles").checked = config.showUnknownDVProfiles;
             view.querySelector("#showAllDVProfiles").checked = config.showAllDVProfiles;
             view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
+            view.querySelector("#numMostActive").value = config.numMostActiveUsers;
+            view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
+            
         });
     }
 
@@ -37,6 +40,24 @@
             function () {
                 ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                     config.hasConnectUserID = view.querySelector("#hasConnectUserID").checked;
+                    ApiClient.updatePluginConfiguration(pluginId, config);
+                });
+            }
+        );
+
+        view.querySelector("#excludeAdmin").addEventListener("click",
+            function () {
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    config.excludeAdmin = view.querySelector("#excludeAdmin").checked;
+                    ApiClient.updatePluginConfiguration(pluginId, config);
+                });
+            }
+        );
+
+        view.querySelector("#numMostActive").addEventListener("input",
+            function () {
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    config.numMostActiveUsers = view.querySelector("#hasConnectUserID").value.trim();
                     ApiClient.updatePluginConfiguration(pluginId, config);
                 });
             }
@@ -76,23 +97,32 @@
             }
         );
 
-        view.querySelector("#hasConnectUserIDDiv").addEventListener("click",
+
+        view.querySelector("#numMostActiveHelp").addEventListener("click",
+            function () {
+                showInfo("The default is 5, but you can limit how many most active users that are reported", "Number of Most Active Users");
+            });
+        view.querySelector("#excludeAdminHelp").addEventListener("click",
+            function () {
+                showInfo("For security reasons, Administrators are not typically viewers of media and likely should be excluded from analysis.", "Exclude Administrators");
+            });
+        view.querySelector("#hasConnectUserIDHelp").addEventListener("click",
             function () {
                 showInfo("Normally all users are shown, checking this option will display only users with a Connect User ID.", "Show Users with Connect User ID");
             });
-        view.querySelector("#showAllCodecsDiv").addEventListener("click",
+        view.querySelector("#showAllCodecsHelp").addEventListener("click",
             function () {
                 showInfo("Normally only codecs found in use are shown, checking this option will display all codecs.", "Show All Codecs");
             });
-        view.querySelector("#showUnknownDVProfilesDiv").addEventListener("click",
+        view.querySelector("#showUnknownDVProfilesHelp").addEventListener("click",
             function () {
                 showInfo("Normally unknown Dolby Vision Profiles are hidden, checking this option will display the count of unknown Dolby Vision profiles.", "Show Unknown Dolby Vision Profile Count");
             });
-        view.querySelector("#showAllDVProfilesDiv").addEventListener("click",
+        view.querySelector("#showAllDVProfilesHelp").addEventListener("click",
             function () {
                 showInfo("Normally only Dolby Vision Profiles in use are shown, checking this option will display all Dolby Vision profiles.", "Show All Dolby Vision Profiles");
             });
-        view.querySelector("#showAllResolutionsDiv").addEventListener("click",
+        view.querySelector("#showAllResolutionsHelp").addEventListener("click",
             function () {
                 showInfo("Normally only resolutions in use are show, checking this option will display all resolutions.", "Show All Resolutions");
             });

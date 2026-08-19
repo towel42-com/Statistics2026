@@ -717,6 +717,8 @@ namespace Statistics2026.Data
 
         public ValueGroup CalculateUserCount(bool hasConnectUserID, bool excludeAdmin, IUserManager userManager)
         {
+            // TODO use the UserInfo table
+
             var users = userManager.GetUserList(new UserQuery() { HasConnectUserId = true, IsAdministrator = false }).ToList();
             if (!hasConnectUserID)
             {

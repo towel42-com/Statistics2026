@@ -16,8 +16,17 @@ namespace Statistics2026
         // user summary constants
         internal const string TotalUsers = "Total Users";
         internal const string MostActiveUsers = "Most Active Users";
-        internal const string HelpMostActiveUsers = "Top 5 users that are the most active on the Emby server. This includes viewing movies and episodes.";
+        internal const string HelpMostActiveUsers = "Top <numUsers> users that are the most active on the Emby server. This includes viewing movies and episodes.";
 
+        // movie summary constants
+        internal const string TotalMovies = "Total Movies";
+        internal const string HelpTotalMovies = "Total movies in the Emby library.";
+
+        internal const string TotalCollections = "Total Collections";
+        internal const string HelpTotalCollections = "Total collections in the Emby library.";
+
+        internal const string TotalStudios = "Total Studios";
+        internal const string HelpTotalStudios = "Total studios in the Emby library.";
 
         internal const string MissingVideoStream = "Missing Video Stream";
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";
