@@ -1,10 +1,12 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using ServiceStack;
+using ServiceStack.Text;
 using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 
@@ -264,9 +266,41 @@ namespace Statistics2026.Data
             return retVal;
         }
 
+        private string CheckForPlural(string value, decimal number, string starting = "", string ending = "", bool removeZero = true)
+        {
+            if (number == 1)
+                return $" {starting} {number} {value} {ending}";
+            if (number == 0 && removeZero)
+                return "";
+            return $" {starting} {number} {value}s {ending}";
+        }
+
         private string CheckMaxLength(string value)
         {
             return value.Length > 30 ? value.Substring(0, 27) + "..." : value;
+        }
+
+        private string TimeSince(System.DateTime premiereDate)
+        {
+
+            var yearDiff = (DateTime.Now.Year - premiereDate.Year);
+            var monthDiff = (DateTime.Now.Month - premiereDate.Month);
+
+            var numberOfTotalMonths = (yearDiff * 12) + monthDiff;
+            if (numberOfTotalMonths > 3)
+            {
+                var numberOfYears = Math.Floor(numberOfTotalMonths / (decimal)12);
+                var numberOfMonth = Math.Floor((numberOfTotalMonths / (decimal)12 - numberOfYears) * 12);
+                return $"{CheckForPlural("year", numberOfYears, "", "", false)} {CheckForPlural("month", numberOfMonth, "and")} ago";
+            }
+            else
+            {
+                var numberOfDays = DateTime.Now.Date - premiereDate;
+                if (numberOfDays.Days == 0)
+                    return $"Today";
+                else
+                    return $"{CheckForPlural("day", numberOfDays.Days, "", "", false)} ago";
+            }
         }
 
         public ValueGroup Movie(User user, WhichMovie whichMovie)
@@ -311,6 +345,16 @@ namespace Statistics2026.Data
                     orderClause = "TotalBitrate ASC";
                     title = Constants.LowestBitrateMovie;
                     break;
+                case WhichMovie.LatestPremiereDate:
+                    orderClause = "PremiereDate DESC";
+                    whereClause = "(PremiereDate IS NOT NULL AND PremiereDate != '')";
+                    title = Constants.LatestPremieredMovie;
+                    break;
+                case WhichMovie.OldestPremiereDate:
+                    orderClause = "PremiereDate ASC";
+                    whereClause = "(PremiereDate IS NOT NULL AND PremiereDate != '')";
+                    title = Constants.OldestPremieredMovie;
+                    break;
                 default:
                     return new ValueGroup();
             }
@@ -321,9 +365,10 @@ namespace Statistics2026.Data
                 + ", ImageUrl"
                 + ", FileSize"
                 + ", RunTimeTicks"
-                + ", Rating "
-                + ", TotalBitrate "
-                + "FROM Media "
+                + ", Rating"
+                + ", TotalBitrate"
+                + ", PremiereDate"
+                + " FROM Media "
                 + "WHERE NOT IsEpisode ";
             if (!whereClause.IsNullOrEmpty())
                 sql += $"AND {whereClause} ";
@@ -333,6 +378,7 @@ namespace Statistics2026.Data
             var retVal = new ValueGroup(title, help, null, "half");
 
             string value = "";
+            string secondValue = "";
             string name = "";
             string itemId = "";
             string imageUrl = "";
@@ -377,6 +423,15 @@ namespace Statistics2026.Data
                                     value = $"{bitrate:N0} Kbps";
                                 }
                                 break;
+                            case WhichMovie.OldestPremiereDate:
+                            case WhichMovie.LatestPremiereDate:
+                                {
+                                    var premiereDate = DateTime.ParseExact(row.GetString(7), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                                    value = premiereDate.ToShortDateString();
+
+                                    secondValue = TimeSince(premiereDate);
+                                }
+                                break;
 
                             default:
                                 value = "";
@@ -387,7 +442,13 @@ namespace Statistics2026.Data
                 }
             }
             retVal.ValueLineTwo = CheckMaxLength(value);
-            retVal.ValueLineThree = CheckMaxLength($"{name}");
+            if (secondValue.IsNullOrEmpty())
+                retVal.ValueLineThree = CheckMaxLength(name);
+            else
+            {
+                retVal.ValueLineThree = secondValue;
+                retVal.ValueLineFour = CheckMaxLength(name);
+            }
             retVal.ImageUrl = imageUrl;
             retVal.MediaItemId = itemId;
             return retVal;

@@ -100,8 +100,8 @@
                 movieStats += getSummaryInfo(view, "get_movie/LowestRated", "?serverId=" + config.ServerId, "lowest_rated_movie");
                 movieStats += getSummaryInfo(view, "get_movie/HighestBitrate", "?serverId=" + config.ServerId,"highest_bitrate_movie");
                 movieStats += getSummaryInfo(view, "get_movie/LowestBitrate", "?serverId=" + config.ServerId,"lowest_bitrate_movie");
-                // movieStats += getSummaryInfo(view, "get_movie/Oldest", "?serverId=" + config.ServerId,"oldest_movie");
-                // movieStats += getSummaryInfo(view, "get_movie/Newest", "?serverId=" + config.ServerId,"newest_movie");
+                movieStats += getSummaryInfo(view, "get_movie/OldestPremiereDate", "?serverId=" + config.ServerId,"oldest_movie");
+                movieStats += getSummaryInfo(view, "get_movie/LatestPremiereDate", "?serverId=" + config.ServerId,"latest_movie");
                 // movieStats += getSummaryInfo(view, "get_movie/MostRecent", "?serverId=" + config.ServerId,"most_recent_movie");
                 // movieStats += getSummaryInfo(view, "get_movie/LeastRecent", "?serverId=" + config.ServerId,"least_recent_movie");
                 view.querySelector("#movieStats").innerHTML = movieStats;

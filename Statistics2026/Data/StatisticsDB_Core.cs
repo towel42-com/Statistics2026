@@ -120,7 +120,8 @@ namespace Statistics2026.Data
                         new TableColDef( "ImageUrl", "TEXT", true ),
                         new TableColDef( "RunTimeTicks", "INT", true ),
                         new TableColDef( "Rating", "REAL", true ),
-                        new TableColDef( "TotalBitrate", "INT", true )
+                        new TableColDef( "TotalBitrate", "INT", true ),
+                        new TableColDef( "PremiereDate", "DATETIME", true )
                     },
                     null,
                     true
@@ -414,6 +415,7 @@ namespace Statistics2026.Data
                     ", RunTimeTicks" +
                     ", Rating" +
                     ", TotalBitrate" +
+                    ", PremiereDate" +
                 ")" +
                 " VALUES " +
                 "(" +
@@ -436,6 +438,7 @@ namespace Statistics2026.Data
                     ", @RunTimeTicks" +
                     ", @Rating" +
                     ", @TotalBitrate" +
+                    ", @PremiereDate" +
                 ")";
             lock (_connection)
             {
@@ -460,6 +463,7 @@ namespace Statistics2026.Data
                     _dbHelper.TryBind(statement, "@RunTimeTicks", mediaInfo.RunTimeTicks);
                     _dbHelper.TryBind(statement, "@Rating", mediaInfo.Rating);
                     _dbHelper.TryBind(statement, "@TotalBitrate", mediaInfo.TotalBitrate);
+                    _dbHelper.TryBind(statement, "@PremiereDate", mediaInfo.PremiereDate);
                     statement.MoveNext();
                 }
             }

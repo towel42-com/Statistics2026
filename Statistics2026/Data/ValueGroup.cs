@@ -65,6 +65,7 @@ namespace Statistics2026.Data
 
         public string ValueLineTwo { get; set; }
         public string ValueLineThree { get; set; }
+        public string ValueLineFour { get; set; }
         public string Size { get; set; }
         public string HelpText { get; set; }
         public string ImageUrl { get; set; }
@@ -91,6 +92,7 @@ namespace Statistics2026.Data
 
             ValueLineTwo = null;
             ValueLineThree = null;
+            ValueLineFour = null;
         }
 
         private int findRow(string name)
@@ -210,6 +212,10 @@ namespace Statistics2026.Data
             if (ValueLineThree != "" && ValueLineThree != null)
             {
                 retVal.addToHtml(depth, $"<div class=\"statCard-stats-number\">{ValueLineThree}</div>");
+            }
+            if (ValueLineFour != "" && ValueLineFour != null)
+            {
+                retVal.addToHtml(depth, $"<div class=\"statCard-stats-number\">{ValueLineFour}</div>");
             }
 
             retVal.addToHtml(--depth, "</div>");
