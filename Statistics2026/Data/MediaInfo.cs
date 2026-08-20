@@ -52,6 +52,15 @@ namespace Statistics2026.Data
             Codec = codec;
             DolbyVisionProfile = dvProfile;
             StudioNames = video.Studios;
+            if (IsEpisode)
+            {
+                var parent = video.GetParent();
+                while( parent != null && StudioNames.Count() == 0 )
+                { 
+                    StudioNames = parent.Studios;
+                    parent = parent.GetParent();
+                }
+            }
             ServerLocation = video.Path ?? "Unknown";
             FileSize = (fileSystem != null) ? fileSystem.GetFileSystemInfo(video.Path).Length : 0;
             RunTimeTicks = video.RunTimeTicks ?? 0;

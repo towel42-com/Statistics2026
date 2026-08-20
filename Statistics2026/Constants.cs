@@ -36,11 +36,19 @@ namespace Statistics2026
         internal const string LowestRatedMovie = "Lowest Rated Movie";
         internal const string HighestBitrateMovie = "Highest Bitrate Movie";
         internal const string LowestBitrateMovie = "Lowest Bitrate Movie";
-        internal const string OldestPremieredMovie = "Oldest Premiered Movie";
-        internal const string LatestPremieredMovie = "Latest Premiered Movie";
-        internal const string MostRecentlyAdded = "Most Recently Added Movie";
-        internal const string LeastRecentlyAdded = "Least Recently Added Movie";
-        
+        internal const string OldestMoviePremiere = "Oldest Movie Premiere";
+        internal const string LatestMoviePremiere = "Latest Movie Premier";
+        internal const string OldestMovieAdded = "Oldest Movie Added to Server";
+        internal const string LatestMovieAddition = "Latest Movie Added to Server";
+
+        internal const string TotalTVShows = "Total TV Series";
+        internal const string HelpTotalTVShows = "Total TV Series the Emby library.";
+        internal const string HelpTotalTVNetworks = "Total TV Networks And Studios in the Emby library.";
+        internal const string TotalTVNetworks = "Total TV Networks and Studios";
+
+        internal const string TotalTVEpisodes = "Total TV Episodes";
+        internal const string HelpTotalTVEpisodes = "Total TV Series the Emby library (Excludes Specials).";
+
         internal const string MissingVideoStream = "Missing Video Stream";
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";
         internal const string NonDolbyVisionCompatibleCodec = "Non Dolby Vision Compatible Codec";

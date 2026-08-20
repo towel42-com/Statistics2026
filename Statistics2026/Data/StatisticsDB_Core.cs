@@ -394,6 +394,13 @@ namespace Statistics2026.Data
                 return;
             }
 
+            if (mediaInfo.IsEpisode && mediaInfo.Season == 0)
+            {
+                // dont count specials
+                return;
+            }
+
+
             string sql =
                 "INSERT INTO Media " +
                 "(" +

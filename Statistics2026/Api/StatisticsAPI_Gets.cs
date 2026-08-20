@@ -153,9 +153,9 @@ namespace Statistics2026.Api
             return vgReponse;
         }
 
-        public object Get(GetTotalStudioCount request)
+        public object Get(GetTotalMovieStudioCount request)
         {
-            _logger.Debug("Request: GetTotalStudioCount ");
+            _logger.Debug("Request: GetTotalMovieStudioCount ");
 
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
@@ -164,6 +164,16 @@ namespace Statistics2026.Api
             return vgReponse;
         }
 
+        public object Get(GetTotalTVStudioCount request)
+        {
+            _logger.Debug("Request: GetTotalTVStudioCount ");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+
+            var groupData = db.TotalTVStudioCount(null);
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
 
         public object Get(GetItemImageUrl request)
         {
@@ -193,5 +203,18 @@ namespace Statistics2026.Api
             var vgReponse = groupData.createStat();
             return vgReponse;
         }
+
+        
+        public object Get(GetTotalTVCount request)
+        {
+            _logger.Debug("Request: GetTotalTVCount");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+
+            var groupData = db.TotalTVCount(null);
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+
     }
 }

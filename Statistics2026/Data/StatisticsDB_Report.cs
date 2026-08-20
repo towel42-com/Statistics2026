@@ -1,4 +1,5 @@
 ﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using ServiceStack;
 using ServiceStack.Text;
@@ -146,9 +147,8 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private ValueGroup ValueGroupForSingleItem(string title, string help, string sql)
+        private string GetSingleValueFromSQL(string sql)
         {
-            var retVal = new ValueGroup(title, help, null, "small");
             lock (sql)
             {
                 using (var statement = _connection.PrepareStatement(sql))
@@ -157,11 +157,18 @@ namespace Statistics2026.Data
                     {
                         var row = statement.Current;
                         var count = row.GetInt(0);
-                        retVal.ValueLineTwo = count.ToString();
-                        break;
+                        return count.ToString();
                     }
                 }
             }
+            return "";
+        }
+
+        private ValueGroup ValueGroupForSingleItem(string title, string help, string sql)
+        {
+            var retVal = new ValueGroup(title, help, null, "small");
+            var value = GetSingleValueFromSQL(sql);
+            retVal.ValueLineTwo = value;
             return retVal;
         }
 
@@ -234,6 +241,17 @@ namespace Statistics2026.Data
             return ValueGroupForSingleItem(Constants.TotalMovies, Constants.HelpTotalMovies, sql);
         }
 
+        public ValueGroup TotalTVCount(User user)
+        {
+            string sql = "SELECT COUNT(DISTINCT(PrimaryName)) FROM Media WHERE IsEpisode";
+            var retVal = ValueGroupForSingleItem(Constants.TotalTVShows, Constants.HelpTotalTVShows, sql);
+
+            retVal.ValueLineThree = Constants.TotalTVEpisodes;
+            retVal.ValueLineFour = GetSingleValueFromSQL("SELECT SUM(IsEpisode) FROM Media");
+
+            return retVal;
+        }
+
         public ValueGroup TotalCollectionCount(User user)
         {
             string sql = "SELECT COUNT( ItemId ) FROM Collections";
@@ -241,11 +259,14 @@ namespace Statistics2026.Data
             return ValueGroupForSingleItem(Constants.TotalCollections, Constants.HelpTotalCollections, sql);
         }
 
-        public ValueGroup TotalMovieStudioCount(User user)
+        public ValueGroup TotalStudioCount(User user, bool movies )
         {
-            string sql = "SELECT DISTINCT StudioNames FROM Media WHERE NOT IsEpisode AND StudioNames IS NOT NULL AND StudioNames<>\"\"";
+            string sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
+            if (movies)
+                sql += "NOT ";
+            sql += "IsEpisode AND StudioNames IS NOT NULL AND StudioNames<>\"\"";
 
-            var retVal = new ValueGroup(Constants.TotalStudios, Constants.HelpTotalStudios, null, "small");
+            var retVal = new ValueGroup(movies?Constants.TotalStudios:Constants.TotalTVNetworks, movies?Constants.HelpTotalStudios:Constants.HelpTotalTVNetworks, null, "small");
             // Create an unordered set of strings
             HashSet<string> studios = new HashSet<string>();
 
@@ -266,6 +287,14 @@ namespace Statistics2026.Data
             return retVal;
         }
 
+        public ValueGroup TotalMovieStudioCount(User user)
+        {
+            return TotalStudioCount(user, true);
+        }
+        public ValueGroup TotalTVStudioCount(User user)
+        {
+            return TotalStudioCount(user, false);
+        }
         private string CheckForPlural(string value, decimal number, string starting = "", string ending = "", bool removeZero = true)
         {
             if (number == 1)
@@ -348,22 +377,22 @@ namespace Statistics2026.Data
                 case WhichMovie.LatestPremiereDate:
                     orderClause = "PremiereDate DESC";
                     whereClause = "(PremiereDate IS NOT NULL AND PremiereDate != '')";
-                    title = Constants.LatestPremieredMovie;
+                    title = Constants.LatestMoviePremiere;
                     break;
                 case WhichMovie.OldestPremiereDate:
                     orderClause = "PremiereDate ASC";
                     whereClause = "(PremiereDate IS NOT NULL AND PremiereDate != '')";
-                    title = Constants.OldestPremieredMovie;
+                    title = Constants.OldestMoviePremiere;
                     break;
-                case WhichMovie.LeastRecentlyAdded:
+                case WhichMovie.LatestMovieAdded:
                     orderClause = "DateAdded DESC";
                     whereClause = "(DateAdded IS NOT NULL AND DateAdded != '')";
-                    title = Constants.LeastRecentlyAdded;
+                    title = Constants.LatestMovieAddition;
                     break;
-                case WhichMovie.MostRecentlyAdded:
+                case WhichMovie.OldestMovieAdded:
                     orderClause = "DateAdded ASC";
                     whereClause = "(DateAdded IS NOT NULL AND DateAdded != '')";
-                    title = Constants.MostRecentlyAdded;
+                    title = Constants.OldestMovieAdded;
                     break;
                 default:
                     return new ValueGroup();
@@ -443,10 +472,10 @@ namespace Statistics2026.Data
                                     secondValue = TimeSince(premiereDate);
                                 }
                                 break;
-                            case WhichMovie.LeastRecentlyAdded:
-                            case WhichMovie.MostRecentlyAdded:
+                            case WhichMovie.OldestMovieAdded:
+                            case WhichMovie.LatestMovieAdded:
                                 {
-                                    var premiereDate = DateTime.ParseExact(row.GetString(7), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                                    var premiereDate = DateTime.ParseExact(row.GetString(8), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                                     value = premiereDate.ToShortDateString();
 
                                     secondValue = TimeSince(premiereDate);

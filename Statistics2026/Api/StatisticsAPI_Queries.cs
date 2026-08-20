@@ -140,9 +140,21 @@ namespace Statistics2026.Api
     {
     }
 
-    [Route("/Statistics2026/total_studio_count", "GET", Summary = "Get the total Studio Count")]
+    [Route("/Statistics2026/total_movie_studio_count", "GET", Summary = "Get the total Movie Studio Count")]
     [Authenticated(Roles = "admin")]
-    public class GetTotalStudioCount : IReturn<Object>
+    public class GetTotalMovieStudioCount : IReturn<Object>
+    {
+    }
+
+    [Route("/Statistics2026/total_tv_studio_count", "GET", Summary = "Get the total TV Studio Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalTVStudioCount : IReturn<Object>
+    {
+    }
+
+    [Route("/Statistics2026/total_tv_count", "GET", Summary = "Get the total TV Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalTVCount : IReturn<Object>
     {
     }
 
@@ -156,8 +168,8 @@ namespace Statistics2026.Api
         LatestPremiereDate,
         HighestRated,
         LowestRated,
-        MostRecentlyAdded,
-        LeastRecentlyAdded,
+        OldestMovieAdded,
+        LatestMovieAdded,
         HighestBitrate,
         LowestBitrate
     };

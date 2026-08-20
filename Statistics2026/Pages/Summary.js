@@ -91,7 +91,7 @@
                 var movieStats = "";
                 movieStats += getSummaryInfo(view, "total_movie_count");
                 movieStats += getSummaryInfo(view, "total_collection_count");
-                movieStats += getSummaryInfo(view, "total_studio_count");
+                movieStats += getSummaryInfo(view, "total_movie_studio_count");
                 movieStats += getSummaryInfo(view, "get_movie/Largest", "?serverId=" + config.ServerId, "largest_movie");
                 movieStats += getSummaryInfo(view, "get_movie/Smallest", "?serverId=" + config.ServerId, "smallest_movie");
                 movieStats += getSummaryInfo(view, "get_movie/Longest", "?serverId=" + config.ServerId, "longest_movie");
@@ -102,9 +102,16 @@
                 movieStats += getSummaryInfo(view, "get_movie/LowestBitrate", "?serverId=" + config.ServerId,"lowest_bitrate_movie");
                 movieStats += getSummaryInfo(view, "get_movie/OldestPremiereDate", "?serverId=" + config.ServerId,"oldest_movie");
                 movieStats += getSummaryInfo(view, "get_movie/LatestPremiereDate", "?serverId=" + config.ServerId,"latest_movie");
-                movieStats += getSummaryInfo(view, "get_movie/MostRecentlyAdded", "?serverId=" + config.ServerId,"most_recent_movie");
-                movieStats += getSummaryInfo(view, "get_movie/LeastRecentlyAdded", "?serverId=" + config.ServerId,"least_recent_movie");
+                movieStats += getSummaryInfo(view, "get_movie/LatestMovieAdded", "?serverId=" + config.ServerId,"most_recent_movie");
+                movieStats += getSummaryInfo(view, "get_movie/OldestMovieAdded", "?serverId=" + config.ServerId,"least_recent_movie");
                 view.querySelector("#movieStats").innerHTML = movieStats;
+
+                var tvStats = "";
+                tvStats += getSummaryInfo(view, "total_tv_count");
+                // tvStats += getSummaryInfo(view, "total_networks");
+                tvStats += getSummaryInfo(view, "total_tv_studio_count");
+
+                view.querySelector("#tvStats").innerHTML = tvStats;
 
                 Dashboard.hideLoadingMsg();
             }
