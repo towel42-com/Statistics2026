@@ -12,11 +12,14 @@
 
     const pluginId = "4BFE2894-AEA3-4D3C-A429-503B56D61711";
 
-    function getSummaryInfo(view, whichSummary, parameters = "") {
+    function getSummaryInfo(view, whichSummary, parameters = "", div = "") {
         var url = ApiClient.getUrl("/emby/Statistics2026/" + whichSummary + parameters);
 
+        if (div == "")
+            div = whichSummary;
+
         ApiClient.getJSON(url).then(response => {
-            view.querySelector("#" + whichSummary).innerHTML = response.html;
+            view.querySelector("#" + div).innerHTML = response.html;
 
             response.dynamicButtons.forEach((v) => {
                 view.querySelector("#" + v.id).addEventListener("click",
@@ -28,7 +31,7 @@
             console.error("API call failed:", error);
         });
 
-        return `<div name="${whichSummary}" id="${whichSummary}"></div>`;
+        return `<div name="${div}" id="${div}"></div>`;
     }
 
     function loadDebugInfo(view) {
@@ -87,9 +90,20 @@
 
                 var movieStats = "";
                 movieStats += getSummaryInfo(view, "total_movie_count");
-                // movieStats += getSummaryInfo(view, "total_collection_count");
-                // movieStats += getSummaryInfo(view, "total_collections");
+                movieStats += getSummaryInfo(view, "total_collection_count");
                 movieStats += getSummaryInfo(view, "total_studio_count");
+                movieStats += getSummaryInfo(view, "get_movie/Largest", "?serverId=" + config.ServerId, "largest_movie");
+                movieStats += getSummaryInfo(view, "get_movie/Smallest", "?serverId=" + config.ServerId, "smallest_movie");
+                movieStats += getSummaryInfo(view, "get_movie/Longest", "?serverId=" + config.ServerId, "longest_movie");
+                movieStats += getSummaryInfo(view, "get_movie/Shortest", "?serverId=" + config.ServerId, "shortest_movie");
+                movieStats += getSummaryInfo(view, "get_movie/HighestRated", "?serverId=" + config.ServerId, "highest_rated_movie");
+                movieStats += getSummaryInfo(view, "get_movie/LowestRated", "?serverId=" + config.ServerId, "lowest_rated_movie");
+                // movieStats += getSummaryInfo(view, "get_movie/HighestBitrate", "?serverId=" + config.ServerId,"highest_bitrate_movie");
+                // movieStats += getSummaryInfo(view, "get_movie/LowestBitrate", "?serverId=" + config.ServerId,"lowest_bitrate_movie");
+                // movieStats += getSummaryInfo(view, "get_movie/Oldest", "?serverId=" + config.ServerId,"oldest_movie");
+                // movieStats += getSummaryInfo(view, "get_movie/Newest", "?serverId=" + config.ServerId,"newest_movie");
+                // movieStats += getSummaryInfo(view, "get_movie/MostRecent", "?serverId=" + config.ServerId,"most_recent_movie");
+                // movieStats += getSummaryInfo(view, "get_movie/LeastRecent", "?serverId=" + config.ServerId,"least_recent_movie");
                 view.querySelector("#movieStats").innerHTML = movieStats;
 
                 Dashboard.hideLoadingMsg();

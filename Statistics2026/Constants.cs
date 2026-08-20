@@ -28,6 +28,12 @@ namespace Statistics2026
         internal const string TotalStudios = "Total Studios";
         internal const string HelpTotalStudios = "Total studios in the Emby library.";
         internal const string BiggestMovie = "Largest Movie";
+        internal const string SmallestMovie = "Smallest Movie";
+        internal const string LongestMovie = "Longest Movie";
+        internal const string ShortestMovie = "Shortest Movie";
+
+        internal const string HighestRatedMovie = "Highest Rating Movie";
+        internal const string LowestRatedMovie = "Lowest Rated Movie";
 
         internal const string MissingVideoStream = "Missing Video Stream";
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";

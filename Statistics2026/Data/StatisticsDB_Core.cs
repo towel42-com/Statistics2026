@@ -117,7 +117,9 @@ namespace Statistics2026.Data
                         new TableColDef( "StudioNames", "TEXT", true ),
                         new TableColDef( "ServerLocation", "TEXT", true ),
                         new TableColDef( "FileSize", "INT", true),
-                        new TableColDef( "ImageUrl", "TEXT", true )
+                        new TableColDef( "ImageUrl", "TEXT", true ),
+                        new TableColDef( "RunTimeTicks", "INT", true ),
+                        new TableColDef( "Rating", "REAL", true )
                     },
                     null,
                     true
@@ -408,6 +410,8 @@ namespace Statistics2026.Data
                     ", ServerLocation" +
                     ", FileSize" +
                     ", ImageUrl" +
+                    ", RunTimeTicks" +
+                    ", Rating" +
                 ")" +
                 " VALUES " +
                 "(" +
@@ -427,6 +431,8 @@ namespace Statistics2026.Data
                 ", @ServerLocation" +
                 ", @FileSize" +
                 ", @ImageUrl" +
+                ", @RunTimeTicks" +
+                ", @Rating" +
                 ")";
             lock (_connection)
             {
@@ -448,6 +454,8 @@ namespace Statistics2026.Data
                     _dbHelper.TryBind(statement, "@ServerLocation", mediaInfo.ServerLocation);
                     _dbHelper.TryBind(statement, "@FileSize", mediaInfo.FileSize);
                     _dbHelper.TryBind(statement, "@ImageUrl", (mediaInfo.ImageUrl == null) ? "" : mediaInfo.ImageUrl);
+                    _dbHelper.TryBind(statement, "@RunTimeTicks", mediaInfo.RunTimeTicks);
+                    _dbHelper.TryBind(statement, "@Rating", mediaInfo.Rating);
                     statement.MoveNext();
                 }
             }

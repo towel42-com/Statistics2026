@@ -1,6 +1,8 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using SQLitePCL.pretty;
+using Statistics2026.Api;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -266,16 +268,56 @@ namespace Statistics2026.Data
             return value.Length > 30 ? value.Substring(0, 27) + "..." : value;
         }
 
-        public ValueGroup LargestMovie(User user)
+        public ValueGroup Movie(User user, WhichMovie whichMovie)
         {
-            string sql = "SELECT ItemId, PrimaryName, FileSize, ImageUrl FROM Media " +
-                "WHERE FileSize = ( SELECT MAX( FileSize ) FROM Media) " +
-                "LIMIT 1"
-                ;
+            string title = "";
+            string help = "";
 
-            var retVal = new ValueGroup(Constants.BiggestMovie, null, null, "half");
+            string orderClause = "";
+            switch (whichMovie)
+            {
+                case WhichMovie.Largest:
+                    orderClause = "FileSize DESC";
+                    title = Constants.BiggestMovie;
+                    break;
+                case WhichMovie.Smallest:
+                    orderClause = "FileSize ASC";
+                    title = Constants.SmallestMovie;
+                    break;
+                case WhichMovie.Longest:
+                    orderClause = "RunTimeTicks DESC";
+                    title = Constants.LongestMovie;
+                    break;
+                case WhichMovie.Shortest:
+                    orderClause = "RunTimeTicks ASC";
+                    title = Constants.ShortestMovie;
+                    break;
+                case WhichMovie.HighestRated:
+                    orderClause = "Rating DESC";
+                    title = Constants.HighestRatedMovie;
+                    break;
+                case WhichMovie.LowestRated:
+                    orderClause = "Rating ASC";
+                    title = Constants.LowestRatedMovie;
+                    break;
 
-            double maxSize = 0;
+
+                default:
+                    return new ValueGroup();
+            }
+            string sql = "SELECT "
+                + "   ItemId"
+                + ", PrimaryName"
+                + ", ImageUrl"
+                + ", FileSize"
+                + ", RunTimeTicks"
+                + ", Rating "
+                + "FROM Media "
+                + $"WHERE NOT IsEpisode ORDER BY ${orderClause} LIMIT 1";
+
+            var retVal = new ValueGroup(title, help, null, "half");
+
+            string value = "";
             string name = "";
             string itemId = "";
             string imageUrl = "";
@@ -288,15 +330,41 @@ namespace Statistics2026.Data
                         var row = statement.Current;
                         itemId = row.GetString(0);
                         name = row.GetString(1);
-                        maxSize = row.GetInt64(2);
-                        maxSize /= (1024 * 1024 * 1024); // in GB;
-                        imageUrl = row.GetString(3);
+                        imageUrl = row.GetString(2);
+                        switch (whichMovie)
+                        {
+                            case WhichMovie.Smallest:
+                            case WhichMovie.Largest:
+                                {
+                                    long maxSize = row.GetInt64(3);
+                                    maxSize /= (1024 * 1024 * 1024); // in GB;
+                                    value = $"{maxSize:F1} Gb";
+                                }
+                                break;
+                            case WhichMovie.Longest:
+                            case WhichMovie.Shortest:
+                                {
+                                    long runTimeTicks = row.GetInt64(4);
+                                    value = new TimeSpan(runTimeTicks).ToString(@"hh\:mm\:ss");
+                                }
+                                break;
+                            case WhichMovie.HighestRated:
+                            case WhichMovie.LowestRated:
+                                {
+                                    var rating = row.GetFloat(5).ToString("F1");
+                                    value = $"{rating} / 10";
+                                }
+                                break;
+                            default:
+                                value = "";
+                                break;
+                        }
                         break;
                     }
                 }
             }
-            retVal.ValueLineTwo = CheckMaxLength($"{maxSize:F1} Gb");
-            retVal.ValueLineThree = CheckMaxLength($"{name} Gb");
+            retVal.ValueLineTwo = CheckMaxLength(value);
+            retVal.ValueLineThree = CheckMaxLength($"{name}");
             retVal.ImageUrl = imageUrl;
             retVal.MediaItemId = itemId;
             return retVal;

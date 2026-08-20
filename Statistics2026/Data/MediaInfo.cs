@@ -54,7 +54,9 @@ namespace Statistics2026.Data
             StudioNames = video.Studios;
             ServerLocation = video.Path ?? "Unknown";
             FileSize = (fileSystem != null) ? fileSystem.GetFileSystemInfo(video.Path).Length : 0;
+            RunTimeTicks = video.RunTimeTicks ?? 0;
             ImageUrl = ItemImageUrl._ItemImageUrl(video, ImageType.Primary, 400, 90);
+            Rating = video.CommunityRating ?? 0.0;
         }
 
         public (string primaryName, string secondaryName, string descName) GetDescName(Video video)
@@ -132,5 +134,7 @@ namespace Statistics2026.Data
         public string ServerLocation { get; set; }
         public long FileSize { get; set; }
         public string ImageUrl { get; set; }
+        public long RunTimeTicks { get; set; }
+        public double Rating { get; set; }
     }
 }

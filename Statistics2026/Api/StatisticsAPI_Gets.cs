@@ -179,14 +179,15 @@ namespace Statistics2026.Api
             return retVal;
         }
 
-        public object Get(GetLargestMovie request)
+        public object Get(GetMovie request)
         {
-            _logger.Debug("Request: GetLargestMovie ");
+            _logger.Debug("Request: GetMovie ");
 
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
             var serverId = request.serverId ?? "";
+            WhichMovie whichMovie = request.whichMovie;
 
-            var groupData = db.LargestMovie(null);
+            var groupData = db.Movie(null, whichMovie);
             groupData.ServerId = serverId;
 
             var vgReponse = groupData.createStat();

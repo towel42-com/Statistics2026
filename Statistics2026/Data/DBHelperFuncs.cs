@@ -119,6 +119,19 @@ namespace Statistics2026.Data
             }
         }
 
+        public void TryBind(IStatement statement, string name, double value)
+        {
+            IBindParameter bindParam;
+            if (statement.BindParameters.TryGetValue(name, out bindParam))
+            {
+                bindParam.Bind(value);
+            }
+            else
+            {
+                _logger.Error($"Error Binding {name} to {value}");
+            }
+        }
+
         public void TryBind(IStatement statement, string name, string value)
         {
             IBindParameter bindParam;

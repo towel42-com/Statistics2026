@@ -25,6 +25,19 @@ using System.Text;
 
 namespace Statistics2026.Api
 {
+    [Route("/Statistics2026/GetItemImageUrl/{ItemId}", "GET")]
+    [Authenticated(Roles = "admin")]
+    public class GetItemImageUrl : IReturn<GetItemImageUrlResponse>
+    {
+        public string ItemId { get; set; }
+    }
+
+    public class GetItemImageUrlResponse
+    {
+        public string Name { get; set; }
+        public string PrimaryImageUrl { get; set; }
+    }
+
     // http://localhost:8096/emby/Statistics2026/episode_list
     [Route("/Statistics2026/episode_list", "GET", Summary = "Gets Codec Info for Episodes")]
     [Authenticated(Roles = "admin")]
@@ -133,25 +146,30 @@ namespace Statistics2026.Api
     {
     }
 
-    [Route("/Statistics2026/largest_movie", "GET", Summary = "Get the total Studio Count")]
+    public enum WhichMovie
+    {
+        Largest,
+        Smallest,
+        Longest,
+        Shortest,
+        Oldest,
+        Newest,
+        HighestRated,
+        LowestRated,
+        MostRecent,
+        LeastRecent,
+        HighestBitrate,
+        LowestBitrate
+    };
+
+
+    [Route("/Statistics2026/get_movie/{WhichMovie}", "GET", Summary = "Get the movie in the database")]
     [Authenticated(Roles = "admin")]
-    public class GetLargestMovie : IReturn<Object>
+    public class GetMovie : IReturn<Object>
     {
         [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string serverId { get; set; }
 
-    }
-
-    [Route("/Statistics2026/GetItemImageUrl/{ItemId}", "GET")]
-    [Authenticated(Roles = "admin")]
-    public class GetItemImageUrl : IReturn<GetItemImageUrlResponse>
-    {
-        public string ItemId { get; set; }
-    }
-
-    public class GetItemImageUrlResponse
-    {
-        public string Name { get; set; }
-        public string PrimaryImageUrl { get; set; }
+        public WhichMovie whichMovie { get; set; }
     }
 }
