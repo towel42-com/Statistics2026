@@ -24,7 +24,7 @@ namespace Statistics2026.Data
 
         private ILogger _logger = null;
         private IDatabaseConnection _connection = null;
-        DBHelpers _dbHelper = null;
+        DBHelperFuncs _dbHelper = null;
 
 
         public static StatisticsDB GetInstance(string db_file, ILogger log)
@@ -55,14 +55,14 @@ namespace Statistics2026.Data
 
         private StatisticsDB()
         {
-            _dbHelper = new DBHelpers();
+            _dbHelper = new DBHelperFuncs();
         }
 
         private StatisticsDB(string db_path, ILogger l)
         {
             _logger = l;
             _logger.Info("StatisticsData : Creating");
-            _dbHelper = new DBHelpers(db_path, _logger);
+            _dbHelper = new DBHelperFuncs(db_path, _logger);
             _connection = _dbHelper.SQLConnection;
             _logger.Info("StatisticsData : Finished Creating");
 
@@ -342,7 +342,7 @@ namespace Statistics2026.Data
             }
         }
 
-        public void AnalyzeMedia(ILibraryManager libManager, IFileSystem fileSystem, Statistics2026API apiService, CancellationToken cancellationToken, IProgress<double> progress)
+        public void AnalyzeMedia(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
         {
             _logger.Info($"AnalyzeMedia - Starting Video Analysis");
 
@@ -361,7 +361,7 @@ namespace Statistics2026.Data
                 progress.Report(100.0 * (++curr) / count);
                 try
                 {
-                    var mediaInfo = new MediaInfo(video, fileSystem, apiService);
+                    var mediaInfo = new MediaInfo(video, fileSystem);
 
                     AddMediaInfo(mediaInfo);
                     _logger.Info($"AnalyzeMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
@@ -447,7 +447,7 @@ namespace Statistics2026.Data
                     _dbHelper.TryBind(statement, "@StudioNames", string.Join(";", mediaInfo.StudioNames));
                     _dbHelper.TryBind(statement, "@ServerLocation", mediaInfo.ServerLocation);
                     _dbHelper.TryBind(statement, "@FileSize", mediaInfo.FileSize);
-                    _dbHelper.TryBind(statement, "@ImageUrl", mediaInfo.ImageUrl);
+                    _dbHelper.TryBind(statement, "@ImageUrl", (mediaInfo.ImageUrl == null) ? "" : mediaInfo.ImageUrl);
                     statement.MoveNext();
                 }
             }
