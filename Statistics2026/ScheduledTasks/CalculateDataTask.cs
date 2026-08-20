@@ -12,6 +12,7 @@ using MediaBrowser.Model.Tasks;
 
 using Statistics2026.Configuration;
 using Statistics2026.Data;
+using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -30,6 +31,7 @@ namespace Statistics2026.ScheduledTasks
         private readonly IUserDataManager _userDataManager;
         private readonly IUserManager _userManager;
         private IApplicationHost _appHost;
+        private Statistics2026API _apiService;
         private readonly IJsonSerializer _jsonSerializer;
         private readonly IProviderManager _providerManager;
         private readonly IServerConfigurationManager _appConfig;
@@ -44,9 +46,11 @@ namespace Statistics2026.ScheduledTasks
             IJsonSerializer jsonSerializer,
             IServerApplicationPaths serverApplicationPaths,
             IApplicationHost appHost,
-            IProviderManager providerManager)
+            IProviderManager providerManager,
+            Statistics2026API apiService
+            )
         {
-            _logger = logger.GetLogger("Statistics2026 - CalculateMediaTask");
+            _logger = logger.GetLogger("Statistics2026 - CalculateDataTask");
             _libraryManager = libraryManager;
             _userManager = userManager;
             _userDataManager = userDataManager;
@@ -56,6 +60,7 @@ namespace Statistics2026.ScheduledTasks
             _appHost = appHost;
             _providerManager = providerManager;
             _appConfig = config;
+            _apiService = apiService;
         }
 
         private static PluginConfiguration PluginConfiguration => Plugin.Instance.Configuration;
@@ -83,18 +88,22 @@ namespace Statistics2026.ScheduledTasks
             progress.Report(0);
             db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
             progress.Report(100);
+            cancellationToken.ThrowIfCancellationRequested();
 
             progress.Report(0);
-            db.ClearMediaInfo();
+            db.AnalyzeUsers(_userManager, _userDataManager, _libraryManager, cancellationToken, progress);
             progress.Report(100);
+            cancellationToken.ThrowIfCancellationRequested();
 
             progress.Report(0);
-            db.CalculateMediaInfo(_libraryManager, progress);
+            db.AnalyzeCollections(_libraryManager, cancellationToken, progress);
             progress.Report(100);
+            cancellationToken.ThrowIfCancellationRequested();
 
             progress.Report(0);
-            db.CalculateUserInfo(_userManager, _userDataManager, _libraryManager, progress);
+            db.AnalyzeMedia(_libraryManager, _fileSystem, cancellationToken, progress);
             progress.Report(100);
+            cancellationToken.ThrowIfCancellationRequested();
 
             Plugin.Instance.SaveConfiguration();
             return Task.CompletedTask;
@@ -112,23 +121,5 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        public string getImageUrl( string imageId )
-        {
-            return "";
-            //// 2. Fetch the local loopback port configuration from the server
-
-            //int localPort = _appConfig.Configuration.HttpServerPortNumber;
-            //string localBaseUrl = $"http://localhost:{localPort}";
-
-            //// 3. Construct the official Emby REST endpoint manually
-            //string imageTypeString = ImageType.Primary.ToString(); // Primary, Backdrop, Logo, etc.
-
-            //// Append parameters to ensure caching optimizations remain intact
-            //string completedImageUrl = $"{localBaseUrl}/emby/Items/{itemId}/Images/{imageTypeString}?maxWidth=400&quality=90&tag={imageTag}";
-
-            //_logger.Info($"Successfully constructed internal absolute URL: {completedImageUrl}");
-
-
-        }
     }
 }
