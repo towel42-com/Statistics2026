@@ -156,8 +156,8 @@ namespace Statistics2026.Api
         LatestPremiereDate,
         HighestRated,
         LowestRated,
-        MostRecent,
-        LeastRecent,
+        MostRecentlyAdded,
+        LeastRecentlyAdded,
         HighestBitrate,
         LowestBitrate
     };

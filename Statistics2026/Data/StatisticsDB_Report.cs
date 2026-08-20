@@ -280,11 +280,11 @@ namespace Statistics2026.Data
             return value.Length > 30 ? value.Substring(0, 27) + "..." : value;
         }
 
-        private string TimeSince(System.DateTime premiereDate)
+        private string TimeSince(System.DateTime date)
         {
 
-            var yearDiff = (DateTime.Now.Year - premiereDate.Year);
-            var monthDiff = (DateTime.Now.Month - premiereDate.Month);
+            var yearDiff = (DateTime.Now.Year - date.Year);
+            var monthDiff = (DateTime.Now.Month - date.Month);
 
             var numberOfTotalMonths = (yearDiff * 12) + monthDiff;
             if (numberOfTotalMonths > 3)
@@ -295,7 +295,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                var numberOfDays = DateTime.Now.Date - premiereDate;
+                var numberOfDays = DateTime.Now.Date - date;
                 if (numberOfDays.Days == 0)
                     return $"Today";
                 else
@@ -355,6 +355,16 @@ namespace Statistics2026.Data
                     whereClause = "(PremiereDate IS NOT NULL AND PremiereDate != '')";
                     title = Constants.OldestPremieredMovie;
                     break;
+                case WhichMovie.LeastRecentlyAdded:
+                    orderClause = "DateAdded DESC";
+                    whereClause = "(DateAdded IS NOT NULL AND DateAdded != '')";
+                    title = Constants.LeastRecentlyAdded;
+                    break;
+                case WhichMovie.MostRecentlyAdded:
+                    orderClause = "DateAdded ASC";
+                    whereClause = "(DateAdded IS NOT NULL AND DateAdded != '')";
+                    title = Constants.MostRecentlyAdded;
+                    break;
                 default:
                     return new ValueGroup();
             }
@@ -368,6 +378,7 @@ namespace Statistics2026.Data
                 + ", Rating"
                 + ", TotalBitrate"
                 + ", PremiereDate"
+                + ", DateAdded"
                 + " FROM Media "
                 + "WHERE NOT IsEpisode ";
             if (!whereClause.IsNullOrEmpty())
@@ -425,6 +436,15 @@ namespace Statistics2026.Data
                                 break;
                             case WhichMovie.OldestPremiereDate:
                             case WhichMovie.LatestPremiereDate:
+                                {
+                                    var premiereDate = DateTime.ParseExact(row.GetString(7), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                                    value = premiereDate.ToShortDateString();
+
+                                    secondValue = TimeSince(premiereDate);
+                                }
+                                break;
+                            case WhichMovie.LeastRecentlyAdded:
+                            case WhichMovie.MostRecentlyAdded:
                                 {
                                     var premiereDate = DateTime.ParseExact(row.GetString(7), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                                     value = premiereDate.ToShortDateString();

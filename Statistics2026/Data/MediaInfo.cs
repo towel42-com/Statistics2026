@@ -59,7 +59,8 @@ namespace Statistics2026.Data
             Rating = video.CommunityRating ?? 0.0;
             TotalBitrate = video.TotalBitrate;
             if (video.PremiereDate.HasValue)
-                PremiereDate = video.PremiereDate.Value;
+                PremiereDate = video.PremiereDate.Value.DateTime;
+            DateAdded = video.DateCreated.DateTime;
         }
 
         public (string primaryName, string secondaryName, string descName) GetDescName(Video video)
@@ -140,6 +141,7 @@ namespace Statistics2026.Data
         public long RunTimeTicks { get; set; }
         public double Rating { get; set; }
         public long TotalBitrate { get; set; }
-        public DateTimeOffset? PremiereDate { get; set; }
+        public DateTime? PremiereDate { get; set; }
+        public DateTime DateAdded { get; set; }
     }
 }

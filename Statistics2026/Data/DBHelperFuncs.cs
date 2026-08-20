@@ -105,7 +105,7 @@ namespace Statistics2026.Data
                 _logger.Error($"Error Binding {name} to {value}");
             }
         }
-        public void TryBind(IStatement statement, string name, DateTimeOffset? value)
+        public void TryBind(IStatement statement, string name, DateTime? value)
         {
             if (value == null)
                 return;
@@ -113,7 +113,7 @@ namespace Statistics2026.Data
             IBindParameter bindParam;
             if (statement.BindParameters.TryGetValue(name, out bindParam))
             {
-                bindParam.Bind(value.Value.DateTime.ToString("o", CultureInfo.InvariantCulture));
+                bindParam.Bind(value.Value.ToString("o", CultureInfo.InvariantCulture));
             }
             else
             {

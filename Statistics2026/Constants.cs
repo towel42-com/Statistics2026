@@ -38,7 +38,9 @@ namespace Statistics2026
         internal const string LowestBitrateMovie = "Lowest Bitrate Movie";
         internal const string OldestPremieredMovie = "Oldest Premiered Movie";
         internal const string LatestPremieredMovie = "Latest Premiered Movie";
-
+        internal const string MostRecentlyAdded = "Most Recently Added Movie";
+        internal const string LeastRecentlyAdded = "Least Recently Added Movie";
+        
         internal const string MissingVideoStream = "Missing Video Stream";
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";
         internal const string NonDolbyVisionCompatibleCodec = "Non Dolby Vision Compatible Codec";
