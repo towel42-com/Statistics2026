@@ -95,7 +95,7 @@ namespace Statistics2026.Api
             var items = GetItems<T>(user);
             foreach (var item in items)
             {
-                mediaInfos.Add(new MediaInfo(item, _fileSystem,null));
+                mediaInfos.Add(new MediaInfo(item, _fileSystem));
             }
             return mediaInfos;
         }
