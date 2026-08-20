@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Linq;
+using Emby.Media.Common.Extensions;
 
 namespace Statistics2026.Data
 {
@@ -66,11 +67,12 @@ namespace Statistics2026.Data
         public string ValueLineThree { get; set; }
         public string Size { get; set; }
         public string HelpText { get; set; }
-        private string ImageId { get; set; }
+        public string ImageUrl { get; set; }
+        public string MediaItemId { get; set; }
 
-        public string ServerId {  get; set; }
+        public string ServerId { get; set; }
         public string HtmlDivId { get; set; }
-        public bool SortByKey {  get; set; }
+        public bool SortByKey { get; set; }
 
         public ValueGroup()
         {
@@ -151,7 +153,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public object createStat(string serverId = "", string rootDivName = "")
+        public object createStat( string rootDivName = "")
         {
             var retVal = new ValueGroupResponse();
 
@@ -174,14 +176,10 @@ namespace Statistics2026.Data
                 retVal.addDynamicButton(new DynamicButton { id = id, info = HelpText, title = Title });
             }
 
-            var showImage = (serverId != null && serverId != "") && (ImageId != null && ImageId != "");
+            var showImage = !ServerId.IsNullOrEmpty() && !ImageUrl.IsNullOrEmpty() && !MediaItemId.IsNullOrEmpty();
             if (showImage)
             {
-                //var apiClient = ApiClientHandler.GetApiClient();// ($"Items/{episodeId}");
-
-                //var imageUrl = ApiClient.getImageUrl(ImageId, { type: "Primary", quality: 90 });
-                string imageUrl = "";
-                retVal.addToHtml(depth, $"<a is=\"emby-linkbutton\" href=\"/item?id={ImageId}&serverId={serverId}\"><img src=\"{imageUrl}\" height=\"105px\"/></a>");
+                retVal.addToHtml(depth, $"<a is=\"emby-linkbutton\" href=\"/item?id={MediaItemId}&serverId={ServerId}\"><img src=\"{ImageUrl}\" height=\"105px\"/></a>");
                 retVal.addToHtml(depth++, "<div>");
 
                 if (Title != "")
