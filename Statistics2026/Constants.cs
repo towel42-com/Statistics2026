@@ -27,6 +27,7 @@ namespace Statistics2026
 
         internal const string TotalStudios = "Total Studios";
         internal const string HelpTotalStudios = "Total studios in the Emby library.";
+        internal const string BiggestMovie = "Largest Movie";
 
         internal const string MissingVideoStream = "Missing Video Stream";
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";
