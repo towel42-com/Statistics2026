@@ -16,13 +16,14 @@ using MediaBrowser.Model.Entities;
 
 using MediaBrowser.Model.Logging;
 using System.Net.Mime;
+using Statistics2026.Api;
 
 namespace Statistics2026.Data
 {
     public class MediaInfo
     {
         public MediaInfo() { }
-        public MediaInfo(Video video)
+        public MediaInfo(Video video, IFileSystem fileSystem)
         {
             var (primaryName, secondaryName, descName) = GetDescName(video);
 
@@ -52,6 +53,8 @@ namespace Statistics2026.Data
             DolbyVisionProfile = dvProfile;
             StudioNames = video.Studios;
             ServerLocation = video.Path ?? "Unknown";
+            FileSize = (fileSystem != null) ? fileSystem.GetFileSystemInfo(video.Path).Length : 0;
+            ImageUrl = ItemImageUrl._ItemImageUrl(video, ImageType.Primary, 400, 90);
         }
 
         public (string primaryName, string secondaryName, string descName) GetDescName(Video video)
@@ -127,5 +130,7 @@ namespace Statistics2026.Data
         public string DolbyVisionProfile { get; set; }
         public string[] StudioNames { get; set; }
         public string ServerLocation { get; set; }
+        public long FileSize { get; set; }
+        public string ImageUrl { get; set; }
     }
 }
