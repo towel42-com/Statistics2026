@@ -119,7 +119,8 @@ namespace Statistics2026.Data
                         new TableColDef( "FileSize", "INT", true),
                         new TableColDef( "ImageUrl", "TEXT", true ),
                         new TableColDef( "RunTimeTicks", "INT", true ),
-                        new TableColDef( "Rating", "REAL", true )
+                        new TableColDef( "Rating", "REAL", true ),
+                        new TableColDef( "TotalBitrate", "INT", true )
                     },
                     null,
                     true
@@ -412,27 +413,29 @@ namespace Statistics2026.Data
                     ", ImageUrl" +
                     ", RunTimeTicks" +
                     ", Rating" +
+                    ", TotalBitrate" +
                 ")" +
                 " VALUES " +
                 "(" +
-                "  @ItemId" +
-                ", @PrimaryName" +
-                ", @SortName" +
-                ", @SecondaryName" +
-                ", @StartYear" +
-                ", @IsEpisode" +
-                ", @Season" +
-                ", @Episode" +
-                ", @ResolutionBase" +
-                ", @ResolutionDetail" +
-                ", @Codec" +
-                ", @DolbyVisionProfile" +
-                ", @StudioNames " +
-                ", @ServerLocation" +
-                ", @FileSize" +
-                ", @ImageUrl" +
-                ", @RunTimeTicks" +
-                ", @Rating" +
+                    "  @ItemId" +
+                    ", @PrimaryName" +
+                    ", @SortName" +
+                    ", @SecondaryName" +
+                    ", @StartYear" +
+                    ", @IsEpisode" +
+                    ", @Season" +
+                    ", @Episode" +
+                    ", @ResolutionBase" +
+                    ", @ResolutionDetail" +
+                    ", @Codec" +
+                    ", @DolbyVisionProfile" +
+                    ", @StudioNames " +
+                    ", @ServerLocation" +
+                    ", @FileSize" +
+                    ", @ImageUrl" +
+                    ", @RunTimeTicks" +
+                    ", @Rating" +
+                    ", @TotalBitrate" +
                 ")";
             lock (_connection)
             {
@@ -456,6 +459,7 @@ namespace Statistics2026.Data
                     _dbHelper.TryBind(statement, "@ImageUrl", (mediaInfo.ImageUrl == null) ? "" : mediaInfo.ImageUrl);
                     _dbHelper.TryBind(statement, "@RunTimeTicks", mediaInfo.RunTimeTicks);
                     _dbHelper.TryBind(statement, "@Rating", mediaInfo.Rating);
+                    _dbHelper.TryBind(statement, "@TotalBitrate", mediaInfo.TotalBitrate);
                     statement.MoveNext();
                 }
             }

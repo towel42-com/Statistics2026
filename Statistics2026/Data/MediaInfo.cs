@@ -57,6 +57,7 @@ namespace Statistics2026.Data
             RunTimeTicks = video.RunTimeTicks ?? 0;
             ImageUrl = ItemImageUrl._ItemImageUrl(video, ImageType.Primary, 400, 90);
             Rating = video.CommunityRating ?? 0.0;
+            TotalBitrate = video.TotalBitrate;
         }
 
         public (string primaryName, string secondaryName, string descName) GetDescName(Video video)
@@ -136,5 +137,6 @@ namespace Statistics2026.Data
         public string ImageUrl { get; set; }
         public long RunTimeTicks { get; set; }
         public double Rating { get; set; }
+        public long TotalBitrate { get; set;  }
     }
 }

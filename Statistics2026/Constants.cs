@@ -32,8 +32,10 @@ namespace Statistics2026
         internal const string LongestMovie = "Longest Movie";
         internal const string ShortestMovie = "Shortest Movie";
 
-        internal const string HighestRatedMovie = "Highest Rating Movie";
+        internal const string HighestRatedMovie = "Highest Rated Movie";
         internal const string LowestRatedMovie = "Lowest Rated Movie";
+        internal const string HighestBitrateMovie = "Highest Bitrate Movie";
+        internal const string LowestBitrateMovie = "Lowest Bitrate Movie";
 
         internal const string MissingVideoStream = "Missing Video Stream";
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";

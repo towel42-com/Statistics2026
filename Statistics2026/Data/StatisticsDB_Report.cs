@@ -1,5 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
+using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
@@ -274,6 +275,7 @@ namespace Statistics2026.Data
             string help = "";
 
             string orderClause = "";
+            string whereClause = "";
             switch (whichMovie)
             {
                 case WhichMovie.Largest:
@@ -298,13 +300,21 @@ namespace Statistics2026.Data
                     break;
                 case WhichMovie.LowestRated:
                     orderClause = "Rating ASC";
+                    whereClause = "(Rating > 0)";
                     title = Constants.LowestRatedMovie;
                     break;
-
-
+                case WhichMovie.HighestBitrate:
+                    orderClause = "TotalBitrate DESC";
+                    title = Constants.HighestBitrateMovie;
+                    break;
+                case WhichMovie.LowestBitrate:
+                    orderClause = "TotalBitrate ASC";
+                    title = Constants.LowestBitrateMovie;
+                    break;
                 default:
                     return new ValueGroup();
             }
+
             string sql = "SELECT "
                 + "   ItemId"
                 + ", PrimaryName"
@@ -312,8 +322,13 @@ namespace Statistics2026.Data
                 + ", FileSize"
                 + ", RunTimeTicks"
                 + ", Rating "
+                + ", TotalBitrate "
                 + "FROM Media "
-                + $"WHERE NOT IsEpisode ORDER BY ${orderClause} LIMIT 1";
+                + "WHERE NOT IsEpisode ";
+            if (!whereClause.IsNullOrEmpty())
+                sql += $"AND {whereClause} ";
+
+            sql += $"ORDER BY {orderClause} LIMIT 1";
 
             var retVal = new ValueGroup(title, help, null, "half");
 
@@ -355,6 +370,14 @@ namespace Statistics2026.Data
                                     value = $"{rating} / 10";
                                 }
                                 break;
+                            case WhichMovie.HighestBitrate:
+                            case WhichMovie.LowestBitrate:
+                                {
+                                    var bitrate = Math.Round((decimal)row.GetInt64(6) / 1000);
+                                    value = $"{bitrate:N0} Kbps";
+                                }
+                                break;
+
                             default:
                                 value = "";
                                 break;
