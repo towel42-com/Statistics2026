@@ -143,9 +143,9 @@ namespace Statistics2026.Data
                         new TableColDef( "PremiereDate", "DATETIME", true ),
                         new TableColDef( "DateAdded", "DATETIME", true ),
                         new TableColDef( "ImageUrl", "TEXT", true ),
-                        new TableColDef( "TotalFileSize", "INT", true),
-                        new TableColDef( "TotalRunTimeTicks", "INT", true ),
-                        new TableColDef( "AverageRating", "REAL", true ),
+                        new TableColDef( "FileSize", "INT", true),
+                        new TableColDef( "RunTimeTicks", "INT", true ),
+                        new TableColDef( "Rating", "REAL", true ),
                         new TableColDef( "AverageBitrate", "INT", true )
                     },
                     null,
@@ -690,9 +690,9 @@ namespace Statistics2026.Data
                     ", PremiereDate" +
                     ", DateAdded" +
                     ", ImageUrl" +
-                    ", TotalFileSize" +
-                    ", TotalRunTimeTicks" +
-                    ", AverageRating" +
+                    ", FileSize" +
+                    ", RunTimeTicks" +
+                    ", Rating" +
                     ", AverageBitrate" +
                 ")" +
                 " VALUES " +
@@ -703,9 +703,9 @@ namespace Statistics2026.Data
                     ", @PremiereDate" +
                     ", @DateAdded" +
                     ", @ImageUrl" +
-                    ", @TotalFileSize" +
-                    ", @TotalRunTimeTicks" +
-                    ", @AverageRating" +
+                    ", @FileSize" +
+                    ", @RunTimeTicks" +
+                    ", @Rating" +
                     ", @AverageBitrate" +
                 ")";
 
@@ -739,9 +739,9 @@ namespace Statistics2026.Data
                         _dbHelper.TryBind(statement, "@PremiereDate", series.PremiereDate.Value.DateTime);
                     _dbHelper.TryBind(statement, "@DateAdded", series.DateCreated.DateTime);
                     _dbHelper.TryBind(statement, "@ImageUrl", ItemImageUrl._ItemImageUrl(series, ImageType.Primary, 400, 90));
-                    _dbHelper.TryBind(statement, "@TotalFileSize", totalFileSize);
-                    _dbHelper.TryBind(statement, "@TotalRunTimeTicks", totalRuntime);
-                    _dbHelper.TryBind(statement, "@AverageRating", averageRating);
+                    _dbHelper.TryBind(statement, "@FileSize", totalFileSize);
+                    _dbHelper.TryBind(statement, "@RunTimeTicks", totalRuntime);
+                    _dbHelper.TryBind(statement, "@Rating", averageRating);
                     _dbHelper.TryBind(statement, "@AverageBitrate", averageBitrate);
                     statement.MoveNext();
                 }

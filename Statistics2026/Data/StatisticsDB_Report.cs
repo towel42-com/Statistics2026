@@ -369,15 +369,15 @@ namespace Statistics2026.Data
 
             string sql = "SELECT "
                 + "   ItemId"
-                + ", PrimaryName"
+                + ", Name"
                 + ", ImageUrl"
                 + $", {fieldName}"
-                + " FROM Media "
-                + "WHERE IsEpisode ";
+                + " FROM Series "
+                ;
             if (!whereClause.IsNullOrEmpty())
-                sql += $"AND {whereClause} ";
+                sql += $" WHERE {whereClause} ";
 
-            sql += "GROUP BY PrimaryName ";
+            sql += "GROUP BY Name ";
             sql += $"ORDER BY {orderClause} LIMIT 1";
 
             var retVal = new ValueGroup(title, help, null, "half");

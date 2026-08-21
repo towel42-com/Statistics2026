@@ -36,21 +36,11 @@ namespace Statistics2026.Api
             {
                 case WhichStatistic.Statistic.Largest:
                 case WhichStatistic.Statistic.Smallest:
-                    {
-                        if (videoType == VideoType.Movie)
-                            fieldName = "FileSize";
-                        else if (videoType == VideoType.Series)
-                            fieldName = "SUM(FileSize) AS FileSize";
-                    }
+                    fieldName = "FileSize";
                     break;
                 case WhichStatistic.Statistic.Longest:
                 case WhichStatistic.Statistic.Shortest:
-                    {
-                        if (videoType == VideoType.Movie)
-                            fieldName = "RunTimeTicks";
-                        else if (videoType == VideoType.Series)
-                            fieldName = "SUM(RunTimeTicks) AS FileSize";
-                    }
+                    fieldName = "RunTimeTicks";
                     break;
                 case WhichStatistic.Statistic.HighestRated:
                 case WhichStatistic.Statistic.LowestRated:
@@ -62,7 +52,7 @@ namespace Statistics2026.Api
                         if (videoType == VideoType.Movie)
                             fieldName = "TotalBitrate";
                         else if (videoType == VideoType.Series)
-                            fieldName = "Sum(TotalBitrate)/Count(1) AS TotalBitrate";
+                            fieldName = "AverageBitrate AS TotalBitrate";
                     }
                     break;
                 case WhichStatistic.Statistic.LatestPremiereDate:
@@ -156,7 +146,7 @@ namespace Statistics2026.Api
             return whereClause;
         }
 
-        public static string Title(Statistic whichStatistic, VideoType videoType )
+        public static string Title(Statistic whichStatistic, VideoType videoType)
         {
             string title = "";
             switch (whichStatistic)
@@ -176,7 +166,7 @@ namespace Statistics2026.Api
                         else if (videoType == VideoType.Series)
                             title = Constants.SmallestSeries;
                     }
-                    
+
                     break;
                 case WhichStatistic.Statistic.Longest:
                     {
@@ -249,7 +239,7 @@ namespace Statistics2026.Api
                         else if (videoType == VideoType.Series)
                             title = Constants.LatestSeriesAddition;
                     }
-                    
+
                     break;
                 case WhichStatistic.Statistic.OldestAddition:
                     {
