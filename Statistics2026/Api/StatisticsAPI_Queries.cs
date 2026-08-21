@@ -14,6 +14,8 @@ using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Users;
+using SQLitePCL;
+using SQLitePCL.pretty;
 using Statistics2026;
 using Statistics2026.Data;
 using System;
@@ -158,30 +160,23 @@ namespace Statistics2026.Api
     {
     }
 
-    public enum WhichMovie
-    {
-        Largest,
-        Smallest,
-        Longest,
-        Shortest,
-        OldestPremiereDate,
-        LatestPremiereDate,
-        HighestRated,
-        LowestRated,
-        OldestMovieAdded,
-        LatestMovieAdded,
-        HighestBitrate,
-        LowestBitrate
-    };
-
-
-    [Route("/Statistics2026/get_movie/{WhichMovie}", "GET", Summary = "Get the movie in the database")]
+    [Route("/Statistics2026/get_movie/{WhichStatistic}", "GET", Summary = "Get the movie in the database")]
     [Authenticated(Roles = "admin")]
     public class GetMovie : IReturn<Object>
     {
         [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string serverId { get; set; }
 
-        public WhichMovie whichMovie { get; set; }
+        public WhichStatistic.Statistic whichStatistic { get; set; }
+    }
+
+    [Route("/Statistics2026/get_series/{WhichStatistic}", "GET", Summary = "Get the series information from the database")]
+    [Authenticated(Roles = "admin")]
+    public class GetSeries : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; }
+
+        public WhichStatistic.Statistic whichStatistic { get; set; }
     }
 }

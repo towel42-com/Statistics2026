@@ -164,17 +164,6 @@ namespace Statistics2026.Api
             return vgReponse;
         }
 
-        public object Get(GetTotalTVStudioCount request)
-        {
-            _logger.Debug("Request: GetTotalTVStudioCount ");
-
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-
-            var groupData = db.TotalTVStudioCount(null);
-            var vgReponse = groupData.createStat();
-            return vgReponse;
-        }
-
         public object Get(GetItemImageUrl request)
         {
             var retVal = new GetItemImageUrlResponse { Name = "", PrimaryImageUrl = "" };
@@ -195,9 +184,9 @@ namespace Statistics2026.Api
 
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
             var serverId = request.serverId ?? "";
-            WhichMovie whichMovie = request.whichMovie;
+            var whichStatistic = request.whichStatistic;
 
-            var groupData = db.Movie(null, whichMovie);
+            var groupData = db.Movie(null, whichStatistic);
             groupData.ServerId = serverId;
 
             var vgReponse = groupData.createStat();
@@ -212,6 +201,32 @@ namespace Statistics2026.Api
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
             var groupData = db.TotalTVCount(null);
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+
+        public object Get(GetTotalTVStudioCount request)
+        {
+            _logger.Debug("Request: GetTotalTVStudioCount ");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+
+            var groupData = db.TotalTVStudioCount(null);
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+
+        public object Get(GetSeries request)
+        {
+            _logger.Debug("Request: GetSeries ");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var serverId = request.serverId ?? "";
+            var whichStatistic = request.whichStatistic;
+
+            var groupData = db.Series(null, whichStatistic);
+            groupData.ServerId = serverId;
+
             var vgReponse = groupData.createStat();
             return vgReponse;
         }
