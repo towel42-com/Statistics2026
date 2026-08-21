@@ -105,6 +105,11 @@ namespace Statistics2026.ScheduledTasks
             progress.Report(100);
             cancellationToken.ThrowIfCancellationRequested();
 
+            progress.Report(0);
+            db.AnalyzeSeries(_libraryManager, _fileSystem, cancellationToken, progress);
+            progress.Report(100);
+            cancellationToken.ThrowIfCancellationRequested();
+
             Plugin.Instance.SaveConfiguration();
             return Task.CompletedTask;
         }
