@@ -38,13 +38,27 @@ namespace Statistics2026
         internal const string LowestBitrateMovie = "Lowest Bitrate Movie";
         internal const string OldestMoviePremiere = "Oldest Movie Premiere";
         internal const string LatestMoviePremiere = "Latest Movie Premier";
-        internal const string OldestMovieAdded = "Oldest Movie Added to Server";
+        internal const string OldestMovieAddition = "Oldest Movie Added to Server";
         internal const string LatestMovieAddition = "Latest Movie Added to Server";
 
         internal const string TotalTVShows = "Total TV Series";
         internal const string HelpTotalTVShows = "Total TV Series the Emby library.";
         internal const string HelpTotalTVNetworks = "Total TV Networks And Studios in the Emby library.";
         internal const string TotalTVNetworks = "Total TV Networks and Studios";
+        internal const string BiggestSeries = "Largest TV Series Total Size";
+        internal const string SmallestSeries = "Smallest TV Series Total Size";
+        internal const string LongestSeries = "Longest TV Series Total Runtime";
+        internal const string ShortestSeries = "Shortest TV Series Total Runtime";
+
+        internal const string HighestRatedSeries = "Highest Average Rating TV Series";
+        internal const string LowestRatedSeries = "Lowest Average Rating TV Series";
+
+        internal const string HighestBitrateSeries = "Highest Average Bitrate TV Series";
+        internal const string LowestBitrateSeries = "Lowest Average Bitrate TV Series";
+        internal const string OldestSeriesPremiere = "Oldest TV Series Premiere";
+        internal const string LatestSeriesPremiere = "Latest TV Series Premier";
+        internal const string OldestSeriesAddition = "Oldest TV Series Added to Server";
+        internal const string LatestSeriesAddition = "Latest TV Series Added to Server";
 
         internal const string TotalTVEpisodes = "Total TV Episodes";
         internal const string HelpTotalTVEpisodes = "Total TV Series the Emby library (Excludes Specials).";
