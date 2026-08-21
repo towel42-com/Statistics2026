@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Linq;
 
 
+
 namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
@@ -295,119 +296,25 @@ namespace Statistics2026.Data
         {
             return TotalStudioCount(user, false);
         }
-        private string CheckForPlural(string value, decimal number, string starting = "", string ending = "", bool removeZero = true)
-        {
-            if (number == 1)
-                return $" {starting} {number} {value} {ending}";
-            if (number == 0 && removeZero)
-                return "";
-            return $" {starting} {number} {value}s {ending}";
-        }
-
         private string CheckMaxLength(string value)
         {
             return value.Length > 30 ? value.Substring(0, 27) + "..." : value;
         }
 
-        private string TimeSince(System.DateTime date)
+        public ValueGroup Movie(User user, WhichStatistic.Statistic whichStatistic)
         {
+            string title = WhichStatistic.Title(whichStatistic, WhichStatistic.VideoType.Movie);
+            string help = WhichStatistic.Help(whichStatistic, WhichStatistic.VideoType.Movie);
 
-            var yearDiff = (DateTime.Now.Year - date.Year);
-            var monthDiff = (DateTime.Now.Month - date.Month);
-
-            var numberOfTotalMonths = (yearDiff * 12) + monthDiff;
-            if (numberOfTotalMonths > 3)
-            {
-                var numberOfYears = Math.Floor(numberOfTotalMonths / (decimal)12);
-                var numberOfMonth = Math.Floor((numberOfTotalMonths / (decimal)12 - numberOfYears) * 12);
-                return $"{CheckForPlural("year", numberOfYears, "", "", false)} {CheckForPlural("month", numberOfMonth, "and")} ago";
-            }
-            else
-            {
-                var numberOfDays = DateTime.Now.Date - date;
-                if (numberOfDays.Days == 0)
-                    return $"Today";
-                else
-                    return $"{CheckForPlural("day", numberOfDays.Days, "", "", false)} ago";
-            }
-        }
-
-        public ValueGroup Movie(User user, WhichMovie whichMovie)
-        {
-            string title = "";
-            string help = "";
-
-            string orderClause = "";
-            string whereClause = "";
-            switch (whichMovie)
-            {
-                case WhichMovie.Largest:
-                    orderClause = "FileSize DESC";
-                    title = Constants.BiggestMovie;
-                    break;
-                case WhichMovie.Smallest:
-                    orderClause = "FileSize ASC";
-                    title = Constants.SmallestMovie;
-                    break;
-                case WhichMovie.Longest:
-                    orderClause = "RunTimeTicks DESC";
-                    title = Constants.LongestMovie;
-                    break;
-                case WhichMovie.Shortest:
-                    orderClause = "RunTimeTicks ASC";
-                    title = Constants.ShortestMovie;
-                    break;
-                case WhichMovie.HighestRated:
-                    orderClause = "Rating DESC";
-                    title = Constants.HighestRatedMovie;
-                    break;
-                case WhichMovie.LowestRated:
-                    orderClause = "Rating ASC";
-                    whereClause = "(Rating > 0)";
-                    title = Constants.LowestRatedMovie;
-                    break;
-                case WhichMovie.HighestBitrate:
-                    orderClause = "TotalBitrate DESC";
-                    title = Constants.HighestBitrateMovie;
-                    break;
-                case WhichMovie.LowestBitrate:
-                    orderClause = "TotalBitrate ASC";
-                    title = Constants.LowestBitrateMovie;
-                    break;
-                case WhichMovie.LatestPremiereDate:
-                    orderClause = "PremiereDate DESC";
-                    whereClause = "(PremiereDate IS NOT NULL AND PremiereDate != '')";
-                    title = Constants.LatestMoviePremiere;
-                    break;
-                case WhichMovie.OldestPremiereDate:
-                    orderClause = "PremiereDate ASC";
-                    whereClause = "(PremiereDate IS NOT NULL AND PremiereDate != '')";
-                    title = Constants.OldestMoviePremiere;
-                    break;
-                case WhichMovie.LatestMovieAdded:
-                    orderClause = "DateAdded DESC";
-                    whereClause = "(DateAdded IS NOT NULL AND DateAdded != '')";
-                    title = Constants.LatestMovieAddition;
-                    break;
-                case WhichMovie.OldestMovieAdded:
-                    orderClause = "DateAdded ASC";
-                    whereClause = "(DateAdded IS NOT NULL AND DateAdded != '')";
-                    title = Constants.OldestMovieAdded;
-                    break;
-                default:
-                    return new ValueGroup();
-            }
+            string fieldName = WhichStatistic.FieldFor(whichStatistic, WhichStatistic.VideoType.Movie );
+            string orderClause = WhichStatistic.OrderClause(whichStatistic);
+            string whereClause = WhichStatistic.WhereClause(whichStatistic);
 
             string sql = "SELECT "
                 + "   ItemId"
                 + ", PrimaryName"
                 + ", ImageUrl"
-                + ", FileSize"
-                + ", RunTimeTicks"
-                + ", Rating"
-                + ", TotalBitrate"
-                + ", PremiereDate"
-                + ", DateAdded"
+                + $", {fieldName}"
                 + " FROM Media "
                 + "WHERE NOT IsEpisode ";
             if (!whereClause.IsNullOrEmpty())
@@ -432,62 +339,75 @@ namespace Statistics2026.Data
                         itemId = row.GetString(0);
                         name = row.GetString(1);
                         imageUrl = row.GetString(2);
-                        switch (whichMovie)
-                        {
-                            case WhichMovie.Smallest:
-                            case WhichMovie.Largest:
-                                {
-                                    long maxSize = row.GetInt64(3);
-                                    maxSize /= (1024 * 1024 * 1024); // in GB;
-                                    value = $"{maxSize:F1} Gb";
-                                }
-                                break;
-                            case WhichMovie.Longest:
-                            case WhichMovie.Shortest:
-                                {
-                                    long runTimeTicks = row.GetInt64(4);
-                                    value = new TimeSpan(runTimeTicks).ToString(@"hh\:mm\:ss");
-                                }
-                                break;
-                            case WhichMovie.HighestRated:
-                            case WhichMovie.LowestRated:
-                                {
-                                    var rating = row.GetFloat(5).ToString("F1");
-                                    value = $"{rating} / 10";
-                                }
-                                break;
-                            case WhichMovie.HighestBitrate:
-                            case WhichMovie.LowestBitrate:
-                                {
-                                    var bitrate = Math.Round((decimal)row.GetInt64(6) / 1000);
-                                    value = $"{bitrate:N0} Kbps";
-                                }
-                                break;
-                            case WhichMovie.OldestPremiereDate:
-                            case WhichMovie.LatestPremiereDate:
-                                {
-                                    var premiereDate = DateTime.ParseExact(row.GetString(7), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                                    value = premiereDate.ToShortDateString();
-
-                                    secondValue = TimeSince(premiereDate);
-                                }
-                                break;
-                            case WhichMovie.OldestMovieAdded:
-                            case WhichMovie.LatestMovieAdded:
-                                {
-                                    var premiereDate = DateTime.ParseExact(row.GetString(8), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                                    value = premiereDate.ToShortDateString();
-
-                                    secondValue = TimeSince(premiereDate);
-                                }
-                                break;
-
-                            default:
-                                value = "";
-                                break;
-                        }
+                        value = WhichStatistic.Value(whichStatistic, row, 3);
+                        secondValue = WhichStatistic.SecondValue(whichStatistic, row, 3);
                         break;
                     }
+                }
+            }
+            retVal.ValueLineTwo = CheckMaxLength(value);
+            if (secondValue.IsNullOrEmpty())
+                retVal.ValueLineThree = CheckMaxLength(name);
+            else
+            {
+                retVal.ValueLineThree = secondValue;
+                retVal.ValueLineFour = CheckMaxLength(name);
+            }
+            retVal.ImageUrl = imageUrl;
+            retVal.MediaItemId = itemId;
+            return retVal;
+        }
+
+        public ValueGroup Series(User user, WhichStatistic.Statistic whichStatistic)
+        {
+            string title = WhichStatistic.Title(whichStatistic, WhichStatistic.VideoType.Series);
+            string help = WhichStatistic.Help(whichStatistic, WhichStatistic.VideoType.Series);
+
+            string fieldName = WhichStatistic.FieldFor(whichStatistic, WhichStatistic.VideoType.Series);
+            string orderClause = WhichStatistic.OrderClause(whichStatistic);
+            string whereClause = WhichStatistic.WhereClause(whichStatistic);
+
+            string sql = "SELECT "
+                + "   ItemId"
+                + ", PrimaryName"
+                + ", ImageUrl"
+                + $", {fieldName}"
+                + " FROM Media "
+                + "WHERE IsEpisode ";
+            if (!whereClause.IsNullOrEmpty())
+                sql += $"AND {whereClause} ";
+
+            sql += "GROUP BY PrimaryName ";
+            sql += $"ORDER BY {orderClause} LIMIT 1";
+
+            var retVal = new ValueGroup(title, help, null, "half");
+
+            string value = "";
+            string secondValue = "";
+            string name = "";
+            string itemId = "";
+            string imageUrl = "";
+            lock (_connection)
+            {
+                try
+                {
+                    using (var statement = _connection.PrepareStatement(sql))
+                    {
+                        while (statement.MoveNext())
+                        {
+                            var row = statement.Current;
+                            itemId = row.GetString(0);
+                            name = row.GetString(1);
+                            imageUrl = row.GetString(2);
+                            value = WhichStatistic.Value(whichStatistic, row, 3);
+                            secondValue = WhichStatistic.SecondValue(whichStatistic, row, 3);
+                            break;
+                        }
+                    }
+                } 
+                catch (Exception ex)
+                {
+                    throw ex;
                 }
             }
             retVal.ValueLineTwo = CheckMaxLength(value);

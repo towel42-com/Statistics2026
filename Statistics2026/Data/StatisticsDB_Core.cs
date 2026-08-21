@@ -3,16 +3,20 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Xml.Linq;
 
 
 namespace Statistics2026.Data
@@ -108,6 +112,7 @@ namespace Statistics2026.Data
                         new TableColDef( "SecondaryName", "TEXT", true ),
                         new TableColDef( "StartYear", "INT", true ),
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
+                        new TableColDef( "SeriesId", "TEXT", true ),
                         new TableColDef( "Season", "INT", true ),
                         new TableColDef( "Episode", "INT", true ),
                         new TableColDef( "ResolutionBase", "TEXT", true ),
@@ -123,6 +128,25 @@ namespace Statistics2026.Data
                         new TableColDef( "TotalBitrate", "INT", true ),
                         new TableColDef( "PremiereDate", "DATETIME", true ),
                         new TableColDef( "DateAdded", "DATETIME", true )
+
+                    },
+                    null,
+                    true
+                ).Execute(clearFirst, _connection);
+
+                new TableDef("Series",
+                    new List<TableColDef>()
+                    {
+                        new TableColDef( "ItemId", "TEXT", false ),
+                        new TableColDef( "Name", "TEXT", false ),
+                        new TableColDef( "SortName", "TEXT", true ),
+                        new TableColDef( "PremiereDate", "DATETIME", true ),
+                        new TableColDef( "DateAdded", "DATETIME", true ),
+                        new TableColDef( "ImageUrl", "TEXT", true ),
+                        new TableColDef( "TotalFileSize", "INT", true),
+                        new TableColDef( "TotalRunTimeTicks", "INT", true ),
+                        new TableColDef( "AverageRating", "REAL", true ),
+                        new TableColDef( "AverageBitrate", "INT", true )
                     },
                     null,
                     true
@@ -410,6 +434,7 @@ namespace Statistics2026.Data
                     ", SecondaryName" +
                     ", StartYear" +
                     ", IsEpisode" +
+                    ", SeriesId" +
                     ", Season" +
                     ", Episode" +
                     ", ResolutionBase" +
@@ -434,6 +459,7 @@ namespace Statistics2026.Data
                     ", @SecondaryName" +
                     ", @StartYear" +
                     ", @IsEpisode" +
+                    ", @SeriesId" +
                     ", @Season" +
                     ", @Episode" +
                     ", @ResolutionBase" +
@@ -460,6 +486,7 @@ namespace Statistics2026.Data
                     _dbHelper.TryBind(statement, "@SecondaryName", mediaInfo.SecondaryName);
                     _dbHelper.TryBind(statement, "@StartYear", mediaInfo.StartYear);
                     _dbHelper.TryBind(statement, "@IsEpisode", mediaInfo.IsEpisode);
+                    _dbHelper.TryBind(statement, "@SeriesId", mediaInfo.SeriesId);
                     _dbHelper.TryBind(statement, "@Season", mediaInfo.Season);
                     _dbHelper.TryBind(statement, "@Episode", mediaInfo.Episode);
                     _dbHelper.TryBind(statement, "@ResolutionBase", mediaInfo.ResolutionBase);
@@ -609,5 +636,120 @@ namespace Statistics2026.Data
 
             AddCollectionMembers(collection, libManager, cancellationToken, progress);
         }
+
+        public void AnalyzeSeries(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
+        {
+            _logger.Info($"AnalyzeSeries- Starting Video Analysis");
+
+            progress.Report(0);
+            var seriesList = _dbHelper.GetLibraryItems<Series>(libManager).Cast<Series>().ToList();
+            progress.Report(100);
+
+            double count = seriesList.Count;
+            double curr = 0.0;
+
+            progress.Report(0);
+            foreach (Series series in seriesList)
+            {
+                progress.Report(100.0 * (++curr) / count);
+                try
+                {
+                    AddSeries(series, libManager, cancellationToken, progress);
+                    _logger.Info($"AnalyzeMedia -     Processed Series ({curr} of {count}) - {series.Name}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error($"AnalyzeMedia {series.SortName}:");
+                    var path = series.Path ?? "Unknown";
+                    _logger.Error($"AnalyzeMedia {path}:");
+                    _logger.Error($"AnalyzeMedia {ex.Message}");
+                    throw ex;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            _logger.Info($"AnalyzeMedia - Finished Video Analysis");
+        }
+
+        private void AddSeries(Series series, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
+        {
+            if (series.Id == null)
+            {
+                _logger.Error($"AddMediaInfo {series.SortName}: is missing ItemId");
+                return;
+            }
+
+            _logger.Info($"AnalyzeSeries - AddSeries - Adding Series {series.Name}");
+
+            string sql =
+                "INSERT INTO Series " +
+                "(" +
+                    "  ItemId" +
+                    ", Name" +
+                    ", SortName" +
+                    ", PremiereDate" +
+                    ", DateAdded" +
+                    ", ImageUrl" +
+                    ", TotalFileSize" +
+                    ", TotalRunTimeTicks" +
+                    ", AverageRating" +
+                    ", AverageBitrate" +
+                ")" +
+                " VALUES " +
+                "(" +
+                    "  @ItemId" +
+                    ", @Name" +
+                    ", @SortName" +
+                    ", @PremiereDate" +
+                    ", @DateAdded" +
+                    ", @ImageUrl" +
+                    ", @TotalFileSize" +
+                    ", @TotalRunTimeTicks" +
+                    ", @AverageRating" +
+                    ", @AverageBitrate" +
+                ")";
+
+            lock (_connection)
+            {
+                long totalFileSize = 0;
+                long totalRuntime = 0;
+                Double averageRating = 0.0;
+                long averageBitrate = 0;
+
+                using (var statement = _connection.PrepareStatement("SELECT SUM(FileSize), SUM(RunTimeTicks), SUM(Rating)/Count(1),Sum(TotalBitrate)/Count(1) FROM Media WHERE SeriesId=@SeriesId"))
+                {
+                    _dbHelper.TryBind(statement, "@SeriesId", series.Id.ToString());
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        totalFileSize = row.GetInt64(0);
+                        totalRuntime = row.GetInt64(1);
+                        averageRating = row.GetFloat(2);
+                        averageBitrate = row.GetInt64(3);
+                        break;
+                    }
+                }
+
+                using (var statement = _connection.PrepareStatement(sql))
+                {
+                    _dbHelper.TryBind(statement, "@ItemId", series.Id.ToString());
+                    _dbHelper.TryBind(statement, "@Name", series.Name);
+                    _dbHelper.TryBind(statement, "@SortName", series.SortName);
+                    if (series.PremiereDate.HasValue)
+                        _dbHelper.TryBind(statement, "@PremiereDate", series.PremiereDate.Value.DateTime);
+                    _dbHelper.TryBind(statement, "@DateAdded", series.DateCreated.DateTime);
+                    _dbHelper.TryBind(statement, "@ImageUrl", ItemImageUrl._ItemImageUrl(series, ImageType.Primary, 400, 90));
+                    _dbHelper.TryBind(statement, "@TotalFileSize", totalFileSize);
+                    _dbHelper.TryBind(statement, "@TotalRunTimeTicks", totalRuntime);
+                    _dbHelper.TryBind(statement, "@AverageRating", averageRating);
+                    _dbHelper.TryBind(statement, "@AverageBitrate", averageBitrate);
+                    statement.MoveNext();
+                }
+            }
+            _logger.Info($"AnalyzeCollections -     AddCollection - Successfully Added Collection");
+
+            //AddCollectionMembers(collection, libManager, cancellationToken, progress);
+        }
+
     }
 }

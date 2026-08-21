@@ -17,6 +17,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
 using System.Net.Mime;
 using Statistics2026.Api;
+using Emby.Media.Common.Extensions;
 
 namespace Statistics2026.Data
 {
@@ -52,20 +53,24 @@ namespace Statistics2026.Data
             Codec = codec;
             DolbyVisionProfile = dvProfile;
             StudioNames = video.Studios;
+            Rating = video.CommunityRating ?? 0.0;
             if (IsEpisode)
             {
-                var parent = video.GetParent();
-                while( parent != null && StudioNames.Count() == 0 )
-                { 
-                    StudioNames = parent.Studios;
-                    parent = parent.GetParent();
+                var episode = video as Episode;
+                var series = (episode != null) ? episode.Series : null;
+                if (series != null)
+                {
+                    StudioNames = series.Studios;
+                    Rating = series.CommunityRating ?? 0.0;
+                    SeriesId = series.Id.ToString();
                 }
             }
+            
             ServerLocation = video.Path ?? "Unknown";
             FileSize = (fileSystem != null) ? fileSystem.GetFileSystemInfo(video.Path).Length : 0;
             RunTimeTicks = video.RunTimeTicks ?? 0;
             ImageUrl = ItemImageUrl._ItemImageUrl(video, ImageType.Primary, 400, 90);
-            Rating = video.CommunityRating ?? 0.0;
+
             TotalBitrate = video.TotalBitrate;
             if (video.PremiereDate.HasValue)
                 PremiereDate = video.PremiereDate.Value.DateTime;
@@ -136,6 +141,7 @@ namespace Statistics2026.Data
         public string StartYear { get; set; } // release year for movies, year of the of the first season of the TV show
 
         public bool IsEpisode { get; set; }
+        public string SeriesId { get; set; }
         public int Season { get; set; }
         public int Episode { get; set; }
 
