@@ -167,7 +167,7 @@ namespace Statistics2026.Api
         [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string serverId { get; set; }
 
-        public WhichStatistic.Statistic whichStatistic { get; set; }
+        public StatGen.EStatisticType whichStatistic { get; set; }
     }
 
     [Route("/Statistics2026/get_series/{WhichStatistic}", "GET", Summary = "Get the series information from the database")]
@@ -177,7 +177,7 @@ namespace Statistics2026.Api
         [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string serverId { get; set; }
 
-        public WhichStatistic.Statistic whichStatistic { get; set; }
+        public StatGen.EStatisticType whichStatistic { get; set; }
     }
 
     [Route("/Statistics2026/least_watch_shows", "GET", Summary = "Get the total TV Count")]

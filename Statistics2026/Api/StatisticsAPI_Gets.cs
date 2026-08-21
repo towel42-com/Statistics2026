@@ -170,7 +170,7 @@ namespace Statistics2026.Api
             var item = _libraryManager.GetItemById(request.ItemId);
             if (item == null)
                 return null;
-            
+
             retVal.PrimaryImageUrl = ItemImageUrl._ItemImageUrl(item, ImageType.Primary, 400, 90, 0);
             if (retVal.PrimaryImageUrl.IsNullOrEmpty())
                 return retVal;
@@ -178,22 +178,6 @@ namespace Statistics2026.Api
             return retVal;
         }
 
-        public object Get(GetMovie request)
-        {
-            _logger.Debug("Request: GetMovie ");
-
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var serverId = request.serverId ?? "";
-            var whichStatistic = request.whichStatistic;
-
-            var groupData = db.Movie(null, whichStatistic);
-            groupData.ServerId = serverId;
-
-            var vgReponse = groupData.createStat();
-            return vgReponse;
-        }
-
-        
         public object Get(GetTotalTVCount request)
         {
             _logger.Debug("Request: GetTotalTVCount");
@@ -216,6 +200,30 @@ namespace Statistics2026.Api
             return vgReponse;
         }
 
+        public object Get(GetMovie request)
+        {
+            _logger.Debug("Request: GetMovie ");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var serverId = request.serverId ?? "";
+            var whichStatistic = request.whichStatistic;
+
+            object retVal = null;
+            try
+            {
+                var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Movie);
+                groupData.ServerId = serverId;
+                retVal = groupData.createStat();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("Exception thrown in GetMovie: " + ex.Message);
+                return null;
+            }
+
+            return retVal;
+        }
+
         public object Get(GetSeries request)
         {
             _logger.Debug("Request: GetSeries ");
@@ -224,14 +232,23 @@ namespace Statistics2026.Api
             var serverId = request.serverId ?? "";
             var whichStatistic = request.whichStatistic;
 
-            var groupData = db.Series(null, whichStatistic);
-            groupData.ServerId = serverId;
+            object retVal = null;
+            try
+            {
+                var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Series);
+                groupData.ServerId = serverId;
 
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+                retVal = groupData.createStat();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("Exception thrown in GetMovie: " + ex.Message);
+                return null;
+            }
+            return retVal;
         }
 
-        public object Get(GetLeastWatchedShows request )
+        public object Get(GetLeastWatchedShows request)
         {
             _logger.Debug("Request: GetLeastWatchedShows ");
 

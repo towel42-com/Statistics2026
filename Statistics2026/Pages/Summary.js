@@ -124,8 +124,8 @@
                 tvStats += getSummaryInfo(view, "get_series/OldestAddition", "?serverId=" + config.ServerId, "least_recent_series");
                 tvStats += getSummaryInfo(view, "get_series/LatestAddition", "?serverId=" + config.ServerId, "most_recent_series");
 
-                tvStats += getSummaryInfo(view, "get_episode/OldestPremiereDate", "?serverId=" + config.ServerId, "oldest_episode");
-                tvStats += getSummaryInfo(view, "get_episode/LatestPremiereDate", "?serverId=" + config.ServerId, "latest_episode");
+                // tvStats += getSummaryInfo(view, "get_episode/OldestPremiereDate", "?serverId=" + config.ServerId, "oldest_episode");
+                // tvStats += getSummaryInfo(view, "get_episode/LatestPremiereDate", "?serverId=" + config.ServerId, "latest_episode");
 
                 view.querySelector("#tvStats").innerHTML = tvStats;
 

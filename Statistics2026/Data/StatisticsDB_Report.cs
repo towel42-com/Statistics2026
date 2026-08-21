@@ -17,7 +17,7 @@ namespace Statistics2026.Data
     public sealed partial class StatisticsDB
     {
 
-        public ValueGroup MediaResolutions(bool showAllResolutions)
+        public StatCard MediaResolutions(bool showAllResolutions)
         {
             string sql =
                 "SELECT " +
@@ -29,7 +29,7 @@ namespace Statistics2026.Data
                 "ORDER BY Resolution ASC"
                 ;
 
-            var retVal = new ValueGroup(Constants.MediaResolutions, Constants.HelpMediaResolutions, new List<string> { "Movies", "Episodes" });
+            var retVal = new TableBasedStatCard(Constants.MediaResolutions, Constants.HelpMediaResolutions, new List<string> { "Movies", "Episodes" });
 
             if (showAllResolutions)
             {
@@ -58,7 +58,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public ValueGroup MediaCodecs(bool showAllCodecs)
+        public StatCard MediaCodecs(bool showAllCodecs)
         {
             string sql =
                 "SELECT " +
@@ -70,7 +70,7 @@ namespace Statistics2026.Data
                 "ORDER BY Codec ASC"
                 ;
 
-            var retVal = new ValueGroup(Constants.MediaCodecs, Constants.HelpMediaCodecs, new List<string> { "Movies", "Episodes" });
+            var retVal = new TableBasedStatCard(Constants.MediaCodecs, Constants.HelpMediaCodecs, new List<string> { "Movies", "Episodes" });
             if (showAllCodecs)
             {
                 retVal.addRow("av1", new List<int> { 0, 0 });
@@ -100,7 +100,7 @@ namespace Statistics2026.Data
 
             return retVal;
         }
-        public ValueGroup DVProfileInfo(bool showUnknownDVProfiles, bool showAllDVProfiles)
+        public StatCard DVProfileInfo(bool showUnknownDVProfiles, bool showAllDVProfiles)
         {
             string sql =
                 "SELECT " +
@@ -116,7 +116,7 @@ namespace Statistics2026.Data
                    "ORDER BY DolbyVisionProfile ASC"
                    ;
 
-            var retVal = new ValueGroup(Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile, new List<string> { "Movies", "Episodes" });
+            var retVal = new TableBasedStatCard(Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile, new List<string> { "Movies", "Episodes" });
             if (showUnknownDVProfiles)
                 retVal.addRow("Unknown Dolby Profile", new List<int> { 0, 0 });
             if (showAllDVProfiles)
@@ -165,15 +165,15 @@ namespace Statistics2026.Data
             return "";
         }
 
-        private ValueGroup ValueGroupForSingleItem(string title, string help, string sql)
+        private TextBasedStatCard ValueGroupForSingleItem(string title, string help, string sql)
         {
-            var retVal = new ValueGroup(title, help, null, "small");
+            var retVal = new TextBasedStatCard(title, help, "small");
             var value = GetSingleValueFromSQL(sql);
-            retVal.ValueLines.Add(value);
+            retVal.AddLine(value);
             return retVal;
         }
 
-        public ValueGroup UserCount(bool hasConnectUserID, bool excludeAdmin, IUserManager userManager)
+        public StatCard UserCount(bool hasConnectUserID, bool excludeAdmin, IUserManager userManager)
         {
             string sql = "SELECT COUNT(UserName) FROM Users ";
 
@@ -191,7 +191,7 @@ namespace Statistics2026.Data
             return ValueGroupForSingleItem(Constants.TotalUsers, null, sql);
         }
 
-        public ValueGroup MostActiveUsers(bool hasConnectUserID, int numUsers, bool excludeAdmin, IUserManager userManager)
+        public StatCard MostActiveUsers(bool hasConnectUserID, int numUsers, bool excludeAdmin, IUserManager userManager)
         {
             string sql =
                 "SELECT " +
@@ -215,7 +215,7 @@ namespace Statistics2026.Data
 
             var help = Constants.HelpMostActiveUsers;
             help = help.Replace("<numUsers>", numUsers.ToString());
-            var groupData = new ValueGroup(Constants.MostActiveUsers, help, new List<string> { "Days", "Hours", "Minutes" });
+            var groupData = new TableBasedStatCard(Constants.MostActiveUsers, help, new List<string> { "Days", "Hours", "Minutes" });
             lock (_connection)
             {
                 using (var statement = _connection.PrepareStatement(sql))
@@ -235,39 +235,40 @@ namespace Statistics2026.Data
             return groupData;
         }
 
-        public ValueGroup TotalMovieCount(User user)
+        public StatCard TotalMovieCount(User user)
         {
             string sql = "SELECT SUM(NOT IsEpisode) FROM Media";
 
             return ValueGroupForSingleItem(Constants.TotalMovies, Constants.HelpTotalMovies, sql);
         }
 
-        public ValueGroup TotalTVCount(User user)
+        public StatCard TotalTVCount(User user)
         {
             string sql = "SELECT COUNT(DISTINCT(PrimaryName)) FROM Media WHERE IsEpisode";
             var retVal = ValueGroupForSingleItem(Constants.TotalTVShows, Constants.HelpTotalTVShows, sql);
 
-            retVal.ValueLines.Add(Constants.TotalTVEpisodes);
-            retVal.ValueLines.Add(GetSingleValueFromSQL("SELECT SUM(IsEpisode) FROM Media"));
+            retVal.AddLine(Constants.TotalTVEpisodes);
+            var value = GetSingleValueFromSQL("SELECT SUM(IsEpisode) FROM Media");
+            retVal.AddLine(value);
 
             return retVal;
         }
 
-        public ValueGroup TotalCollectionCount(User user)
+        public StatCard TotalCollectionCount(User user)
         {
             string sql = "SELECT COUNT( ItemId ) FROM Collections";
 
             return ValueGroupForSingleItem(Constants.TotalCollections, Constants.HelpTotalCollections, sql);
         }
 
-        public ValueGroup TotalStudioCount(User user, bool movies)
+        public StatCard TotalStudioCount(User user, bool movies)
         {
             string sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
             if (movies)
                 sql += "NOT ";
             sql += "IsEpisode AND StudioNames IS NOT NULL AND StudioNames<>\"\"";
 
-            var retVal = new ValueGroup(movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, null, "small");
+            var retVal = new TextBasedStatCard(movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, "small");
             // Create an unordered set of strings
             HashSet<string> studios = new HashSet<string>();
 
@@ -283,147 +284,27 @@ namespace Statistics2026.Data
                     }
                 }
             }
-            retVal.ValueLines.Add(studios.Count().ToString());
+            retVal.AddLine(studios.Count().ToString());
 
             return retVal;
         }
 
-        public ValueGroup TotalMovieStudioCount(User user)
+        public StatCard TotalMovieStudioCount(User user)
         {
             return TotalStudioCount(user, true);
         }
-        public ValueGroup TotalTVStudioCount(User user)
+        public StatCard TotalTVStudioCount(User user)
         {
             return TotalStudioCount(user, false);
         }
-        private string CheckMaxLength(string value)
+
+        public StatCard StatisticFor(User user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType)
         {
-            return value.Length > 30 ? value.Substring(0, 27) + "..." : value;
+            var statGen = new StatGen(whichStatistic, videoType, _connection);
+            return statGen.GetStatCard();
         }
 
-        public ValueGroup Movie(User user, WhichStatistic.Statistic whichStatistic)
-        {
-            string title = WhichStatistic.Title(whichStatistic, WhichStatistic.VideoType.Movie);
-            string help = WhichStatistic.Help(whichStatistic, WhichStatistic.VideoType.Movie);
-
-            string fieldName = WhichStatistic.FieldFor(whichStatistic, WhichStatistic.VideoType.Movie);
-            string orderClause = WhichStatistic.OrderClause(whichStatistic);
-            string whereClause = WhichStatistic.WhereClause(whichStatistic);
-
-            string sql = "SELECT "
-                + "   ItemId"
-                + ", PrimaryName"
-                + ", ImageUrl"
-                + $", {fieldName}"
-                + " FROM Media "
-                + "WHERE NOT IsEpisode ";
-            if (!whereClause.IsNullOrEmpty())
-                sql += $"AND {whereClause} ";
-
-            sql += $"ORDER BY {orderClause} LIMIT 1";
-
-            var retVal = new ValueGroup(title, help, null, "half");
-
-            string value = "";
-            string secondValue = "";
-            string name = "";
-            string itemId = "";
-            string imageUrl = "";
-            lock (_connection)
-            {
-                using (var statement = _connection.PrepareStatement(sql))
-                {
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        itemId = row.GetString(0);
-                        name = row.GetString(1);
-                        imageUrl = row.GetString(2);
-                        value = WhichStatistic.Value(whichStatistic, row, 3);
-                        secondValue = WhichStatistic.SecondValue(whichStatistic, row, 3);
-                        break;
-                    }
-                }
-            }
-            retVal.ValueLines.Add(CheckMaxLength(value));
-            if (secondValue.IsNullOrEmpty())
-                retVal.ValueLines.Add(CheckMaxLength(name));
-            else
-            {
-                retVal.ValueLines.Add(secondValue);
-                retVal.ValueLines.Add(CheckMaxLength(name));
-            }
-            retVal.ValueLines.Add(imageUrl);
-            retVal.ValueLines.Add(itemId);
-            return retVal;
-        }
-
-        public ValueGroup Series(User user, WhichStatistic.Statistic whichStatistic)
-        {
-            string title = WhichStatistic.Title(whichStatistic, WhichStatistic.VideoType.Series);
-            string help = WhichStatistic.Help(whichStatistic, WhichStatistic.VideoType.Series);
-
-            string fieldName = WhichStatistic.FieldFor(whichStatistic, WhichStatistic.VideoType.Series);
-            string orderClause = WhichStatistic.OrderClause(whichStatistic);
-            string whereClause = WhichStatistic.WhereClause(whichStatistic);
-
-            string sql = "SELECT "
-                + "   ItemId"
-                + ", Name"
-                + ", ImageUrl"
-                + $", {fieldName}"
-                + " FROM Series "
-                ;
-            if (!whereClause.IsNullOrEmpty())
-                sql += $" WHERE {whereClause} ";
-
-            sql += "GROUP BY Name ";
-            sql += $"ORDER BY {orderClause} LIMIT 1";
-
-            var retVal = new ValueGroup(title, help, null, "half");
-
-            string value = "";
-            string secondValue = "";
-            string name = "";
-            string itemId = "";
-            string imageUrl = "";
-            lock (_connection)
-            {
-                try
-                {
-                    using (var statement = _connection.PrepareStatement(sql))
-                    {
-                        while (statement.MoveNext())
-                        {
-                            var row = statement.Current;
-                            itemId = row.GetString(0);
-                            name = row.GetString(1);
-                            imageUrl = row.GetString(2);
-                            value = WhichStatistic.Value(whichStatistic, row, 3);
-                            secondValue = WhichStatistic.SecondValue(whichStatistic, row, 3);
-                            break;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
-            }
-            retVal.ValueLines.Add(CheckMaxLength(value));
-            if (secondValue.IsNullOrEmpty())
-                retVal.ValueLines.Add(CheckMaxLength(name));
-            else
-            {
-                retVal.ValueLines.Add(secondValue);
-                retVal.ValueLines.Add(CheckMaxLength(name));
-            }
-            retVal.ValueLines.Add(imageUrl);
-            retVal.ValueLines.Add(itemId);
-            return retVal;
-        }
-
-        public ValueGroup LeastWatchedShows(User user)
+        public StatCard LeastWatchedShows(User user)
         {
             return null;
         }
