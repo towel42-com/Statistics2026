@@ -59,13 +59,10 @@ namespace Statistics2026.Data
         public List<string> Headers { get; private set; }
 
         public string SubTitle { get; set; }
-
-        //public string TableInfo { get; set; }
+        public List<string> ValueLines { get; set; }
         private List<ValueGroupRow> Values;
 
-        public string ValueLineTwo { get; set; }
-        public string ValueLineThree { get; set; }
-        public string ValueLineFour { get; set; }
+
         public string Size { get; set; }
         public string HelpText { get; set; }
         public string ImageUrl { get; set; }
@@ -87,12 +84,9 @@ namespace Statistics2026.Data
             Headers = headers;
 
             Title = title;
+            ValueLines = new List<string>();
             HelpText = helpText;
             Size = size;
-
-            ValueLineTwo = null;
-            ValueLineThree = null;
-            ValueLineFour = null;
         }
 
         private int findRow(string name)
@@ -203,19 +197,11 @@ namespace Statistics2026.Data
                 retVal.addToHtml(0, tableInfo);
                 retVal.addToHtml(--depth, "</div>");
             }
-
-            if (ValueLineTwo != "" && ValueLineTwo != null)
+            foreach( var valueLine in ValueLines )
             {
-                retVal.addToHtml(depth, $"<div class=\"statCard-stats-number\">{ValueLineTwo}</div>");
-            }
-
-            if (ValueLineThree != "" && ValueLineThree != null)
-            {
-                retVal.addToHtml(depth, $"<div class=\"statCard-stats-number\">{ValueLineThree}</div>");
-            }
-            if (ValueLineFour != "" && ValueLineFour != null)
-            {
-                retVal.addToHtml(depth, $"<div class=\"statCard-stats-number\">{ValueLineFour}</div>");
+                if (valueLine.IsNullOrEmpty())
+                    continue;
+                retVal.addToHtml(depth, $"<div class=\"statCard-stats-number\">{valueLine}</div>");
             }
 
             retVal.addToHtml(--depth, "</div>");

@@ -238,7 +238,7 @@ namespace Statistics2026.Api
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
             var serverId = request.serverId ?? "";
 
-            var groupData = db.LeastWatchedSeries(null);
+            var groupData = db.LeastWatchedShows(null);
             groupData.ServerId = serverId;
 
             var vgReponse = groupData.createStat();

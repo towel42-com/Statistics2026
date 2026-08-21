@@ -169,7 +169,7 @@ namespace Statistics2026.Data
         {
             var retVal = new ValueGroup(title, help, null, "small");
             var value = GetSingleValueFromSQL(sql);
-            retVal.ValueLineTwo = value;
+            retVal.ValueLines.Add(value);
             return retVal;
         }
 
@@ -247,8 +247,8 @@ namespace Statistics2026.Data
             string sql = "SELECT COUNT(DISTINCT(PrimaryName)) FROM Media WHERE IsEpisode";
             var retVal = ValueGroupForSingleItem(Constants.TotalTVShows, Constants.HelpTotalTVShows, sql);
 
-            retVal.ValueLineThree = Constants.TotalTVEpisodes;
-            retVal.ValueLineFour = GetSingleValueFromSQL("SELECT SUM(IsEpisode) FROM Media");
+            retVal.ValueLines.Add(Constants.TotalTVEpisodes);
+            retVal.ValueLines.Add(GetSingleValueFromSQL("SELECT SUM(IsEpisode) FROM Media"));
 
             return retVal;
         }
@@ -260,14 +260,14 @@ namespace Statistics2026.Data
             return ValueGroupForSingleItem(Constants.TotalCollections, Constants.HelpTotalCollections, sql);
         }
 
-        public ValueGroup TotalStudioCount(User user, bool movies )
+        public ValueGroup TotalStudioCount(User user, bool movies)
         {
             string sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
             if (movies)
                 sql += "NOT ";
             sql += "IsEpisode AND StudioNames IS NOT NULL AND StudioNames<>\"\"";
 
-            var retVal = new ValueGroup(movies?Constants.TotalStudios:Constants.TotalTVNetworks, movies?Constants.HelpTotalStudios:Constants.HelpTotalTVNetworks, null, "small");
+            var retVal = new ValueGroup(movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, null, "small");
             // Create an unordered set of strings
             HashSet<string> studios = new HashSet<string>();
 
@@ -283,7 +283,7 @@ namespace Statistics2026.Data
                     }
                 }
             }
-            retVal.ValueLineTwo = studios.Count().ToString();
+            retVal.ValueLines.Add(studios.Count().ToString());
 
             return retVal;
         }
@@ -306,7 +306,7 @@ namespace Statistics2026.Data
             string title = WhichStatistic.Title(whichStatistic, WhichStatistic.VideoType.Movie);
             string help = WhichStatistic.Help(whichStatistic, WhichStatistic.VideoType.Movie);
 
-            string fieldName = WhichStatistic.FieldFor(whichStatistic, WhichStatistic.VideoType.Movie );
+            string fieldName = WhichStatistic.FieldFor(whichStatistic, WhichStatistic.VideoType.Movie);
             string orderClause = WhichStatistic.OrderClause(whichStatistic);
             string whereClause = WhichStatistic.WhereClause(whichStatistic);
 
@@ -345,16 +345,16 @@ namespace Statistics2026.Data
                     }
                 }
             }
-            retVal.ValueLineTwo = CheckMaxLength(value);
+            retVal.ValueLines.Add(CheckMaxLength(value));
             if (secondValue.IsNullOrEmpty())
-                retVal.ValueLineThree = CheckMaxLength(name);
+                retVal.ValueLines.Add(CheckMaxLength(name));
             else
             {
-                retVal.ValueLineThree = secondValue;
-                retVal.ValueLineFour = CheckMaxLength(name);
+                retVal.ValueLines.Add(secondValue);
+                retVal.ValueLines.Add(CheckMaxLength(name));
             }
-            retVal.ImageUrl = imageUrl;
-            retVal.MediaItemId = itemId;
+            retVal.ValueLines.Add(imageUrl);
+            retVal.ValueLines.Add(itemId);
             return retVal;
         }
 
@@ -404,27 +404,28 @@ namespace Statistics2026.Data
                             break;
                         }
                     }
-                } 
+                }
                 catch (Exception ex)
                 {
                     throw ex;
                 }
             }
-            retVal.ValueLineTwo = CheckMaxLength(value);
+            retVal.ValueLines.Add(CheckMaxLength(value));
             if (secondValue.IsNullOrEmpty())
-                retVal.ValueLineThree = CheckMaxLength(name);
+                retVal.ValueLines.Add(CheckMaxLength(name));
             else
             {
-                retVal.ValueLineThree = secondValue;
-                retVal.ValueLineFour = CheckMaxLength(name);
+                retVal.ValueLines.Add(secondValue);
+                retVal.ValueLines.Add(CheckMaxLength(name));
             }
-            retVal.ImageUrl = imageUrl;
-            retVal.MediaItemId = itemId;
+            retVal.ValueLines.Add(imageUrl);
+            retVal.ValueLines.Add(itemId);
             return retVal;
         }
 
-        public ValueGroup LeastWatchedSeries(User user)
+        public ValueGroup LeastWatchedShows(User user)
         {
+            return null;
         }
 
     }
