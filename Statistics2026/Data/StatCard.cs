@@ -10,6 +10,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Linq;
 using Emby.Media.Common.Extensions;
+using Statistics2026.Api;
 
 namespace Statistics2026.Data
 {
@@ -131,16 +132,16 @@ namespace Statistics2026.Data
         {
             retVal = StatCardResponse._addToHtml(depth++, "<table>");
 
-            retVal += StatCardResponse._addToHtml(depth++, "<tr>");
-            retVal += StatCardResponse._addToHtml(depth, "<td>&nbsp;</td>");
             if (Headers != null)
             {
+                retVal += StatCardResponse._addToHtml(depth++, "<tr>");
+                retVal += StatCardResponse._addToHtml(depth, "<td>&nbsp;</td>");
                 foreach (var header in Headers)
                 {
                     retVal += StatCardResponse._addToHtml(depth, $"<td>{header}</td>");
                 }
+                retVal += StatCardResponse._addToHtml(--depth, "</tr>");
             }
-            retVal += StatCardResponse._addToHtml(--depth, "</tr>");
 
             retVal += GetDataString(depth);
 
@@ -176,7 +177,8 @@ namespace Statistics2026.Data
             var showImage = !ServerId.IsNullOrEmpty() && !ImageUrl.IsNullOrEmpty() && !MediaItemId.IsNullOrEmpty();
             if (showImage)
             {
-                retVal.addToHtml(depth, $"<a is=\"emby-linkbutton\" href=\"/item?id={MediaItemId}&serverId={ServerId}\"><img src=\"{ImageUrl}\" height=\"105px\"/></a>");
+                var itemUrl = ItemImageUrl.ItemUrl(MediaItemId, ServerId, ImageUrl);
+                retVal.addToHtml(depth, itemUrl);
                 retVal.addToHtml(depth++, "<div>");
                 titleClass = "statCard-stats-title-left";
             }
@@ -237,18 +239,19 @@ namespace Statistics2026.Data
 
     public class TextBasedStatCard : StatCard
     {
-        private List<string> ValueLines { get; set; }
+        public bool AsNumberedList { get; set; } = false;
+        private List<(string data, string itemId, string url)> ValueLines { get; set; }
         public override bool IsEmpty() { return ValueLines == null || ValueLines.Count == 0; }
         public TextBasedStatCard()
             : base()
         {
-            ValueLines = new List<string>();
+            ValueLines = new List<(string, string, string)>();
         }
 
         public TextBasedStatCard(string title, string helpText, string size = "half")
             : base(title, helpText, size)
         {
-            ValueLines = new List<string>();
+            ValueLines = new List<(string, string, string)>();
         }
 
         private string CheckMaxLength(string value)
@@ -258,17 +261,45 @@ namespace Statistics2026.Data
 
         public void AddLine(string value)
         {
-            ValueLines.Add( CheckMaxLength(value) );
+            AddLine(value, "", "");
+        }
+
+        public void AddLine(string value, string itemId, string url)
+        {
+            ValueLines.Add((CheckMaxLength(value), itemId, url));
         }
 
         public override string GetDataString(int depth = 0)
         {
             string retVal = "";
+            string style = "";
+            if (AsNumberedList)
+            {
+                style = "style=\"text-align: left; white-space: nowrap;\"";
+                retVal += StatCardResponse._addToHtml(depth++, $"<ol>");
+            }
             foreach (var valueLine in ValueLines)
             {
-                if (valueLine.IsNullOrEmpty())
+                if (valueLine.data.IsNullOrEmpty())
                     continue;
-                retVal += StatCardResponse._addToHtml(depth, $"<div class=\"statCard-stats-number\">{valueLine}</div>");
+                var dataHtml = $"<div class=\"statCard-stats-number\" {style}>{valueLine.data}</div>";
+
+                var showImage = !ServerId.IsNullOrEmpty() && !valueLine.url.IsNullOrEmpty() && !valueLine.itemId.IsNullOrEmpty();
+                if (showImage)
+                {
+                    dataHtml = ItemImageUrl.ItemUrl(valueLine.itemId, ServerId, valueLine.url, dataHtml, "50px");
+                }
+                var html = dataHtml;
+
+                if (AsNumberedList)
+                {
+                    html = $"<li {style}>" + dataHtml + "</li>";
+                }
+                retVal += StatCardResponse._addToHtml(depth, html);
+            }
+            if (AsNumberedList)
+            {
+                retVal += StatCardResponse._addToHtml(--depth, "<ol>");
             }
             return retVal;
         }

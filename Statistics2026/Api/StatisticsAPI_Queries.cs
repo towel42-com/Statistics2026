@@ -160,7 +160,7 @@ namespace Statistics2026.Api
     {
     }
 
-    [Route("/Statistics2026/get_movie/{WhichStatistic}", "GET", Summary = "Get the movie in the database")]
+    [Route("/Statistics2026/get_movie/{WhichStatistic}", "GET", Summary = "Get the movie statistic in from the database")]
     [Authenticated(Roles = "admin")]
     public class GetMovie : IReturn<Object>
     {
@@ -170,7 +170,7 @@ namespace Statistics2026.Api
         public StatGen.EStatisticType whichStatistic { get; set; }
     }
 
-    [Route("/Statistics2026/get_series/{WhichStatistic}", "GET", Summary = "Get the series information from the database")]
+    [Route("/Statistics2026/get_series/{WhichStatistic}", "GET", Summary = "Get the series statistic information from the database")]
     [Authenticated(Roles = "admin")]
     public class GetSeries : IReturn<Object>
     {
@@ -180,9 +180,27 @@ namespace Statistics2026.Api
         public StatGen.EStatisticType whichStatistic { get; set; }
     }
 
-    [Route("/Statistics2026/least_watch_shows", "GET", Summary = "Get the total TV Count")]
+    [Route("/Statistics2026/get_episode/{WhichStatistic}", "GET", Summary = "Get the episode statistic information from the database")]
+    [Authenticated(Roles = "admin")]
+    public class GetEpisode : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; }
+
+        public StatGen.EStatisticType whichStatistic { get; set; }
+    }
+
+    [Route("/Statistics2026/least_watched_shows", "GET", Summary = "Get the List of Least Watched Shows")]
     [Authenticated(Roles = "admin")]
     public class GetLeastWatchedShows : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; }
+    }
+
+    [Route("/Statistics2026/most_watched_shows", "GET", Summary = "Get the List of Most Watched Shows")]
+    [Authenticated(Roles = "admin")]
+    public class GetMostWatchedShows : IReturn<Object>
     {
         [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string serverId { get; set; }

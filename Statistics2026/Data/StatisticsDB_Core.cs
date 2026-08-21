@@ -128,10 +128,8 @@ namespace Statistics2026.Data
                         new TableColDef( "TotalBitrate", "INT", true ),
                         new TableColDef( "PremiereDate", "DATETIME", true ),
                         new TableColDef( "DateAdded", "DATETIME", true )
-
                     },
-                    null,
-                    true
+                    null
                 ).Execute(clearFirst, _connection);
 
                 new TableDef("Series",
@@ -148,8 +146,7 @@ namespace Statistics2026.Data
                         new TableColDef( "Rating", "REAL", true ),
                         new TableColDef( "AverageBitrate", "INT", true )
                     },
-                    null,
-                    true
+                    null
                 ).Execute(clearFirst, _connection);
 
                 new TableDef("Users",
@@ -181,6 +178,16 @@ namespace Statistics2026.Data
                     new List<string>() { "UserId", "UserName", "ConnectUserId" }
                 ).Execute(clearFirst, _connection);
 
+                new TableDef("VideoPlayList",
+                    new List<TableColDef>()
+                    {
+                        new TableColDef( "UserId", "TEXT", false ), // user
+                        new TableColDef( "ItemId", "TEXT", false ), // video item
+                        new TableColDef( "IsEpisode", "BOOLEAN", true ),
+                        new TableColDef( "SeriesId", "TEXT", true ) // if episode add seriesid
+                    },
+                    null
+                ).Execute(clearFirst, _connection);
 
                 new TableDef("EpisodeProgress",
                     new List<TableColDef>()
@@ -213,8 +220,7 @@ namespace Statistics2026.Data
                         new TableColDef( "Name", "TEXT", false ),
                         new TableColDef( "SortName", "TEXT", false )
                     },
-                    null,
-                    true
+                    null
                 ).Execute(clearFirst, _connection);
 
                 new TableDef("CollectionMembership",
@@ -224,8 +230,7 @@ namespace Statistics2026.Data
                         new TableColDef( "ItemId", "TEXT", false ),
                         new TableColDef( "CollectionName", "TEXT", false ) // for debugging purposes
                    },
-                    null,
-                    true
+                    null
                 ).Execute(clearFirst, _connection);
 
             }

@@ -16,7 +16,6 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-
         public StatCard MediaResolutions(bool showAllResolutions)
         {
             string sql =
@@ -304,9 +303,93 @@ namespace Statistics2026.Data
             return statGen.GetStatCard();
         }
 
-        public StatCard LeastWatchedShows(User user)
+        public StatCard WatchedShows(User user, bool leastWatched, ILibraryManager libManager)
         {
-            return null;
+            var series = new List<(string id, string name, string url, long numEpisodes, long watched, double percentWatched, double percentWatchedPerUser)>();
+            long numUsers = 0;
+
+            lock (_connection)
+            {
+                using (var statement = _connection.PrepareStatement("SELECT COUNT(1) FROM Users"))
+                {
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        numUsers = row.GetInt64(0);
+                        break;
+                    }
+                }
+
+                using (var statement = _connection.PrepareStatement("SELECT ItemId, Name FROM Series"))
+                {
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        var id = row.GetString(0);
+                        var name = row.GetString(1);
+                        var url = ItemImageUrl._ItemImageUrl(id, libManager);
+                        series.Add((id, name, url, 0, 0, 0, 0));
+                    }
+                }
+            }
+
+            for (int ii = 0; ii < series.Count(); ++ii)
+            {
+                var curr = series[ii];
+                lock (_connection)
+                {
+                    using (var statement = _connection.PrepareStatement("SELECT Count(1) FROM Media WHERE SeriesId=@SeriesId"))
+                    {
+                        _dbHelper.TryBind(statement, "@SeriesId", curr.id);
+                        while (statement.MoveNext())
+                        {
+                            var row = statement.Current;
+                            curr.numEpisodes = row.GetInt64(0);
+                            break;
+                        }
+                    }
+                    using (var statement = _connection.PrepareStatement("SELECT Count(1) FROM VideoPlayList WHERE SeriesId=@SeriesId"))
+                    {
+                        _dbHelper.TryBind(statement, "@SeriesId", curr.id);
+                        while (statement.MoveNext())
+                        {
+                            var row = statement.Current;
+                            curr.watched = row.GetInt64(0);
+                            break;
+                        }
+                    }
+
+                    curr.percentWatched = (1.0 * curr.watched) / (1.0 * curr.numEpisodes);
+                    curr.percentWatchedPerUser = curr.percentWatched / (1.0 * numUsers);
+                    series[ii] = curr;
+                }
+            }
+            // this sorts it in ascending order
+            series.Sort(
+                (lhs, rhs) =>
+                {
+                    var diff = lhs.percentWatched - rhs.percentWatched;
+                    if (diff < 0)
+                        return -1;
+                    if (diff > 0)
+                        return 1;
+                    return 0;
+
+                });
+
+            if (!leastWatched)
+            {
+                series.Reverse();
+            }
+
+            var retVal = new TextBasedStatCard(Constants.LeastWatchedShows, Constants.HelpLeastWatchedShows, "small");
+            retVal.AsNumberedList = true;
+            for (int ii = 0; ii < series.Count && ii < 5; ++ii)
+            {
+                retVal.AddLine(series[ii].name, series[ii].id, series[ii].url);
+            }
+
+            return retVal;
         }
 
     }

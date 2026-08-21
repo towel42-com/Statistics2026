@@ -91,7 +91,7 @@ namespace Statistics2026.ScheduledTasks
             cancellationToken.ThrowIfCancellationRequested();
 
             progress.Report(0);
-            db.AnalyzeUsers(_userManager, _userDataManager, _libraryManager, cancellationToken, progress);
+            db.AddUsers(_userManager, _userDataManager, _libraryManager, cancellationToken, progress);
             progress.Report(100);
             cancellationToken.ThrowIfCancellationRequested();
 

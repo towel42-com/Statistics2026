@@ -155,7 +155,7 @@ namespace Statistics2026.Api
                         else if (VideoType == EVideoType.Series)
                             fieldName = "AverageBitrate AS TotalBitrate";
                         else
-                            throwHandleEpisode();
+                            fieldName = "TotalBitrate";
                     }
                     break;
                 case EStatisticType.LatestPremiereDate:
@@ -360,7 +360,7 @@ namespace Statistics2026.Api
                         else if (VideoType == EVideoType.Series)
                             title = Constants.LatestSeriesPremiere;
                         else
-                            throwHandleEpisode();
+                            title = Constants.LatestEpisodePremiere;
                     }
                     break;
                 case EStatisticType.OldestPremiereDate:
@@ -370,7 +370,7 @@ namespace Statistics2026.Api
                         else if (VideoType == EVideoType.Series)
                             title = Constants.OldestSeriesPremiere;
                         else
-                            throwHandleEpisode();
+                            title = Constants.OldestEpisodePremiere;
                     }
                     break;
                 case EStatisticType.LatestAddition:
@@ -380,7 +380,7 @@ namespace Statistics2026.Api
                         else if (VideoType == EVideoType.Series)
                             title = Constants.LatestSeriesAddition;
                         else
-                            throwHandleEpisode();
+                            title = Constants.LatestEpisodeAddition;
                     }
 
                     break;
@@ -391,7 +391,7 @@ namespace Statistics2026.Api
                         else if (VideoType == EVideoType.Series)
                             title = Constants.LatestMovieAddition;
                         else
-                            throwHandleEpisode();
+                            title = Constants.OldestEpisodeAddition;
                     }
                     break;
                 default:

@@ -171,7 +171,7 @@ namespace Statistics2026.Api
             if (item == null)
                 return null;
 
-            retVal.PrimaryImageUrl = ItemImageUrl._ItemImageUrl(item, ImageType.Primary, 400, 90, 0);
+            retVal.PrimaryImageUrl = ItemImageUrl._ItemImageUrl(item);
             if (retVal.PrimaryImageUrl.IsNullOrEmpty())
                 return retVal;
             retVal.Name = item.Name;
@@ -248,6 +248,30 @@ namespace Statistics2026.Api
             return retVal;
         }
 
+        public object Get(GetEpisode request)
+        {
+            _logger.Debug("Request: GetEpisode");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var serverId = request.serverId ?? "";
+            var whichStatistic = request.whichStatistic;
+
+            object retVal = null;
+            try
+            {
+                var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Episode);
+                groupData.ServerId = serverId;
+
+                retVal = groupData.createStat();
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("Exception thrown in GetMovie: " + ex.Message);
+                return null;
+            }
+            return retVal;
+        }
+
         public object Get(GetLeastWatchedShows request)
         {
             _logger.Debug("Request: GetLeastWatchedShows ");
@@ -255,7 +279,21 @@ namespace Statistics2026.Api
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
             var serverId = request.serverId ?? "";
 
-            var groupData = db.LeastWatchedShows(null);
+            var groupData = db.WatchedShows(null, true, _libraryManager);
+            groupData.ServerId = serverId;
+
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+
+        public object Get(GetMostWatchedShows request)
+        {
+            _logger.Debug("Request: GetMostWatchedShows ");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var serverId = request.serverId ?? "";
+
+            var groupData = db.WatchedShows(null, false,_libraryManager);
             groupData.ServerId = serverId;
 
             var vgReponse = groupData.createStat();

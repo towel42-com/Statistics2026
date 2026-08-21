@@ -2,6 +2,7 @@
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.IO;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
@@ -41,33 +42,37 @@ namespace Statistics2026.Data
             }
         }
 
-        public void AnalyzeUsers(IUserManager userManager, IUserDataManager userDataManager, ILibraryManager libraryManager, CancellationToken cancellationToken, IProgress<double> progress)
+        public void AddUsers(IUserManager userManager, IUserDataManager userDataManager, ILibraryManager libraryManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
             progress.Report(0);
             var users = userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
             progress.Report(100);
 
-            _logger.Info($"AnalyzeUsers - Starting User Analysis");
+            _logger.Info($"AddUsers - Starting User Analysis");
             double count = users.Count;
             double curr = 0;
 
             progress.Report(0);
-            foreach (var user in users)
+            _connection.RunInTransaction(connection =>
             {
-                progress.Report(100.0 * (++curr) / count);
-                try
+                foreach (var user in users)
                 {
-                    AddUserInfo(user, userDataManager, libraryManager);
-                    _logger.Info($"AnalyzeUsers -     Processed User ({curr} of {count}) - {user.Name}");
+                    progress.Report(100.0 * (++curr) / count);
+                    try
+                    {
+                        AddUser(user, userDataManager, libraryManager);
+                        AddUserWatchData(user, userDataManager, libraryManager, progress);
+                        _logger.Info($"AddUsers -     Processed User ({curr} of {count}) - {user.Name}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error($"AddUsers {user.SortName}: {ex.Message}");
+                        throw ex;
+                    }
+                    cancellationToken.ThrowIfCancellationRequested();
                 }
-                catch (Exception ex)
-                {
-                    _logger.Error($"AnalyzeUsers {user.SortName}: {ex.Message}");
-                    throw ex;
-                }
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-            _logger.Info($"AnalyzeUsers - Finished User Analysis");
+                _logger.Info($"AddUsers - Finished User Analysis");
+            });
         }
 
         (long, long) AnalyzeOverallTime(User user, List<User> userList, IUserDataManager userDataManager, ILibraryManager libraryManager)
@@ -93,22 +98,64 @@ namespace Statistics2026.Data
 
             return (watched, watchable);
         }
+        private void AddUserWatchData(User user, IUserDataManager userDataManager, ILibraryManager libManager, IProgress<double> progress)
+        {
+            var query = new InternalItemsQuery(user)
+            {
+                IncludeItemTypes = new[] { typeof(Episode).Name, typeof(Movie).Name },
+                Recursive = true,
+                IsSpecialSeason = false,
+                MaxPremiereDate = DateTime.Now,
+                IsVirtualItem = false,
+                IsPlayed = true
+            };
+            var videos = libManager.GetItemList(query).OfType<Video>().ToList();
 
-        //long AnalyzeOverallTime(User user, bool onlyPlayed, IUserDataManager userDataManager, ILibraryManager libraryManager, List<User> allUsers = null)
-        //{
-        //    if (user == null && allUsers == null)
-        //        throw new ArgumentException("Either user or allUsers must be provided.");
+            string sql =
+                "INSERT INTO VideoPlayList " +
+                "(" +
+                    "  UserId" +
+                    ", ItemId" +
+                    ", IsEpisode" +
+                    ", SeriesId" +
+                ")" +
+                " VALUES " +
+                "(" +
+                    "  @UserId" +
+                    ", @ItemId" +
+                    ", @IsEpisode" +
+                    ", @SeriesId" +
+                ")";
 
-        //    var allVideos = Statistics2026API.GetAllEpisodesAndMovies(user, libraryManager);
-        //    var totalTicks = (user == null
-        //            ? allVideos.Where(m => allUsers.Any(u => !onlyPlayed || userDataManager.GetUserData(u, m).Played))
-        //            : allVideos.Where(m => (!onlyPlayed || userDataManager.GetUserData(user, m).Played) && m.IsVisible(user)))
-        //        .Sum(item => item.RunTimeTicks ?? 0);
+            foreach (var video in videos)
+            {
+                bool isEpisode = video is Episode;
+                string seriesId = "";
+                if (isEpisode)
+                {
+                    var episode = video as Episode;
+                    var series = (episode != null) ? episode.Series : null;
+                    if (series != null)
+                    {
+                        seriesId = series.Id.ToString();
+                    }
+                }
 
-        //    return totalTicks;
-        //}
+                lock (_connection)
+                {
+                    using (var statement = _connection.PrepareStatement(sql))
+                    {
+                        _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
+                        _dbHelper.TryBind(statement, "@ItemId", video.Id.ToString());
+                        _dbHelper.TryBind(statement, "@IsEpisode", isEpisode);
+                        _dbHelper.TryBind(statement, "@SeriesId", seriesId);
+                        statement.MoveNext();
+                    }
+                }
+            }
+        }
 
-        public void AddUserInfo(User user, IUserDataManager userDataManager, ILibraryManager libraryManager)
+        public void AddUser(User user, IUserDataManager userDataManager, ILibraryManager libraryManager)
         {
             if (user.Id == null)
             {
@@ -210,11 +257,11 @@ namespace Statistics2026.Data
                 return;
             }
 
-            if (mediaInfo.IsEpisode && mediaInfo.Season == 0)
-            {
-                // dont count specials
-                return;
-            }
+            //if (mediaInfo.IsEpisode && mediaInfo.Season == 0)
+            //{
+            //    // dont count specials
+            //    return;
+            //}
 
 
             string sql =
@@ -530,7 +577,7 @@ namespace Statistics2026.Data
                     if (series.PremiereDate.HasValue)
                         _dbHelper.TryBind(statement, "@PremiereDate", series.PremiereDate.Value.DateTime);
                     _dbHelper.TryBind(statement, "@DateAdded", series.DateCreated.DateTime);
-                    _dbHelper.TryBind(statement, "@ImageUrl", ItemImageUrl._ItemImageUrl(series, ImageType.Primary, 400, 90));
+                    _dbHelper.TryBind(statement, "@ImageUrl", ItemImageUrl._ItemImageUrl(series));
                     _dbHelper.TryBind(statement, "@FileSize", totalFileSize);
                     _dbHelper.TryBind(statement, "@RunTimeTicks", totalRuntime);
                     _dbHelper.TryBind(statement, "@Rating", averageRating);

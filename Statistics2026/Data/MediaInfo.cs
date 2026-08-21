@@ -69,7 +69,7 @@ namespace Statistics2026.Data
             ServerLocation = video.Path ?? "Unknown";
             FileSize = (fileSystem != null) ? fileSystem.GetFileSystemInfo(video.Path).Length : 0;
             RunTimeTicks = video.RunTimeTicks ?? 0;
-            ImageUrl = ItemImageUrl._ItemImageUrl(video, ImageType.Primary, 400, 90);
+            ImageUrl = ItemImageUrl._ItemImageUrl(video);
 
             TotalBitrate = video.TotalBitrate;
             if (video.PremiereDate.HasValue)

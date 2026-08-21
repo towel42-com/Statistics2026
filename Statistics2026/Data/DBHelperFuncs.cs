@@ -279,7 +279,7 @@ namespace Statistics2026.Data
 
     public class TableDef
     {
-        public TableDef(string name, List<TableColDef> cols, List<string> indexes, bool allColumnsIndexed = false)
+        public TableDef(string name, List<TableColDef> cols, List<string> indexes)
         {
             Name = name;
             if (Name == null || Name == "")
@@ -288,20 +288,13 @@ namespace Statistics2026.Data
             if (Columns.Count() == 0)
                 throw new ArgumentException("TableDef: Must define columns");
 
-            if (allColumnsIndexed && indexes != null)
-                throw new ArgumentException("TableDef: Can not set indexes with allColumnsIndexed set");
-
             if (indexes == null)
-                Indexes = new List<string>();
-            else
-                Indexes = indexes;
-
-            if (allColumnsIndexed)
             {
-                Indexes.Clear();
+                Indexes = new List<string>();
                 Columns.ForEach(col => Indexes.Add(col.Name));
             }
-
+            else
+                Indexes = indexes;
         }
         public string Name { get; private set; }
         public List<TableColDef> Columns { get; private set; }

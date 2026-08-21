@@ -57,8 +57,16 @@ namespace Statistics2026
         internal const string LowestBitrateSeries = "Lowest Average Bitrate TV Series";
         internal const string OldestSeriesPremiere = "Oldest TV Series Premiere";
         internal const string LatestSeriesPremiere = "Latest TV Series Premier";
+        internal const string OldestEpisodePremiere = "Oldest TV Episode Premier";
+        internal const string LatestEpisodePremiere = "Latest TV Episode Premier";
         internal const string OldestSeriesAddition = "Oldest TV Series Added to Server";
         internal const string LatestSeriesAddition = "Latest TV Series Added to Server";
+        internal const string OldestEpisodeAddition = "Oldest TV Series Added to Server";
+        internal const string LatestEpisodeAddition = "Latest TV Episode Added to Server";
+        internal const string MostWatchedShows = "Most Watched Shows";
+        internal const string LeastWatchedShows = "Least Watched Shows";
+        internal const string HelpMostWatchedShows = "Most watched shows based on the average percent of episodes finished per user.";
+        internal const string HelpLeastWatchedShows = "Least watched shows based on the average percent of episodes finished per user.";
 
         internal const string TotalTVEpisodes = "Total TV Episodes";
         internal const string HelpTotalTVEpisodes = "Total TV Series the Emby library (Excludes Specials).";
