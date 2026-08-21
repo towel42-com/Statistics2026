@@ -179,4 +179,12 @@ namespace Statistics2026.Api
 
         public WhichStatistic.Statistic whichStatistic { get; set; }
     }
+
+    [Route("/Statistics2026/least_watch_shows", "GET", Summary = "Get the total TV Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetLeastWatchedShows : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; }
+    }
 }

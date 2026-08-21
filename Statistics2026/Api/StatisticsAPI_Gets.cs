@@ -231,5 +231,18 @@ namespace Statistics2026.Api
             return vgReponse;
         }
 
+        public object Get(GetLeastWatchedShows request )
+        {
+            _logger.Debug("Request: GetLeastWatchedShows ");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var serverId = request.serverId ?? "";
+
+            var groupData = db.LeastWatchedSeries(null);
+            groupData.ServerId = serverId;
+
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
     }
 }
