@@ -102,14 +102,30 @@
                 movieStats += getSummaryInfo(view, "get_movie/LowestBitrate", "?serverId=" + config.ServerId,"lowest_bitrate_movie");
                 movieStats += getSummaryInfo(view, "get_movie/OldestPremiereDate", "?serverId=" + config.ServerId,"oldest_movie");
                 movieStats += getSummaryInfo(view, "get_movie/LatestPremiereDate", "?serverId=" + config.ServerId,"latest_movie");
-                movieStats += getSummaryInfo(view, "get_movie/LatestMovieAdded", "?serverId=" + config.ServerId,"most_recent_movie");
-                movieStats += getSummaryInfo(view, "get_movie/OldestMovieAdded", "?serverId=" + config.ServerId,"least_recent_movie");
+                movieStats += getSummaryInfo(view, "get_movie/OldestAddition", "?serverId=" + config.ServerId,"oldest_movie_addition");
+                movieStats += getSummaryInfo(view, "get_movie/LatestAddition", "?serverId=" + config.ServerId, "latest_movie_addition");
                 view.querySelector("#movieStats").innerHTML = movieStats;
 
                 var tvStats = "";
                 tvStats += getSummaryInfo(view, "total_tv_count");
-                // tvStats += getSummaryInfo(view, "total_networks");
                 tvStats += getSummaryInfo(view, "total_tv_studio_count");
+                // tvStats += getSummaryInfo(view, "least_watch_shows");
+                // tvStats += getSummaryInfo(view, "most_watched_shows");
+                tvStats += getSummaryInfo(view, "get_series/Largest", "?serverId=" + config.ServerId, "largest_series");
+                tvStats += getSummaryInfo(view, "get_series/Smallest", "?serverId=" + config.ServerId, "smallest_series");
+                tvStats += getSummaryInfo(view, "get_series/Longest", "?serverId=" + config.ServerId, "longest_series");
+                tvStats += getSummaryInfo(view, "get_series/Shortest", "?serverId=" + config.ServerId, "shortest_series");
+                tvStats += getSummaryInfo(view, "get_series/HighestRated", "?serverId=" + config.ServerId, "highest_rated_series");
+                tvStats += getSummaryInfo(view, "get_series/LowestRated", "?serverId=" + config.ServerId, "lowest_rated_series");
+                tvStats += getSummaryInfo(view, "get_series/HighestBitrate", "?serverId=" + config.ServerId, "highest_bitrate_series");
+                tvStats += getSummaryInfo(view, "get_series/LowestBitrate", "?serverId=" + config.ServerId, "lowest_bitrate_series");
+                tvStats += getSummaryInfo(view, "get_series/OldestPremiereDate", "?serverId=" + config.ServerId, "oldest_series");
+                tvStats += getSummaryInfo(view, "get_series/LatestPremiereDate", "?serverId=" + config.ServerId, "latest_series");
+                tvStats += getSummaryInfo(view, "get_series/OldestAddition", "?serverId=" + config.ServerId, "least_recent_series");
+                tvStats += getSummaryInfo(view, "get_series/LatestAddition", "?serverId=" + config.ServerId, "most_recent_series");
+
+                tvStats += getSummaryInfo(view, "get_episode/OldestPremiereDate", "?serverId=" + config.ServerId, "oldest_episode");
+                tvStats += getSummaryInfo(view, "get_episode/LatestPremiereDate", "?serverId=" + config.ServerId, "latest_episode");
 
                 view.querySelector("#tvStats").innerHTML = tvStats;
 
