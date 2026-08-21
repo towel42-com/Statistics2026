@@ -422,5 +422,10 @@ namespace Statistics2026.Data
             retVal.MediaItemId = itemId;
             return retVal;
         }
+
+        public ValueGroup LeastWatchedSeries(User user)
+        {
+        }
+
     }
 }
