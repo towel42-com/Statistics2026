@@ -77,7 +77,7 @@ namespace Statistics2026.Data
             DateAdded = video.DateCreated.DateTime;
         }
 
-        public (string primaryName, string secondaryName, string descName) GetDescName(Video video)
+        public static (string primaryName, string secondaryName, string descName) GetDescName(Video video)
         {
             var primaryName = video.Name;
             var secondaryName = video.Name;
