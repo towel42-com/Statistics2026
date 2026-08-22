@@ -65,10 +65,10 @@ namespace Statistics2026.Data
         private StatisticsDB(string db_path, ILogger l)
         {
             _logger = l;
-            _logger.Info("StatisticsData : Creating");
+            _logger.Info("StatisticsData : Creating Database");
             _dbHelper = new DBHelperFuncs(db_path, _logger);
             _connection = _dbHelper.SQLConnection;
-            _logger.Info("StatisticsData : Finished Creating");
+            _logger.Info("StatisticsData : Finished Creating Database");
 
         }
 

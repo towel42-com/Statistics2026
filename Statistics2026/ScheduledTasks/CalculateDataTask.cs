@@ -86,44 +86,31 @@ namespace Statistics2026.ScheduledTasks
             var db = StatisticsDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
             db.Initialize();
 
-            Stopwatch stopWatch = Stopwatch.StartNew();
-            progress.Report(0);
-            db.AddUsers(_userManager, _userDataManager, _libraryManager, cancellationToken, progress);
-            cancellationToken.ThrowIfCancellationRequested();
-            stopWatch.Stop();
-            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to Add All Users");
-            progress.Report(100);
+            using (var timer = new AutoTimer($"Adding All Users", _logger))
+            {
+                db.AddAllUsers(_userManager, _userDataManager, _libraryManager, cancellationToken, progress);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
 
-            progress.Report(0);
-            stopWatch.Restart();
-            db.AddCollections(_libraryManager, cancellationToken, progress);
-            cancellationToken.ThrowIfCancellationRequested();
-            stopWatch.Stop();
-            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to Add Collections");
-            progress.Report(100);
+            using (var timer = new AutoTimer($"Adding Collections", _logger))
+            {
+                db.AddAllCollections(_libraryManager, cancellationToken, progress);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
 
-            progress.Report(0);
-            stopWatch.Restart();
-            db.AddAllMedia(_libraryManager, _fileSystem, cancellationToken, progress);
-            stopWatch.Stop();
-            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to Add All Media");
-            progress.Report(100);
-            cancellationToken.ThrowIfCancellationRequested();
+            using (var timer = new AutoTimer($"Adding All Media", _logger))
+            {
+                db.AddAllMedia(_libraryManager, _fileSystem, cancellationToken, progress);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
 
-            progress.Report(0);
-            stopWatch.Restart();
-            db.AddAllSeries(_libraryManager, _fileSystem, cancellationToken, progress);
-            stopWatch.Stop();
-            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to Add All Series");
-            progress.Report(100);
-            cancellationToken.ThrowIfCancellationRequested();
+            using (var timer = new AutoTimer($"Adding All Series", _logger))
+            {
+                db.AddAllSeries(_libraryManager, _fileSystem, cancellationToken, progress);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
 
-            progress.Report(0);
-            stopWatch.Restart();
             db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
-            stopWatch.Stop();
-            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to UpdateLastUpdated");
-            progress.Report(100);
             cancellationToken.ThrowIfCancellationRequested();
 
             Plugin.Instance.SaveConfiguration();

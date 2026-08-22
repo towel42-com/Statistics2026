@@ -21,7 +21,7 @@ using Emby.Media.Common.Extensions;
 
 namespace Statistics2026.Data
 {
-    public class MediaInfo
+    public class MediaInfo : IDisposable
     {
         public MediaInfo() { }
         public MediaInfo(Video video, IFileSystem fileSystem)
@@ -134,6 +134,23 @@ namespace Statistics2026.Data
 
             return dvProfile;
         }
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+        }
+
+        ~MediaInfo()
+        {
+            Dispose(false);
+        }
 
         public string ItemId { get; set; }
         public string DescriptiveName { get; set; }
@@ -161,5 +178,7 @@ namespace Statistics2026.Data
         public long TotalBitrate { get; set; }
         public DateTime? PremiereDate { get; set; }
         public DateTime DateAdded { get; set; }
+        private bool _disposed = false;
+
     }
 }

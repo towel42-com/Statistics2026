@@ -428,7 +428,10 @@ namespace Statistics2026.Data
                 series.Reverse();
             }
 
-            var retVal = new TextBasedStatCard(Constants.LeastWatchedShows, Constants.HelpLeastWatchedShows, "small");
+            var title = leastWatched ? Constants.LeastWatchedShows : Constants.MostWatchedShows;
+            var help = leastWatched ? Constants.HelpLeastWatchedShows : Constants.HelpMostWatchedShows;
+
+            var retVal = new TextBasedStatCard(title, help, "small");
             retVal.AsNumberedList = true;
             for (int ii = 0; ii < series.Count && ii < 5; ++ii)
             {

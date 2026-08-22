@@ -14,6 +14,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -42,7 +43,7 @@ namespace Statistics2026.Data
             }
         }
 
-        public void AddUsers(IUserManager userManager, IUserDataManager userDataManager, ILibraryManager libraryManager, CancellationToken cancellationToken, IProgress<double> progress)
+        public void AddAllUsers(IUserManager userManager, IUserDataManager userDataManager, ILibraryManager libraryManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
             progress.Report(0);
             var users = userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
@@ -60,17 +61,19 @@ namespace Statistics2026.Data
                     progress.Report(100.0 * (++curr) / count);
                     try
                     {
-                        AddUser(user, userDataManager, libraryManager);
-                        AddUserWatchData(user, userDataManager, libraryManager, progress);
-                        _logger.Info($"AddUsers -     Processed User ({curr} of {count}) - {user.Name}");
+                        using (var timer = new AutoTimer($"AddUsers -     Processed User ({curr} of {count}) - {user.Name}", _logger))
+                        {
+                            AddUser(user, userDataManager, libraryManager, connection);
+                            AddUserWatchData(user, userDataManager, libraryManager, progress, connection);
+                        }
                     }
                     catch (Exception ex)
                     {
                         _logger.Error($"AddUsers {user.SortName}: {ex.Message}");
                         throw ex;
                     }
-                    cancellationToken.ThrowIfCancellationRequested();
                 }
+                cancellationToken.ThrowIfCancellationRequested();
                 _logger.Info($"AddUsers - Finished User Analysis");
             });
         }
@@ -98,7 +101,7 @@ namespace Statistics2026.Data
 
             return (watched, watchable);
         }
-        private void AddUserWatchData(User user, IUserDataManager userDataManager, ILibraryManager libManager, IProgress<double> progress)
+        private void AddUserWatchData(User user, IUserDataManager userDataManager, ILibraryManager libManager, IProgress<double> progress, IDatabaseConnection connection)
         {
             var (allVideosForUser, allVideos) = Statistics2026API.GetAllEpisodesAndMovies(user, libManager);
 
@@ -134,9 +137,9 @@ namespace Statistics2026.Data
                     }
                 }
 
-                lock (_connection)
+                lock (connection)
                 {
-                    using (var statement = _connection.PrepareStatement(sql))
+                    using (var statement = connection.PrepareStatement(sql))
                     {
                         _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
                         _dbHelper.TryBind(statement, "@ItemId", video.Id.ToString());
@@ -149,7 +152,7 @@ namespace Statistics2026.Data
             }
         }
 
-        public void AddUser(User user, IUserDataManager userDataManager, ILibraryManager libraryManager)
+        public void AddUser(User user, IUserDataManager userDataManager, ILibraryManager libraryManager, IDatabaseConnection connection)
         {
             if (user.Id == null)
             {
@@ -163,10 +166,12 @@ namespace Statistics2026.Data
                 return;
             }
 
-            Stopwatch stopWatch = Stopwatch.StartNew();
-            var (timeWatched, totalTime) = AnalyzeOverallTime(user, null, userDataManager, libraryManager);
-            stopWatch.Stop();
-            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to calculate totalWatchableTime for user {user.Name}");
+            long timeWatched = 0;
+            long totalTime = 0;
+            using (var timer = new AutoTimer($"AddUsers -         AnalyzeOverallTime - User {user.Name}", _logger))
+            {
+                (timeWatched, totalTime) = AnalyzeOverallTime(user, null, userDataManager, libraryManager);
+            }
 
             var isAdmin = user.Policy.IsAdministrator;
             string sql =
@@ -188,9 +193,9 @@ namespace Statistics2026.Data
                 ", @TotalTimeWatched" +
                 ", @TotalWatchableTime" +
                 ")";
-            lock (_connection)
+            lock (connection)
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var statement = connection.PrepareStatement(sql))
                 {
                     _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
                     _dbHelper.TryBind(statement, "@UserName", user.Name);
@@ -218,32 +223,37 @@ namespace Statistics2026.Data
             double curr = 0.0;
 
             progress.Report(0);
-            foreach (var video in videoList)
+            _connection.RunInTransaction(connection =>
             {
-                progress.Report(100.0 * (++curr) / count);
-                try
+                foreach (var video in videoList)
                 {
-                    var mediaInfo = new MediaInfo(video, fileSystem);
+                    progress.Report(100.0 * (++curr) / count);
+                    try
+                    {
+                        using (var mediaInfo = new MediaInfo(video, fileSystem))
+                        {
 
-                    AddMediaInfo(mediaInfo);
-                    _logger.Info($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error($"AddAllMedia {video.SortName}:");
-                    var path = video.Path ?? "Unknown";
-                    _logger.Error($"AddAllMedia {path}:");
-                    _logger.Error($"AddAllMedia {ex.Message}");
-                    throw ex;
-                }
+                            AddMediaInfo(mediaInfo, connection);
+                            _logger.Info($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error($"AddAllMedia {video.SortName}:");
+                        var path = video.Path ?? "Unknown";
+                        _logger.Error($"AddAllMedia {path}:");
+                        _logger.Error($"AddAllMedia {ex.Message}");
+                        throw ex;
+                    }
 
-                cancellationToken.ThrowIfCancellationRequested();
-            }
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+            });
             _logger.Info($"AddAllMedia - Finished Video Analysis");
         }
 
 
-        public void AddMediaInfo(MediaInfo mediaInfo)
+        public void AddMediaInfo(MediaInfo mediaInfo, IDatabaseConnection connection)
         {
             if (mediaInfo.ItemId == null)
             {
@@ -311,9 +321,9 @@ namespace Statistics2026.Data
                     ", @PremiereDate" +
                     ", @DateAdded" +
                ")";
-            lock (_connection)
+            lock (connection)
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var statement = connection.PrepareStatement(sql))
                 {
                     _dbHelper.TryBind(statement, "@ItemId", mediaInfo.ItemId);
                     _dbHelper.TryBind(statement, "@PrimaryName", mediaInfo.PrimaryName);
@@ -344,9 +354,9 @@ namespace Statistics2026.Data
         }
 
 
-        public void AddCollections(ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
+        public void AddAllCollections(ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info($"AddCollections - Starting Collection Analysis");
+            _logger.Info($"AddAllCollections - Starting Collection Analysis");
             progress.Report(0);
             var collections = _dbHelper.GetLibraryItems<BoxSet>(libManager);
             progress.Report(100);
@@ -355,28 +365,31 @@ namespace Statistics2026.Data
             double curr = 0.0;
 
             progress.Report(0);
-            foreach (var collection in collections)
+            _connection.RunInTransaction(connection =>
             {
-                progress.Report(100.0 * (++curr) / count);
-                try
+                foreach (var collection in collections)
                 {
-                    AddCollection(collection, libManager, cancellationToken, progress);
-                    _logger.Info($"AddCollections -     Processed Collection ({curr} of {count}) - {collection.Name} items processed");
+                    progress.Report(100.0 * (++curr) / count);
+                    try
+                    {
+                        AddCollection(collection, libManager, cancellationToken, progress, connection);
+                        _logger.Info($"AddAllCollections -     Processed Collection ({curr} of {count}) - {collection.Name} items processed");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error($"AddAllCollections {collection.SortName}:");
+                        var path = collection.Path ?? "Unknown";
+                        _logger.Error($"AddAllCollections {path}:");
+                        _logger.Error($"AddAllCollections {ex.Message}");
+                        throw ex;
+                    }
+                    cancellationToken.ThrowIfCancellationRequested();
                 }
-                catch (Exception ex)
-                {
-                    _logger.Error($"AddCollections {collection.SortName}:");
-                    var path = collection.Path ?? "Unknown";
-                    _logger.Error($"AddCollections {path}:");
-                    _logger.Error($"AddCollections {ex.Message}");
-                    throw ex;
-                }
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-            _logger.Info($"AddCollections - Finished Collection Analysis");
+            });
+            _logger.Info($"AddAllCollections - Finished Collection Analysis");
         }
 
-        private void AddChildToCollection(Video video, BoxSet collection, ILibraryManager libManager)
+        private void AddChildToCollection(Video video, BoxSet collection, ILibraryManager libManager, IDatabaseConnection connection)
         {
             if (video == null || collection == null || libManager == null)
             {
@@ -397,9 +410,9 @@ namespace Statistics2026.Data
                 ", @ItemId" +
                 ", @CollectionName" +
                 ")";
-            lock (_connection)
+            lock (connection)
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var statement = connection.PrepareStatement(sql))
                 {
                     _dbHelper.TryBind(statement, "@CollectionId", collection.Id.ToString());
                     _dbHelper.TryBind(statement, "@ItemId", video.Id.ToString());
@@ -409,9 +422,9 @@ namespace Statistics2026.Data
             }
         }
 
-        private int AddCollectionMembers(BoxSet collection, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
+        private int AddCollectionMembers(BoxSet collection, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress, IDatabaseConnection connection)
         {
-            _logger.Info($"AddCollections - AddCollectionMembers -     Adding members of Collection - {collection.Name}");
+            _logger.Info($"AddAllCollections - AddCollectionMembers -     Adding members of Collection - {collection.Name}");
 
             var query = new InternalItemsQuery
             {
@@ -428,22 +441,22 @@ namespace Statistics2026.Data
             videos.ForEach(video =>
             {
                 progress.Report(100.0 * (++curr) / count);
-                AddChildToCollection(video, collection, libManager);
+                AddChildToCollection(video, collection, libManager, connection);
                 cancellationToken.ThrowIfCancellationRequested();
             });
-            _logger.Info($"AddCollections - AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} ");
+            _logger.Info($"AddAllCollections - AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} ");
             return videos.Count;
         }
 
-        public void AddCollection(BoxSet collection, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
+        public void AddCollection(BoxSet collection, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress, IDatabaseConnection connection)
         {
             if (collection.Id == null)
             {
-                _logger.Error($"AddMediaInfo {collection.SortName}: is missing ItemId");
+                _logger.Error($"AddCollection {collection.SortName}: is missing ItemId");
                 return;
             }
 
-            _logger.Info($"AddCollections - AddCollection - Adding Collection {collection.Name}");
+            _logger.Info($"AddAllCollections - AddCollection - Adding Collection {collection.Name}");
 
             string sql =
                 "INSERT INTO Collections " +
@@ -458,9 +471,9 @@ namespace Statistics2026.Data
                 ", @Name" +
                 ", @SortName" +
                 ")";
-            lock (_connection)
+            lock (connection)
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var statement = connection.PrepareStatement(sql))
                 {
                     _dbHelper.TryBind(statement, "@ItemId", collection.Id.ToString());
                     _dbHelper.TryBind(statement, "@Name", collection.Name);
@@ -468,9 +481,9 @@ namespace Statistics2026.Data
                     statement.MoveNext();
                 }
             }
-            _logger.Info($"AddCollections -     AddCollection - Successfully Added Collection");
+            _logger.Info($"AddAllCollections -     AddCollection - Successfully Added Collection");
 
-            AddCollectionMembers(collection, libManager, cancellationToken, progress);
+            AddCollectionMembers(collection, libManager, cancellationToken, progress, connection);
         }
 
         public void AddAllSeries(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
@@ -485,33 +498,37 @@ namespace Statistics2026.Data
             double curr = 0.0;
 
             progress.Report(0);
-            foreach (Series series in seriesList)
+            _connection.RunInTransaction(connection =>
             {
-                progress.Report(100.0 * (++curr) / count);
-                try
-                {
-                    AddSeries(series, libManager, cancellationToken, progress);
-                    _logger.Info($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error($"AddAllSeries {series.SortName}:");
-                    var path = series.Path ?? "Unknown";
-                    _logger.Error($"AddAllSeries {path}:");
-                    _logger.Error($"AddAllSeries {ex.Message}");
-                    throw ex;
-                }
 
-                cancellationToken.ThrowIfCancellationRequested();
-            }
+                foreach (Series series in seriesList)
+                {
+                    progress.Report(100.0 * (++curr) / count);
+                    try
+                    {
+                        AddSeries(series, libManager, cancellationToken, progress, connection);
+                        _logger.Info($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error($"AddAllSeries {series.SortName}:");
+                        var path = series.Path ?? "Unknown";
+                        _logger.Error($"AddAllSeries {path}:");
+                        _logger.Error($"AddAllSeries {ex.Message}");
+                        throw ex;
+                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+            });
             _logger.Info($"AddAllSeries - Finished Video Analysis");
         }
 
-        private void AddSeries(Series series, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
+        private void AddSeries(Series series, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress, IDatabaseConnection connection)
         {
             if (series.Id == null)
             {
-                _logger.Error($"AddMediaInfo {series.SortName}: is missing ItemId");
+                _logger.Error($"AddSeries {series.SortName}: is missing ItemId");
                 return;
             }
 
@@ -545,14 +562,14 @@ namespace Statistics2026.Data
                     ", @AverageBitrate" +
                 ")";
 
-            lock (_connection)
+            lock (connection)
             {
                 long totalFileSize = 0;
                 long totalRuntime = 0;
                 Double averageRating = 0.0;
                 long averageBitrate = 0;
 
-                using (var statement = _connection.PrepareStatement("SELECT SUM(FileSize), SUM(RunTimeTicks), SUM(Rating)/Count(1),Sum(TotalBitrate)/Count(1) FROM Media WHERE SeriesId=@SeriesId"))
+                using (var statement = connection.PrepareStatement("SELECT SUM(FileSize), SUM(RunTimeTicks), SUM(Rating)/Count(1),Sum(TotalBitrate)/Count(1) FROM Media WHERE SeriesId=@SeriesId"))
                 {
                     _dbHelper.TryBind(statement, "@SeriesId", series.Id.ToString());
                     while (statement.MoveNext())
@@ -566,7 +583,7 @@ namespace Statistics2026.Data
                     }
                 }
 
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var statement = connection.PrepareStatement(sql))
                 {
                     _dbHelper.TryBind(statement, "@ItemId", series.Id.ToString());
                     _dbHelper.TryBind(statement, "@Name", series.Name);
@@ -582,9 +599,7 @@ namespace Statistics2026.Data
                     statement.MoveNext();
                 }
             }
-            _logger.Info($"AddCollections -     AddCollection - Successfully Added Collection");
-
-            //AddCollectionMembers(collection, libManager, cancellationToken, progress);
+            _logger.Info($"AddAllCollections -     AddCollection - Successfully Added Collection");
         }
 
     }
