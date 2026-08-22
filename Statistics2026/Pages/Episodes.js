@@ -1,4 +1,4 @@
-﻿define(['mainTabsManager', 'appRouter', 'emby-linkbutton', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, appRouter) {
+﻿define(['mainTabsManager', 'appRouter', Dashboard.getConfigurationResourceUrl('Helpers.js'), 'emby-linkbutton'], function (mainTabsManager, appRouter, Helpers) {
     'use strict';
 
     ApiClient.getStatistics2026URL = function (url_to_get) {
@@ -15,7 +15,7 @@
         // init code here
         view.addEventListener('viewshow', function (e) {
 
-            mainTabsManager.setTabs(this, getTabIndex("Episodes"), getTabs);
+            mainTabsManager.setTabs(this, Helpers.getTabIndex("Episodes"), Helpers.getTabs);
 
             var style = document.createElement('style');
             style.innerHTML =

@@ -155,7 +155,7 @@ namespace Statistics2026.Api
         }
         public object Get(GetTotalMovieCountNoUser request)
         {
-            _logger.Debug("Request: GetTotalMovieCount");
+            _logger.Debug("Request: GetTotalMovieCountNoUser");
             return TotalMovieCount(null);
         }
         public object Get(GetTotalMoviesWatched request)

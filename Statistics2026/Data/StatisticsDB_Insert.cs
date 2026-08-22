@@ -204,9 +204,9 @@ namespace Statistics2026.Data
             }
         }
 
-        public void AnalyzeMedia(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
+        public void AddAllMedia(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info($"AnalyzeMedia - Starting Video Analysis");
+            _logger.Info($"AddAllMedia - Starting Video Analysis");
 
             progress.Report(0);
             var videoList = _dbHelper.GetLibraryItems<Episode>(libManager).Cast<Video>().ToList();
@@ -226,20 +226,20 @@ namespace Statistics2026.Data
                     var mediaInfo = new MediaInfo(video, fileSystem);
 
                     AddMediaInfo(mediaInfo);
-                    _logger.Info($"AnalyzeMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
+                    _logger.Info($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error($"AnalyzeMedia {video.SortName}:");
+                    _logger.Error($"AddAllMedia {video.SortName}:");
                     var path = video.Path ?? "Unknown";
-                    _logger.Error($"AnalyzeMedia {path}:");
-                    _logger.Error($"AnalyzeMedia {ex.Message}");
+                    _logger.Error($"AddAllMedia {path}:");
+                    _logger.Error($"AddAllMedia {ex.Message}");
                     throw ex;
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
             }
-            _logger.Info($"AnalyzeMedia - Finished Video Analysis");
+            _logger.Info($"AddAllMedia - Finished Video Analysis");
         }
 
 
@@ -344,9 +344,9 @@ namespace Statistics2026.Data
         }
 
 
-        public void AnalyzeCollections(ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
+        public void AddCollections(ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info($"AnalyzeCollections - Starting Collection Analysis");
+            _logger.Info($"AddCollections - Starting Collection Analysis");
             progress.Report(0);
             var collections = _dbHelper.GetLibraryItems<BoxSet>(libManager);
             progress.Report(100);
@@ -361,19 +361,19 @@ namespace Statistics2026.Data
                 try
                 {
                     AddCollection(collection, libManager, cancellationToken, progress);
-                    _logger.Info($"AnalyzeCollections -     Processed Collection ({curr} of {count}) - {collection.Name} items processed");
+                    _logger.Info($"AddCollections -     Processed Collection ({curr} of {count}) - {collection.Name} items processed");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error($"AnalyzeCollections {collection.SortName}:");
+                    _logger.Error($"AddCollections {collection.SortName}:");
                     var path = collection.Path ?? "Unknown";
-                    _logger.Error($"AnalyzeCollections {path}:");
-                    _logger.Error($"AnalyzeCollections {ex.Message}");
+                    _logger.Error($"AddCollections {path}:");
+                    _logger.Error($"AddCollections {ex.Message}");
                     throw ex;
                 }
                 cancellationToken.ThrowIfCancellationRequested();
             }
-            _logger.Info($"AnalyzeCollections - Finished Collection Analysis");
+            _logger.Info($"AddCollections - Finished Collection Analysis");
         }
 
         private void AddChildToCollection(Video video, BoxSet collection, ILibraryManager libManager)
@@ -411,7 +411,7 @@ namespace Statistics2026.Data
 
         private int AddCollectionMembers(BoxSet collection, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info($"AnalyzeCollections - AddCollectionMembers -     Adding members of Collection - {collection.Name}");
+            _logger.Info($"AddCollections - AddCollectionMembers -     Adding members of Collection - {collection.Name}");
 
             var query = new InternalItemsQuery
             {
@@ -431,7 +431,7 @@ namespace Statistics2026.Data
                 AddChildToCollection(video, collection, libManager);
                 cancellationToken.ThrowIfCancellationRequested();
             });
-            _logger.Info($"AnalyzeCollections - AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} ");
+            _logger.Info($"AddCollections - AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} ");
             return videos.Count;
         }
 
@@ -443,7 +443,7 @@ namespace Statistics2026.Data
                 return;
             }
 
-            _logger.Info($"AnalyzeCollections - AddCollection - Adding Collection {collection.Name}");
+            _logger.Info($"AddCollections - AddCollection - Adding Collection {collection.Name}");
 
             string sql =
                 "INSERT INTO Collections " +
@@ -468,14 +468,14 @@ namespace Statistics2026.Data
                     statement.MoveNext();
                 }
             }
-            _logger.Info($"AnalyzeCollections -     AddCollection - Successfully Added Collection");
+            _logger.Info($"AddCollections -     AddCollection - Successfully Added Collection");
 
             AddCollectionMembers(collection, libManager, cancellationToken, progress);
         }
 
-        public void AnalyzeSeries(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
+        public void AddAllSeries(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info($"AnalyzeSeries- Starting Video Analysis");
+            _logger.Info($"AddAllSeries- Starting Video Analysis");
 
             progress.Report(0);
             var seriesList = _dbHelper.GetLibraryItems<Series>(libManager).Cast<Series>().ToList();
@@ -491,20 +491,20 @@ namespace Statistics2026.Data
                 try
                 {
                     AddSeries(series, libManager, cancellationToken, progress);
-                    _logger.Info($"AnalyzeMedia -     Processed Series ({curr} of {count}) - {series.Name}");
+                    _logger.Info($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error($"AnalyzeMedia {series.SortName}:");
+                    _logger.Error($"AddAllSeries {series.SortName}:");
                     var path = series.Path ?? "Unknown";
-                    _logger.Error($"AnalyzeMedia {path}:");
-                    _logger.Error($"AnalyzeMedia {ex.Message}");
+                    _logger.Error($"AddAllSeries {path}:");
+                    _logger.Error($"AddAllSeries {ex.Message}");
                     throw ex;
                 }
 
                 cancellationToken.ThrowIfCancellationRequested();
             }
-            _logger.Info($"AnalyzeMedia - Finished Video Analysis");
+            _logger.Info($"AddAllSeries - Finished Video Analysis");
         }
 
         private void AddSeries(Series series, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
@@ -515,7 +515,7 @@ namespace Statistics2026.Data
                 return;
             }
 
-            _logger.Info($"AnalyzeSeries - AddSeries - Adding Series {series.Name}");
+            _logger.Info($"AddAllSeries - AddSeries - Adding Series {series.Name}");
 
             string sql =
                 "INSERT INTO Series " +
@@ -582,7 +582,7 @@ namespace Statistics2026.Data
                     statement.MoveNext();
                 }
             }
-            _logger.Info($"AnalyzeCollections -     AddCollection - Successfully Added Collection");
+            _logger.Info($"AddCollections -     AddCollection - Successfully Added Collection");
 
             //AddCollectionMembers(collection, libManager, cancellationToken, progress);
         }

@@ -1,4 +1,4 @@
-﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager) {
+﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, Helpers) {
     'use strict';
 
     ApiClient.getStatistics2026URL = function (url_to_get) {
@@ -14,22 +14,35 @@
 
     function loadStats(view, user) {
         Dashboard.showLoadingMsg();
+
         ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            if (config.LastUpdated === undefined) {
+                Dashboard.alert({
+                    message:
+                        "No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results."
+                });
+
+                view.querySelector(`#lastRunInfo`).style.display = 'none';
+
+                Dashboard.hideLoadingMsg();
+                return;
+            } 
+
             view.querySelector("#UserTitle").innerHTML = "User statistics for " + user;
             view.querySelector("#userStats").innerHTML = "";
             view.querySelector("#movieStats").innerHTML = "";
             view.querySelector("#showStats").innerHTML = "";
 
             var userStats = "";
-            userStats += getSummaryInfo(view, "total_time_watched", user);
-            userStats += getSummaryInfo(view, "total_watchable_time", user);
+            userStats += Helpers.getSummaryInfo(view, "total_time_watched", user);
+            userStats += Helpers.getSummaryInfo(view, "total_watchable_time", user);
             view.querySelector("#userStats").innerHTML = userStats;
 
             var movieStats = "";
-            movieStats += getSummaryInfo(view, "total_movie_count", user);
-            movieStats += getSummaryInfo(view, "total_movies_watched", user);
-            movieStats += getSummaryInfo(view, "movie_favorite_years", user);
-            movieStats += getSummaryInfo(view, "movie_favorite_genres", user);
+            movieStats += Helpers.getSummaryInfo(view, "total_movie_count", user);
+            movieStats += Helpers.getSummaryInfo(view, "total_movies_watched", user);
+            movieStats += Helpers.getSummaryInfo(view, "movie_favorite_years", user);
+            movieStats += Helpers.getSummaryInfo(view, "movie_favorite_genres", user);
             view.querySelector("#movieStats").innerHTML = movieStats;
 
             var showStats = "";
@@ -54,7 +67,7 @@
     return function (view, params) {
         view.addEventListener('viewshow', function (e) {
 
-            mainTabsManager.setTabs(this, getTabIndex("UserStats"), getTabs);
+            mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats"), Helpers.getTabs);
         });
 
         view.addEventListener('viewhide', function (e) {

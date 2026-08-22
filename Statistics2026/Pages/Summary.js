@@ -1,4 +1,4 @@
-﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager) {
+﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, Helpers) {
     'use strict';
 
     ApiClient.getStatistics2026URL = function (url_to_get) {
@@ -34,14 +34,14 @@
         Dashboard.showLoadingMsg();
 
         ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-
             var lastRunInfo = "Last Codec Analysis finished at <b> " + config.LastUpdated + "</b>";
 
             view.querySelector("#lastRunInfo").innerHTML = lastRunInfo;
             view.querySelector(`#debugInfo`).style.display = 'none';
             loadDebugInfo(view);
 
-            if (config.LastUpdated === undefined) {
+            if (config.LastUpdated === undefined)
+            {
                 Dashboard.alert({
                     message:
                         "No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results."
@@ -50,75 +50,77 @@
                 view.querySelector(`#lastRunInfo`).style.display = 'none';
 
                 Dashboard.hideLoadingMsg();
-            } else {
-                view.querySelector("#pageIntro").innerHTML = "This plugin will calculate media and user statistics "
-                    + "from this Emby server instance.";
+                return;
+            } 
+
+            view.querySelector("#pageIntro").innerHTML =
+                "This plugin will calculate media and user statistics "
+                + "from this Emby server instance.";
 
 
-                var userInfo = "";
-                userInfo += getSummaryInfo(view, "most_active_users", "", "?hasConnectUserID=" + config.hasConnectUserID + "&numUsers=" + config.numMostActiveUsers + "&excludeAdmin=" + config.excludeAdmin);
-                userInfo += getSummaryInfo(view, "user_count", "", "?hasConnectUserID=" + config.hasConnectUserID + "&excludeAdmin=" + config.excludeAdmin);
-                view.querySelector("#userInfo").innerHTML = (userInfo);
+            var userInfo = "";
+            // userInfo += Helpers.getSummaryInfo(view, "most_active_users", "", "?hasConnectUserID=" + config.hasConnectUserID + "&numUsers=" + config.numMostActiveUsers + "&excludeAdmin=" + config.excludeAdmin);
+            // userInfo += Helpers.getSummaryInfo(view, "user_count", "", "?hasConnectUserID=" + config.hasConnectUserID + "&excludeAdmin=" + config.excludeAdmin);
+            view.querySelector("#userInfo").innerHTML = (userInfo);
 
-                var mediaInfo = "";
-                mediaInfo += getSummaryInfo(view, "codec_summary", "", "?showAllCodecs=" + config.showAllCodecs);
-                mediaInfo += getSummaryInfo(view, "resolution_summary", "", "?showAllResolutions=" + config.showAllResolutions);
-                mediaInfo += getSummaryInfo(view, "dvprofile_summary", "", "?showUnknownDVProfiles=" + config.showUnknownDVProfiles + "&showAllDVProfiles=" + config.showAllDVProfiles);
-                view.querySelector("#mediaInfo").innerHTML = mediaInfo;
+            var mediaInfo = "";
+            // mediaInfo += Helpers.getSummaryInfo(view, "codec_summary", "", "?showAllCodecs=" + config.showAllCodecs);
+            // mediaInfo += Helpers.getSummaryInfo(view, "resolution_summary", "", "?showAllResolutions=" + config.showAllResolutions);
+            // mediaInfo += Helpers.getSummaryInfo(view, "dvprofile_summary", "", "?showUnknownDVProfiles=" + config.showUnknownDVProfiles + "&showAllDVProfiles=" + config.showAllDVProfiles);
+            view.querySelector("#mediaInfo").innerHTML = mediaInfo;
 
-                var movieStats = "";
-                movieStats += getSummaryInfo(view, "total_movie_count", "");
-                movieStats += getSummaryInfo(view, "total_collection_count", "");
-                movieStats += getSummaryInfo(view, "total_movie_studio_count", "");
-                movieStats += getSummaryInfo(view, "get_movie/Largest", "", "?serverId=" + config.ServerId, "largest_movie");
-                movieStats += getSummaryInfo(view, "get_movie/Smallest", "", "?serverId=" + config.ServerId, "smallest_movie");
-                movieStats += getSummaryInfo(view, "get_movie/Longest", "", "?serverId=" + config.ServerId, "longest_movie");
-                movieStats += getSummaryInfo(view, "get_movie/Shortest", "", "?serverId=" + config.ServerId, "shortest_movie");
-                movieStats += getSummaryInfo(view, "get_movie/HighestRated", "", "?serverId=" + config.ServerId, "highest_rated_movie");
-                movieStats += getSummaryInfo(view, "get_movie/LowestRated", "", "?serverId=" + config.ServerId, "lowest_rated_movie");
-                movieStats += getSummaryInfo(view, "get_movie/HighestBitrate", "", "?serverId=" + config.ServerId, "highest_bitrate_movie");
-                movieStats += getSummaryInfo(view, "get_movie/LowestBitrate", "", "?serverId=" + config.ServerId, "lowest_bitrate_movie");
-                movieStats += getSummaryInfo(view, "get_movie/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_movie");
-                movieStats += getSummaryInfo(view, "get_movie/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_movie");
-                movieStats += getSummaryInfo(view, "get_movie/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_movie_addition");
-                movieStats += getSummaryInfo(view, "get_movie/LatestAddition", "", "?serverId=" + config.ServerId, "latest_movie_addition");
-                view.querySelector("#movieStats").innerHTML = movieStats;
+            var movieStats = "";
+            // movieStats += Helpers.getSummaryInfo(view, "total_movie_count", "");
+            // movieStats += Helpers.getSummaryInfo(view, "total_collection_count", "");
+            // movieStats += Helpers.getSummaryInfo(view, "total_movie_studio_count", "");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/Largest", "", "?serverId=" + config.ServerId, "largest_movie");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/Smallest", "", "?serverId=" + config.ServerId, "smallest_movie");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/Longest", "", "?serverId=" + config.ServerId, "longest_movie");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/Shortest", "", "?serverId=" + config.ServerId, "shortest_movie");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/HighestRated", "", "?serverId=" + config.ServerId, "highest_rated_movie");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/LowestRated", "", "?serverId=" + config.ServerId, "lowest_rated_movie");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/HighestBitrate", "", "?serverId=" + config.ServerId, "highest_bitrate_movie");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/LowestBitrate", "", "?serverId=" + config.ServerId, "lowest_bitrate_movie");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_movie");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_movie");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_movie_addition");
+            // movieStats += Helpers.getSummaryInfo(view, "get_movie/LatestAddition", "", "?serverId=" + config.ServerId, "latest_movie_addition");
+            view.querySelector("#movieStats").innerHTML = movieStats;
 
-                var seriesStats = "";
-                seriesStats += getSummaryInfo(view, "total_tv_count", "");
-                seriesStats += getSummaryInfo(view, "total_tv_studio_count", "");
-                seriesStats += getSummaryInfo(view, "least_watched_shows", "", "?serverId=" + config.ServerId);
-                seriesStats += getSummaryInfo(view, "most_watched_shows", "", "?serverId=" + config.ServerId);
-                seriesStats += getSummaryInfo(view, "get_series/Largest", "", "?serverId=" + config.ServerId, "largest_series");
-                seriesStats += getSummaryInfo(view, "get_series/Smallest", "", "?serverId=" + config.ServerId, "smallest_series");
-                seriesStats += getSummaryInfo(view, "get_series/Longest", "", "?serverId=" + config.ServerId, "longest_series");
-                seriesStats += getSummaryInfo(view, "get_series/Shortest", "", "?serverId=" + config.ServerId, "shortest_series");
-                seriesStats += getSummaryInfo(view, "get_series/HighestRated", "", "?serverId=" + config.ServerId, "highest_rated_series");
-                seriesStats += getSummaryInfo(view, "get_series/LowestRated", "", "?serverId=" + config.ServerId, "lowest_rated_series");
-                seriesStats += getSummaryInfo(view, "get_series/HighestBitrate", "", "?serverId=" + config.ServerId, "highest_bitrate_series");
-                seriesStats += getSummaryInfo(view, "get_series/LowestBitrate", "", "?serverId=" + config.ServerId, "lowest_bitrate_series");
-                seriesStats += getSummaryInfo(view, "get_series/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_series");
-                seriesStats += getSummaryInfo(view, "get_series/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_series");
-                seriesStats += getSummaryInfo(view, "get_series/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_series_addition");
-                seriesStats += getSummaryInfo(view, "get_series/LatestAddition", "", "?serverId=" + config.ServerId, "latest_series_addition");
-                view.querySelector("#seriesStats").innerHTML = seriesStats;
+            var seriesStats = "";
+            seriesStats += Helpers.getSummaryInfo(view, "total_tv_count", "");
+            seriesStats += Helpers.getSummaryInfo(view, "total_tv_studio_count", "");
+            //seriesStats += Helpers.getSummaryInfo(view, "least_watched_shows", "", "?serverId=" + config.ServerId);
+            //seriesStats += Helpers.getSummaryInfo(view, "most_watched_shows", "", "?serverId=" + config.ServerId);
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/Largest", "", "?serverId=" + config.ServerId, "largest_series");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/Smallest", "", "?serverId=" + config.ServerId, "smallest_series");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/Longest", "", "?serverId=" + config.ServerId, "longest_series");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/Shortest", "", "?serverId=" + config.ServerId, "shortest_series");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/HighestRated", "", "?serverId=" + config.ServerId, "highest_rated_series");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/LowestRated", "", "?serverId=" + config.ServerId, "lowest_rated_series");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/HighestBitrate", "", "?serverId=" + config.ServerId, "highest_bitrate_series");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/LowestBitrate", "", "?serverId=" + config.ServerId, "lowest_bitrate_series");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_series");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_series");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_series_addition");
+            //seriesStats += Helpers.getSummaryInfo(view, "get_series/LatestAddition", "", "?serverId=" + config.ServerId, "latest_series_addition");
+            view.querySelector("#seriesStats").innerHTML = seriesStats;
 
-                var episodeStats = "";
-                episodeStats += getSummaryInfo(view, "get_episode/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_episode");
-                episodeStats += getSummaryInfo(view, "get_episode/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_episode");
-                episodeStats += getSummaryInfo(view, "get_episode/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_episode_addition");
-                episodeStats += getSummaryInfo(view, "get_episode/LatestAddition", "", "?serverId=" + config.ServerId, "latest_episode_addition");
-                view.querySelector("#episodeStats").innerHTML = episodeStats;
+            var episodeStats = "";
+            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_episode");
+            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_episode");
+            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_episode_addition");
+            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/LatestAddition", "", "?serverId=" + config.ServerId, "latest_episode_addition");
+            view.querySelector("#episodeStats").innerHTML = episodeStats;
 
-                Dashboard.hideLoadingMsg();
-            }
+            Dashboard.hideLoadingMsg();
         });
     }
 
     return function (view, params) {
         view.addEventListener('viewshow', function (e) {
 
-            mainTabsManager.setTabs(this, getTabIndex("Summary"), getTabs);
+            mainTabsManager.setTabs(this, Helpers.getTabIndex("Summary"), Helpers.getTabs);
         });
 
         view.addEventListener('viewhide', function (e) {

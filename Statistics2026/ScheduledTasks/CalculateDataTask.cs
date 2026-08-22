@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Common;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Activity;
@@ -9,12 +10,12 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-
+using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Data;
-using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -85,28 +86,43 @@ namespace Statistics2026.ScheduledTasks
             var db = StatisticsDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
             db.Initialize();
 
-            progress.Report(0);
-            db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
-            progress.Report(100);
-            cancellationToken.ThrowIfCancellationRequested();
-
+            Stopwatch stopWatch = Stopwatch.StartNew();
             progress.Report(0);
             db.AddUsers(_userManager, _userDataManager, _libraryManager, cancellationToken, progress);
+            cancellationToken.ThrowIfCancellationRequested();
+            stopWatch.Stop();
+            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to Add All Users");
+            progress.Report(100);
+
+            progress.Report(0);
+            stopWatch.Restart();
+            db.AddCollections(_libraryManager, cancellationToken, progress);
+            cancellationToken.ThrowIfCancellationRequested();
+            stopWatch.Stop();
+            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to Add Collections");
+            progress.Report(100);
+
+            progress.Report(0);
+            stopWatch.Restart();
+            db.AddAllMedia(_libraryManager, _fileSystem, cancellationToken, progress);
+            stopWatch.Stop();
+            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to Add All Media");
             progress.Report(100);
             cancellationToken.ThrowIfCancellationRequested();
 
             progress.Report(0);
-            db.AnalyzeCollections(_libraryManager, cancellationToken, progress);
+            stopWatch.Restart();
+            db.AddAllSeries(_libraryManager, _fileSystem, cancellationToken, progress);
+            stopWatch.Stop();
+            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to Add All Series");
             progress.Report(100);
             cancellationToken.ThrowIfCancellationRequested();
 
             progress.Report(0);
-            db.AnalyzeMedia(_libraryManager, _fileSystem, cancellationToken, progress);
-            progress.Report(100);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            progress.Report(0);
-            db.AnalyzeSeries(_libraryManager, _fileSystem, cancellationToken, progress);
+            stopWatch.Restart();
+            db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
+            stopWatch.Stop();
+            _logger.Debug($"It took {stopWatch.ElapsedMilliseconds} ms to UpdateLastUpdated");
             progress.Report(100);
             cancellationToken.ThrowIfCancellationRequested();
 
