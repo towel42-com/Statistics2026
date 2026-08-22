@@ -38,7 +38,7 @@ namespace Statistics2026.Data
                 if (instance == null)
                 {
                     instance = new StatisticsDB(db_file, log);
-                    log.Info("StatisticsData : New Instance Created : " + instance.GetHashCode());
+                    log.Debug("StatisticsData : New Instance Created : " + instance.GetHashCode());
                 }
                 return instance;
             }
@@ -65,20 +65,20 @@ namespace Statistics2026.Data
         private StatisticsDB(string db_path, ILogger l)
         {
             _logger = l;
-            _logger.Info("StatisticsData : Creating Database");
+            _logger.Debug("StatisticsData : Creating Database");
             _dbHelper = new DBHelperFuncs(db_path, _logger);
             _connection = _dbHelper.SQLConnection;
-            _logger.Info("StatisticsData : Finished Creating Database");
+            _logger.Debug("StatisticsData : Finished Creating Database");
 
         }
 
         ~StatisticsDB()
         {
-            _logger.Info("StatisticsData : Cleaning up");
+            _logger.Debug("StatisticsData : Cleaning up");
             if (_connection != null)
             {
                 _connection.Close();
-                _logger.Info("StatisticsData : DB Connection Closed");
+                _logger.Debug("StatisticsData : DB Connection Closed");
             }
         }
 

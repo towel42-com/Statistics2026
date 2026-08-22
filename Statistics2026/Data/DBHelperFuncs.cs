@@ -196,10 +196,10 @@ namespace Statistics2026.Data
 
         private IDatabaseConnection CreateConnection(string db_file)
         {
-            _logger.Info("CreateConnection : " + db_file);
+            _logger.Debug("CreateConnection : " + db_file);
             ConnectionFlags connectionFlags;
 
-            //Logger.Info("Opening write _connection");
+            //Logger.Debug("Opening write _connection");
             connectionFlags = ConnectionFlags.Create;
             connectionFlags |= ConnectionFlags.ReadWrite;
             connectionFlags |= ConnectionFlags.PrivateCache;
@@ -224,7 +224,7 @@ namespace Statistics2026.Data
                 throw;
             }
 
-            _logger.Info("ConnectionCreated : " + db.GetHashCode());
+            _logger.Debug("ConnectionCreated : " + db.GetHashCode());
             return db;
         }
         public IEnumerable<T> GetLibraryItems<T>(ILibraryManager libManager)

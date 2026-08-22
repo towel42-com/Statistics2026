@@ -49,7 +49,7 @@ namespace Statistics2026.Data
             var users = userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
             progress.Report(100);
 
-            _logger.Info($"AddUsers - Starting User Analysis");
+            _logger.Debug($"AddUsers - Starting User Analysis");
             double count = users.Count;
             double curr = 0;
 
@@ -74,7 +74,7 @@ namespace Statistics2026.Data
                     }
                 }
                 cancellationToken.ThrowIfCancellationRequested();
-                _logger.Info($"AddUsers - Finished User Analysis");
+                _logger.Debug($"AddUsers - Finished User Analysis");
             });
         }
 
@@ -166,12 +166,7 @@ namespace Statistics2026.Data
                 return;
             }
 
-            long timeWatched = 0;
-            long totalTime = 0;
-            using (var timer = new AutoTimer($"AddUsers -         AnalyzeOverallTime - User {user.Name}", _logger))
-            {
-                (timeWatched, totalTime) = AnalyzeOverallTime(user, null, userDataManager, libraryManager);
-            }
+            var (timeWatched, totalTime) = AnalyzeOverallTime(user, null, userDataManager, libraryManager);
 
             var isAdmin = user.Policy.IsAdministrator;
             string sql =
@@ -211,7 +206,7 @@ namespace Statistics2026.Data
 
         public void AddAllMedia(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info($"AddAllMedia - Starting Video Analysis");
+            _logger.Debug($"AddAllMedia - Starting Video Analysis");
 
             progress.Report(0);
             var videoList = _dbHelper.GetLibraryItems<Episode>(libManager).Cast<Video>().ToList();
@@ -234,7 +229,7 @@ namespace Statistics2026.Data
                         {
 
                             AddMediaInfo(mediaInfo, connection);
-                            _logger.Info($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
+                            _logger.Debug($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
                         }
                     }
                     catch (Exception ex)
@@ -249,7 +244,7 @@ namespace Statistics2026.Data
                     cancellationToken.ThrowIfCancellationRequested();
                 }
             });
-            _logger.Info($"AddAllMedia - Finished Video Analysis");
+            _logger.Debug($"AddAllMedia - Finished Video Analysis");
         }
 
 
@@ -356,7 +351,7 @@ namespace Statistics2026.Data
 
         public void AddAllCollections(ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info($"AddAllCollections - Starting Collection Analysis");
+            _logger.Debug($"AddAllCollections - Starting Collection Analysis");
             progress.Report(0);
             var collections = _dbHelper.GetLibraryItems<BoxSet>(libManager);
             progress.Report(100);
@@ -373,7 +368,7 @@ namespace Statistics2026.Data
                     try
                     {
                         AddCollection(collection, libManager, cancellationToken, progress, connection);
-                        _logger.Info($"AddAllCollections -     Processed Collection ({curr} of {count}) - {collection.Name} items processed");
+                        _logger.Debug($"AddAllCollections -     Processed Collection ({curr} of {count}) - {collection.Name} items processed");
                     }
                     catch (Exception ex)
                     {
@@ -386,7 +381,7 @@ namespace Statistics2026.Data
                     cancellationToken.ThrowIfCancellationRequested();
                 }
             });
-            _logger.Info($"AddAllCollections - Finished Collection Analysis");
+            _logger.Debug($"AddAllCollections - Finished Collection Analysis");
         }
 
         private void AddChildToCollection(Video video, BoxSet collection, ILibraryManager libManager, IDatabaseConnection connection)
@@ -424,7 +419,7 @@ namespace Statistics2026.Data
 
         private int AddCollectionMembers(BoxSet collection, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress, IDatabaseConnection connection)
         {
-            _logger.Info($"AddAllCollections - AddCollectionMembers -     Adding members of Collection - {collection.Name}");
+            _logger.Debug($"AddAllCollections - AddCollectionMembers -     Adding members of Collection - {collection.Name}");
 
             var query = new InternalItemsQuery
             {
@@ -444,7 +439,7 @@ namespace Statistics2026.Data
                 AddChildToCollection(video, collection, libManager, connection);
                 cancellationToken.ThrowIfCancellationRequested();
             });
-            _logger.Info($"AddAllCollections - AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} ");
+            _logger.Debug($"AddAllCollections - AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} ");
             return videos.Count;
         }
 
@@ -456,7 +451,7 @@ namespace Statistics2026.Data
                 return;
             }
 
-            _logger.Info($"AddAllCollections - AddCollection - Adding Collection {collection.Name}");
+            _logger.Debug($"AddAllCollections - AddCollection - Adding Collection {collection.Name}");
 
             string sql =
                 "INSERT INTO Collections " +
@@ -481,14 +476,14 @@ namespace Statistics2026.Data
                     statement.MoveNext();
                 }
             }
-            _logger.Info($"AddAllCollections -     AddCollection - Successfully Added Collection");
+            _logger.Debug($"AddAllCollections -     AddCollection - Successfully Added Collection");
 
             AddCollectionMembers(collection, libManager, cancellationToken, progress, connection);
         }
 
         public void AddAllSeries(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info($"AddAllSeries- Starting Video Analysis");
+            _logger.Debug($"AddAllSeries- Starting Video Analysis");
 
             progress.Report(0);
             var seriesList = _dbHelper.GetLibraryItems<Series>(libManager).Cast<Series>().ToList();
@@ -507,7 +502,7 @@ namespace Statistics2026.Data
                     try
                     {
                         AddSeries(series, libManager, cancellationToken, progress, connection);
-                        _logger.Info($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
+                        _logger.Debug($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
                     }
                     catch (Exception ex)
                     {
@@ -521,7 +516,7 @@ namespace Statistics2026.Data
                     cancellationToken.ThrowIfCancellationRequested();
                 }
             });
-            _logger.Info($"AddAllSeries - Finished Video Analysis");
+            _logger.Debug($"AddAllSeries - Finished Video Analysis");
         }
 
         private void AddSeries(Series series, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress, IDatabaseConnection connection)
@@ -532,7 +527,7 @@ namespace Statistics2026.Data
                 return;
             }
 
-            _logger.Info($"AddAllSeries - AddSeries - Adding Series {series.Name}");
+            _logger.Debug($"AddAllSeries - AddSeries - Adding Series {series.Name}");
 
             string sql =
                 "INSERT INTO Series " +
@@ -599,7 +594,7 @@ namespace Statistics2026.Data
                     statement.MoveNext();
                 }
             }
-            _logger.Info($"AddAllCollections -     AddCollection - Successfully Added Collection");
+            _logger.Debug($"AddAllCollections -     AddCollection - Successfully Added Collection");
         }
 
     }

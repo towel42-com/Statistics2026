@@ -86,32 +86,52 @@ namespace Statistics2026.ScheduledTasks
             var db = StatisticsDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
             db.Initialize();
 
+            var overAllTimer = new AutoTimer($"Adding All Data", _logger, false);
+            long addUsers = 0;
             using (var timer = new AutoTimer($"Adding All Users", _logger))
             {
                 db.AddAllUsers(_userManager, _userDataManager, _libraryManager, cancellationToken, progress);
+                addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
+            long addCollections = 0;
             using (var timer = new AutoTimer($"Adding Collections", _logger))
             {
                 db.AddAllCollections(_libraryManager, cancellationToken, progress);
+                addCollections = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
+            long addMedia = 0;
             using (var timer = new AutoTimer($"Adding All Media", _logger))
             {
                 db.AddAllMedia(_libraryManager, _fileSystem, cancellationToken, progress);
+                addMedia = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
+            long addSeries = 0;
             using (var timer = new AutoTimer($"Adding All Series", _logger))
             {
                 db.AddAllSeries(_libraryManager, _fileSystem, cancellationToken, progress);
+                addSeries = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
             db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
             cancellationToken.ThrowIfCancellationRequested();
+
+            var overall = overAllTimer.ElapsedMilliseconds();
+            overAllTimer.Dispose();
+            _logger.Info($"=======================================");
+            _logger.Info($"Time to Add: {overall} ms");
+            _logger.Info($"          Users: {addUsers} ms");
+            _logger.Info($"    Collections: {addCollections} ms");
+            _logger.Info($"          Media: {addMedia} ms");
+            _logger.Info($"         Series: {addSeries} ms");
+            _logger.Info($"=======================================");
+            _logger.Info("Statistics 2026 : Finished Statistics 2026 calculation task");
 
             Plugin.Instance.SaveConfiguration();
             return Task.CompletedTask;

@@ -27,12 +27,23 @@ namespace Statistics2026.Data
         private string _text = null;
         private Stopwatch _stopWatch = null;
         private ILogger _logger = null;
-        public AutoTimer(string text, ILogger logger)
+        private bool _debug = true;
+
+        public AutoTimer(string text, ILogger logger, bool debug = true)
         {
             _text = text;
+            _debug = debug;
             _logger = logger;
             _stopWatch = Stopwatch.StartNew();
+
+            SendMessage($"Starting {_text}");
         }
+
+        public long ElapsedMilliseconds()
+        {
+            return _stopWatch.ElapsedMilliseconds;
+        }
+
         private bool _disposed = false;
 
         public void Dispose()
@@ -41,16 +52,23 @@ namespace Statistics2026.Data
             GC.SuppressFinalize(this);
         }
 
+        private void SendMessage(string message)
+        {
+            if (_debug)
+                _logger.Debug(message);
+            else
+                _logger.Info(message);
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (_disposed)
                 return;
 
-            _logger.Debug($"{_text} - {_stopWatch.ElapsedMilliseconds}ms");
+            SendMessage($"Finished {_text} - {_stopWatch.ElapsedMilliseconds}ms");
 
             _disposed = true;
         }
-
         ~AutoTimer()
         {
             Dispose(false);
