@@ -25,6 +25,10 @@ function getTabs() {
             name: 'Summary'
         }
         , {
+            href: Dashboard.getConfigurationPageUrl('UserStats'),
+            name: 'UserStats'
+        }
+        , {
             href: Dashboard.getConfigurationPageUrl('Episodes'),
             name: 'Episodes'
         }
@@ -85,6 +89,32 @@ Date.daysBetween = function (date1, date2) {
     return Math.round(difference_ms / one_day);
 };
 
+function getSummaryInfo(view, whichSummary, user, parameters = "", div = "") {
+    var urlText = "/emby/Statistics2026/" + whichSummary;
+    if (user != "")
+        urlText += "/" + user;
+    urlText += parameters;
+    var url = ApiClient.getUrl(urlText);
+
+    if (div == "")
+        div = whichSummary;
+
+    ApiClient.getJSON(url).then(response => {
+        view.querySelector("#" + div).innerHTML = response.html;
+
+        response.dynamicButtons.forEach((v) => {
+            view.querySelector("#" + v.id).addEventListener("click",
+                function () {
+                    showInfo(v.info, v.title);
+                });
+        });
+    }).catch(error => {
+        var errorMessage = "getSummaryInfo call failed: '" + error + "' - '" + urlText + "'";
+        console.error("API call failed:", errorMessage);
+    });
+
+    return `<div name="${div}" id="${div}"></div>`;
+}
 
 function showInfo(text, title) {
     Dashboard.alert({ message: text, title: title });

@@ -22,6 +22,9 @@ namespace Statistics2026
         internal const string TotalMovies = "Total Movies";
         internal const string HelpTotalMovies = "Total movies in the Emby library.";
 
+        internal const string TotalUserMoviesWatched = "Total Movies Watched";
+        internal const string HelpTotalUserMoviesWatched = "Total Movies in the Emby library for the User.";
+
         internal const string TotalCollections = "Total Collections";
         internal const string HelpTotalCollections = "Total collections in the Emby library.";
 
@@ -75,6 +78,12 @@ namespace Statistics2026
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";
         internal const string NonDolbyVisionCompatibleCodec = "Non Dolby Vision Compatible Codec";
         internal const string NoDolbyProfile = "No Dolby Profile";
+
+        internal const string UserTotalTimeWatched = "Total Time Watched";
+        internal const string UserTotalWatchableTime = "Total Watchable Time";
+
+        internal const string FavoriteMovieYears = "Favorite Movie Years";
+        internal const string FavoriteMovieGenres = "Favorite Movie Genres";
         public static readonly string[] UnknownDolbyProfiles =
         {
             MissingVideoStream,
@@ -101,7 +110,6 @@ namespace Statistics2026
         internal const string _8k = "8K";
         internal const string _720p = "720p";
         internal const string SD = "SD";
-
         internal const string HEVC = "HEVC";
         internal const string AV1 = "AV1";
     }

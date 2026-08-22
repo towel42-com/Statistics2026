@@ -35,6 +35,16 @@ namespace Statistics2026
                 },
                 new PluginPageInfo
                 {
+                    Name = "UserStats",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStats.html"
+                },
+                new PluginPageInfo
+                {
+                    Name = "UserStats.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStats.js"
+                },
+                new PluginPageInfo
+                {
                     Name = "Episodes",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.Episodes.html",
                 },

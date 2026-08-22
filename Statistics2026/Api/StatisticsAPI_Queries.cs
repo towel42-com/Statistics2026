@@ -130,10 +130,39 @@ namespace Statistics2026.Api
         public bool excludeAdmin { get; set; } = true;
     }
 
-    [Route("/Statistics2026/total_movie_count", "GET", Summary = "Get the total Movie Count")]
+    [Route("/Statistics2026/total_movie_count/{User}", "GET", Summary = "Get the total Movie Count")]
     [Authenticated(Roles = "admin")]
     public class GetTotalMovieCount : IReturn<Object>
     {
+        public string user { get; set; }
+    }
+
+    [Route("/Statistics2026/total_movie_count", "GET", Summary = "Get the total Movie Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalMovieCountNoUser : IReturn<Object>
+    {
+    }
+
+
+    [Route("/Statistics2026/total_movies_watched/{User}", "GET", Summary = "Get the total Movie Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalMoviesWatched : IReturn<Object>
+    {
+        public string user { get; set; }
+    }
+
+    [Route("/Statistics2026/movie_favorite_years/{User}", "GET", Summary = "Get the Favorite Movie Years")]
+    [Authenticated(Roles = "admin")]
+    public class GetMovieFavoriteYears : IReturn<Object>
+    {
+        public string user { get; set; }
+    }
+
+    [Route("/Statistics2026/movie_favorite_genres/{User}", "GET", Summary = "Get the Favorite Movie Genres")]
+    [Authenticated(Roles = "admin")]
+    public class GetMovieFavoriteGenres : IReturn<Object>
+    {
+        public string user { get; set; }
     }
 
     [Route("/Statistics2026/total_collection_count", "GET", Summary = "Get the total Collection Count")]
@@ -204,5 +233,19 @@ namespace Statistics2026.Api
     {
         [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string serverId { get; set; }
+    }
+
+    [Route("/Statistics2026/total_time_watched/{User}", "GET", Summary = "Get the Total Time Watched for User")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalTimeWatched : IReturn<Object>
+    {
+        public string user { get; set; }
+    }
+
+    [Route("/Statistics2026/total_watchable_time/{User}", "GET", Summary = "Get the Total Time Watched for User")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalWatchableTime : IReturn<Object>
+    {
+        public string user { get; set; }
     }
 }

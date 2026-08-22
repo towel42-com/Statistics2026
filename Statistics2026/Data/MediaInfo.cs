@@ -53,6 +53,7 @@ namespace Statistics2026.Data
             Codec = codec;
             DolbyVisionProfile = dvProfile;
             StudioNames = video.Studios;
+            Genres = video.Genres;
             Rating = video.CommunityRating ?? 0.0;
             if (IsEpisode)
             {
@@ -61,6 +62,7 @@ namespace Statistics2026.Data
                 if (series != null)
                 {
                     StudioNames = series.Studios;
+                    Genres = series.Genres;
                     Rating = series.CommunityRating ?? 0.0;
                     SeriesId = series.Id.ToString();
                 }
@@ -150,6 +152,7 @@ namespace Statistics2026.Data
         public string Codec { get; set; }
         public string DolbyVisionProfile { get; set; }
         public string[] StudioNames { get; set; }
+        public string[] Genres { get; set; }
         public string ServerLocation { get; set; }
         public long FileSize { get; set; }
         public string ImageUrl { get; set; }

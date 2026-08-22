@@ -24,6 +24,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 
 namespace Statistics2026.Api
 {
@@ -110,7 +111,7 @@ namespace Statistics2026.Api
             var hasConnectUserID = request.hasConnectUserID;
             var excludeAdmin = request.excludeAdmin;
 
-            var groupData = db.UserCount(hasConnectUserID, excludeAdmin, _userManager);
+            var groupData = db.UserCount(hasConnectUserID, excludeAdmin);
             var vgReponse = groupData.createStat();
             return vgReponse;
         }
@@ -131,13 +132,43 @@ namespace Statistics2026.Api
             return vgReponse;
         }
 
+        public object TotalMovieCount(User user)
+        {
+            _logger.Debug("Request: TotalMovieCount");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var groupData = db.TotalMovieCount(user, false);
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+
         public object Get(GetTotalMovieCount request)
         {
             _logger.Debug("Request: GetTotalMovieCount");
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var userName = request.user;
+            var user = GetUser(userName);
+            if (user == null)
+                return null;
 
-            var groupData = db.TotalMovieCount(null);
+            return TotalMovieCount(user);
+        }
+        public object Get(GetTotalMovieCountNoUser request)
+        {
+            _logger.Debug("Request: GetTotalMovieCount");
+            return TotalMovieCount(null);
+        }
+        public object Get(GetTotalMoviesWatched request)
+        {
+            _logger.Debug("Request: GetTotalMoviesWatched");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var userName = request.user;
+            var user = GetUser(userName);
+            if (user == null)
+                return null;
+
+            var groupData = db.TotalMovieCount(user, true);
             var vgReponse = groupData.createStat();
             return vgReponse;
         }
@@ -147,8 +178,7 @@ namespace Statistics2026.Api
             _logger.Debug("Request: GetTotalCollectionCount");
 
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-
-            var groupData = db.TotalCollectionCount(null);
+            var groupData = db.TotalCollectionCount();
             var vgReponse = groupData.createStat();
             return vgReponse;
         }
@@ -296,6 +326,68 @@ namespace Statistics2026.Api
             var groupData = db.WatchedShows(null, false,_libraryManager);
             groupData.ServerId = serverId;
 
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+
+        public object Get(GetTotalTimeWatched request)
+        {
+            _logger.Debug("Request: GetTotalTimeWatched ");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var userName = request.user;
+            var user = GetUser(userName);
+            if (user == null)
+                return null;
+
+            var groupData = db.TotalTimeWatched(user);
+
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+
+        public object Get(GetTotalWatchableTime request)
+        {
+            _logger.Debug("Request: GetTotalWatchableTime");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var userName = request.user;
+            var user = GetUser(userName);
+            if (user == null)
+                return null;
+
+            var groupData = db.TotalWatchableTime(user);
+
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+
+        public object Get(GetMovieFavoriteYears request)
+        {
+            _logger.Debug("Request: GetMovieFavoriteYears");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var userName = request.user;
+            var user = GetUser(userName);
+            if (user == null)
+                return null;
+
+            var groupData = db.FavoriteYears(user, true);
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+        
+        public object Get(GetMovieFavoriteGenres request)
+        {
+            _logger.Debug("Request: GetMovieFavoriteGenres");
+
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var userName = request.user;
+            var user = GetUser(userName);
+            if (user == null)
+                return null;
+
+            var groupData = db.FavoriteGenre(user, true);
             var vgReponse = groupData.createStat();
             return vgReponse;
         }

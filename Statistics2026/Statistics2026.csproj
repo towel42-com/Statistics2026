@@ -21,6 +21,9 @@
 		<EmbeddedResource Include="Pages\Summary.html" />
 		<EmbeddedResource Include="Pages\Summary.js" />
 
+		<EmbeddedResource Include="Pages\UserStats.html" />
+		<EmbeddedResource Include="Pages\UserStats.js" />
+
 		<EmbeddedResource Include="Pages\Movies.html" />
 		<EmbeddedResource Include="Pages\Movies.js" />
 

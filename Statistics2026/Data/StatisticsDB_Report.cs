@@ -1,14 +1,18 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using RestSharp;
 using ServiceStack;
 using ServiceStack.Text;
+using SQLitePCL;
 using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.Serialization;
 
 
 
@@ -147,32 +151,39 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private string GetSingleValueFromSQL(string sql)
+        private string GetSingleValueFromSQL(string sql, List<(string field, string value)> parameters = null, Func<long, string> formatter = null)
         {
             lock (sql)
             {
                 using (var statement = _connection.PrepareStatement(sql))
                 {
+                    if (parameters != null)
+                    {
+                        foreach (var parameter in parameters)
+                        {
+                            _dbHelper.TryBind(statement, parameter.field, parameter.value);
+                        }
+                    }
                     while (statement.MoveNext())
                     {
                         var row = statement.Current;
-                        var count = row.GetInt(0);
-                        return count.ToString();
+                        var count = row.GetInt64(0);
+                        return formatter?.Invoke(count) ?? count.ToString();
                     }
                 }
             }
             return "";
         }
 
-        private TextBasedStatCard ValueGroupForSingleItem(string title, string help, string sql)
+        private TextBasedStatCard ValueGroupForSingleItem(string title, string help, string sql, List<(string field, string value)> parameters = null, Func<long, string> formatter = null)
         {
             var retVal = new TextBasedStatCard(title, help, "small");
-            var value = GetSingleValueFromSQL(sql);
+            var value = GetSingleValueFromSQL(sql, parameters, formatter);
             retVal.AddLine(value);
             return retVal;
         }
 
-        public StatCard UserCount(bool hasConnectUserID, bool excludeAdmin, IUserManager userManager)
+        public StatCard UserCount(bool hasConnectUserID, bool excludeAdmin)
         {
             string sql = "SELECT COUNT(UserName) FROM Users ";
 
@@ -225,7 +236,6 @@ namespace Statistics2026.Data
                         var userName = row.GetString(0);
                         var runtime = new RunTime(row.GetInt64(1));
 
-
                         groupData.addRow(userName, new List<int> { runtime.Days, runtime.Hours, runtime.Minutes });
                     }
                 }
@@ -234,11 +244,47 @@ namespace Statistics2026.Data
             return groupData;
         }
 
-        public StatCard TotalMovieCount(User user)
+        public StatCard TotalMovieCount(User user, bool watched)
         {
-            string sql = "SELECT SUM(NOT IsEpisode) FROM Media";
+            string sql = "";
+            var parameters = new List<(string, string)>();
+            string title = Constants.TotalMovies;
+            string help = Constants.HelpTotalMovies;
+            long total = 0;
+            if (user == null)
+            {
+                sql = "SELECT SUM(NOT IsEpisode) FROM Media";
+            }
+            else
+            {
+                title = Constants.TotalUserMoviesWatched;
+                help = Constants.HelpTotalUserMoviesWatched;
 
-            return ValueGroupForSingleItem(Constants.TotalMovies, Constants.HelpTotalMovies, sql);
+                sql = "SELECT SUM(NOT IsEpisode) FROM UserVideoList WHERE UserId=@UserId";
+                if (watched)
+                    sql += " AND IsPlayed";
+                parameters.Add(("@UserId", user.Id.ToString()));
+
+                if (watched)
+                {
+                    total = GetSingleValueFromSQL("SELECT SUM(NOT IsEpisode) FROM UserVideoList WHERE UserId=@UserId", parameters).ToLong();
+                }
+            }
+
+            return ValueGroupForSingleItem(title, help, sql, parameters, count =>
+            {
+                if (watched && total != 0)
+                {
+                    if (total != 0)
+                    {
+                        double value = (100.0 * count) / (1.0 * total);
+                        return $"{count} ({value.ToString("F1")})%";
+                    }
+                    else
+                        return $"0 (0%)";
+                }
+                return count.ToString();
+            });
         }
 
         public StatCard TotalTVCount(User user)
@@ -253,7 +299,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard TotalCollectionCount(User user)
+        public StatCard TotalCollectionCount()
         {
             string sql = "SELECT COUNT( ItemId ) FROM Collections";
 
@@ -348,7 +394,7 @@ namespace Statistics2026.Data
                             break;
                         }
                     }
-                    using (var statement = _connection.PrepareStatement("SELECT Count(1) FROM VideoPlayList WHERE SeriesId=@SeriesId"))
+                    using (var statement = _connection.PrepareStatement("SELECT Count(1) FROM UserVideoList WHERE SeriesId=@SeriesId"))
                     {
                         _dbHelper.TryBind(statement, "@SeriesId", curr.id);
                         while (statement.MoveNext())
@@ -392,5 +438,119 @@ namespace Statistics2026.Data
             return retVal;
         }
 
+        public static string FormatTicks(long ticks)
+        {
+            var runtime = new RunTime(ticks);
+            return runtime.ToLongString();
+        }
+
+        public StatCard TotalTimeWatched(User user)
+        {
+            string sql = "SELECT TotalTimeWatched FROM Users  WHERE UserId=@UserId";
+            return ValueGroupForSingleItem(Constants.UserTotalTimeWatched, null, sql, new List<(string field, string value)>() { ("@UserId", user.Id.ToString()) }, FormatTicks);
+        }
+
+        public StatCard TotalWatchableTime(User user)
+        {
+            string sql = "SELECT TotalWatchableTime FROM Users WHERE UserId=@UserId";
+            return ValueGroupForSingleItem(Constants.UserTotalWatchableTime, null, sql, new List<(string field, string value)>() { ("@UserId", user.Id.ToString()) }, FormatTicks);
+        }
+
+        public StatCard FavoriteYears(User user, bool movies)
+        {
+            string sql =
+                "SELECT COUNT(*) as NumVideos, StartYear From Media "
+                + "INNER JOIN UserVideoList On Media.ItemId=UserVideoList.ItemId "
+                + "WHERE "
+
+                ;
+            string videoType = "";
+            if (movies)
+            {
+                sql += "NOT Media.IsEpisode ";
+                videoType = "Movies";
+            }
+            else
+            {
+                sql += "Media.IsEpisode ";
+                videoType = "Episodes";
+            }
+            sql +=
+                "AND UserId=@UserId AND IsPlayed "
+              + "GROUP BY StartYear "
+              + "ORDER BY NumVideos DESC "
+              + "LIMIT 5 "
+              ;
+
+            var retVal = new TableBasedStatCard(Constants.FavoriteMovieYears, "", new List< string>() { $"# of {videoType} Watched"});
+            lock (_connection)
+            {
+                using (var statement = _connection.PrepareStatement(sql))
+                {
+                    _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        var count = row.GetInt(0);
+                        var year = row.GetInt64(1);
+                        retVal.addRow(year.ToString(), new List<int>() { count});
+                    }
+                }
+            }
+
+            return retVal;
+        }
+
+        public StatCard FavoriteGenre(User user, bool movies)
+        {
+            string sql =
+                "SELECT Genres From Media "
+                + "INNER JOIN UserVideoList On Media.ItemId=UserVideoList.ItemId "
+                + "WHERE "
+
+                ;
+            string videoType = "";
+            if (movies)
+            {
+                sql += "NOT Media.IsEpisode ";
+                videoType = "Movies";
+            }
+            else
+            {
+                sql += "Media.IsEpisode ";
+                videoType = "Episodes";
+            }
+            sql +=
+                "AND UserId=@UserId AND IsPlayed "
+              ;
+
+            Dictionary<string, int> genreMap = new Dictionary<string, int>();
+            lock (_connection)
+            {
+                using (var statement = _connection.PrepareStatement(sql))
+                {
+                    _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
+                    while (statement.MoveNext())
+                    {
+                        var row = statement.Current;
+                        var genres = row.GetString(0).Split(';');
+                        foreach (var genre in genres)
+                        {
+                            if (!genreMap.ContainsKey(genre))
+                                genreMap[genre] = 0;
+                            genreMap[genre]++;
+                        }
+                    }
+                }
+            }
+            var retVal = new TableBasedStatCard(Constants.FavoriteMovieGenres, "", new List<string>() { $"# of {videoType} Watched" });
+
+            var sortedGenre = genreMap.OrderByDescending(kvp => kvp.Value).ToList();
+            for (int ii = 0; ii < sortedGenre.Count() && ii < 5; ++ii)
+            {
+                retVal.addRow(sortedGenre[ii].Key, new List<int>() { sortedGenre[ii].Value });
+            }
+            return retVal;
+        }
     }
 }

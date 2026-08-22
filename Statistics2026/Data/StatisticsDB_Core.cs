@@ -120,6 +120,7 @@ namespace Statistics2026.Data
                         new TableColDef( "Codec", "TEXT", true ),
                         new TableColDef( "DolbyVisionProfile", "TEXT", true ),
                         new TableColDef( "StudioNames", "TEXT", true ),
+                        new TableColDef( "Genres", "TEXT", true ),
                         new TableColDef( "ServerLocation", "TEXT", true ),
                         new TableColDef( "FileSize", "INT", true),
                         new TableColDef( "ImageUrl", "TEXT", true ),
@@ -178,39 +179,40 @@ namespace Statistics2026.Data
                     new List<string>() { "UserId", "UserName", "ConnectUserId" }
                 ).Execute(clearFirst, _connection);
 
-                new TableDef("VideoPlayList",
+                new TableDef("UserVideoList",
                     new List<TableColDef>()
                     {
                         new TableColDef( "UserId", "TEXT", false ), // user
                         new TableColDef( "ItemId", "TEXT", false ), // video item
+                        new TableColDef( "IsPlayed", "BOOLEAN", false ),
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
                         new TableColDef( "SeriesId", "TEXT", true ) // if episode add seriesid
                     },
                     null
                 ).Execute(clearFirst, _connection);
 
-                new TableDef("EpisodeProgress",
-                    new List<TableColDef>()
-                    {
-                        new TableColDef( "ItemId", "TEXT", false ),
-                        new TableColDef( "UserId", "TEXT", false ),
-                        new TableColDef( "Name", "TEXT", false ),
-                        new TableColDef( "SortName", "TEXT" , true ),
-                        new TableColDef( "StartYear", "INT" , true ),
-                        new TableColDef( "Watched", "INT" , true ),
-                        new TableColDef( "Score", "REAL" , true ),
-                        new TableColDef( "Status", "TEXT" , true ),
-                        new TableColDef( "TotalEpisodes", "INT" , true ),
-                        new TableColDef( "CollectedEpisodes", "INT" , true ),
-                        new TableColDef( "SeenEpisodes", "INT" , true ),
-                        new TableColDef( "TotalSpecials", "INT" , true ),
-                        new TableColDef( "CollectedSpecials", "INT" , true ),
-                        new TableColDef( "SeenSpecials", "INT" , true ),
-                        new TableColDef( "PercentSeen", "INT" , true ),
-                        new TableColDef( "PercentCollected", "INT" , true ),
-                    },
-                    new List<string>() { "ItemId", "UserId", "Name", "SortName" }
-                ).Execute(clearFirst, _connection);
+                //new TableDef("EpisodeProgress",
+                //    new List<TableColDef>()
+                //    {
+                //        new TableColDef( "ItemId", "TEXT", false ),
+                //        new TableColDef( "UserId", "TEXT", false ),
+                //        new TableColDef( "Name", "TEXT", false ),
+                //        new TableColDef( "SortName", "TEXT" , true ),
+                //        new TableColDef( "StartYear", "INT" , true ),
+                //        new TableColDef( "Watched", "INT" , true ),
+                //        new TableColDef( "Score", "REAL" , true ),
+                //        new TableColDef( "Status", "TEXT" , true ),
+                //        new TableColDef( "TotalEpisodes", "INT" , true ),
+                //        new TableColDef( "CollectedEpisodes", "INT" , true ),
+                //        new TableColDef( "SeenEpisodes", "INT" , true ),
+                //        new TableColDef( "TotalSpecials", "INT" , true ),
+                //        new TableColDef( "CollectedSpecials", "INT" , true ),
+                //        new TableColDef( "SeenSpecials", "INT" , true ),
+                //        new TableColDef( "PercentSeen", "INT" , true ),
+                //        new TableColDef( "PercentCollected", "INT" , true ),
+                //    },
+                //    new List<string>() { "ItemId", "UserId", "Name", "SortName" }
+                //).Execute(clearFirst, _connection);
 
 
                 new TableDef("Collections",

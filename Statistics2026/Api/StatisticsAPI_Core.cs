@@ -99,5 +99,19 @@ namespace Statistics2026.Api
             }
             return mediaInfos;
         }
+
+        private User GetUser(string userName)
+        {
+            if (string.IsNullOrEmpty(userName))
+                return null;
+
+            var users = _userManager.GetUserList(new UserQuery() { Name = userName }).ToList();
+            if (users.Count() == 0)
+                return null;
+
+            var user = users[0];
+            return user;
+        }
+
     }
 }

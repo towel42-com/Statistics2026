@@ -100,22 +100,14 @@ namespace Statistics2026.Data
         }
         private void AddUserWatchData(User user, IUserDataManager userDataManager, ILibraryManager libManager, IProgress<double> progress)
         {
-            var query = new InternalItemsQuery(user)
-            {
-                IncludeItemTypes = new[] { typeof(Episode).Name, typeof(Movie).Name },
-                Recursive = true,
-                IsSpecialSeason = false,
-                MaxPremiereDate = DateTime.Now,
-                IsVirtualItem = false,
-                IsPlayed = true
-            };
-            var videos = libManager.GetItemList(query).OfType<Video>().ToList();
+            var (allVideosForUser, allVideos) = Statistics2026API.GetAllEpisodesAndMovies(user, libManager);
 
             string sql =
-                "INSERT INTO VideoPlayList " +
+                "INSERT INTO UserVideoList " +
                 "(" +
                     "  UserId" +
                     ", ItemId" +
+                    ", IsPlayed" +
                     ", IsEpisode" +
                     ", SeriesId" +
                 ")" +
@@ -123,11 +115,12 @@ namespace Statistics2026.Data
                 "(" +
                     "  @UserId" +
                     ", @ItemId" +
+                    ", @IsPlayed" +
                     ", @IsEpisode" +
                     ", @SeriesId" +
                 ")";
 
-            foreach (var video in videos)
+            foreach (var video in allVideosForUser)
             {
                 bool isEpisode = video is Episode;
                 string seriesId = "";
@@ -148,6 +141,7 @@ namespace Statistics2026.Data
                         _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
                         _dbHelper.TryBind(statement, "@ItemId", video.Id.ToString());
                         _dbHelper.TryBind(statement, "@IsEpisode", isEpisode);
+                        _dbHelper.TryBind(statement, "@IsPlayed", video.IsPlayed(user));
                         _dbHelper.TryBind(statement, "@SeriesId", seriesId);
                         statement.MoveNext();
                     }
@@ -281,6 +275,7 @@ namespace Statistics2026.Data
                     ", Codec" +
                     ", DolbyVisionProfile" +
                     ", StudioNames " +
+                    ", Genres " +
                     ", ServerLocation" +
                     ", FileSize" +
                     ", ImageUrl" +
@@ -306,6 +301,7 @@ namespace Statistics2026.Data
                     ", @Codec" +
                     ", @DolbyVisionProfile" +
                     ", @StudioNames " +
+                    ", @Genres " +
                     ", @ServerLocation" +
                     ", @FileSize" +
                     ", @ImageUrl" +
@@ -333,6 +329,7 @@ namespace Statistics2026.Data
                     _dbHelper.TryBind(statement, "@Codec", mediaInfo.Codec);
                     _dbHelper.TryBind(statement, "@DolbyVisionProfile", mediaInfo.DolbyVisionProfile);
                     _dbHelper.TryBind(statement, "@StudioNames", string.Join(";", mediaInfo.StudioNames));
+                    _dbHelper.TryBind(statement, "@Genres", string.Join(";", mediaInfo.Genres));
                     _dbHelper.TryBind(statement, "@ServerLocation", mediaInfo.ServerLocation);
                     _dbHelper.TryBind(statement, "@FileSize", mediaInfo.FileSize);
                     _dbHelper.TryBind(statement, "@ImageUrl", (mediaInfo.ImageUrl == null) ? "" : mediaInfo.ImageUrl);
