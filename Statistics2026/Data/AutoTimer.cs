@@ -8,7 +8,6 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
-using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
 using System.Collections;
@@ -24,24 +23,34 @@ namespace Statistics2026.Data
 {
     public class AutoTimer : IDisposable
     {
-        private string _text = null;
-        private Stopwatch _stopWatch = null;
-        private ILogger _logger = null;
+        public string Message { set; get; }
+        private Stopwatch? _stopWatch = null;
+        private ILogger? _logger = null;
         private bool _debug = true;
-
-        public AutoTimer(string text, ILogger logger, bool debug = true)
+        private long _warningTimer = -1;
+        public AutoTimer(string text, ILogger? logger, bool debug = true)
         {
-            _text = text;
+            Message = text;
             _debug = debug;
             _logger = logger;
             _stopWatch = Stopwatch.StartNew();
 
-            SendMessage($"Starting {_text}");
+            SendMessage($"Starting {Message}");
+        }
+        public AutoTimer(string text, ILogger logger, long warningTimer)
+        {
+            Message = text;
+            _debug = true;
+            _logger = logger;
+            _stopWatch = Stopwatch.StartNew();
+            _warningTimer = warningTimer;
+
+            SendMessage($"Starting {Message}");
         }
 
         public long ElapsedMilliseconds()
         {
-            return _stopWatch.ElapsedMilliseconds;
+            return _stopWatch?.ElapsedMilliseconds ?? 0;
         }
 
         private bool _disposed = false;
@@ -54,10 +63,12 @@ namespace Statistics2026.Data
 
         private void SendMessage(string message)
         {
-            if (_debug)
-                _logger.Debug(message);
+            if (_warningTimer > 0 && ((_stopWatch?.ElapsedMilliseconds ?? 0) > _warningTimer))
+                _logger?.Warn(message);
+            else if (_debug)
+                _logger?.Debug(message);
             else
-                _logger.Info(message);
+                _logger?.Info(message);
         }
 
         protected virtual void Dispose(bool disposing)
@@ -65,7 +76,7 @@ namespace Statistics2026.Data
             if (_disposed)
                 return;
 
-            SendMessage($"Finished {_text} - {_stopWatch.ElapsedMilliseconds}ms");
+            SendMessage($"Finished {Message} - {_stopWatch?.ElapsedMilliseconds ?? 0}ms");
 
             _disposed = true;
         }

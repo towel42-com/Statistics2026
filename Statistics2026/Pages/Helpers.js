@@ -98,11 +98,26 @@ define(function () {
         Dashboard.alert({ message: text, title: title });
     }
 
+    function dataLoaded(config) {
+        if (config.LastUpdated === undefined) {
+            Dashboard.alert({
+                message:
+                    "No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results."
+            });
+
+            Dashboard.hideLoadingMsg();
+            return false;
+        }
+        return true;
+    }
+
+
     return {
         getTabs,
         getTabIndex,
         getSummaryInfo,
-        showInfo
+        showInfo,
+        dataLoaded
     };
 
 })

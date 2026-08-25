@@ -40,16 +40,9 @@
             view.querySelector(`#debugInfo`).style.display = 'none';
             loadDebugInfo(view);
 
-            if (config.LastUpdated === undefined)
+            if (!Helpers.dataLoaded(config))
             {
-                Dashboard.alert({
-                    message:
-                        "No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results."
-                });
-
                 view.querySelector(`#lastRunInfo`).style.display = 'none';
-
-                Dashboard.hideLoadingMsg();
                 return;
             } 
 
@@ -63,11 +56,11 @@
             userInfo += Helpers.getSummaryInfo(view, "user_count", "", "?hasConnectUserID=" + config.hasConnectUserID + "&excludeAdmin=" + config.excludeAdmin);
             view.querySelector("#userInfo").innerHTML = (userInfo);
 
-            // var mediaInfo = "";
-            // mediainfo += helpers.getsummaryinfo(view, "codec_summary", "", "?showallcodecs=" + config.showallcodecs);
-            // mediainfo += helpers.getsummaryinfo(view, "resolution_summary", "", "?showallresolutions=" + config.showallresolutions);
-            // mediainfo += helpers.getsummaryinfo(view, "dvprofile_summary", "", "?showunknowndvprofiles=" + config.showunknowndvprofiles + "&showalldvprofiles=" + config.showalldvprofiles);
-            // view.querySelector("#mediaInfo").innerHTML = mediaInfo;
+            var mediaInfo = "";
+            mediaInfo += Helpers.getSummaryInfo(view, "codec_summary", "", "?showAllCodecs=" + config.showAllCodecs);
+            mediaInfo += Helpers.getSummaryInfo(view, "resolution_summary", "", "?showAllResolutions =" + config.showAllResolutions);
+            mediaInfo += Helpers.getSummaryInfo(view, "dvprofile_summary", "", "?showUnknownDVProfiles=" + config.showUnknownDVProfiles + "&showAllDVProfiles =" + config.showAllDVProfiles);
+            view.querySelector("#mediaInfo").innerHTML = mediaInfo;
 
             var movieStats = "";
             movieStats += Helpers.getSummaryInfo(view, "total_movie_count", "");
@@ -88,8 +81,8 @@
             view.querySelector("#movieStats").innerHTML = movieStats;
 
             var seriesStats = "";
-            // seriesStats += Helpers.getSummaryInfo(view, "total_tv_count", "");
-            // seriesStats += Helpers.getSummaryInfo(view, "total_tv_studio_count", "");
+            seriesStats += Helpers.getSummaryInfo(view, "total_tv_count", "");
+            seriesStats += Helpers.getSummaryInfo(view, "total_tv_studio_count", "");
             seriesStats += Helpers.getSummaryInfo(view, "least_watched_shows", "", "?serverId=" + config.ServerId);
             seriesStats += Helpers.getSummaryInfo(view, "most_watched_shows", "", "?serverId=" + config.ServerId);
             seriesStats += Helpers.getSummaryInfo(view, "get_series/Largest", "", "?serverId=" + config.ServerId, "largest_series");
@@ -107,10 +100,10 @@
             view.querySelector("#seriesStats").innerHTML = seriesStats;
 
             var episodeStats = "";
-            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_episode");
-            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_episode");
-            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_episode_addition");
-            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/LatestAddition", "", "?serverId=" + config.ServerId, "latest_episode_addition");
+            episodeStats += Helpers.getSummaryInfo(view, "get_episode/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_episode");
+            episodeStats += Helpers.getSummaryInfo(view, "get_episode/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_episode");
+            episodeStats += Helpers.getSummaryInfo(view, "get_episode/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_episode_addition");
+            episodeStats += Helpers.getSummaryInfo(view, "get_episode/LatestAddition", "", "?serverId=" + config.ServerId, "latest_episode_addition");
             view.querySelector("#episodeStats").innerHTML = episodeStats;
 
             Dashboard.hideLoadingMsg();

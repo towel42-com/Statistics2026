@@ -55,15 +55,15 @@ namespace Statistics2026.Api
             _httpServer = httpServer;
         }
 
-        public IRequest Request { get; set; }
+        public IRequest? Request { get; set; } = null;
 
 
-        private IEnumerable<T> GetItems<T>(User user)
+        private IEnumerable<T> GetItems<T>(User? user)
         {
             return DBHelperFuncs.GetUserItems<T>(user, _libraryManager);
         }
 
-        static public (IEnumerable<Video>, IEnumerable<Video>) GetAllEpisodesAndMovies(User user, ILibraryManager libraryManager)
+        static public (IEnumerable<Video>, IEnumerable<Video>) GetAllEpisodesAndMovies(User? user, ILibraryManager libraryManager)
         {
             var episodesForUser = DBHelperFuncs.GetUserItems<Episode>(user, libraryManager).OfType<Video>().ToList();
             var moviesForUser = DBHelperFuncs.GetUserItems<Movie>(user, libraryManager).OfType<Video>().ToList();
@@ -89,7 +89,7 @@ namespace Statistics2026.Api
             return episodes.Concat(movies);
         }
 
-        private List<MediaInfo> GetVideos<T>(User user) where T : Video
+        private List<MediaInfo> GetVideos<T>(User? user) where T : Video
         {
             List<MediaInfo> mediaInfos = new List<MediaInfo>();
             var items = GetItems<T>(user);
@@ -100,7 +100,7 @@ namespace Statistics2026.Api
             return mediaInfos;
         }
 
-        private User GetUser(string userName)
+        private User? GetUser(string userName)
         {
             if (string.IsNullOrEmpty(userName))
                 return null;

@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Dto;
+﻿using Dapper;
+using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
@@ -11,7 +12,7 @@ using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Users;
-using SQLitePCL.pretty;
+using Microsoft.Data.Sqlite;
 using Statistics2026;
 using Statistics2026.Api;
 using Statistics2026.Configuration;
@@ -19,15 +20,19 @@ using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 
 
 namespace Statistics2026.Data
 {
-    public sealed class DBHelperFuncs
+
+    public class DBHelperFuncs : IDisposable
     {
         private static string[] _datetimeFormats = new string[] {
             "THHmmssK",
@@ -65,11 +70,23 @@ namespace Statistics2026.Data
         private static string _datetimeFormatUtc = _datetimeFormats[5];
         private static string _datetimeFormatLocal = _datetimeFormats[19];
 
-        private ILogger _logger = null;
-        public IDatabaseConnection SQLConnection = null;
+        private ILogger? _logger = null;
+        public SQLConnection _connection = new SQLConnection();
+
+        public async Task Execute(string sql)
+        {
+            _ = _connection.Execute(sql);
+        }
 
         public DBHelperFuncs()
         {
+        }
+
+
+        public void Dispose()
+        {
+            _connection?.Dispose();
+            _logger?.Debug("StatisticsData : DB Connection Closed");
         }
 
         public DBHelperFuncs(string db_path, ILogger logger)
@@ -77,94 +94,10 @@ namespace Statistics2026.Data
             _logger = logger;
 
             string db_file_name = Path.Combine(db_path, "Statistics2026.db");
-            SQLConnection = CreateConnection(db_file_name);
-        }
+            _logger.Debug("CreateConnection : " + db_file_name);
+            _connection.CreateConnection(db_file_name);
 
-        public void TryBind(IStatement statement, string name, int value)
-        {
-            IBindParameter bindParam;
-            if (statement.BindParameters.TryGetValue(name, out bindParam))
-            {
-                bindParam.Bind(value);
-            }
-            else
-            {
-                _logger.Error($"Error Binding {name} to {value}");
-            }
-        }
-
-        public void TryBind(IStatement statement, string name, long value)
-        {
-            IBindParameter bindParam;
-            if (statement.BindParameters.TryGetValue(name, out bindParam))
-            {
-                bindParam.Bind(value);
-            }
-            else
-            {
-                _logger.Error($"Error Binding {name} to {value}");
-            }
-        }
-        public void TryBind(IStatement statement, string name, DateTime? value)
-        {
-            if (value == null)
-                return;
-
-            IBindParameter bindParam;
-            if (statement.BindParameters.TryGetValue(name, out bindParam))
-            {
-                bindParam.Bind(value.Value.ToString("o", CultureInfo.InvariantCulture));
-            }
-            else
-            {
-                _logger.Error($"Error Binding {name} to {value}");
-            }
-        }
-
-        public void TryBind(IStatement statement, string name, bool value)
-        {
-            IBindParameter bindParam;
-            if (statement.BindParameters.TryGetValue(name, out bindParam))
-            {
-                bindParam.Bind(value);
-            }
-            else
-            {
-                _logger.Error($"Error Binding {name} to {value}");
-            }
-        }
-
-        public void TryBind(IStatement statement, string name, double value)
-        {
-            IBindParameter bindParam;
-            if (statement.BindParameters.TryGetValue(name, out bindParam))
-            {
-                bindParam.Bind(value);
-            }
-            else
-            {
-                _logger.Error($"Error Binding {name} to {value}");
-            }
-        }
-
-        public void TryBind(IStatement statement, string name, string value)
-        {
-            IBindParameter bindParam;
-            if (statement.BindParameters.TryGetValue(name, out bindParam))
-            {
-                if (value == null)
-                {
-                    bindParam.BindNull();
-                }
-                else
-                {
-                    bindParam.Bind(value);
-                }
-            }
-            else
-            {
-                _logger.Error($"Error Binding {name} to {value}");
-            }
+            _logger.Debug("ConnectionCreated : " + GetHashCode());
         }
 
         private string GetDateTimeKindFormat(DateTimeKind kind)
@@ -194,45 +127,12 @@ namespace Statistics2026.Data
             }
         }
 
-        private IDatabaseConnection CreateConnection(string db_file)
-        {
-            _logger.Debug("CreateConnection : " + db_file);
-            ConnectionFlags connectionFlags;
-
-            //Logger.Debug("Opening write _connection");
-            connectionFlags = ConnectionFlags.Create;
-            connectionFlags |= ConnectionFlags.ReadWrite;
-            connectionFlags |= ConnectionFlags.PrivateCache;
-            connectionFlags |= ConnectionFlags.NoMutex;
-
-            SQLiteDatabaseConnection db = SQLite3.Open(db_file, connectionFlags, null, true);
-
-            try
-            {
-                var queries = new List<string>
-                {
-                    //"PRAGMA cache size=-10000"
-                    //"PRAGMA read_uncommitted = true",
-                    "PRAGMA synchronous=Normal",
-                    "PRAGMA temp_store=file"
-                };
-
-                db.ExecuteAll(string.Join(";", queries.ToArray()));
-            }
-            catch
-            {
-                throw;
-            }
-
-            _logger.Debug("ConnectionCreated : " + db.GetHashCode());
-            return db;
-        }
         public IEnumerable<T> GetLibraryItems<T>(ILibraryManager libManager)
         {
             return GetUserItems<T>(null, libManager);
         }
 
-        static public IEnumerable<T> GetUserItems<T>(User user, ILibraryManager libraryManager)
+        static public IEnumerable<T> GetUserItems<T>(User? user, ILibraryManager libraryManager)
         {
             var query = new InternalItemsQuery(user)
             {
@@ -248,136 +148,70 @@ namespace Statistics2026.Data
 
             return libraryManager.GetItemList(query).OfType<T>();
         }
+
+        public SqliteTransaction BeginTransaction()
+        {
+            return _connection.BeginTransaction();
+        }
+
+        public Task WaitAsync()
+        {
+            return _connection.WaitAsync();
+        }
+
+        public int Release()
+        {
+            return _connection.Release();
+        }
+
+        public SqliteCommand CreateCommand()
+        {
+            return _connection.CreateCommand();
+        }
+        public override int GetHashCode()
+        {
+            return _connection.GetHashCode();
+        }
+
     };
 
-    public class TableColDef
+    public static class DBHelperExtFuncs
     {
-        public TableColDef(string columnName, string columnType, bool allowNull)
+        public static Task<int> ExecuteAsync(this SQLConnection sqlConnection, string sql, object? param = null, IDbTransaction? transaction = null, int? commandTimeout = null, CommandType? commandType = null)
         {
-            if (columnName == null || columnName == "")
-                throw new ArgumentException("TableColDef: Must define the column name");
-            if (columnType == null || columnType == "")
-                throw new ArgumentException("TableColDef: Must define the column type");
+            if (sqlConnection == null || sqlConnection._connection == null)
+                throw new ArgumentNullException("null sqlConnection");
 
-            Name = columnName;
-            Type = columnType;
-            AllowNull = allowNull;
+            var commandDef = new CommandDefinition(sql, param, transaction, commandTimeout, commandType);
+
+            return sqlConnection._connection.ExecuteAsync(commandDef);
         }
 
-        public override string ToString()
+        public static Task<int> ExecuteAsync(this DBHelperFuncs dbHelper, string sql, object? param = null, IDbTransaction? transaction = null, int? commandTimeout = null, CommandType? commandType = null)
         {
-            string retVal = $"{Name} {Type}";
-            if (!AllowNull)
-                retVal += " NOT NULL";
-            return retVal;
+            if (dbHelper == null || dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
+            return dbHelper._connection.ExecuteAsync(sql, param, transaction, commandTimeout, commandType);
         }
 
-        public string Name { get; private set; }
-        public string Type { get; private set; }
-        public bool AllowNull { get; private set; }
-    }
-
-    public class TableDef
-    {
-        public TableDef(string name, List<TableColDef> cols, List<string> indexes)
+        public static Task<DbDataReader> ExecuteReaderAsync(this SQLConnection sqlConnection, string sql, object? param = null, IDbTransaction? transaction = null, int? commandTimeout = null, CommandType? commandType = null)
         {
-            Name = name;
-            if (Name == null || Name == "")
-                throw new ArgumentException("TableDef: Must define the table name");
-            Columns = cols;
-            if (Columns.Count() == 0)
-                throw new ArgumentException("TableDef: Must define columns");
+            if (sqlConnection == null || sqlConnection._connection == null)
+                throw new ArgumentNullException("null sqlConnection");
 
-            if (indexes == null)
-            {
-                Indexes = new List<string>();
-                Columns.ForEach(col => Indexes.Add(col.Name));
-            }
-            else
-                Indexes = indexes;
-        }
-        public string Name { get; private set; }
-        public List<TableColDef> Columns { get; private set; }
-        public List<string> Indexes { get; private set; }
+            var commandDef = new CommandDefinition(sql, param, transaction, commandTimeout, commandType);
 
-        public List<string> GetSQLCreateCommands()
-        {
-            string sql = $"CREATE TABLE IF NOT EXISTS {Name} (\n";
-            bool first = true;
-            foreach (var col in Columns)
-            {
-                if (first)
-                    sql += "      ";
-                else
-                    sql += "    , ";
-
-                first = false;
-                sql += col.ToString() + "\n";
-            }
-
-            sql += ");";
-
-            var retVal = new List<string>();
-            retVal.Add(sql);
-
-            if (Indexes != null)
-            {
-                Indexes.ForEach(columnName =>
-                {
-                    if (columnName == null || columnName == "")
-                        return;
-
-                    var idxName = getIndexName(columnName);
-                    sql = $"CREATE INDEX IF NOT EXISTS {idxName} on {Name} ({columnName});";
-                    retVal.Add(sql);
-                }
-                );
-            }
-
-            return retVal;
+            return sqlConnection._connection.ExecuteReaderAsync(commandDef);
         }
 
-        public override string ToString()
+        public static Task<DbDataReader> ExecuteReaderAsync(this DBHelperFuncs dbHelper, string sql, object? param = null, IDbTransaction? transaction = null, int? commandTimeout = null, CommandType? commandType = null)
         {
-            return string.Join(";\n", GetSQLCreateCommands());
+            if (dbHelper == null || dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
+            return dbHelper._connection.ExecuteReaderAsync(sql, param, transaction, commandTimeout, commandType);
         }
 
-        public void dropTable(IDatabaseConnection _connection)
-        {
-            string sql = $"DROP TABLE IF EXISTS {Name}";
-            _connection.Execute(sql);
-        }
-
-        public string getIndexName(string name)
-        {
-            return $"idx_{Name}_{name}";
-        }
-
-        public void dropIndex(string name, IDatabaseConnection _connection)
-        {
-            var idxName = getIndexName(name);
-            string sql = $"DROP INDEX IF EXISTS {idxName}";
-            _connection.Execute(sql);
-        }
-
-        public void dropIndexes(IDatabaseConnection _connection)
-        {
-            Indexes.ForEach(colName => dropIndex(colName, _connection));
-        }
-
-        public void Execute(bool clearFirst, IDatabaseConnection _connection)
-        {
-            if (clearFirst)
-            {
-                dropTable(_connection);
-                dropIndexes(_connection);
-            }
-
-            var cmds = GetSQLCreateCommands();
-            foreach (var cmd in cmds)
-            {
-                _connection.Execute(cmd);
-            }
-        }
     }
 }

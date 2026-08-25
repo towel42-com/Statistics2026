@@ -1,10 +1,10 @@
-﻿using SQLitePCL;
-using SQLitePCL.pretty;
+﻿using Microsoft.Data.Sqlite;
 using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
+using System.Threading.Tasks;
 using System.Globalization;
+using System.Threading;
 
 namespace Statistics2026.Api
 {
@@ -36,16 +36,20 @@ namespace Statistics2026.Api
         private EStatisticType WhichStatistic { get; set; }
         private EVideoType VideoType { get; set; }
 
-        private IDatabaseConnection _connection { get; set; }
-        public StatGen(EStatisticType statType, EVideoType videoType, IDatabaseConnection connection)
+        private SQLConnection _connection { get; set; }
+        public StatGen(EStatisticType statType, EVideoType videoType, SQLConnection connection)
         {
             WhichStatistic = statType;
             VideoType = videoType;
             _connection = connection;
         }
 
-        public StatCard GetStatCard()
+        public async Task<StatCard> GetStatCard()
         {
+            //if (VideoType == EVideoType.Series && WhichStatistic==EStatisticType.Largest)
+            //{
+            //    int xyz = 0;
+            //}
             string sql = SQL();
             string title = Title();
             string help = Help();
@@ -57,29 +61,34 @@ namespace Statistics2026.Api
             string name = "";
             string itemId = "";
             string imageUrl = "";
-            lock (_connection)
+
+            await _connection.WaitAsync();
+            try
             {
-                try
+                using (var command = _connection.CreateCommand())
                 {
-                    using (var statement = _connection.PrepareStatement(sql))
+                    using (var reader = await command.ExecuteReaderAsync())
                     {
-                        while (statement.MoveNext())
+                        if (await reader.ReadAsync())
                         {
-                            var row = statement.Current;
-                            itemId = row.GetString(0);
-                            name = row.GetString(1);
-                            imageUrl = row.GetString(2);
-                            value = Value(row, 3);
-                            secondValue = SecondValue(row, 3);
-                            break;
+                            itemId = reader.GetString(0);
+                            name = reader.GetString(1);
+                            imageUrl = reader.GetString(2);
+                            value = Value(reader, 3);
+                            secondValue = SecondValue(reader, 3);
                         }
                     }
                 }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
             }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _connection.Release();
+            }
+
             retVal.AddLine(value);
             if (string.IsNullOrEmpty(secondValue))
                 retVal.AddLine(name);
@@ -435,7 +444,7 @@ namespace Statistics2026.Api
             return help;
         }
 
-        private string Value(IResultSet sqlResultValue, int index)
+        private string Value(SqliteDataReader sqlResultValue, int index)
         {
             string value = "";
             switch (WhichStatistic)
@@ -491,7 +500,7 @@ namespace Statistics2026.Api
             return value;
         }
 
-        private string SecondValue(IResultSet sqlResultValue, int index)
+        private string SecondValue(SqliteDataReader sqlResultValue, int index)
         {
             string secondValue = "";
             switch (WhichStatistic)

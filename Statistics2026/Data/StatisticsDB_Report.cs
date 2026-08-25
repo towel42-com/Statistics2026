@@ -1,18 +1,23 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using RestSharp;
-using ServiceStack;
-using ServiceStack.Text;
 using SQLitePCL;
-using SQLitePCL.pretty;
+
+//using RestSharp;
+//using ServiceStack;
+//using ServiceStack.Text;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Metrics;
+using System.Collections.ObjectModel;
+using System.Data.Common;
+
+
+//using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 
 
 
@@ -20,8 +25,11 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public StatCard MediaResolutions(bool showAllResolutions)
+        public async Task<StatCard> MediaResolutions(bool showAllResolutions)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             string sql =
                 "SELECT " +
                 "ResolutionBase as Resolution, " +
@@ -43,26 +51,37 @@ namespace Statistics2026.Data
                 retVal.addRow(Constants.SD, new List<int> { 0, 0 });
             }
 
-            lock (_connection)
+            await _dbHelper.WaitAsync();
+            try
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var reader = await _dbHelper.ExecuteReaderAsync(sql))
                 {
-                    while (statement.MoveNext())
+                    while (reader.Read())
                     {
-                        var row = statement.Current;
-                        var resolution = row.GetString(0);
-                        var episodeCount = row.GetInt(1);
-                        var movieCount = row.GetInt(2);
+                        var resolution = reader.GetString(0);
+                        var episodeCount = reader.GetInt32(1);
+                        var movieCount = reader.GetInt32(2);
                         retVal.addRow(resolution, new List<int> { movieCount, episodeCount });
                     }
                 }
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _dbHelper.Release();
             }
 
             return retVal;
         }
 
-        public StatCard MediaCodecs(bool showAllCodecs)
+        public async Task<StatCard> MediaCodecs(bool showAllCodecs)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             string sql =
                 "SELECT " +
                 "Codec as Codec, " +
@@ -86,25 +105,37 @@ namespace Statistics2026.Data
                 retVal.addRow("vc1", new List<int> { 0, 0 });
             }
 
-            lock (_connection)
+            await _dbHelper.WaitAsync();
+            try
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var reader = await _dbHelper.ExecuteReaderAsync(sql))
                 {
-                    while (statement.MoveNext())
+                    while (reader.Read())
                     {
-                        var row = statement.Current;
-                        var codec = row.GetString(0);
-                        var episodeCount = row.GetInt(1);
-                        var movieCount = row.GetInt(2);
+                        var codec = reader.GetString(0);
+                        var episodeCount = reader.GetInt32(1);
+                        var movieCount = reader.GetInt32(2);
                         retVal.addRow(codec, new List<int> { movieCount, episodeCount });
                     }
                 }
             }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _dbHelper.Release();
+            }
 
             return retVal;
         }
-        public StatCard DVProfileInfo(bool showUnknownDVProfiles, bool showAllDVProfiles)
+
+        public async Task<StatCard> DVProfileInfo(bool showUnknownDVProfiles, bool showAllDVProfiles)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             string sql =
                 "SELECT " +
                 "DolbyVisionProfile as DVProfile, " +
@@ -133,58 +164,75 @@ namespace Statistics2026.Data
                 retVal.addRow("Profile 9.0", new List<int> { 0, 0 });
                 retVal.addRow("Profile 20.0", new List<int> { 0, 0 });
             }
-            lock (_connection)
+
+            await _dbHelper.WaitAsync();
+            try
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var reader = await _dbHelper.ExecuteReaderAsync(sql))
                 {
-                    while (statement.MoveNext())
+                    while (reader.Read())
                     {
-                        var row = statement.Current;
-                        var dvProfile = row.GetString(0);
-                        var episodeCount = row.GetInt(1);
-                        var movieCount = row.GetInt(2);
+                        var dvProfile = reader.GetString(0);
+                        var episodeCount = reader.GetInt32(1);
+                        var movieCount = reader.GetInt32(2);
                         retVal.addRow(dvProfile, new List<int> { movieCount, episodeCount });
                     }
                 }
             }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _dbHelper.Release();
+            }
 
             return retVal;
         }
 
-        private string GetSingleValueFromSQL(string sql, List<(string field, string value)> parameters = null, Func<long, string> formatter = null)
+        private async Task<(string text, long value)> GetSingleValueFromSQL(string sql, List<(string field, string value)>? parameters = null, Func<long, string>? formatter = null)
         {
-            lock (sql)
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
+            await _dbHelper.WaitAsync();
+            try
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var reader = await _dbHelper.ExecuteReaderAsync(sql, parameters.Select(item => new { item.field, item.value }).ToList()))
                 {
-                    if (parameters != null)
+                    while (reader.Read())
                     {
-                        foreach (var parameter in parameters)
-                        {
-                            _dbHelper.TryBind(statement, parameter.field, parameter.value);
-                        }
-                    }
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var count = row.GetInt64(0);
-                        return formatter?.Invoke(count) ?? count.ToString();
+                        var count = reader.GetInt64(0);
+                        return (formatter?.Invoke(count) ?? count.ToString(), count);
                     }
                 }
             }
-            return "";
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _dbHelper.Release();
+            }
+
+            return ("", 0);
         }
 
-        private TextBasedStatCard ValueGroupForSingleItem(string title, string help, string sql, List<(string field, string value)> parameters = null, Func<long, string> formatter = null)
+        private async Task<TextBasedStatCard> ValueGroupForSingleItem(string title, string help, string sql, List<(string field, string value)>? parameters = null, Func<long, string>? formatter = null)
         {
             var retVal = new TextBasedStatCard(title, help, "small");
-            var value = GetSingleValueFromSQL(sql, parameters, formatter);
+            var value = (await GetSingleValueFromSQL(sql, parameters, formatter)).text;
             retVal.AddLine(value);
             return retVal;
         }
 
-        public StatCard UserCount(bool hasConnectUserID, bool excludeAdmin)
+        public async Task<TextBasedStatCard> UserCount(bool hasConnectUserID, bool excludeAdmin)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             string sql = "SELECT COUNT(UserName) FROM Users ";
 
             List<string> conditions = new List<string>();
@@ -198,11 +246,15 @@ namespace Statistics2026.Data
             if (conditions.Count > 0)
                 sql += "WHERE " + string.Join(" AND ", conditions) + " ";
 
-            return ValueGroupForSingleItem(Constants.TotalUsers, null, sql);
+            var retVal = await ValueGroupForSingleItem(Constants.TotalUsers, String.Empty, sql);
+            return retVal;
         }
 
-        public StatCard MostActiveUsers(bool hasConnectUserID, int numUsers, bool excludeAdmin, IUserManager userManager)
+        public async Task<StatCard> MostActiveUsers(bool hasConnectUserID, int numUsers, bool excludeAdmin, IUserManager userManager)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             string sql =
                 "SELECT " +
                 "UserName, " +
@@ -226,26 +278,38 @@ namespace Statistics2026.Data
             var help = Constants.HelpMostActiveUsers;
             help = help.Replace("<numUsers>", numUsers.ToString());
             var groupData = new TableBasedStatCard(Constants.MostActiveUsers, help, new List<string> { "Days", "Hours", "Minutes" });
-            lock (_connection)
+
+            await _dbHelper.WaitAsync();
+            try
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var reader = await _dbHelper.ExecuteReaderAsync(sql))
                 {
-                    while (statement.MoveNext())
+                    while (reader.Read())
                     {
-                        var row = statement.Current;
-                        var userName = row.GetString(0);
-                        var runtime = new RunTime(row.GetInt64(1));
+                        var userName = reader.GetString(0);
+                        var runtime = new RunTime(reader.GetInt64(1));
 
                         groupData.addRow(userName, new List<int> { runtime.Days, runtime.Hours, runtime.Minutes });
                     }
                 }
             }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _dbHelper.Release();
+            }
 
             return groupData;
         }
 
-        public StatCard TotalMovieCount(User user, bool watched)
+        public async Task<TextBasedStatCard> TotalMovieCount(User? user, bool watched)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             string sql = "";
             var parameters = new List<(string, string)>();
             string title = Constants.TotalMovies;
@@ -267,11 +331,12 @@ namespace Statistics2026.Data
 
                 if (watched)
                 {
-                    total = GetSingleValueFromSQL("SELECT SUM(NOT IsEpisode) FROM UserVideoList WHERE UserId=@UserId", parameters).ToLong();
+                    var totalValue = (await GetSingleValueFromSQL("SELECT SUM(NOT IsEpisode) FROM UserVideoList WHERE UserId=@UserId", parameters));
+                    total = totalValue.value;
                 }
             }
 
-            return ValueGroupForSingleItem(title, help, sql, parameters, count =>
+            var retVal = (await ValueGroupForSingleItem(title, help, sql, parameters, count =>
             {
                 if (watched && total != 0)
                 {
@@ -284,123 +349,145 @@ namespace Statistics2026.Data
                         return $"0 (0%)";
                 }
                 return count.ToString();
-            });
+            }));
+
+            return retVal;
         }
 
-        public StatCard TotalTVCount(User user)
+        public async Task<StatCard> TotalTVCount(User? user)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             string sql = "SELECT COUNT(DISTINCT(PrimaryName)) FROM Media WHERE IsEpisode";
-            var retVal = ValueGroupForSingleItem(Constants.TotalTVShows, Constants.HelpTotalTVShows, sql);
+            var retVal = (await ValueGroupForSingleItem(Constants.TotalTVShows, Constants.HelpTotalTVShows, sql));
 
             retVal.AddLine(Constants.TotalTVEpisodes);
-            var value = GetSingleValueFromSQL("SELECT SUM(IsEpisode) FROM Media");
+            var value = (await GetSingleValueFromSQL("SELECT SUM(IsEpisode) FROM Media")).text;
             retVal.AddLine(value);
 
             return retVal;
         }
 
-        public StatCard TotalCollectionCount()
+        public async Task<StatCard> TotalCollectionCount()
         {
             string sql = "SELECT COUNT( ItemId ) FROM Collections";
 
-            return ValueGroupForSingleItem(Constants.TotalCollections, Constants.HelpTotalCollections, sql);
+            return (await ValueGroupForSingleItem(Constants.TotalCollections, Constants.HelpTotalCollections, sql));
         }
 
-        public StatCard TotalStudioCount(User user, bool movies)
+        public async Task<StatCard> TotalStudioCount(User? user, bool movies)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             string sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
             if (movies)
                 sql += "NOT ";
-            sql += "IsEpisode AND StudioNames IS NOT NULL AND StudioNames<>\"\"";
+            sql += "IsEpisode AND StudioNames IS NOT NULL AND StudioNames IS NOT NULL AND StudioNames != ''";
 
             var retVal = new TextBasedStatCard(movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, "small");
             // Create an unordered set of strings
             HashSet<string> studios = new HashSet<string>();
 
-            lock (_connection)
+            await _dbHelper.WaitAsync();
+            try
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                using (var reader = await _dbHelper.ExecuteReaderAsync(sql))
                 {
-                    while (statement.MoveNext())
+                    while (reader.Read())
                     {
-                        var row = statement.Current;
-                        var currStudios = row.GetString(0).Split(';');
+                        var currStudios = reader.GetString(0).Split(';');
                         studios.UnionWith(currStudios);
                     }
                 }
             }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _dbHelper.Release();
+            }
+
             retVal.AddLine(studios.Count().ToString());
 
             return retVal;
         }
 
-        public StatCard TotalMovieStudioCount(User user)
+        public async Task<StatCard> TotalMovieStudioCount(User? user)
         {
-            return TotalStudioCount(user, true);
+            return (await TotalStudioCount(user, true));
         }
-        public StatCard TotalTVStudioCount(User user)
+        public async Task<StatCard> TotalTVStudioCount(User? user)
         {
-            return TotalStudioCount(user, false);
-        }
-
-        public StatCard StatisticFor(User user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType)
-        {
-            var statGen = new StatGen(whichStatistic, videoType, _connection);
-            return statGen.GetStatCard();
+            return (await TotalStudioCount(user, false));
         }
 
-        public StatCard WatchedShows(User user, bool leastWatched, ILibraryManager libManager)
+        public async Task<StatCard> StatisticFor(User? user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
+            var statGen = new StatGen(whichStatistic, videoType, _dbHelper._connection);
+            return (await statGen.GetStatCard());
+        }
+
+        public async Task<StatCard> WatchedShows(User? user, bool leastWatched, ILibraryManager libManager)
+        {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             var series = new List<(string id, string name, string url, long numEpisodes, long watched, double percentWatched, double percentWatchedPerUser)>();
             long numUsers = 0;
 
-            lock (_connection)
+            await _dbHelper.WaitAsync();
+            try
             {
-                using (var statement = _connection.PrepareStatement("SELECT COUNT(1) FROM Users"))
+                using (var reader = await _dbHelper.ExecuteReaderAsync("SELECT COUNT(1) FROM Users"))
                 {
-                    while (statement.MoveNext())
+                    while (reader.Read())
                     {
-                        var row = statement.Current;
-                        numUsers = row.GetInt64(0);
+                        numUsers = reader.GetInt64(0);
                         break;
                     }
                 }
 
-                using (var statement = _connection.PrepareStatement("SELECT ItemId, Name FROM Series"))
+                using (var reader = await _dbHelper.ExecuteReaderAsync("SELECT ItemId, Name FROM Series"))
                 {
-                    while (statement.MoveNext())
+                    while (reader.Read())
                     {
-                        var row = statement.Current;
-                        var id = row.GetString(0);
-                        var name = row.GetString(1);
+                        var id = reader.GetString(0);
+                        var name = reader.GetString(1);
                         var url = ItemImageUrl._ItemImageUrl(id, libManager);
                         series.Add((id, name, url, 0, 0, 0, 0));
                     }
                 }
-            }
 
-            for (int ii = 0; ii < series.Count(); ++ii)
-            {
-                var curr = series[ii];
-                lock (_connection)
+                for (int ii = 0; ii < series.Count(); ++ii)
                 {
-                    using (var statement = _connection.PrepareStatement("SELECT Count(1) FROM Media WHERE SeriesId=@SeriesId"))
+                    var curr = series[ii];
+                    using (var reader = await _dbHelper.ExecuteReaderAsync("SELECT Count(1) FROM Media WHERE SeriesId=@SeriesId", new
                     {
-                        _dbHelper.TryBind(statement, "@SeriesId", curr.id);
-                        while (statement.MoveNext())
+                        SeriesId = curr.id.ToString()
+                    }))
+                    {
+                        while (reader.Read())
                         {
-                            var row = statement.Current;
-                            curr.numEpisodes = row.GetInt64(0);
+                            curr.numEpisodes = reader.GetInt64(0);
                             break;
                         }
                     }
-                    using (var statement = _connection.PrepareStatement("SELECT Count(1) FROM UserVideoList WHERE SeriesId=@SeriesId"))
+
+                    using (var reader = await _dbHelper.ExecuteReaderAsync("SELECT Count(1) FROM Media WHERE SeriesId=@SeriesId", new
                     {
-                        _dbHelper.TryBind(statement, "@SeriesId", curr.id);
-                        while (statement.MoveNext())
+                        SeriesId = curr.id.ToString()
+                    }))
+                    {
+                        while (reader.Read())
                         {
-                            var row = statement.Current;
-                            curr.watched = row.GetInt64(0);
+                            curr.numEpisodes = reader.GetInt64(0);
                             break;
                         }
                     }
@@ -410,18 +497,27 @@ namespace Statistics2026.Data
                     series[ii] = curr;
                 }
             }
+            catch (Exception)
+            {
+                throw;
+            }
+            finally
+            {
+                _dbHelper.Release();
+            }
+
             // this sorts it in ascending order
             series.Sort(
                 (lhs, rhs) =>
-                {
-                    var diff = lhs.percentWatched - rhs.percentWatched;
-                    if (diff < 0)
-                        return -1;
-                    if (diff > 0)
-                        return 1;
-                    return 0;
+                    {
+                        var diff = lhs.percentWatched - rhs.percentWatched;
+                        if (diff < 0)
+                            return -1;
+                        if (diff > 0)
+                            return 1;
+                        return 0;
 
-                });
+                    });
 
             if (!leastWatched)
             {
@@ -447,20 +543,23 @@ namespace Statistics2026.Data
             return runtime.ToLongString();
         }
 
-        public StatCard TotalTimeWatched(User user)
+        public async Task<StatCard> TotalTimeWatched(User user)
         {
             string sql = "SELECT TotalTimeWatched FROM Users  WHERE UserId=@UserId";
-            return ValueGroupForSingleItem(Constants.UserTotalTimeWatched, null, sql, new List<(string field, string value)>() { ("@UserId", user.Id.ToString()) }, FormatTicks);
+            return (await ValueGroupForSingleItem(Constants.UserTotalTimeWatched, String.Empty, sql, new List<(string field, string value)>() { ("@UserId", user.Id.ToString()) }, FormatTicks));
         }
 
-        public StatCard TotalWatchableTime(User user)
+        public async Task<StatCard> TotalWatchableTime(User user)
         {
             string sql = "SELECT TotalWatchableTime FROM Users WHERE UserId=@UserId";
-            return ValueGroupForSingleItem(Constants.UserTotalWatchableTime, null, sql, new List<(string field, string value)>() { ("@UserId", user.Id.ToString()) }, FormatTicks);
+            return (await ValueGroupForSingleItem(Constants.UserTotalWatchableTime, String.Empty, sql, new List<(string field, string value)>() { ("@UserId", user.Id.ToString()) }, FormatTicks));
         }
 
-        public StatCard FavoriteYears(User user, bool movies)
+        public async Task<StatCard> FavoriteYears(User user, bool movies)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             string sql =
                 "SELECT COUNT(*) as NumVideos, StartYear From Media "
                 + "INNER JOIN UserVideoList On Media.ItemId=UserVideoList.ItemId "
@@ -485,27 +584,27 @@ namespace Statistics2026.Data
               + "LIMIT 5 "
               ;
 
-            var retVal = new TableBasedStatCard(Constants.FavoriteMovieYears, "", new List< string>() { $"# of {videoType} Watched"});
-            lock (_connection)
+            var retVal = new TableBasedStatCard(Constants.FavoriteMovieYears, "", new List<string>() { $"# of {videoType} Watched" });
+
+            await _dbHelper.WaitAsync();
+            using (var reader = await _dbHelper.ExecuteReaderAsync(sql, new { UserId = user.Id.ToString() }))
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                while (reader.Read())
                 {
-                    _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var count = row.GetInt(0);
-                        var year = row.GetInt64(1);
-                        retVal.addRow(year.ToString(), new List<int>() { count});
-                    }
+                    var count = reader.GetInt32(0);
+                    var year = reader.GetInt64(1);
+                    retVal.addRow(year.ToString(), new List<int>() { count });
                 }
             }
 
             return retVal;
         }
 
-        public StatCard FavoriteGenre(User user, bool movies)
+        public async Task<StatCard> FavoriteGenre(User user, bool movies)
         {
+            if (_dbHelper == null || _dbHelper._connection == null)
+                throw new ArgumentNullException("null dbHelper");
+
             string sql =
                 "SELECT Genres From Media "
                 + "INNER JOIN UserVideoList On Media.ItemId=UserVideoList.ItemId "
@@ -528,24 +627,22 @@ namespace Statistics2026.Data
               ;
 
             Dictionary<string, int> genreMap = new Dictionary<string, int>();
-            lock (_connection)
+
+            await _dbHelper.WaitAsync();
+            using (var reader = await _dbHelper.ExecuteReaderAsync(sql, new { UserId = user.Id.ToString() }))
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                while (reader.Read())
                 {
-                    _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
-                    while (statement.MoveNext())
+                    var genres = reader.GetString(0).Split(';');
+                    foreach (var genre in genres)
                     {
-                        var row = statement.Current;
-                        var genres = row.GetString(0).Split(';');
-                        foreach (var genre in genres)
-                        {
-                            if (!genreMap.ContainsKey(genre))
-                                genreMap[genre] = 0;
-                            genreMap[genre]++;
-                        }
+                        if (!genreMap.ContainsKey(genre))
+                            genreMap[genre] = 0;
+                        genreMap[genre]++;
                     }
                 }
             }
+
             var retVal = new TableBasedStatCard(Constants.FavoriteMovieGenres, "", new List<string>() { $"# of {videoType} Watched" });
 
             var sortedGenre = genreMap.OrderByDescending(kvp => kvp.Value).ToList();

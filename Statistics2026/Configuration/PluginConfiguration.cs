@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
-using MediaBrowser.Model.Plugins;
+﻿using MediaBrowser.Model.Plugins;
 using Statistics2026.Data;
+using System;
+using System.Collections.Generic;
 
 namespace Statistics2026.Configuration
 {
@@ -10,10 +11,10 @@ namespace Statistics2026.Configuration
         {
         }
 
-        public string BuildDate { get; set; }
-        public string LastUpdated { get; set; }
-        public string Version { get; set; }
-        public string ServerId { get; set; }
+        public string BuildDate { get; set; } = String.Empty;
+        public string LastUpdated { get; set; } = String.Empty;
+        public string Version { get; set; } = String.Empty;
+        public string ServerId { get; set; } = String.Empty;
 
         public bool hasConnectUserID { get; set; } = false;
         public int numMostActiveUsers { get; set; } = 5;

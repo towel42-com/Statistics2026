@@ -29,7 +29,7 @@ namespace Statistics2026.Data
             var (primaryName, secondaryName, descName) = GetDescName(video);
 
             var mediaStream = video.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video);
-            if (!mediaStream?.Width.HasValue ?? true)
+            if (mediaStream == null || ( !mediaStream?.Width.HasValue ?? true) )
             {
                 return;
             }
@@ -67,7 +67,7 @@ namespace Statistics2026.Data
                     SeriesId = series.Id.ToString();
                 }
             }
-            
+
             ServerLocation = video.Path ?? "Unknown";
             FileSize = (fileSystem != null) ? fileSystem.GetFileSystemInfo(video.Path).Length : 0;
             RunTimeTicks = video.RunTimeTicks ?? 0;
@@ -94,7 +94,7 @@ namespace Statistics2026.Data
             return (primaryName, secondaryName, descName);
         }
 
-        string GetMediaResolution(MediaStream typeInfo, bool includeDetails)
+        string GetMediaResolution(MediaStream? typeInfo, bool includeDetails)
         {
             if (typeInfo == null || typeInfo.Width == null)
                 return Constants.NoResolution;
@@ -116,7 +116,7 @@ namespace Statistics2026.Data
         }
 
 
-        private string GetDolbyVisionProfile(MediaStream mediaStream)
+        private string GetDolbyVisionProfile(MediaStream? mediaStream)
         {
             if (mediaStream == null)
                 return Constants.MissingVideoStream;
@@ -152,33 +152,32 @@ namespace Statistics2026.Data
             Dispose(false);
         }
 
-        public string ItemId { get; set; }
-        public string DescriptiveName { get; set; }
-        public string PrimaryName { get; set; } // movie title or series name
-        public string SortName { get; set; }
-        public string SecondaryName { get; set; } // episode name
-        public string StartYear { get; set; } // release year for movies, year of the of the first season of the TV show
+        public string ItemId { get; set; } = String.Empty;
+        public string DescriptiveName { get; set; } = String.Empty;
+        public string PrimaryName { get; set; } = String.Empty; // movie title or series name
+        public string SortName { get; set; } = String.Empty;
+        public string SecondaryName { get; set; } = String.Empty;// episode name
+        public string StartYear { get; set; } = String.Empty;// release year for movies, year of the of the first season of the TV show
 
-        public bool IsEpisode { get; set; }
-        public string SeriesId { get; set; }
-        public int Season { get; set; }
-        public int Episode { get; set; }
+        public bool IsEpisode { get; set; } = false;
+        public string SeriesId { get; set; } = String.Empty;
+        public int Season { get; set; } = 0;
+        public int Episode { get; set; } = 0;
 
-        public string ResolutionBase { get; set; } // just SD/HD/4k/8k etc
-        public string ResolutionDetail { get; set; } // includes details of resolution
-        public string Codec { get; set; }
-        public string DolbyVisionProfile { get; set; }
-        public string[] StudioNames { get; set; }
-        public string[] Genres { get; set; }
-        public string ServerLocation { get; set; }
-        public long FileSize { get; set; }
-        public string ImageUrl { get; set; }
-        public long RunTimeTicks { get; set; }
-        public double Rating { get; set; }
-        public long TotalBitrate { get; set; }
-        public DateTime? PremiereDate { get; set; }
-        public DateTime DateAdded { get; set; }
+        public string ResolutionBase { get; set; } = String.Empty;// just SD/HD/4k/8k etc
+        public string ResolutionDetail { get; set; } = String.Empty; // includes details of resolution
+        public string Codec { get; set; } = String.Empty;
+        public string DolbyVisionProfile { get; set; } = String.Empty;
+        public string[] StudioNames { get; set; } = Array.Empty<string>();
+        public string[] Genres { get; set; } = Array.Empty<string>();
+        public string ServerLocation { get; set; } = String.Empty;
+        public long FileSize { get; set; } = 0;
+        public string ImageUrl { get; set; } = String.Empty;
+        public long RunTimeTicks { get; set; } = 0;
+        public double Rating { get; set; } = 0.0;
+        public long TotalBitrate { get; set; } = 0;
+        public DateTime? PremiereDate { get; set; } = null;
+        public DateTime DateAdded { get; set; }= DateTime.MinValue;
         private bool _disposed = false;
-
     }
 }

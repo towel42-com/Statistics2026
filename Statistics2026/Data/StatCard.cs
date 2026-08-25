@@ -1,29 +1,21 @@
-﻿using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Model.Services;
-using Emby.ApiClient; // Namespace containing the ApiClient
-using MediaBrowser.Model.Dto;     // Namespace containing BaseItemDto
-using MediaBrowser.Model.Entities;// Namespace containing ImageType
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Linq;
 using Emby.Media.Common.Extensions;
-using Statistics2026.Api;
 
 namespace Statistics2026.Data
 {
     public class DynamicButton
     {
-        public string id { get; set; }
-        public string info { get; set; }
-        public string title { get; set; }
+        public string id { get; set; } = string.Empty;
+        public string info { get; set; } = string.Empty;
+        public string title { get; set; } = string.Empty;
     };
 
     public class StatCardResponse
     {
-        public string html { get; set; }
+        public string html { get; set; } = String.Empty;
         public DynamicButton[] dynamicButtons { get; set; } = new DynamicButton[] { };
 
         public void addDynamicButton(DynamicButton button)
@@ -58,9 +50,9 @@ namespace Statistics2026.Data
     public class StatCardRow
     {
         public string Name { get; private set; }
-        public List<int> Values { get; private set; }
+        public List<int>? Values { get; private set; } = null;
 
-        public StatCardRow(string name, List<int> values)
+        public StatCardRow(string name, List<int>? values)
         {
             Name = name;
             Values = values;
@@ -76,7 +68,7 @@ namespace Statistics2026.Data
             var retVal = StatCardResponse._addToHtml(depth++, "<tr style=\"white-space: nowrap;\">");
 
             retVal += StatCardResponse._addToHtml(depth, $"<td style=\"text-align: left; white-space: nowrap;\">{Name}</td>");
-            foreach (var value in Values)
+            foreach (var value in Values ?? Enumerable.Empty<int>())
             {
                 retVal += StatCardResponse._addToHtml(depth, $"<td>{value}</td>");
             }
@@ -94,19 +86,19 @@ namespace Statistics2026.Data
 
     public abstract class StatCard
     {
-        public string Title { get; set; }
-        protected List<string> Headers { get; set; }
+        public string Title { get; set; } = string.Empty;
+        protected List<string> Headers { get; set; } = new List<string>();
 
-        public string SubTitle { get; set; }
+        public string SubTitle { get; set; } = string.Empty;
 
-        public string Size { get; set; }
-        public string HelpText { get; set; }
-        public string ImageUrl { get; set; }
-        public string MediaItemId { get; set; }
+        public string Size { get; set; } = string.Empty;
+        public string HelpText { get; set; } = string.Empty;
+        public string ImageUrl { get; set; } = string.Empty;
+        public string MediaItemId { get; set; } = string.Empty;
 
-        public string ServerId { get; set; }
-        public string HtmlDivId { get; set; }
-        public bool SortByKey { get; set; }
+        public string ServerId { get; set; } = string.Empty;
+        public string HtmlDivId { get; set; } = string.Empty;
+        public bool SortByKey { get; set; } = false;
 
         public StatCard()
         {
@@ -335,7 +327,7 @@ namespace Statistics2026.Data
         public void addRow(string category, List<int> values)
         {
             int currRow = findRow(category);
-            StatCardRow row = null;
+            StatCardRow row;
             if (currRow == -1)
             {
                 row = new StatCardRow(category, null);

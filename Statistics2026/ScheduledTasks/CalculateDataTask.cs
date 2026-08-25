@@ -15,6 +15,7 @@ using Statistics2026.Configuration;
 using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -64,7 +65,7 @@ namespace Statistics2026.ScheduledTasks
             _apiService = apiService;
         }
 
-        private static PluginConfiguration PluginConfiguration => Plugin.Instance.Configuration;
+        private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration;
         string IScheduledTask.Name => "Calculate Media and User Information for all library media and users";
 
         string IScheduledTask.Key => "Statistics2026CalculateStatsTask";
@@ -77,9 +78,13 @@ namespace Statistics2026.ScheduledTasks
         {
             _logger.Info("Statistics 2026 : Starting Statistics 2026 calculation task");
             // purely for progress reporting
+
+            if (PluginConfiguration == null || Plugin.Instance == null)
+                throw new ArgumentNullException("PluginConfiguration is null");
+
             var now = DateTime.Now;
             PluginConfiguration.LastUpdated = now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-            PluginConfiguration.Version = Plugin.Instance.Version.ToString(4);
+            PluginConfiguration.Version = Plugin.Instance?.Version.ToString(4) ?? String.Empty;
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
             PluginConfiguration.ServerId = _appHost.SystemId;
 
@@ -90,7 +95,7 @@ namespace Statistics2026.ScheduledTasks
             long addUsers = 0;
             using (var timer = new AutoTimer($"Adding All Users", _logger))
             {
-                db.AddAllUsers(_userManager, _userDataManager, _libraryManager, cancellationToken, progress);
+                db.AddAllUsers(_userManager, _userDataManager, _libraryManager, cancellationToken, progress).GetAwaiter().GetResult();
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
@@ -98,7 +103,7 @@ namespace Statistics2026.ScheduledTasks
             long addCollections = 0;
             using (var timer = new AutoTimer($"Adding Collections", _logger))
             {
-                db.AddAllCollections(_libraryManager, cancellationToken, progress);
+                db.AddAllCollections(_libraryManager, cancellationToken, progress).GetAwaiter().GetResult();
                 addCollections = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
@@ -106,7 +111,7 @@ namespace Statistics2026.ScheduledTasks
             long addMedia = 0;
             using (var timer = new AutoTimer($"Adding All Media", _logger))
             {
-                db.AddAllMedia(_libraryManager, _fileSystem, cancellationToken, progress);
+                db.AddAllMedia(_libraryManager, _fileSystem, cancellationToken, progress).GetAwaiter().GetResult();
                 addMedia = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
@@ -114,12 +119,12 @@ namespace Statistics2026.ScheduledTasks
             long addSeries = 0;
             using (var timer = new AutoTimer($"Adding All Series", _logger))
             {
-                db.AddAllSeries(_libraryManager, _fileSystem, cancellationToken, progress);
+                db.AddAllSeries(_libraryManager, _fileSystem, cancellationToken, progress).GetAwaiter().GetResult();
                 addSeries = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
-            db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
+            db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version).GetAwaiter().GetResult();
             cancellationToken.ThrowIfCancellationRequested();
 
             var overall = overAllTimer.ElapsedMilliseconds();
@@ -133,7 +138,8 @@ namespace Statistics2026.ScheduledTasks
             _logger.Info($"=======================================");
             _logger.Info("Statistics 2026 : Finished Statistics 2026 calculation task");
 
-            Plugin.Instance.SaveConfiguration();
+            Plugin.Instance?.SaveConfiguration();
+
             return Task.CompletedTask;
         }
 

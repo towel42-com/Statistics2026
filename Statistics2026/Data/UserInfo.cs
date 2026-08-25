@@ -29,8 +29,8 @@ namespace Statistics2026.Data
             ConnectUserId = user.ConnectUserId;
         }
 
-        public string UserId { get; set; }
-        public string UserName { get; set; }
-        public string ConnectUserId { get; set; }
+        public string UserId { get; set; } = String.Empty;
+        public string UserName { get; set; } = String.Empty;
+        public string ConnectUserId { get; set; } = String.Empty;
     }
 }
