@@ -14,8 +14,6 @@ using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Users;
-using SQLitePCL;
-using SQLitePCL.pretty;
 using Statistics2026;
 using Statistics2026.Data;
 using System;

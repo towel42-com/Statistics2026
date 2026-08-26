@@ -11,7 +11,6 @@ using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Users;
-using SQLitePCL.pretty;
 using Statistics2026;
 using Statistics2026.Api;
 using Statistics2026.Configuration;

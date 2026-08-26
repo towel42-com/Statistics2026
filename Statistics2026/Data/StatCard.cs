@@ -1,7 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Services;
-using Emby.ApiClient; // Namespace containing the ApiClient
 using MediaBrowser.Model.Dto;     // Namespace containing BaseItemDto
 using MediaBrowser.Model.Entities;// Namespace containing ImageType
 using System;

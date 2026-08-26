@@ -8,7 +8,6 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
-using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
 using System.Collections;
