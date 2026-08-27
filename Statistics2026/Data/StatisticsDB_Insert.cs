@@ -76,7 +76,9 @@ namespace Statistics2026.Data
 
             using (var timer = new AutoTimer($"    Adding All Users - Executing Commands", _dbHelper.Logger))
             {
+                progress.Report(80);
                 _dbHelper.ExecuteCommands(sqlCmds);
+                progress.Report(100);
             }
 
             _dbHelper.Logger?.Debug($"AddAllUsers - Finished User Analysis");
@@ -247,7 +249,9 @@ namespace Statistics2026.Data
 
                 cancellationToken.ThrowIfCancellationRequested();
             }
+            progress.Report(80);
             _dbHelper.ExecuteCommands(sqlCmds);
+            progress.Report(100);
             _dbHelper.Logger?.Debug($"AddAllMedia - Finished Video Analysis");
         }
 
@@ -379,7 +383,9 @@ namespace Statistics2026.Data
             }
             cancellationToken.ThrowIfCancellationRequested();
 
+            progress.Report(80);
             _dbHelper.ExecuteCommands(sqlCmds);
+            progress.Report(100);
             _dbHelper.Logger?.Debug($"AddAllCollections - Finished Collection Analysis");
         }
 
@@ -515,7 +521,9 @@ namespace Statistics2026.Data
                 _dbHelper.Logger?.Debug($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
             }
 
+            progress.Report(80);
             _dbHelper.ExecuteCommands(sqlCmds);
+            progress.Report(100);
             cancellationToken.ThrowIfCancellationRequested();
             _dbHelper.Logger?.Debug($"AddAllSeries - Finished Video Analysis");
         }
