@@ -83,8 +83,8 @@
             movieStats += Helpers.getSummaryInfo(view, "get_movie/LowestBitrate", "", "?serverId=" + config.ServerId, "lowest_bitrate_movie");
             movieStats += Helpers.getSummaryInfo(view, "get_movie/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_movie");
             movieStats += Helpers.getSummaryInfo(view, "get_movie/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_movie");
-            movieStats += Helpers.getSummaryInfo(view, "get_movie/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_movie_addition");
-            movieStats += Helpers.getSummaryInfo(view, "get_movie/LatestAddition", "", "?serverId=" + config.ServerId, "latest_movie_addition");
+            movieStats += Helpers.getSummaryInfo(view, "get_movie/FirstAdditionToServer", "", "?serverId=" + config.ServerId, "oldest_movie_addition");
+            movieStats += Helpers.getSummaryInfo(view, "get_movie/LatestAdditionToServer", "", "?serverId=" + config.ServerId, "latest_movie_addition");
             view.querySelector("#movieStats").innerHTML = movieStats;
 
             var seriesSummaryStats = "";
@@ -105,16 +105,19 @@
             seriesStats += Helpers.getSummaryInfo(view, "get_series/LowestBitrate", "", "?serverId=" + config.ServerId, "lowest_bitrate_series");
             seriesStats += Helpers.getSummaryInfo(view, "get_series/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_series");
             seriesStats += Helpers.getSummaryInfo(view, "get_series/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_series");
-            seriesStats += Helpers.getSummaryInfo(view, "get_series/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_series_addition");
-            seriesStats += Helpers.getSummaryInfo(view, "get_series/LatestAddition", "", "?serverId=" + config.ServerId, "latest_series_addition");
+            seriesStats += Helpers.getSummaryInfo(view, "get_series/FirstAdditionToServer", "", "?serverId=" + config.ServerId, "oldest_series_addition");
+            seriesStats += Helpers.getSummaryInfo(view, "get_series/LatestAdditionToServer", "", "?serverId=" + config.ServerId, "latest_series_addition");
             view.querySelector("#seriesStats").innerHTML = seriesStats;
 
-            var episodeStats = "";
-            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_episode");
-            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_episode");
-            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/OldestAddition", "", "?serverId=" + config.ServerId, "oldest_episode_addition");
-            // episodeStats += Helpers.getSummaryInfo(view, "get_episode/LatestAddition", "", "?serverId=" + config.ServerId, "latest_episode_addition");
-            view.querySelector("#episodeStats").innerHTML = episodeStats;
+            var episodeAgeStats = "";
+            episodeAgeStats += Helpers.getSummaryInfo(view, "get_episode/OldestPremiereDate", "", "?serverId=" + config.ServerId, "oldest_episode");
+            episodeAgeStats += Helpers.getSummaryInfo(view, "get_episode/LatestPremiereDate", "", "?serverId=" + config.ServerId, "latest_episode");
+            view.querySelector("#episodeAgeStats").innerHTML = episodeAgeStats;
+
+            var episodeAdditionStats = "";
+            episodeAdditionStats += Helpers.getSummaryInfo(view, "get_episode/FirstAdditionToServer", "", "?serverId=" + config.ServerId, "oldest_episode_addition");
+            episodeAdditionStats += Helpers.getSummaryInfo(view, "get_episode/LatestAdditionToServer", "", "?serverId=" + config.ServerId, "latest_episode_addition");
+            view.querySelector("#episodeAdditionStats").innerHTML = episodeAdditionStats;
 
             Dashboard.hideLoadingMsg();
         });

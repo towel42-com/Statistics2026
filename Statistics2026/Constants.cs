@@ -41,7 +41,7 @@ namespace Statistics2026
         internal const string LowestBitrateMovie = "Lowest Bitrate Movie";
         internal const string OldestMoviePremiere = "Oldest Movie Premiere";
         internal const string LatestMoviePremiere = "Latest Movie Premier";
-        internal const string OldestMovieAddition = "Oldest Movie Added to Server";
+        internal const string FirstMovieAddition = "First Movie Added to Server";
         internal const string LatestMovieAddition = "Latest Movie Added to Server";
 
         internal const string TotalTVShows = "Total TV Series";
@@ -62,9 +62,9 @@ namespace Statistics2026
         internal const string LatestSeriesPremiere = "Latest TV Series Premier";
         internal const string OldestEpisodePremiere = "Oldest TV Episode Premier";
         internal const string LatestEpisodePremiere = "Latest TV Episode Premier";
-        internal const string OldestSeriesAddition = "Oldest TV Series Added to Server";
+        internal const string FirstSeriesAddition = "First TV Series Added to Server";
         internal const string LatestSeriesAddition = "Latest TV Series Added to Server";
-        internal const string OldestEpisodeAddition = "Oldest TV Series Added to Server";
+        internal const string FirstEpisodeAddition = "First TV Episode Added to Server";
         internal const string LatestEpisodeAddition = "Latest TV Episode Added to Server";
         internal const string MostWatchedShows = "Most Watched Shows";
         internal const string LeastWatchedShows = "Least Watched Shows";
