@@ -27,8 +27,8 @@ namespace Statistics2026.Api
             LatestPremiereDate,
             HighestRated,
             LowestRated,
-            OldestAddition,
-            LatestAddition,
+            FirstAdditionToServer,
+            LatestAdditionToServer,
             HighestBitrate,
             LowestBitrate
         }
@@ -166,8 +166,8 @@ namespace Statistics2026.Api
                 case EStatisticType.OldestPremiereDate:
                     fieldName = "PremiereDate";
                     break;
-                case EStatisticType.LatestAddition:
-                case EStatisticType.OldestAddition:
+                case EStatisticType.LatestAdditionToServer:
+                case EStatisticType.FirstAdditionToServer:
                     fieldName = "DateAdded";
                     break;
                 default:
@@ -211,10 +211,10 @@ namespace Statistics2026.Api
                 case EStatisticType.OldestPremiereDate:
                     orderClause = "PremiereDate ASC";
                     break;
-                case EStatisticType.LatestAddition:
+                case EStatisticType.LatestAdditionToServer:
                     orderClause = "DateAdded DESC";
                     break;
-                case EStatisticType.OldestAddition:
+                case EStatisticType.FirstAdditionToServer:
                     orderClause = "DateAdded ASC";
                     break;
                 default:
@@ -253,11 +253,11 @@ namespace Statistics2026.Api
                     break;
                 case EStatisticType.OldestPremiereDate:
                 case EStatisticType.LatestPremiereDate:
-                    whereClauseList.Add("(PremiereDate IS NOT NULL AND PremiereDate != '')");
+                    whereClauseList.Add("(PremiereDate IS NOT NULL AND PremiereDate != '' AND PremiereDate != '0001-01-01T00:00:00.0000000')");
                     break;
-                case EStatisticType.LatestAddition:
-                case EStatisticType.OldestAddition:
-                    whereClauseList.Add("(DateAdded IS NOT NULL AND DateAdded != '')");
+                case EStatisticType.LatestAdditionToServer:
+                case EStatisticType.FirstAdditionToServer:
+                    whereClauseList.Add("(DateAdded IS NOT NULL AND DateAdded != '' AND DateAdded != '0001-01-01T00:00:00.0000000')");
                     break;
                 default:
                     break;
@@ -384,7 +384,7 @@ namespace Statistics2026.Api
                             title = Constants.OldestEpisodePremiere;
                     }
                     break;
-                case EStatisticType.LatestAddition:
+                case EStatisticType.LatestAdditionToServer:
                     {
                         if (VideoType == EVideoType.Movie)
                             title = Constants.LatestMovieAddition;
@@ -395,14 +395,14 @@ namespace Statistics2026.Api
                     }
 
                     break;
-                case EStatisticType.OldestAddition:
+                case EStatisticType.FirstAdditionToServer:
                     {
                         if (VideoType == EVideoType.Movie)
-                            title = Constants.OldestMovieAddition;
+                            title = Constants.FirstMovieAddition;
                         else if (VideoType == EVideoType.Series)
                             title = Constants.LatestMovieAddition;
                         else
-                            title = Constants.OldestEpisodeAddition;
+                            title = Constants.FirstEpisodeAddition;
                     }
                     break;
                 default:
@@ -436,9 +436,9 @@ namespace Statistics2026.Api
                     break;
                 case EStatisticType.OldestPremiereDate:
                     break;
-                case EStatisticType.LatestAddition:
+                case EStatisticType.LatestAdditionToServer:
                     break;
-                case EStatisticType.OldestAddition:
+                case EStatisticType.FirstAdditionToServer:
                     break;
                 default:
                     break;
@@ -487,8 +487,8 @@ namespace Statistics2026.Api
                         value = premiereDate.ToShortDateString();
                     }
                     break;
-                case EStatisticType.OldestAddition:
-                case EStatisticType.LatestAddition:
+                case EStatisticType.FirstAdditionToServer:
+                case EStatisticType.LatestAdditionToServer:
                     {
                         var premiereDate = DateTime.ParseExact(sqlResultValue.GetString(index), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                         value = premiereDate.ToShortDateString();
@@ -523,8 +523,8 @@ namespace Statistics2026.Api
                         secondValue = TimeSince(premiereDate);
                     }
                     break;
-                case EStatisticType.OldestAddition:
-                case EStatisticType.LatestAddition:
+                case EStatisticType.FirstAdditionToServer:
+                case EStatisticType.LatestAdditionToServer:
                     {
                         var premiereDate = DateTime.ParseExact(sqlResultValue.GetString(index), "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
                         secondValue = TimeSince(premiereDate);
@@ -547,7 +547,6 @@ namespace Statistics2026.Api
 
         private string TimeSince(System.DateTime date)
         {
-
             var yearDiff = (DateTime.Now.Year - date.Year);
             var monthDiff = (DateTime.Now.Month - date.Month);
 
@@ -560,11 +559,19 @@ namespace Statistics2026.Api
             }
             else
             {
-                var numberOfDays = DateTime.Now.Date - date;
-                if (numberOfDays.Days == 0)
+                var numberOfDays = DateTime.Now.DayOfYear - date.DayOfYear;
+                if (numberOfDays < 0)
+                    numberOfDays *= -1;
+                if (numberOfDays == 0)
+                {
                     return $"Today";
+                }
+                else if ( numberOfDays == 1 )
+                {
+                    return $"Yesterday";
+                }
                 else
-                    return $"{CheckForPlural("day", numberOfDays.Days, "", "", false)} ago";
+                    return $"{CheckForPlural("day", numberOfDays, "", "", false)} ago";
             }
         }
     };
