@@ -14,6 +14,7 @@ using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading;
 
 
 namespace Statistics2026.Data
@@ -396,7 +397,7 @@ namespace Statistics2026.Data
             }
         }
 
-        public List<WatchedShowValue> ComputeWatchedShowValues(User? user, bool leastWatched, ILibraryManager libManager)
+        public List<WatchedShowValue> ComputeWatchedShowValues(User? user, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
@@ -410,8 +411,19 @@ namespace Statistics2026.Data
                 return false;
             });
 
+            sqlCommand = new SQLCmdDef("SELECT COUNT(1) FROM Series");
+            double numSeries = 0;
+            _dbHelper.ExecuteCommand(sqlCommand, statement =>
+            {
+                var row = statement.Current;
+                numSeries = 1.0 * row.GetInt64(0);
+                return false;
+            });
+
             var retVal = new List<WatchedShowValue>();
             sqlCommand = new SQLCmdDef("SELECT ItemId, Name FROM Series");
+            progress.Report(0);
+            long count = 0;
             _dbHelper.ExecuteCommand(sqlCommand, statement =>
             {
                 var row = statement.Current;
@@ -424,6 +436,8 @@ namespace Statistics2026.Data
                     Name = name,
                     ImageUrl = url
                 });
+                cancellationToken.ThrowIfCancellationRequested();
+                progress.Report((100.0 * (count++) / numSeries));
                 return true;
             });
 
@@ -443,7 +457,7 @@ namespace Statistics2026.Data
                     return false;
                 });
 
-                sqlCommand = new SQLCmdDef("SELECT Count(1) FROM Media WHERE SeriesId=@SeriesId",
+                sqlCommand = new SQLCmdDef("SELECT Count(1) FROM UserVideoList WHERE SeriesId=@SeriesId AND IsPlayed",
                     new List<(string name, object? value)>()
                     {
                         ("@SeriesId", curr.ItemId)
@@ -458,23 +472,8 @@ namespace Statistics2026.Data
 
                 curr.UpdatePercents(numUsers);
                 retVal[ii] = curr;
-            }
-            // this sorts it in ascending order
-            retVal.Sort(
-                (lhs, rhs) =>
-                    {
-                        var diff = lhs.PercentWatched - rhs.PercentWatched;
-                        if (diff < 0)
-                            return -1;
-                        if (diff > 0)
-                            return 1;
-                        return 0;
+                progress.Report((100.0 * (ii) / retVal.Count()));
 
-                    });
-
-            if (!leastWatched)
-            {
-                retVal.Reverse();
             }
 
             return retVal;
@@ -487,7 +486,26 @@ namespace Statistics2026.Data
 
             var series = new List<WatchedShowValue>();
 
-            _dbHelper.ExecuteCommand(new SQLCmdDef("SELECT ItemId, Name, ImageUrl, NumEpisodes, NumWatched, PercentWatched, PercentWatchedPerUser FROM CachedWatchedAnalysis"), statement =>
+            var sql = "SELECT " 
+                + "  ItemId "
+                + ", Name "
+                + ", ImageUrl "
+                + ", NumEpisodes "
+                + ", NumWatched "
+                + ", PercentWatched "
+                + ", PercentWatchedPerUser " +
+                "FROM CachedWatchedAnalysis " +
+                "WHERE PercentWatchedPerUser <> 0 " +
+                "ORDER BY PercentWatchedPerUser ";
+            ;
+            if (leastWatched)
+                sql += "ASC ";
+            else
+                sql += "DESC ";
+            sql += "LIMIT 5";
+
+
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
             {
                 var row = statement.Current;
                 var id = row.GetString(0);
@@ -538,10 +556,11 @@ namespace Statistics2026.Data
             var help = leastWatched ? Constants.HelpLeastWatchedShows : Constants.HelpMostWatchedShows;
 
             var retVal = new TextBasedStatCard(title, help, "small");
+            retVal.SubTitle = "(Average Percentage Watched across All Users)";
             retVal.AsNumberedList = true;
             for (int ii = 0; ii < series.Count && ii < 5; ++ii)
             {
-                retVal.AddLine(series[ii].Name, series[ii].ItemId, series[ii].ImageUrl);
+                retVal.AddLine($"{series[ii].Name} ({series[ii].PercentWatchedPerUser:P2})", series[ii].ItemId, series[ii].ImageUrl);
             }
 
             return retVal;
