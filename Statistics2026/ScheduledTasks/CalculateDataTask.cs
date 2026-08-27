@@ -1,13 +1,12 @@
-﻿using MediaBrowser.Common;
+﻿using Emby.Notifications;
+using MediaBrowser.Common;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Notifications;
 using MediaBrowser.Controller.Providers;
-using MediaBrowser.Model.Activity;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
@@ -15,9 +14,7 @@ using Statistics2026.Configuration;
 using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -234,8 +231,14 @@ namespace Statistics2026.ScheduledTasks
 
             var db = StatisticsDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
             db.SetCancellationToken(cancellationToken);
-            db.ClearTable("CachedWatchedAnalysis");
-
+            try
+            {
+                db.ClearTable("CachedWatchedAnalysis"); // will throw an exception if the primary has not been run yet
+            }
+            catch (Exception /*ex*/)
+            {
+                return Task.CompletedTask;
+            }
             long computePercentWatchedCache = 0;
             using (var timer = new AutoTimer($"Computing Percent Watched Cached Stats", _logger))
             {
@@ -260,14 +263,6 @@ namespace Statistics2026.ScheduledTasks
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()
         {
             return null!;
-            //{
-            //    new TaskTriggerInfo
-            //    {
-            //        Type = TaskTriggerInfo.TriggerWeekly,
-            //        DayOfWeek = DayOfWeek.Sunday,
-            //        TimeOfDayTicks = TimeSpan.FromMinutes(30).Ticks
-            //    }
-            //};
         }
     }
 }
