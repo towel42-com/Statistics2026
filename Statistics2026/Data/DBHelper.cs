@@ -30,28 +30,6 @@ using System.Xml.Linq;
 
 namespace Statistics2026.Data
 {
-    public class SQLCmdDef
-    {
-        public string Statement = String.Empty;
-        public List<(string name, object? value)>? Parameters = null;
-
-        public bool HasParameters()
-        {
-            return !Parameters.IsNullOrEmpty();
-        }
-
-        public SQLCmdDef(string sql)
-        {
-            Statement = sql;
-        }
-
-        public SQLCmdDef(string sql, List<(string name, object? value)>? _parameters)
-        {
-            Statement = sql;
-            Parameters = _parameters;
-        }
-    }
-
     public sealed class DBHelper
     {
         private static string[] _datetimeFormats = new string[] {
@@ -232,7 +210,7 @@ namespace Statistics2026.Data
                 }
             }
 
-            return false;
+            return true;
         }
 
         public bool ExecuteCommands(List<string> cmds)
