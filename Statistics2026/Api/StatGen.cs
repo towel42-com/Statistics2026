@@ -36,60 +36,63 @@ namespace Statistics2026.Api
         private EStatisticType WhichStatistic { get; set; }
         private EVideoType VideoType { get; set; }
 
-        private IDatabaseConnection _connection { get; set; }
-        public StatGen(EStatisticType statType, EVideoType videoType, IDatabaseConnection connection)
+        private DBHelper _dbHelper { get; set; }
+        public StatGen(EStatisticType statType, EVideoType videoType, DBHelper dbHelper)
         {
             WhichStatistic = statType;
             VideoType = videoType;
-            _connection = connection;
+            _dbHelper = dbHelper;
+        }
+
+        public class StatCardValues
+        {
+            public string Value = "";
+            public string SecondValue = "";
+            public string Name = "";
+            public string ItemId = "";
+            public string ImageUrl = "";
+        };
+
+        public StatCardValues GetStatCardValues()
+        {
+            string sql = SQL();
+
+            var retVal = new StatCardValues();
+
+            var sqlCmd = new SQLCmdDef(sql);
+
+            var cmd = new SQLCmdDef(sql);
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            {
+                var row = statement.Current;
+                retVal.ItemId = row.GetString(0);
+                retVal.Name = row.GetString(1);
+                retVal.ImageUrl = row.GetString(2);
+                retVal.Value = Value(row, 3);
+                retVal.SecondValue = SecondValue(row, 3);
+                return false;
+            });
+            return retVal;
         }
 
         public StatCard GetStatCard()
         {
-            string sql = SQL();
             string title = Title();
             string help = Help();
-
             var retVal = new TextBasedStatCard(title, help, "half");
 
-            string value = "";
-            string secondValue = "";
-            string name = "";
-            string itemId = "";
-            string imageUrl = "";
-            lock (_connection)
-            {
-                try
-                {
-                    using (var statement = _connection.PrepareStatement(sql))
-                    {
-                        while (statement.MoveNext())
-                        {
-                            var row = statement.Current;
-                            itemId = row.GetString(0);
-                            name = row.GetString(1);
-                            imageUrl = row.GetString(2);
-                            value = Value(row, 3);
-                            secondValue = SecondValue(row, 3);
-                            break;
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    throw ex;
-                }
-            }
-            retVal.AddLine(value);
-            if (string.IsNullOrEmpty(secondValue))
-                retVal.AddLine(name);
+            var statCardValues = GetStatCardValues();
+
+            retVal.AddLine(statCardValues.Value);
+            if (string.IsNullOrEmpty(statCardValues.SecondValue))
+                retVal.AddLine(statCardValues.Name);
             else
             {
-                retVal.AddLine(secondValue);
-                retVal.AddLine(name);
+                retVal.AddLine(statCardValues.SecondValue);
+                retVal.AddLine(statCardValues.Name);
             }
-            retVal.ImageUrl = imageUrl;
-            retVal.MediaItemId = itemId;
+            retVal.ImageUrl = statCardValues.ImageUrl;
+            retVal.MediaItemId = statCardValues.ItemId;
             return retVal;
         }
 
@@ -120,6 +123,7 @@ namespace Statistics2026.Api
             else // if (VideoType == EVideoType.Series)
                 return "Name";
         }
+
         private string TableName()
         {
             if (VideoType == EVideoType.Movie)
@@ -231,10 +235,17 @@ namespace Statistics2026.Api
             {
                 case EStatisticType.Largest:
                 case EStatisticType.Smallest:
+                    whereClauseList.Add("(FileSize > 0)");
+                    break;
+
                 case EStatisticType.Longest:
                 case EStatisticType.Shortest:
+                    whereClauseList.Add("(RunTimeTicks > 0)");
+                    break;
+
                 case EStatisticType.HighestBitrate:
                 case EStatisticType.LowestBitrate:
+                    whereClauseList.Add("(TotalBitrate > 0)");
                     break;
                 case EStatisticType.HighestRated:
                 case EStatisticType.LowestRated:
@@ -556,6 +567,5 @@ namespace Statistics2026.Api
                     return $"{CheckForPlural("day", numberOfDays.Days, "", "", false)} ago";
             }
         }
-
     };
 }
