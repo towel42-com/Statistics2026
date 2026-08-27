@@ -312,6 +312,17 @@ namespace Statistics2026.Data
             return runtime.ToLongString();
         }
 
+        public static string JoinClauses(List<string> clauses)
+        {
+            if (clauses.IsNullOrEmpty())
+                return String.Empty;
 
+            for (int ii = 0; ii < clauses.Count; ++ii)
+            {
+                clauses[ii] = $"( {clauses[ii]} )";
+            }
+
+            return "WHERE " + string.Join(" AND ", clauses) + " ";
+        }
     };
 }

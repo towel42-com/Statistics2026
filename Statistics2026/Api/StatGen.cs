@@ -235,29 +235,29 @@ namespace Statistics2026.Api
             {
                 case EStatisticType.Largest:
                 case EStatisticType.Smallest:
-                    whereClauseList.Add("(FileSize > 0)");
+                    whereClauseList.Add("FileSize > 0");
                     break;
 
                 case EStatisticType.Longest:
                 case EStatisticType.Shortest:
-                    whereClauseList.Add("(RunTimeTicks > 0)");
+                    whereClauseList.Add("RunTimeTicks > 0");
                     break;
 
                 case EStatisticType.HighestBitrate:
                 case EStatisticType.LowestBitrate:
-                    whereClauseList.Add("(TotalBitrate > 0)");
+                    whereClauseList.Add("TotalBitrate > 0");
                     break;
                 case EStatisticType.HighestRated:
                 case EStatisticType.LowestRated:
-                    whereClauseList.Add("(Rating > 0)");
+                    whereClauseList.Add("Rating > 0");
                     break;
                 case EStatisticType.OldestPremiereDate:
                 case EStatisticType.LatestPremiereDate:
-                    whereClauseList.Add("(PremiereDate IS NOT NULL AND PremiereDate != '' AND PremiereDate != '0001-01-01T00:00:00.0000000')");
+                    whereClauseList.Add("PremiereDate IS NOT NULL AND PremiereDate != '' AND PremiereDate != '0001-01-01T00:00:00.0000000'");
                     break;
                 case EStatisticType.LatestAdditionToServer:
                 case EStatisticType.FirstAdditionToServer:
-                    whereClauseList.Add("(DateAdded IS NOT NULL AND DateAdded != '' AND DateAdded != '0001-01-01T00:00:00.0000000')");
+                    whereClauseList.Add("DateAdded IS NOT NULL AND DateAdded != '' AND DateAdded != '0001-01-01T00:00:00.0000000'");
                     break;
                 default:
                     break;
@@ -268,13 +268,8 @@ namespace Statistics2026.Api
             else if (VideoType == EVideoType.Episode)
                 whereClauseList.Add("IsEpisode");
 
-            for (int ii = 0; ii < whereClauseList.Count; ++ii)
-            {
-                whereClauseList[ii] = $"( {whereClauseList[ii]} )";
-            }
-
             if (whereClauseList.Count > 0)
-                return "WHERE " + string.Join(" AND ", whereClauseList) + " ";
+                return DBHelper.JoinClauses(whereClauseList) + " ";
             return "";
         }
 
@@ -566,7 +561,7 @@ namespace Statistics2026.Api
                 {
                     return $"Today";
                 }
-                else if ( numberOfDays == 1 )
+                else if (numberOfDays == 1)
                 {
                     return $"Yesterday";
                 }
