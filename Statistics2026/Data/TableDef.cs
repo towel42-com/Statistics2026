@@ -54,7 +54,15 @@ namespace Statistics2026.Data
     }
     public class TableDef
     {
-        public TableDef(string name, List<TableColDef> cols, List<string>? indexes)
+        public enum EAction
+        {
+            eRecreate, // drops first then recreates
+            eCreate,   // only calls create
+            eDrop,      // only drops the table and indexes
+            eClear      // deletes all from table
+        }
+
+        public TableDef(string name, List<TableColDef> cols, List<string>? indexes=null)
         {
             Name = name;
             if (Name == null || Name == "")
@@ -72,7 +80,7 @@ namespace Statistics2026.Data
                 Indexes = indexes;
         }
 
-        private List<string> GetSQLCreateCommands()
+        private List<string> createTable()
         {
             string sql = $"CREATE TABLE IF NOT EXISTS {Name} (\n";
             bool first = true;
@@ -111,7 +119,13 @@ namespace Statistics2026.Data
 
         public override string ToString()
         {
-            return string.Join(";\n", GetSQLCreateCommands());
+            return string.Join(";\n", createTable());
+        }
+
+        private string clearTable()
+        {
+            string sql = $"DELETE FROM {Name}";
+            return sql;
         }
 
         private string dropTable()
@@ -139,17 +153,26 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public List<string> GetSQLCommands(bool clearFirst)
+        public List<string> GetSQLCommands(EAction action)
         {
             var retVal = new List<string>();
-            if (clearFirst)
+            switch (action)
             {
-                retVal.Add(dropTable());
-                retVal.AddRange(dropIndexes());
+                case EAction.eClear:
+                    retVal.Add(clearTable());
+                    break;
+                case EAction.eDrop:
+                    retVal.Add(dropTable());
+                    retVal.AddRange(dropIndexes()); // for many sql this is unnecessary but it doesnt hurt
+                    break;
+                case EAction.eCreate:
+                    retVal.AddRange(createTable());
+                    break;
+                case EAction.eRecreate:
+                    retVal.AddRange(GetSQLCommands(EAction.eDrop));
+                    retVal.AddRange(GetSQLCommands(EAction.eCreate));
+                    break;
             }
-
-            retVal.AddRange(GetSQLCreateCommands());
-
             return retVal;
         }
 
