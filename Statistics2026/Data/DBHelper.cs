@@ -1,0 +1,339 @@
+﻿using MediaBrowser.Controller.Dto;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.IO;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.LiveTv;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Logging;
+using MediaBrowser.Model.MediaInfo;
+using MediaBrowser.Model.Querying;
+using MediaBrowser.Model.Services;
+using MediaBrowser.Model.Users;
+using RestSharp;
+using ServiceStack;
+using SQLitePCL.pretty;
+using Statistics2026;
+using Statistics2026.Api;
+using Statistics2026.Configuration;
+using Statistics2026.Data;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Xml.Linq;
+
+namespace Statistics2026.Data
+{
+    public class SQLCmdDef
+    {
+        public string Statement = String.Empty;
+        public List<(string name, object? value)>? Parameters = null;
+
+        public bool HasParameters()
+        {
+            return !Parameters.IsNullOrEmpty();
+        }
+
+        public SQLCmdDef(string sql)
+        {
+            Statement = sql;
+        }
+
+        public SQLCmdDef(string sql, List<(string name, object? value)>? _parameters)
+        {
+            Statement = sql;
+            Parameters = _parameters;
+        }
+    }
+
+    public sealed class DBHelper
+    {
+        private static string[] _datetimeFormats = new string[] {
+            "THHmmssK",
+            "THHmmK",
+            "HH:mm:ss.FFFFFFFK",
+            "HH:mm:ssK",
+            "HH:mmK",
+            "yyyy-MM-dd HH:mm:ss.FFFFFFFK", /* NOTE: UTC default (5). */
+            "yyyy-MM-dd HH:mm:ssK",
+            "yyyy-MM-dd HH:mmK",
+            "yyyy-MM-ddTHH:mm:ss.FFFFFFFK",
+            "yyyy-MM-ddTHH:mmK",
+            "yyyy-MM-ddTHH:mm:ssK",
+            "yyyyMMddHHmmssK",
+            "yyyyMMddHHmmK",
+            "yyyyMMddTHHmmssFFFFFFFK",
+            "THHmmss",
+            "THHmm",
+            "HH:mm:ss.FFFFFFF",
+            "HH:mm:ss",
+            "HH:mm",
+            "yyyy-MM-dd HH:mm:ss.FFFFFFF", /* NOTE: Non-UTC default (19). */
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd HH:mm",
+            "yyyy-MM-ddTHH:mm:ss.FFFFFFF",
+            "yyyy-MM-ddTHH:mm",
+            "yyyy-MM-ddTHH:mm:ss",
+            "yyyyMMddHHmmss",
+            "yyyyMMddHHmm",
+            "yyyyMMddTHHmmssFFFFFFF",
+            "yyyy-MM-dd",
+            "yyyyMMdd",
+            "yy-MM-dd"
+        };
+        private static string _datetimeFormatUtc = _datetimeFormats[5];
+        private static string _datetimeFormatLocal = _datetimeFormats[19];
+
+        public ILogger? Logger { get; private set; } = null;
+        private IDatabaseConnection? Connection { get; set; } = null;
+        public CancellationToken? CancellationToken { get; set; } = null;
+        public DBHelper()
+        {
+        }
+
+        public DBHelper(string db_path, ILogger logger)
+        {
+            Logger = logger;
+            string db_file_name = Path.Combine(db_path, "Statistics2026.db");
+            CreateConnection(db_file_name);
+        }
+        public bool isValid()
+        {
+            if (Connection == null)
+                return false;
+            if (Logger == null)
+                return false;
+            return true;
+
+        }
+
+        ~DBHelper()
+        {
+            Logger?.Debug("StatisticsData : Cleaning up");
+            if (Connection != null)
+            {
+                Connection.Close();
+                Logger?.Debug("StatisticsData : DB Connection Closed");
+            }
+        }
+
+        public bool TryBind<T>(IStatement statement, string name, T? value)
+        {
+            IBindParameter bindParam;
+            if (!statement.BindParameters.TryGetValue(name, out bindParam))
+            {
+                Logger?.Error($"Error Binding {name} to {value}");
+                return false;
+            }
+
+            if (value == null)
+            {
+                bindParam.BindNull();
+                return true;
+            }
+
+
+            switch (value)
+            {
+                case string s:
+                    bindParam.Bind(s);
+                    break;
+                case int i:
+                    bindParam.Bind(i);
+                    break;
+                case long l:
+                    bindParam.Bind(l);
+                    break;
+                case double d:
+                    bindParam.Bind(d);
+                    break;
+                case float f:
+                    bindParam.Bind((double)f);
+                    break;
+                case short sh:
+                    bindParam.Bind((int)sh);
+                    break;
+                case byte[] ba:
+                    bindParam.Bind(ba);
+                    break;
+                case DateTime dt:
+                    bindParam.Bind(dt.ToString("o", CultureInfo.InvariantCulture));
+                    break;
+                case bool b:
+                    // store bool as integer 0/1
+                    bindParam.Bind(b ? 1 : 0);
+                    break;
+                default:
+                    // Fallback: convert to string (covers enums, GUID, etc.)
+                    bindParam.Bind(value.ToString() ?? string.Empty);
+                    break;
+            }
+
+            return true;
+        }
+
+        public bool ExecuteCommand(SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null)
+        {
+            var cmds = new List<SQLCmdDef>();
+            cmds.Add(cmd);
+            return ExecuteCommands(cmds, onStatement);
+        }
+
+        public bool ExecuteCommands(List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null)
+        {
+            if (Connection == null)
+                throw new ArgumentNullException("Connection");
+
+            lock (Connection)
+            {
+                try
+                {
+                    Connection.RunInTransaction(connection =>
+                    {
+                        foreach (var cmd in cmds)
+                        {
+                            CancellationToken?.ThrowIfCancellationRequested();
+                            using (var statement = connection.PrepareStatement(cmd.Statement))
+                            {
+                                if (cmd.HasParameters())
+                                {
+                                    foreach (var param in cmd.Parameters!)
+                                    {
+                                        TryBind(statement, param.name, param.value);
+                                    }
+                                }
+
+                                if (onStatement == null)
+                                {
+                                    statement.MoveNext();
+                                }
+                                else
+                                {
+                                    while (statement.MoveNext())
+                                    {
+                                        if (!onStatement(statement))
+                                            break;
+                                        CancellationToken?.ThrowIfCancellationRequested();
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+
+            return false;
+        }
+
+        public bool ExecuteCommands(List<string> cmds)
+        {
+            List<SQLCmdDef> cmdDefs = new List<SQLCmdDef>();
+            foreach (var cmd in cmds)
+            {
+                CancellationToken?.ThrowIfCancellationRequested();
+                cmdDefs.Add(new SQLCmdDef(cmd));
+            }
+            return ExecuteCommands(cmdDefs);
+        }
+        private string GetDateTimeKindFormat(DateTimeKind kind)
+        {
+            return (kind == DateTimeKind.Utc) ? _datetimeFormatUtc : _datetimeFormatLocal;
+        }
+
+        public DateTime ReadDateTime(string dateText)
+        {
+            return DateTime.ParseExact(
+                dateText,
+                _datetimeFormats,
+                DateTimeFormatInfo.InvariantInfo,
+                DateTimeStyles.None).ToUniversalTime();
+        }
+
+        public string ToDateTimeParamValue(DateTime dateValue)
+        {
+            var kind = DateTimeKind.Utc;
+            if (dateValue.Kind == DateTimeKind.Unspecified) // if Unspecified force UTC
+            {
+                return DateTime.SpecifyKind(dateValue, kind).ToString(GetDateTimeKindFormat(kind), CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                return dateValue.ToString(GetDateTimeKindFormat(dateValue.Kind), CultureInfo.InvariantCulture);
+            }
+        }
+
+        private void CreateConnection(string db_file)
+        {
+            Logger?.Debug("CreateConnection : " + db_file);
+            ConnectionFlags connectionFlags;
+
+            //Logger.Debug("Opening write _connection");
+            connectionFlags = ConnectionFlags.Create;
+            connectionFlags |= ConnectionFlags.ReadWrite;
+            connectionFlags |= ConnectionFlags.PrivateCache;
+            connectionFlags |= ConnectionFlags.NoMutex;
+
+            SQLiteDatabaseConnection db = SQLite3.Open(db_file, connectionFlags, null, true);
+
+            try
+            {
+                var queries = new List<string>
+                {
+                    //"PRAGMA cache size=-10000"
+                    //"PRAGMA read_uncommitted = true",
+                    "PRAGMA synchronous=Normal",
+                    "PRAGMA temp_store=file"
+                };
+
+                db.ExecuteAll(string.Join(";", queries.ToArray()));
+            }
+            catch
+            {
+                throw;
+            }
+
+            Connection = db;
+            Logger?.Debug("ConnectionCreated : " + Connection.GetHashCode());
+        }
+
+        public IEnumerable<T> GetLibraryItems<T>(ILibraryManager libManager)
+        {
+            return GetUserItems<T>(null, libManager);
+        }
+
+        static public IEnumerable<T> GetUserItems<T>(User? user, ILibraryManager libraryManager)
+        {
+            var query = new InternalItemsQuery(user)
+            {
+                IncludeItemTypes = new[] { typeof(T).Name },
+                Recursive = true,
+                IsVirtualItem = false,
+                DtoOptions = new DtoOptions(true)
+                {
+                    ImageTypes = new[] { ImageType.Thumb, ImageType.Thumbnail },
+                    EnableImages = true
+                }
+            };
+
+            return libraryManager.GetItemList(query).OfType<T>();
+        }
+
+        public static string FormatTicks(long ticks)
+        {
+            var runtime = new RunTime(ticks);
+            return runtime.ToLongString();
+        }
+
+
+    };
+}
