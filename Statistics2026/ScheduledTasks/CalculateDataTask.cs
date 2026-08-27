@@ -172,6 +172,102 @@ namespace Statistics2026.ScheduledTasks
                 }
             };
         }
+    }
 
+    public class CalculateWatchedShowsTask : IScheduledTask
+    {
+        private readonly IFileSystem _fileSystem;
+        private readonly ILibraryManager _libraryManager;
+        private readonly ILogger _logger;
+        private readonly IServerApplicationPaths _serverApplicationPaths;
+        private readonly IUserDataManager _userDataManager;
+        private readonly IUserManager _userManager;
+        private IApplicationHost _appHost;
+        private Statistics2026API _apiService;
+        private readonly IJsonSerializer _jsonSerializer;
+        private readonly IProviderManager _providerManager;
+        private readonly IServerConfigurationManager _appConfig;
+
+        public CalculateWatchedShowsTask(
+            ILogManager logger,
+            IServerConfigurationManager config,
+            IUserManager userManager,
+            IUserDataManager userDataManager,
+            ILibraryManager libraryManager,
+            IFileSystem fileSystem,
+            IJsonSerializer jsonSerializer,
+            IServerApplicationPaths serverApplicationPaths,
+            IApplicationHost appHost,
+            IProviderManager providerManager,
+            Statistics2026API apiService
+            )
+        {
+            _logger = logger.GetLogger("Statistics2026 - CalculateDataTask");
+            _libraryManager = libraryManager;
+            _userManager = userManager;
+            _userDataManager = userDataManager;
+            _jsonSerializer = jsonSerializer;
+            _fileSystem = fileSystem;
+            _serverApplicationPaths = serverApplicationPaths;
+            _appHost = appHost;
+            _providerManager = providerManager;
+            _appConfig = config;
+            _apiService = apiService;
+        }
+
+        private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
+        string IScheduledTask.Name => "Calculate Weighted Watched Shows Accounting";
+
+        string IScheduledTask.Key => "Statistics2026CalculateWatchedShowsTask";
+
+        string IScheduledTask.Description => "Task that will calculate the most (and least) watched shows.";
+
+        string IScheduledTask.Category => "Statistics 2026";
+
+        Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
+        {
+            _logger.Info("Statistics 2026 : Starting Statistics 2026 Weighted Watch Analysis");
+            // purely for progress reporting
+            var now = DateTime.Now;
+            if (PluginConfiguration == null)
+                throw new ArgumentNullException(nameof(PluginConfiguration));
+
+            var db = StatisticsDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
+            db.SetCancellationToken(cancellationToken);
+            db.ClearTable("CachedWatchedAnalysis");
+
+            long computePercentWatchedCache = 0;
+            using (var timer = new AutoTimer($"Computing Percent Watched Cached Stats", _logger))
+            {
+                db.ComputePercentWatchedCache(_libraryManager, cancellationToken, progress);
+                computePercentWatchedCache = timer.ElapsedMilliseconds();
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _logger.Info($"=======================================");
+            _logger.Info($"  Compute Percent Watched Cache: {computePercentWatchedCache} ms");
+            _logger.Info($"=======================================");
+            _logger.Info("Statistics 2026 : Finished Statistics 2026 Watched Show Analysis");
+
+            Plugin.Instance?.SaveConfiguration();
+
+            db.SetCancellationToken(null);
+            return Task.CompletedTask;
+        }
+
+        IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()
+        {
+            return null!;
+            //{
+            //    new TaskTriggerInfo
+            //    {
+            //        Type = TaskTriggerInfo.TriggerWeekly,
+            //        DayOfWeek = DayOfWeek.Sunday,
+            //        TimeOfDayTicks = TimeSpan.FromMinutes(30).Ticks
+            //    }
+            //};
+        }
     }
 }
