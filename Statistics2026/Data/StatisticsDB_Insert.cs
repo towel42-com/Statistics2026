@@ -8,6 +8,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
+using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
 using System.Collections;
@@ -18,7 +19,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Xml.Linq;
-using SQLitePCL.pretty;
+using static Statistics2026.Data.DBHelper;
 
 namespace Statistics2026.Data
 {
@@ -26,64 +27,70 @@ namespace Statistics2026.Data
     {
         public void UpdateLastUpdated(DateTime lastUpdate, DateTime buildDate, string version)
         {
-            string sql = "delete from LastUpdateTable";
-            lock (_connection)
-            {
-                _connection.Execute(sql);
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
 
-                sql = "INSERT INTO LastUpdateTable (LastUpdated, BuildDate, Version) values (@LastUpdated, @BuildDate,@Version)";
-                using (var statement = _connection.PrepareStatement(sql))
-                {
-                    _dbHelper.TryBind(statement, "@LastUpdated", _dbHelper.ToDateTimeParamValue(lastUpdate));
-                    _dbHelper.TryBind(statement, "@BuildDate", _dbHelper.ToDateTimeParamValue(buildDate));
-                    _dbHelper.TryBind(statement, "@Version", version);
-                    statement.MoveNext();
-                }
-            }
+            var sqlCmds = new List<SQLCmdDef>();
+            sqlCmds.Add(new SQLCmdDef("delete from LastUpdateTable"));
+            sqlCmds.Add(new SQLCmdDef("INSERT INTO LastUpdateTable (LastUpdated, BuildDate, Version) values (@LastUpdated, @BuildDate,@Version)",
+                        new List<(string name, object? value)>()
+                        {
+                            ("@LastUpdated", _dbHelper.ToDateTimeParamValue(lastUpdate)),
+                            ("@BuildDate", _dbHelper.ToDateTimeParamValue(buildDate)),
+                            ("@Version", version)
+                        }));
+
+            _dbHelper.ExecuteCommands(sqlCmds);
         }
 
         public void AddAllUsers(IUserManager userManager, IUserDataManager userDataManager, ILibraryManager libraryManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
             progress.Report(0);
             var users = userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
             progress.Report(100);
 
-            _logger.Debug($"AddUsers - Starting User Analysis");
+            _dbHelper.Logger?.Debug($"AddAllUsers - Starting User Analysis");
             double count = users.Count;
             double curr = 0;
 
             progress.Report(0);
-            _connection.RunInTransaction(connection =>
+            var sqlCmds = new List<SQLCmdDef>();
+            using (var timer = new AutoTimer($"    Adding All Users - Getting Commands", _dbHelper.Logger))
             {
                 foreach (var user in users)
                 {
                     progress.Report(100.0 * (++curr) / count);
-                    try
+                    using (var userTimer = new AutoTimer($"AddUsers -     Processed User ({curr} of {count}) - {user.Name}", _dbHelper.Logger))
                     {
-                        using (var timer = new AutoTimer($"AddUsers -     Processed User ({curr} of {count}) - {user.Name}", _logger))
-                        {
-                            AddUser(user, userDataManager, libraryManager, connection);
-                            AddUserWatchData(user, userDataManager, libraryManager, progress, connection);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error($"AddUsers {user.SortName}: {ex.Message}");
-                        throw ex;
+                        sqlCmds.AddRange(AddUser(user, userDataManager, libraryManager));
+                        cancellationToken.ThrowIfCancellationRequested();
+                        sqlCmds.AddRange(AddUserWatchData(user, userDataManager, libraryManager, progress));
+                        cancellationToken.ThrowIfCancellationRequested();
                     }
                 }
                 cancellationToken.ThrowIfCancellationRequested();
-                _logger.Debug($"AddUsers - Finished User Analysis");
-            });
+            }
+
+            using (var timer = new AutoTimer($"    Adding All Users - Executing Commands", _dbHelper.Logger))
+            {
+                _dbHelper.ExecuteCommands(sqlCmds);
+            }
+
+            _dbHelper.Logger?.Debug($"AddAllUsers - Finished User Analysis");
         }
 
-        (long, long) AnalyzeOverallTime(User user, List<User> userList, IUserDataManager userDataManager, ILibraryManager libraryManager)
+        (long, long) AnalyzeOverallTime(User? user, List<User>? userList, IUserDataManager userDataManager, ILibraryManager libraryManager)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
             if (user == null && userList == null)
                 throw new ArgumentException("Either user or allUsers must be provided.");
 
-            var (allVideosForUser, allVideos) = Statistics2026API.GetAllEpisodesAndMovies(user, libraryManager);
-
+            var (allVideosForUser, allVideos) = Statistics2026API.GetAllEpisodesAndMovies(user, libraryManager, true);
 
             long watchable = 0;
             long watched = 0;
@@ -100,9 +107,15 @@ namespace Statistics2026.Data
 
             return (watched, watchable);
         }
-        private void AddUserWatchData(User user, IUserDataManager userDataManager, ILibraryManager libManager, IProgress<double> progress, IDatabaseConnection connection)
+        private List<SQLCmdDef> AddUserWatchData(User? user, IUserDataManager userDataManager, ILibraryManager libManager, IProgress<double> progress)
         {
-            var (allVideosForUser, allVideos) = Statistics2026API.GetAllEpisodesAndMovies(user, libManager);
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
+            var allVideosForUser = Statistics2026API.GetAllEpisodesAndMovies(user, libManager, false).forUser;
 
             string sql =
                 "INSERT INTO UserVideoList " +
@@ -122,6 +135,7 @@ namespace Statistics2026.Data
                     ", @SeriesId" +
                 ")";
 
+            var sqlCmds = new List<SQLCmdDef>();
             foreach (var video in allVideosForUser)
             {
                 bool isEpisode = video is Episode;
@@ -136,33 +150,37 @@ namespace Statistics2026.Data
                     }
                 }
 
-                lock (connection)
+                sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
                 {
-                    using (var statement = connection.PrepareStatement(sql))
-                    {
-                        _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
-                        _dbHelper.TryBind(statement, "@ItemId", video.Id.ToString());
-                        _dbHelper.TryBind(statement, "@IsEpisode", isEpisode);
-                        _dbHelper.TryBind(statement, "@IsPlayed", video.IsPlayed(user));
-                        _dbHelper.TryBind(statement, "@SeriesId", seriesId);
-                        statement.MoveNext();
-                    }
-                }
+                    ( "@UserId", user.Id.ToString()),
+                    ( "@ItemId", video.Id.ToString()),
+                    ( "@IsEpisode", isEpisode),
+                    ( "@IsPlayed", video.IsPlayed(user)),
+                    ( "@SeriesId", seriesId)
+                }));
             }
+            return sqlCmds;
         }
 
-        public void AddUser(User user, IUserDataManager userDataManager, ILibraryManager libraryManager, IDatabaseConnection connection)
+        private List<SQLCmdDef> AddUser(User? user, IUserDataManager userDataManager, ILibraryManager libraryManager)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
+            var sqlCmds = new List<SQLCmdDef>();
             if (user.Id == null)
             {
-                _logger.Error($"AddUserInfo {user.Name}: is missing Id");
-                return;
+                _dbHelper.Logger?.Error($"AddUser {user.Name}: is missing Id");
+                return sqlCmds;
             }
 
             if (user.Name == null)
             {
-                _logger.Error($"AddUserInfo {user.Id.ToString()}: is missing Name");
-                return;
+                _dbHelper.Logger?.Error($"AddUser {user.Id.ToString()}: is missing Name");
+                return sqlCmds;
             }
 
             var (timeWatched, totalTime) = AnalyzeOverallTime(user, null, userDataManager, libraryManager);
@@ -187,25 +205,24 @@ namespace Statistics2026.Data
                 ", @TotalTimeWatched" +
                 ", @TotalWatchableTime" +
                 ")";
-            lock (connection)
+            sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
             {
-                using (var statement = connection.PrepareStatement(sql))
-                {
-                    _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
-                    _dbHelper.TryBind(statement, "@UserName", user.Name);
-                    _dbHelper.TryBind(statement, "@ConnectUserId", user.ConnectUserId);
-                    _dbHelper.TryBind(statement, "@IsAdministrator", isAdmin);
-
-                    _dbHelper.TryBind(statement, "@TotalTimeWatched", timeWatched);
-                    _dbHelper.TryBind(statement, "@TotalWatchableTime", totalTime);
-                    statement.MoveNext();
-                }
-            }
+                ( "@UserId", user.Id.ToString()),
+                ( "@UserName", user.Name),
+                ( "@ConnectUserId", user.ConnectUserId),
+                ( "@IsAdministrator", isAdmin),
+                ( "@TotalTimeWatched", timeWatched),
+                ( "@TotalWatchableTime", totalTime),
+            }));
+            return sqlCmds;
         }
 
         public void AddAllMedia(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Debug($"AddAllMedia - Starting Video Analysis");
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            _dbHelper.Logger?.Debug($"AddAllMedia - Starting Video Analysis");
 
             progress.Report(0);
             var videoList = _dbHelper.GetLibraryItems<Episode>(libManager).Cast<Video>().ToList();
@@ -217,42 +234,33 @@ namespace Statistics2026.Data
             double curr = 0.0;
 
             progress.Report(0);
-            _connection.RunInTransaction(connection =>
+            var sqlCmds = new List<SQLCmdDef>();
+            foreach (var video in videoList)
             {
-                foreach (var video in videoList)
+                progress.Report(100.0 * (++curr) / count);
+                using (var mediaInfo = new MediaInfo(video, fileSystem))
                 {
-                    progress.Report(100.0 * (++curr) / count);
-                    try
-                    {
-                        using (var mediaInfo = new MediaInfo(video, fileSystem))
-                        {
 
-                            AddMediaInfo(mediaInfo, connection);
-                            _logger.Debug($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error($"AddAllMedia {video.SortName}:");
-                        var path = video.Path ?? "Unknown";
-                        _logger.Error($"AddAllMedia {path}:");
-                        _logger.Error($"AddAllMedia {ex.Message}");
-                        throw ex;
-                    }
-
-                    cancellationToken.ThrowIfCancellationRequested();
+                    sqlCmds.AddRange(AddMediaInfo(mediaInfo));
+                    _dbHelper.Logger?.Debug($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
                 }
-            });
-            _logger.Debug($"AddAllMedia - Finished Video Analysis");
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            _dbHelper.ExecuteCommands(sqlCmds);
+            _dbHelper.Logger?.Debug($"AddAllMedia - Finished Video Analysis");
         }
 
-
-        public void AddMediaInfo(MediaInfo mediaInfo, IDatabaseConnection connection)
+        public List<SQLCmdDef> AddMediaInfo(MediaInfo mediaInfo)
         {
-            if (mediaInfo.ItemId == null)
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            var sqlCmds = new List<SQLCmdDef>();
+            if (mediaInfo == null || mediaInfo.ItemId == null)
             {
-                _logger.Error($"AddMediaInfo {mediaInfo.SortName}: is missing ItemId");
-                return;
+                _dbHelper.Logger?.Error($"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId");
+                return sqlCmds;
             }
 
             //if (mediaInfo.IsEpisode && mediaInfo.Season == 0)
@@ -315,42 +323,43 @@ namespace Statistics2026.Data
                     ", @PremiereDate" +
                     ", @DateAdded" +
                ")";
-            lock (connection)
-            {
-                using (var statement = connection.PrepareStatement(sql))
-                {
-                    _dbHelper.TryBind(statement, "@ItemId", mediaInfo.ItemId);
-                    _dbHelper.TryBind(statement, "@PrimaryName", mediaInfo.PrimaryName);
-                    _dbHelper.TryBind(statement, "@SortName", mediaInfo.SortName);
-                    _dbHelper.TryBind(statement, "@SecondaryName", mediaInfo.SecondaryName);
-                    _dbHelper.TryBind(statement, "@StartYear", mediaInfo.StartYear);
-                    _dbHelper.TryBind(statement, "@IsEpisode", mediaInfo.IsEpisode);
-                    _dbHelper.TryBind(statement, "@SeriesId", mediaInfo.SeriesId);
-                    _dbHelper.TryBind(statement, "@Season", mediaInfo.Season);
-                    _dbHelper.TryBind(statement, "@Episode", mediaInfo.Episode);
-                    _dbHelper.TryBind(statement, "@ResolutionBase", mediaInfo.ResolutionBase);
-                    _dbHelper.TryBind(statement, "@ResolutionDetail", mediaInfo.ResolutionDetail);
-                    _dbHelper.TryBind(statement, "@Codec", mediaInfo.Codec);
-                    _dbHelper.TryBind(statement, "@DolbyVisionProfile", mediaInfo.DolbyVisionProfile);
-                    _dbHelper.TryBind(statement, "@StudioNames", string.Join(";", mediaInfo.StudioNames));
-                    _dbHelper.TryBind(statement, "@Genres", string.Join(";", mediaInfo.Genres));
-                    _dbHelper.TryBind(statement, "@ServerLocation", mediaInfo.ServerLocation);
-                    _dbHelper.TryBind(statement, "@FileSize", mediaInfo.FileSize);
-                    _dbHelper.TryBind(statement, "@ImageUrl", (mediaInfo.ImageUrl == null) ? "" : mediaInfo.ImageUrl);
-                    _dbHelper.TryBind(statement, "@RunTimeTicks", mediaInfo.RunTimeTicks);
-                    _dbHelper.TryBind(statement, "@Rating", mediaInfo.Rating);
-                    _dbHelper.TryBind(statement, "@TotalBitrate", mediaInfo.TotalBitrate);
-                    _dbHelper.TryBind(statement, "@PremiereDate", mediaInfo.PremiereDate);
-                    _dbHelper.TryBind(statement, "@DateAdded", mediaInfo.DateAdded);
-                    statement.MoveNext();
-                }
-            }
-        }
 
+            sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
+            {
+                ("@ItemId", mediaInfo.ItemId),
+                ("@PrimaryName", mediaInfo.PrimaryName),
+                ("@SortName", mediaInfo.SortName),
+                ("@SecondaryName", mediaInfo.SecondaryName),
+                ("@StartYear", mediaInfo.StartYear),
+                ("@IsEpisode", mediaInfo.IsEpisode),
+                ("@SeriesId", mediaInfo.SeriesId),
+                ("@Season", mediaInfo.Season),
+                ("@Episode", mediaInfo.Episode),
+                ("@ResolutionBase", mediaInfo.ResolutionBase),
+                ("@ResolutionDetail", mediaInfo.ResolutionDetail),
+                ("@Codec", mediaInfo.Codec),
+                ("@DolbyVisionProfile", mediaInfo.DolbyVisionProfile),
+                ("@StudioNames", string.Join(",", mediaInfo.StudioNames)),
+                ("@Genres", string.Join(",", mediaInfo.Genres)),
+                ("@ServerLocation", mediaInfo.ServerLocation),
+                ("@FileSize", mediaInfo.FileSize),
+                ("@ImageUrl", (mediaInfo.ImageUrl == null) ? "" : mediaInfo.ImageUrl),
+                ("@RunTimeTicks", mediaInfo.RunTimeTicks),
+                ("@Rating", mediaInfo.Rating),
+                ("@TotalBitrate", mediaInfo.TotalBitrate),
+                ("@PremiereDate", mediaInfo.PremiereDate ),
+                ("@DateAdded", mediaInfo.DateAdded),
+            }));
+
+            return sqlCmds;
+        }
 
         public void AddAllCollections(ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Debug($"AddAllCollections - Starting Collection Analysis");
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            _dbHelper.Logger?.Debug($"AddAllCollections - Starting Collection Analysis");
             progress.Report(0);
             var collections = _dbHelper.GetLibraryItems<BoxSet>(libManager);
             progress.Report(100);
@@ -359,36 +368,32 @@ namespace Statistics2026.Data
             double curr = 0.0;
 
             progress.Report(0);
-            _connection.RunInTransaction(connection =>
+            var sqlCmds = new List<SQLCmdDef>();
+
+            foreach (var collection in collections)
             {
-                foreach (var collection in collections)
-                {
-                    progress.Report(100.0 * (++curr) / count);
-                    try
-                    {
-                        AddCollection(collection, libManager, cancellationToken, progress, connection);
-                        _logger.Debug($"AddAllCollections -     Processed Collection ({curr} of {count}) - {collection.Name} items processed");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error($"AddAllCollections {collection.SortName}:");
-                        var path = collection.Path ?? "Unknown";
-                        _logger.Error($"AddAllCollections {path}:");
-                        _logger.Error($"AddAllCollections {ex.Message}");
-                        throw ex;
-                    }
-                    cancellationToken.ThrowIfCancellationRequested();
-                }
-            });
-            _logger.Debug($"AddAllCollections - Finished Collection Analysis");
+                progress.Report(100.0 * (++curr) / count);
+                sqlCmds.AddRange(AddCollection(collection, libManager, cancellationToken, progress));
+                cancellationToken.ThrowIfCancellationRequested();
+                _dbHelper.Logger?.Debug($"AddAllCollections -     Processed Collection ({curr} of {count}) - {collection.Name} items processed");
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+
+            _dbHelper.ExecuteCommands(sqlCmds);
+            _dbHelper.Logger?.Debug($"AddAllCollections - Finished Collection Analysis");
         }
 
-        private void AddChildToCollection(Video video, BoxSet collection, ILibraryManager libManager, IDatabaseConnection connection)
+        private List<SQLCmdDef> AddChildToCollection(Video video, BoxSet collection, ILibraryManager libManager)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            var sqlCmds = new List<SQLCmdDef>();
+
             if (video == null || collection == null || libManager == null)
             {
-                _logger.Error($"AddChildToCollection video, collection and libManager must be set");
-                return;
+                _dbHelper.Logger?.Error($"AddChildToCollection video, collection and libManager must be set");
+                return sqlCmds;
             }
 
             string sql =
@@ -404,21 +409,22 @@ namespace Statistics2026.Data
                 ", @ItemId" +
                 ", @CollectionName" +
                 ")";
-            lock (connection)
+
+            sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>
             {
-                using (var statement = connection.PrepareStatement(sql))
-                {
-                    _dbHelper.TryBind(statement, "@CollectionId", collection.Id.ToString());
-                    _dbHelper.TryBind(statement, "@ItemId", video.Id.ToString());
-                    _dbHelper.TryBind(statement, "@CollectionName", collection.Name);
-                    statement.MoveNext();
-                }
-            }
+                ("@CollectionId", collection.Id.ToString()),
+                ("@ItemId", video.Id.ToString()),
+                ("@CollectionName", collection.Name),
+            }));
+            return sqlCmds;
         }
 
-        private int AddCollectionMembers(BoxSet collection, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress, IDatabaseConnection connection)
+        private List<SQLCmdDef> AddCollectionMembers(BoxSet collection, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Debug($"AddAllCollections - AddCollectionMembers -     Adding members of Collection - {collection.Name}");
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            _dbHelper.Logger?.Debug($"AddAllCollections - AddCollectionMembers -     Adding members of Collection - {collection.Name}");
 
             var query = new InternalItemsQuery
             {
@@ -432,25 +438,31 @@ namespace Statistics2026.Data
             double count = videos.Count;
             double curr = 0.0;
 
+            var sqlCmds = new List<SQLCmdDef>();
+
             videos.ForEach(video =>
             {
                 progress.Report(100.0 * (++curr) / count);
-                AddChildToCollection(video, collection, libManager, connection);
+                sqlCmds.AddRange(AddChildToCollection(video, collection, libManager));
                 cancellationToken.ThrowIfCancellationRequested();
             });
-            _logger.Debug($"AddAllCollections - AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} ");
-            return videos.Count;
+            _dbHelper.Logger?.Debug($"AddAllCollections - AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} ");
+            return sqlCmds;
         }
 
-        public void AddCollection(BoxSet collection, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress, IDatabaseConnection connection)
+        public List<SQLCmdDef> AddCollection(BoxSet collection, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            var sqlCmds = new List<SQLCmdDef>();
             if (collection.Id == null)
             {
-                _logger.Error($"AddCollection {collection.SortName}: is missing ItemId");
-                return;
+                _dbHelper.Logger?.Error($"AddCollection {collection.SortName}: is missing ItemId");
+                return sqlCmds;
             }
 
-            _logger.Debug($"AddAllCollections - AddCollection - Adding Collection {collection.Name}");
+            _dbHelper.Logger?.Debug($"AddAllCollections - AddCollection - Adding Collection {collection.Name}");
 
             string sql =
                 "INSERT INTO Collections " +
@@ -465,24 +477,24 @@ namespace Statistics2026.Data
                 ", @Name" +
                 ", @SortName" +
                 ")";
-            lock (connection)
+            sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
             {
-                using (var statement = connection.PrepareStatement(sql))
-                {
-                    _dbHelper.TryBind(statement, "@ItemId", collection.Id.ToString());
-                    _dbHelper.TryBind(statement, "@Name", collection.Name);
-                    _dbHelper.TryBind(statement, "@SortName", collection.SortName);
-                    statement.MoveNext();
-                }
-            }
-            _logger.Debug($"AddAllCollections -     AddCollection - Successfully Added Collection");
+                ("@ItemId", collection.Id.ToString()),
+                ("@Name", collection.Name),
+                ("@SortName", collection.SortName),
+            }));
+            _dbHelper.Logger?.Debug($"AddAllCollections -     AddCollection - Successfully Added Collection");
 
-            AddCollectionMembers(collection, libManager, cancellationToken, progress, connection);
+            sqlCmds.AddRange(AddCollectionMembers(collection, libManager, cancellationToken, progress));
+            return sqlCmds;
         }
 
         public void AddAllSeries(ILibraryManager libManager, IFileSystem fileSystem, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Debug($"AddAllSeries- Starting Video Analysis");
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            _dbHelper.Logger?.Debug($"AddAllSeries- Starting Video Analysis");
 
             progress.Report(0);
             var seriesList = _dbHelper.GetLibraryItems<Series>(libManager).Cast<Series>().ToList();
@@ -492,41 +504,61 @@ namespace Statistics2026.Data
             double curr = 0.0;
 
             progress.Report(0);
-            _connection.RunInTransaction(connection =>
+            var sqlCmds = new List<SQLCmdDef>();
+
+            foreach (Series series in seriesList)
             {
+                progress.Report(100.0 * (++curr) / count);
+                sqlCmds.AddRange(AddSeries(series, libManager, cancellationToken, progress));
+                cancellationToken.ThrowIfCancellationRequested();
 
-                foreach (Series series in seriesList)
-                {
-                    progress.Report(100.0 * (++curr) / count);
-                    try
-                    {
-                        AddSeries(series, libManager, cancellationToken, progress, connection);
-                        _logger.Debug($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error($"AddAllSeries {series.SortName}:");
-                        var path = series.Path ?? "Unknown";
-                        _logger.Error($"AddAllSeries {path}:");
-                        _logger.Error($"AddAllSeries {ex.Message}");
-                        throw ex;
-                    }
-
-                    cancellationToken.ThrowIfCancellationRequested();
-                }
-            });
-            _logger.Debug($"AddAllSeries - Finished Video Analysis");
-        }
-
-        private void AddSeries(Series series, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress, IDatabaseConnection connection)
-        {
-            if (series.Id == null)
-            {
-                _logger.Error($"AddSeries {series.SortName}: is missing ItemId");
-                return;
+                _dbHelper.Logger?.Debug($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
             }
 
-            _logger.Debug($"AddAllSeries - AddSeries - Adding Series {series.Name}");
+            _dbHelper.ExecuteCommands(sqlCmds);
+            cancellationToken.ThrowIfCancellationRequested();
+            _dbHelper.Logger?.Debug($"AddAllSeries - Finished Video Analysis");
+        }
+
+        private List<SQLCmdDef> AddSeries(Series series, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            var sqlCmds = new List<SQLCmdDef>();
+            if (series.Id == null)
+            {
+                _dbHelper.Logger?.Error($"AddSeries {series.SortName}: is missing ItemId");
+                return sqlCmds;
+            }
+
+            _dbHelper.Logger?.Debug($"AddAllSeries - AddSeries - Adding Series {series.Name}");
+
+
+            long totalFileSize = 0;
+            long totalRuntime = 0;
+            Double averageRating = 0.0;
+            long averageBitrate = 0;
+
+            var cmd = new SQLCmdDef("SELECT SUM(FileSize), SUM(RunTimeTicks), SUM(Rating)/Count(1),Sum(TotalBitrate)/Count(1) FROM Media WHERE SeriesId=@SeriesId",
+                        new List<(string name, object? value)>()
+                        {
+                            ("@SeriesId", series.Id.ToString())
+                        });
+            _dbHelper.ExecuteCommands(new List<SQLCmdDef>() { cmd },
+                statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        totalFileSize = row.GetInt64(0);
+                        totalRuntime = row.GetInt64(1);
+                        averageRating = row.GetFloat(2);
+                        averageBitrate = row.GetInt64(3);
+                        return false;
+                    }
+                    return true;
+                });
 
             string sql =
                 "INSERT INTO Series " +
@@ -556,45 +588,167 @@ namespace Statistics2026.Data
                     ", @AverageBitrate" +
                 ")";
 
-            lock (connection)
+            sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
             {
-                long totalFileSize = 0;
-                long totalRuntime = 0;
-                Double averageRating = 0.0;
-                long averageBitrate = 0;
-
-                using (var statement = connection.PrepareStatement("SELECT SUM(FileSize), SUM(RunTimeTicks), SUM(Rating)/Count(1),Sum(TotalBitrate)/Count(1) FROM Media WHERE SeriesId=@SeriesId"))
-                {
-                    _dbHelper.TryBind(statement, "@SeriesId", series.Id.ToString());
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        totalFileSize = row.GetInt64(0);
-                        totalRuntime = row.GetInt64(1);
-                        averageRating = row.GetFloat(2);
-                        averageBitrate = row.GetInt64(3);
-                        break;
-                    }
-                }
-
-                using (var statement = connection.PrepareStatement(sql))
-                {
-                    _dbHelper.TryBind(statement, "@ItemId", series.Id.ToString());
-                    _dbHelper.TryBind(statement, "@Name", series.Name);
-                    _dbHelper.TryBind(statement, "@SortName", series.SortName);
-                    if (series.PremiereDate.HasValue)
-                        _dbHelper.TryBind(statement, "@PremiereDate", series.PremiereDate.Value.DateTime);
-                    _dbHelper.TryBind(statement, "@DateAdded", series.DateCreated.DateTime);
-                    _dbHelper.TryBind(statement, "@ImageUrl", ItemImageUrl._ItemImageUrl(series));
-                    _dbHelper.TryBind(statement, "@FileSize", totalFileSize);
-                    _dbHelper.TryBind(statement, "@RunTimeTicks", totalRuntime);
-                    _dbHelper.TryBind(statement, "@Rating", averageRating);
-                    _dbHelper.TryBind(statement, "@AverageBitrate", averageBitrate);
-                    statement.MoveNext();
-                }
-            }
-            _logger.Debug($"AddAllCollections -     AddCollection - Successfully Added Collection");
+                ("@ItemId", series.Id.ToString()),
+                ("@Name", series.Name),
+                ("@SortName", series.SortName),
+                ("@PremiereDate", series.PremiereDate.HasValue ? series.PremiereDate.Value.DateTime : null),
+                ("@DateAdded", series.DateCreated.DateTime),
+                ("@ImageUrl", ItemImageUrl._ItemImageUrl(series)),
+                ("@FileSize", totalFileSize),
+                ("@RunTimeTicks", totalRuntime),
+                ("@Rating", averageRating),
+                ("@AverageBitrate", averageBitrate),
+            }));
+            _dbHelper.Logger?.Debug($"AddAllCollections -     AddCollection - Successfully Added Collection");
+            return sqlCmds;
         }
 
+        public void ComputePercentWatchedCache(ILibraryManager libraryManager, CancellationToken cancellationToken, IProgress<double> progress)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            _dbHelper.Logger?.Debug($"ComputePercentWatchedCache - Starting Analysis");
+
+            progress.Report(0);
+            var leastWatched = ComputeWatchedShowValues(null, true, libraryManager);
+            progress.Report(100);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var sql = "INSERT INTO CachedWatchedAnalysis" +
+                    "(" +
+                        "  ItemId" +
+                        ", Name" +
+                        ", ImageUrl" +
+                        ", NumEpisodes" +
+                        ", NumWatched" +
+                        ", PercentWatched" +
+                        ", PercentWatchedPerUser" +
+                    ")" +
+                    " VALUES " +
+                    "(" +
+                        "  @ItemId" +
+                        ", @Name" +
+                        ", @ImageUrl" +
+                        ", @NumEpisodes" +
+                        ", @NumWatched" +
+                        ", @PercentWatched" +
+                        ", @PercentWatchedPerUser" +
+                    ")";
+
+            var sqlCmds = new List<SQLCmdDef>();
+
+            foreach(var watched in leastWatched)
+            {
+                sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
+                {
+                    ("@ItemId", watched.ItemId),
+                    ("@Name", watched.Name),
+                    ("@ImageUrl", watched.ImageUrl),
+                    ("@NumEpisodes", watched.NumEpisodes),
+                    ("@NumWatched", watched.NumWatched),
+                    ("@PercentWatched", watched.PercentWatched),
+                    ("@PercentWatchedPerUser", watched.PercentWatchedPerUser)
+                }));
+            }
+
+            _dbHelper.ExecuteCommands(sqlCmds);
+        }
+
+        public void ComputeCachedStats(ILibraryManager libraryManager, CancellationToken cancellationToken, IProgress<double> progress)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            _dbHelper.Logger?.Debug($"ComputeCachedStats - Starting Analysis");
+
+            progress.Report(0);
+            double percentPer = 100.0 / 11.0;
+            int curr = 0;
+
+            var longestSeries = StatCardValuesFor(null, StatGen.EStatisticType.Longest, StatGen.EVideoType.Series);
+            progress.Report((++curr) * percentPer);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var shortestSeries = StatCardValuesFor(null, StatGen.EStatisticType.Shortest, StatGen.EVideoType.Series);
+            progress.Report((++curr) * percentPer);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var largestSeries = StatCardValuesFor(null, StatGen.EStatisticType.Largest, StatGen.EVideoType.Series);
+            progress.Report((++curr) * percentPer);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var smallestSeries = StatCardValuesFor(null, StatGen.EStatisticType.Smallest, StatGen.EVideoType.Series);
+            progress.Report((++curr) * percentPer);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var longestMovie = StatCardValuesFor(null, StatGen.EStatisticType.Longest, StatGen.EVideoType.Movie);
+            progress.Report((++curr) * percentPer);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var shortestMovie = StatCardValuesFor(null, StatGen.EStatisticType.Shortest, StatGen.EVideoType.Movie);
+            progress.Report((++curr) * percentPer);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var largestMovie = StatCardValuesFor(null, StatGen.EStatisticType.Largest, StatGen.EVideoType.Movie);
+            progress.Report((++curr) * percentPer);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var smallestMovie = StatCardValuesFor(null, StatGen.EStatisticType.Smallest, StatGen.EVideoType.Movie);
+            progress.Report((++curr) * percentPer);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var totalTVStudioCount = TotalStudioCountValue(null, false);
+            progress.Report((++curr) * percentPer);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var totalMovieStudioCount = TotalStudioCountValue(null, true);
+            progress.Report((++curr) * percentPer);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            string sql = "INSERT INTO CachedStats " +
+                        "(" +
+                            "  LongestSeries" +
+                            ", ShortestSeries" +
+                            ", LargestSeries" +
+                            ", SmallestSeries" +
+                            ", TotalTVStudioCount" +
+                            ", LongestMovie" +
+                            ", ShortestMovie" +
+                            ", LargestMovie" +
+                            ", SmallestMovie" +
+                            ", TotalMovieStudioCount" +
+                        ")" +
+                        " VALUES " +
+                        "(" +
+                            "  @LongestSeries" +
+                            ", @ShortestSeries" +
+                            ", @LargestSeries" +
+                            ", @SmallestSeries" +
+                            ", @TotalTVStudioCount" +
+                            ", @LongestMovie" +
+                            ", @ShortestMovie" +
+                            ", @LargestMovie" +
+                            ", @SmallestMovie" +
+                            ", @TotalMovieStudioCount" +
+                        ")";
+            var cmdDef = new SQLCmdDef(sql, new List<(string name, object? value)>()
+            {
+                ("@LongestSeries", longestSeries.ItemId),
+                ("@ShortestSeries", shortestSeries.ItemId),
+                ("@LargestSeries", largestSeries.ItemId),
+                ("@SmallestSeries", smallestSeries.ItemId),
+                ("@TotalTVStudioCount", totalTVStudioCount),
+                ("@LongestMovie", longestMovie.ItemId),
+                ("@ShortestMovie", shortestMovie.ItemId),
+                ("@LargestMovie", largestMovie.ItemId),
+                ("@SmallestMovie", smallestMovie.ItemId),
+                ("@TotalMovieStudioCount", totalMovieStudioCount),
+            });
+            _dbHelper.ExecuteCommand(cmdDef);
+            progress.Report((++curr) * percentPer);
+        }
     }
 }

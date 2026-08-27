@@ -1,17 +1,19 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.MediaEncoding;
 using RestSharp;
 using ServiceStack;
 using ServiceStack.Text;
+using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.Serialization;
-using SQLitePCL.pretty;
 
 
 namespace Statistics2026.Data
@@ -20,15 +22,8 @@ namespace Statistics2026.Data
     {
         public StatCard MediaResolutions(bool showAllResolutions)
         {
-            string sql =
-                "SELECT " +
-                "ResolutionBase as Resolution, " +
-                "sum(IsEpisode) AS Episodes, " +
-                "sum(NOT IsEpisode) AS Movies " +
-                "FROM Media " +
-                "GROUP BY Resolution " +
-                "ORDER BY Resolution ASC"
-                ;
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
 
             var retVal = new TableBasedStatCard(Constants.MediaResolutions, Constants.HelpMediaResolutions, new List<string> { "Movies", "Episodes" });
 
@@ -41,35 +36,32 @@ namespace Statistics2026.Data
                 retVal.addRow(Constants.SD, new List<int> { 0, 0 });
             }
 
-            lock (_connection)
+            string sql =
+                "SELECT " +
+                "ResolutionBase as Resolution, " +
+                "sum(IsEpisode) AS Episodes, " +
+                "sum(NOT IsEpisode) AS Movies " +
+                "FROM Media " +
+                "GROUP BY Resolution " +
+                "ORDER BY Resolution ASC"
+                ;
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
             {
-                using (var statement = _connection.PrepareStatement(sql))
-                {
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var resolution = row.GetString(0);
-                        var episodeCount = row.GetInt(1);
-                        var movieCount = row.GetInt(2);
-                        retVal.addRow(resolution, new List<int> { movieCount, episodeCount });
-                    }
-                }
-            }
+                var row = statement.Current;
+                var resolution = row.GetString(0);
+                var episodeCount = row.GetInt(1);
+                var movieCount = row.GetInt(2);
+                retVal.addRow(resolution, new List<int> { movieCount, episodeCount });
+                return true;
+            });
 
             return retVal;
         }
 
         public StatCard MediaCodecs(bool showAllCodecs)
         {
-            string sql =
-                "SELECT " +
-                "Codec as Codec, " +
-                "sum(IsEpisode) AS Episodes, " +
-                "sum(NOT IsEpisode) AS Movies " +
-                "FROM Media " +
-                "GROUP BY Codec " +
-                "ORDER BY Codec ASC"
-                ;
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
 
             var retVal = new TableBasedStatCard(Constants.MediaCodecs, Constants.HelpMediaCodecs, new List<string> { "Movies", "Episodes" });
             if (showAllCodecs)
@@ -84,25 +76,34 @@ namespace Statistics2026.Data
                 retVal.addRow("vc1", new List<int> { 0, 0 });
             }
 
-            lock (_connection)
+            string sql =
+                "SELECT " +
+                "Codec as Codec, " +
+                "sum(IsEpisode) AS Episodes, " +
+                "sum(NOT IsEpisode) AS Movies " +
+                "FROM Media " +
+                "GROUP BY Codec " +
+                "ORDER BY Codec ASC"
+                ;
+
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
             {
-                using (var statement = _connection.PrepareStatement(sql))
-                {
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var codec = row.GetString(0);
-                        var episodeCount = row.GetInt(1);
-                        var movieCount = row.GetInt(2);
-                        retVal.addRow(codec, new List<int> { movieCount, episodeCount });
-                    }
-                }
-            }
+                var row = statement.Current;
+                var codec = row.GetString(0);
+                var episodeCount = row.GetInt(1);
+                var movieCount = row.GetInt(2);
+                retVal.addRow(codec, new List<int> { movieCount, episodeCount });
+                return true;
+            });
 
             return retVal;
         }
+
         public StatCard DVProfileInfo(bool showUnknownDVProfiles, bool showAllDVProfiles)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
             string sql =
                 "SELECT " +
                 "DolbyVisionProfile as DVProfile, " +
@@ -131,50 +132,43 @@ namespace Statistics2026.Data
                 retVal.addRow("Profile 9.0", new List<int> { 0, 0 });
                 retVal.addRow("Profile 20.0", new List<int> { 0, 0 });
             }
-            lock (_connection)
+
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
             {
-                using (var statement = _connection.PrepareStatement(sql))
-                {
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var dvProfile = row.GetString(0);
-                        var episodeCount = row.GetInt(1);
-                        var movieCount = row.GetInt(2);
-                        retVal.addRow(dvProfile, new List<int> { movieCount, episodeCount });
-                    }
-                }
-            }
+                var row = statement.Current;
+                var dvProfile = row.GetString(0);
+                var episodeCount = row.GetInt(1);
+                var movieCount = row.GetInt(2);
+                retVal.addRow(dvProfile, new List<int> { movieCount, episodeCount });
+                return true;
+            });
 
             return retVal;
         }
 
-        private string GetSingleValueFromSQL(string sql, List<(string field, string value)> parameters = null, Func<long, string> formatter = null)
+        private string GetSingleValueFromSQL(string sql, List<(string name, object? value)>? parameters = null, Func<long, string>? formatter = null)
         {
-            lock (sql)
-            {
-                using (var statement = _connection.PrepareStatement(sql))
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            var cmd = new SQLCmdDef(sql, parameters);
+
+            var retVal = String.Empty;
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
                 {
-                    if (parameters != null)
-                    {
-                        foreach (var parameter in parameters)
-                        {
-                            _dbHelper.TryBind(statement, parameter.field, parameter.value);
-                        }
-                    }
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var count = row.GetInt64(0);
-                        return formatter?.Invoke(count) ?? count.ToString();
-                    }
-                }
-            }
-            return "";
+                    var row = statement.Current;
+                    var count = row.GetInt64(0);
+                    retVal = formatter?.Invoke(count) ?? count.ToString();
+                    return false;
+                });
+            return retVal;
         }
 
-        private TextBasedStatCard ValueGroupForSingleItem(string title, string help, string sql, List<(string field, string value)> parameters = null, Func<long, string> formatter = null)
+        private TextBasedStatCard ValueGroupForSingleItem(string title, string? help, string sql, List<(string name, object? value)>? parameters = null, Func<long, string>? formatter = null)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
             var retVal = new TextBasedStatCard(title, help, "small");
             var value = GetSingleValueFromSQL(sql, parameters, formatter);
             retVal.AddLine(value);
@@ -183,12 +177,15 @@ namespace Statistics2026.Data
 
         public StatCard UserCount(bool hasConnectUserID, bool excludeAdmin)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
             string sql = "SELECT COUNT(UserName) FROM Users ";
 
             List<string> conditions = new List<string>();
 
             if (hasConnectUserID)
-                conditions.Add("( ConnectUserId <> \"\" AND ConnectUserId IS NOT NULL )");
+                conditions.Add("( ConnectUserId <> '' AND ConnectUserId IS NOT NULL )");
 
             if (excludeAdmin)
                 conditions.Add("( NOT IsAdministrator )");
@@ -201,6 +198,9 @@ namespace Statistics2026.Data
 
         public StatCard MostActiveUsers(bool hasConnectUserID, int numUsers, bool excludeAdmin, IUserManager userManager)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
             string sql =
                 "SELECT " +
                 "UserName, " +
@@ -209,7 +209,7 @@ namespace Statistics2026.Data
             List<string> conditions = new List<string>();
 
             if (hasConnectUserID)
-                conditions.Add("( ConnectUserId <> \"\" AND ConnectUserId IS NOT NULL )");
+                conditions.Add("( ConnectUserId <> '' AND ConnectUserId IS NOT NULL )");
 
             if (excludeAdmin)
                 conditions.Add("( NOT IsAdministrator )");
@@ -223,29 +223,29 @@ namespace Statistics2026.Data
 
             var help = Constants.HelpMostActiveUsers;
             help = help.Replace("<numUsers>", numUsers.ToString());
-            var groupData = new TableBasedStatCard(Constants.MostActiveUsers, help, new List<string> { "Days", "Hours", "Minutes" });
-            lock (_connection)
-            {
-                using (var statement = _connection.PrepareStatement(sql))
-                {
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var userName = row.GetString(0);
-                        var runtime = new RunTime(row.GetInt64(1));
 
-                        groupData.addRow(userName, new List<int> { runtime.Days, runtime.Hours, runtime.Minutes });
-                    }
-                }
-            }
+            var groupData = new TableBasedStatCard(Constants.MostActiveUsers, help, new List<string> { "Days", "Hours", "Minutes" });
+            var cmd = new SQLCmdDef(sql);
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            {
+                var row = statement.Current;
+                var userName = row.GetString(0);
+                var runtime = new RunTime(row.GetInt64(1));
+
+                groupData.addRow(userName, new List<int> { runtime.Days, runtime.Hours, runtime.Minutes });
+                return true;
+            });
 
             return groupData;
         }
 
-        public StatCard TotalMovieCount(User user, bool watched)
+        public StatCard TotalMovieCount(User? user, bool watched)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
             string sql = "";
-            var parameters = new List<(string, string)>();
+            var parameters = new List<(string, object?)>();
             string title = Constants.TotalMovies;
             string help = Constants.HelpTotalMovies;
             long total = 0;
@@ -285,8 +285,11 @@ namespace Statistics2026.Data
             });
         }
 
-        public StatCard TotalTVCount(User user)
+        public StatCard TotalTVCount(User? user)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
             string sql = "SELECT COUNT(DISTINCT(PrimaryName)) FROM Media WHERE IsEpisode";
             var retVal = ValueGroupForSingleItem(Constants.TotalTVShows, Constants.HelpTotalTVShows, sql);
 
@@ -299,120 +302,219 @@ namespace Statistics2026.Data
 
         public StatCard TotalCollectionCount()
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
             string sql = "SELECT COUNT( ItemId ) FROM Collections";
 
             return ValueGroupForSingleItem(Constants.TotalCollections, Constants.HelpTotalCollections, sql);
         }
 
-        public StatCard TotalStudioCount(User user, bool movies)
+        public long TotalStudioCountValue(User? user, bool movies)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
             string sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
             if (movies)
                 sql += "NOT ";
-            sql += "IsEpisode AND StudioNames IS NOT NULL AND StudioNames<>\"\"";
+            sql += "IsEpisode AND StudioNames IS NOT NULL AND StudioNames<>''";
 
-            var retVal = new TextBasedStatCard(movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, "small");
             // Create an unordered set of strings
             HashSet<string> studios = new HashSet<string>();
 
-            lock (_connection)
+            var cmd = new SQLCmdDef(sql);
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
             {
-                using (var statement = _connection.PrepareStatement(sql))
-                {
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var currStudios = row.GetString(0).Split(';');
-                        studios.UnionWith(currStudios);
-                    }
-                }
+                var row = statement.Current;
+                var currStudios = row.GetString(0).Split(';');
+                studios.UnionWith(currStudios);
+                return true;
+            });
+
+            return studios.Count();
+        }
+
+        public StatCard TotalStudioCount(User? user, bool movies)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            var retVal = new TextBasedStatCard(movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, "small");
+            var value = TotalStudioCountValue(user, movies);
+            retVal.AddLine(value.ToString());
+            return retVal;
+        }
+
+        public StatCard TotalMovieStudioCount(User? user)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            return TotalStudioCount(user, true);
+        }
+        public StatCard TotalTVStudioCount(User? user)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            return TotalStudioCount(user, false);
+        }
+
+        public StatCard StatisticFor(User? user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            var statGen = new StatGen(whichStatistic, videoType, _dbHelper);
+            return statGen.GetStatCard();
+        }
+
+        public StatGen.StatCardValues StatCardValuesFor(User? user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+            var statGen = new StatGen(whichStatistic, videoType, _dbHelper);
+            return statGen.GetStatCardValues();
+        }
+
+        public class WatchedShowValue
+        {
+            public string ItemId { get; set; } = String.Empty;
+            public string Name { get; set; } = String.Empty;
+            public string ImageUrl { get; set; } = String.Empty;
+            public long NumEpisodes { get; set; } = 0;
+            public long NumWatched { get; set; } = 0;
+            public double PercentWatched { get; set; } = 0;
+            public double PercentWatchedPerUser { get; set; } = 0;
+
+            public void UpdatePercents(long numUsers)
+            {
+                PercentWatched = (1.0 * NumWatched) / (1.0 * NumEpisodes);
+                PercentWatchedPerUser = PercentWatched / (1.0 * numUsers);
+
             }
-            retVal.AddLine(studios.Count().ToString());
+        }
+
+        public List<WatchedShowValue> ComputeWatchedShowValues(User? user, bool leastWatched, ILibraryManager libManager)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            var sqlCommand = new SQLCmdDef("SELECT COUNT(1) FROM Users");
+            long numUsers = 0;
+            _dbHelper.ExecuteCommand(sqlCommand, statement =>
+            {
+                var row = statement.Current;
+                numUsers = row.GetInt64(0);
+                return false;
+            });
+
+            var retVal = new List<WatchedShowValue>();
+            sqlCommand = new SQLCmdDef("SELECT ItemId, Name FROM Series");
+            _dbHelper.ExecuteCommand(sqlCommand, statement =>
+            {
+                var row = statement.Current;
+                var itemId = row.GetString(0);
+                var name = row.GetString(1);
+                var url = ItemImageUrl._ItemImageUrl(itemId, libManager);
+                retVal.Add(new WatchedShowValue()
+                {
+                    ItemId = itemId,
+                    Name = name,
+                    ImageUrl = url
+                });
+                return true;
+            });
+
+            for (int ii = 0; ii < retVal.Count(); ++ii)
+            {
+                var curr = retVal[ii];
+                sqlCommand = new SQLCmdDef("SELECT Count(1) FROM Media WHERE SeriesId=@SeriesId",
+                    new List<(string name, object? value)>()
+                    {
+                        ("@SeriesId", curr.ItemId)
+                    });
+
+                _dbHelper.ExecuteCommand(sqlCommand, statement =>
+                {
+                    var row = statement.Current;
+                    curr.NumEpisodes = row.GetInt64(0);
+                    return false;
+                });
+
+                sqlCommand = new SQLCmdDef("SELECT Count(1) FROM Media WHERE SeriesId=@SeriesId",
+                    new List<(string name, object? value)>()
+                    {
+                        ("@SeriesId", curr.ItemId)
+                    });
+
+                _dbHelper.ExecuteCommand(sqlCommand, statement =>
+                {
+                    var row = statement.Current;
+                    curr.NumWatched = row.GetInt64(0);
+                    return false;
+                });
+
+                curr.UpdatePercents(numUsers);
+                retVal[ii] = curr;
+            }
+            // this sorts it in ascending order
+            retVal.Sort(
+                (lhs, rhs) =>
+                    {
+                        var diff = lhs.PercentWatched - rhs.PercentWatched;
+                        if (diff < 0)
+                            return -1;
+                        if (diff > 0)
+                            return 1;
+                        return 0;
+
+                    });
+
+            if (!leastWatched)
+            {
+                retVal.Reverse();
+            }
 
             return retVal;
         }
 
-        public StatCard TotalMovieStudioCount(User user)
+        public List<WatchedShowValue> WatchedShowValues(User? user, bool leastWatched, ILibraryManager libManager)
         {
-            return TotalStudioCount(user, true);
-        }
-        public StatCard TotalTVStudioCount(User user)
-        {
-            return TotalStudioCount(user, false);
-        }
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
 
-        public StatCard StatisticFor(User user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType)
-        {
-            var statGen = new StatGen(whichStatistic, videoType, _connection);
-            return statGen.GetStatCard();
-        }
+            var series = new List<WatchedShowValue>();
 
-        public StatCard WatchedShows(User user, bool leastWatched, ILibraryManager libManager)
-        {
-            var series = new List<(string id, string name, string url, long numEpisodes, long watched, double percentWatched, double percentWatchedPerUser)>();
-            long numUsers = 0;
-
-            lock (_connection)
+            _dbHelper.ExecuteCommand(new SQLCmdDef("SELECT ItemId, Name, ImageUrl, NumEpisodes, NumWatched, PercentWatched, PercentWatchedPerUser FROM CachedWatchedAnalysis"), statement =>
             {
-                using (var statement = _connection.PrepareStatement("SELECT COUNT(1) FROM Users"))
+                var row = statement.Current;
+                var id = row.GetString(0);
+                var name = row.GetString(1);
+                var url = row.GetString(2);
+                var numEpisodes = row.GetInt(3);
+                var numWatched = row.GetInt(4);
+                var percentWatched = row.GetFloat(5);
+                var percentWatchedPerUser = row.GetFloat(6);
+                series.Add(new WatchedShowValue()
                 {
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        numUsers = row.GetInt64(0);
-                        break;
-                    }
-                }
+                    ItemId = id,
+                    Name = name,
+                    ImageUrl = url,
+                    NumWatched = numWatched,
+                    NumEpisodes = numEpisodes,
+                    PercentWatched = percentWatched,
+                    PercentWatchedPerUser = percentWatchedPerUser
+                });
+                return series.Count <= 5;
+            });
 
-                using (var statement = _connection.PrepareStatement("SELECT ItemId, Name FROM Series"))
-                {
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var id = row.GetString(0);
-                        var name = row.GetString(1);
-                        var url = ItemImageUrl._ItemImageUrl(id, libManager);
-                        series.Add((id, name, url, 0, 0, 0, 0));
-                    }
-                }
-            }
-
-            for (int ii = 0; ii < series.Count(); ++ii)
-            {
-                var curr = series[ii];
-                lock (_connection)
-                {
-                    using (var statement = _connection.PrepareStatement("SELECT Count(1) FROM Media WHERE SeriesId=@SeriesId"))
-                    {
-                        _dbHelper.TryBind(statement, "@SeriesId", curr.id);
-                        while (statement.MoveNext())
-                        {
-                            var row = statement.Current;
-                            curr.numEpisodes = row.GetInt64(0);
-                            break;
-                        }
-                    }
-                    using (var statement = _connection.PrepareStatement("SELECT Count(1) FROM UserVideoList WHERE SeriesId=@SeriesId"))
-                    {
-                        _dbHelper.TryBind(statement, "@SeriesId", curr.id);
-                        while (statement.MoveNext())
-                        {
-                            var row = statement.Current;
-                            curr.watched = row.GetInt64(0);
-                            break;
-                        }
-                    }
-
-                    curr.percentWatched = (1.0 * curr.watched) / (1.0 * curr.numEpisodes);
-                    curr.percentWatchedPerUser = curr.percentWatched / (1.0 * numUsers);
-                    series[ii] = curr;
-                }
-            }
             // this sorts it in ascending order
             series.Sort(
                 (lhs, rhs) =>
                 {
-                    var diff = lhs.percentWatched - rhs.percentWatched;
+                    var diff = lhs.PercentWatched - rhs.PercentWatched;
                     if (diff < 0)
                         return -1;
                     if (diff > 0)
@@ -426,6 +528,12 @@ namespace Statistics2026.Data
                 series.Reverse();
             }
 
+            return series;
+        }
+
+        public StatCard WatchedShows(User? user, bool leastWatched, ILibraryManager libManager)
+        {
+            var series = WatchedShowValues(user, leastWatched, libManager);
             var title = leastWatched ? Constants.LeastWatchedShows : Constants.MostWatchedShows;
             var help = leastWatched ? Constants.HelpLeastWatchedShows : Constants.HelpMostWatchedShows;
 
@@ -433,48 +541,56 @@ namespace Statistics2026.Data
             retVal.AsNumberedList = true;
             for (int ii = 0; ii < series.Count && ii < 5; ++ii)
             {
-                retVal.AddLine(series[ii].name, series[ii].id, series[ii].url);
+                retVal.AddLine(series[ii].Name, series[ii].ItemId, series[ii].ImageUrl);
             }
 
             return retVal;
         }
 
-        public static string FormatTicks(long ticks)
+        public StatCard TotalTimeWatched(User? user)
         {
-            var runtime = new RunTime(ticks);
-            return runtime.ToLongString();
-        }
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
 
-        public StatCard TotalTimeWatched(User user)
-        {
+            if (user == null)
+                throw new ArgumentNullException("user");
+
             string sql = "SELECT TotalTimeWatched FROM Users  WHERE UserId=@UserId";
-            return ValueGroupForSingleItem(Constants.UserTotalTimeWatched, null, sql, new List<(string field, string value)>() { ("@UserId", user.Id.ToString()) }, FormatTicks);
+            return ValueGroupForSingleItem(Constants.UserTotalTimeWatched, null, sql, new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) }, DBHelper.FormatTicks);
         }
 
-        public StatCard TotalWatchableTime(User user)
+        public StatCard TotalWatchableTime(User? user)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
             string sql = "SELECT TotalWatchableTime FROM Users WHERE UserId=@UserId";
-            return ValueGroupForSingleItem(Constants.UserTotalWatchableTime, null, sql, new List<(string field, string value)>() { ("@UserId", user.Id.ToString()) }, FormatTicks);
+            return ValueGroupForSingleItem(Constants.UserTotalWatchableTime, null, sql, new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) }, DBHelper.FormatTicks);
         }
 
-        public StatCard FavoriteYears(User user, bool movies)
+        public List<(int year, long count)> FavoriteYearValues(User? user, bool movies)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
             string sql =
                 "SELECT COUNT(*) as NumVideos, StartYear From Media "
                 + "INNER JOIN UserVideoList On Media.ItemId=UserVideoList.ItemId "
                 + "WHERE "
-
                 ;
-            string videoType = "";
             if (movies)
             {
                 sql += "NOT Media.IsEpisode ";
-                videoType = "Movies";
             }
             else
             {
                 sql += "Media.IsEpisode ";
-                videoType = "Episodes";
             }
             sql +=
                 "AND UserId=@UserId AND IsPlayed "
@@ -483,73 +599,117 @@ namespace Statistics2026.Data
               + "LIMIT 5 "
               ;
 
-            var retVal = new TableBasedStatCard(Constants.FavoriteMovieYears, "", new List< string>() { $"# of {videoType} Watched"});
-            lock (_connection)
+            var sqlCmd = new SQLCmdDef(sql, new List<(string, object?)>()
             {
-                using (var statement = _connection.PrepareStatement(sql))
-                {
-                    _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var count = row.GetInt(0);
-                        var year = row.GetInt64(1);
-                        retVal.addRow(year.ToString(), new List<int>() { count});
-                    }
-                }
+                ( "@UserId", user.Id.ToString())
+            });
+
+            var retVal = new List<(int year, long count)>();
+            _dbHelper.ExecuteCommand(sqlCmd, statement =>
+            {
+                var row = statement.Current;
+                var count = row.GetInt64(0);
+                var year = row.GetInt(1);
+                retVal.Add((year, count));
+                return true;
+            });
+
+            return retVal;
+        }
+
+        public StatCard FavoriteYears(User? user, bool movies)
+        {
+            string videoType = "";
+            if (movies)
+            {
+                videoType = "Movies";
+            }
+            else
+            {
+                videoType = "Episodes";
+            }
+            var retVal = new TableBasedStatCard(Constants.FavoriteMovieYears, "", new List<string>() { $"# of {videoType} Watched" });
+            var values = FavoriteYearValues(user, movies);
+
+            foreach (var value in values)
+            {
+                retVal.addRow(value.year.ToString(), new List<long>() { value.count });
             }
 
             return retVal;
         }
 
-        public StatCard FavoriteGenre(User user, bool movies)
+        public List<(string genre, long count)> FavoriteGenreValues(User? user, bool movies)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
             string sql =
                 "SELECT Genres From Media "
                 + "INNER JOIN UserVideoList On Media.ItemId=UserVideoList.ItemId "
                 + "WHERE "
 
                 ;
-            string videoType = "";
             if (movies)
             {
                 sql += "NOT Media.IsEpisode ";
-                videoType = "Movies";
             }
             else
             {
                 sql += "Media.IsEpisode ";
-                videoType = "Episodes";
             }
             sql +=
                 "AND UserId=@UserId AND IsPlayed "
               ;
 
-            Dictionary<string, int> genreMap = new Dictionary<string, int>();
-            lock (_connection)
+            var sqlCmd = new SQLCmdDef(sql, new List<(string, object?)>()
             {
-                using (var statement = _connection.PrepareStatement(sql))
+                ( "@UserId", user.Id.ToString())
+            });
+
+            Dictionary<string, int> genreMap = new Dictionary<string, int>();
+            _dbHelper.ExecuteCommand(sqlCmd, statement =>
+            {
+                var row = statement.Current;
+                var genres = row.GetString(0).Split(';');
+                foreach (var genre in genres)
                 {
-                    _dbHelper.TryBind(statement, "@UserId", user.Id.ToString());
-                    while (statement.MoveNext())
-                    {
-                        var row = statement.Current;
-                        var genres = row.GetString(0).Split(';');
-                        foreach (var genre in genres)
-                        {
-                            if (!genreMap.ContainsKey(genre))
-                                genreMap[genre] = 0;
-                            genreMap[genre]++;
-                        }
-                    }
+                    if (!genreMap.ContainsKey(genre))
+                        genreMap[genre] = 0;
+                    genreMap[genre]++;
                 }
-            }
-            var retVal = new TableBasedStatCard(Constants.FavoriteMovieGenres, "", new List<string>() { $"# of {videoType} Watched" });
+                return true;
+            });
 
             var sortedGenre = genreMap.OrderByDescending(kvp => kvp.Value).ToList();
+
+            var retVal = new List<(string genre, long count)>();
             for (int ii = 0; ii < sortedGenre.Count() && ii < 5; ++ii)
             {
-                retVal.addRow(sortedGenre[ii].Key, new List<int>() { sortedGenre[ii].Value });
+                retVal.Add((sortedGenre[ii].Key, sortedGenre[ii].Value));
+            }
+            return retVal;
+        }
+
+        public StatCard FavoriteGenre(User? user, bool movies)
+        {
+            string videoType = "";
+            if (movies)
+            {
+                videoType = "Movies";
+            }
+            else
+            {
+                videoType = "Episodes";
+            }
+            var retVal = new TableBasedStatCard(Constants.FavoriteMovieGenres, "", new List<string>() { $"# of {videoType} Watched" });
+            var values = FavoriteGenreValues(user, movies);
+            foreach (var value in values)
+            {
+                retVal.addRow(value.genre, new List<long>() { value.count });
             }
             return retVal;
         }
