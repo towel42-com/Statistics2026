@@ -1,15 +1,17 @@
-﻿using MediaBrowser.Controller.Entities.Movies;
+﻿using Emby.Media.Common.Extensions;
+using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Dto;     // Namespace containing BaseItemDto
 using MediaBrowser.Model.Entities;// Namespace containing ImageType
+using MediaBrowser.Model.Services;
+using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
-using System.Linq;
-using Emby.Media.Common.Extensions;
-using Statistics2026.Api;
+using static Emby.Web.GenericEdit.Elements.DxGrid.DxGridColumn;
+using static Statistics2026.Data.StatCard;
 
 namespace Statistics2026.Data
 {
@@ -53,47 +55,6 @@ namespace Statistics2026.Data
         }
     };
 
-
-    public class StatCardRow
-    {
-        public string Name { get; private set; } = String.Empty;
-        public List<long>? Values { get; private set; } = null;
-
-        public StatCardRow(string name, List<long>? values)
-        {
-            Name = name;
-            Values = values;
-        }
-
-        public void setValues(List<long> values)
-        {
-            Values = values;
-        }
-
-        public string ToString(int depth = 0)
-        {
-            var retVal = StatCardResponse._addToHtml(depth++, "<tr style=\"white-space: nowrap;\">");
-
-            retVal += StatCardResponse._addToHtml(depth, $"<td style=\"text-align: left; white-space: nowrap;\">{Name}</td>");
-            if (Values != null)
-            {
-                foreach (var value in Values)
-                {
-                    retVal += StatCardResponse._addToHtml(depth, $"<td>{value}</td>");
-                }
-            }
-
-            retVal += StatCardResponse._addToHtml(--depth, "</tr>");
-
-            return retVal;
-        }
-
-        public override string ToString()
-        {
-            return ToString(0);
-        }
-    }
-
     public abstract class StatCard
     {
         public string Title { get; set; } = String.Empty;
@@ -110,6 +71,47 @@ namespace Statistics2026.Data
         public string HtmlDivId { get; set; } = String.Empty;
         public bool SortByKey { get; set; } = false;
 
+        public enum EAlignment
+        {
+            eLeft,
+            eRight,
+            eCenter
+        };
+
+        public static string AlignmentText(EAlignment alignment)
+        {
+            switch (alignment)
+            {
+                case EAlignment.eLeft: return "left";
+                case EAlignment.eRight: return "right";
+                case EAlignment.eCenter: return "center";
+                default: return String.Empty;
+            }
+        }
+
+        public static string GetStyleString(EAlignment alignment)
+        {
+            var style = $"style=\"text-align: {AlignmentText(alignment)}; white-space: nowrap;\"";
+            return style;
+        }
+
+        public static EAlignment GetAlignmentForColumn(int column, Dictionary<int, StatCard.EAlignment>? columnAlignment)
+        {
+            var colAlign = StatCard.EAlignment.eLeft;
+            if (columnAlignment != null && columnAlignment.TryGetValue(column, out var columnAlign))
+                colAlign = columnAlign;
+            return colAlign;
+        }
+        public static string GetStyleString(int column, Dictionary<int, StatCard.EAlignment>? columnAlignment)
+        {
+            return GetStyleString(GetAlignmentForColumn(column, columnAlignment));
+        }
+
+        public static string GetStyleString()
+        {
+            return GetStyleString(EAlignment.eLeft);
+        }
+
         public StatCard()
         {
             Size = "small";
@@ -118,7 +120,7 @@ namespace Statistics2026.Data
         public StatCard(string title, string? helpText, string size = "half")
         {
             Title = title;
-            if ( helpText != null )
+            if (helpText != null)
                 HelpText = helpText;
             else
                 HelpText = String.Empty;
@@ -133,6 +135,11 @@ namespace Statistics2026.Data
         public abstract bool IsEmpty();
         public abstract string GetDataString(int depth = 0);
 
+        public virtual StatCard.EAlignment alignmentForColumn(int column)
+        {
+            return StatCard.EAlignment.eLeft;
+        }
+
         private void addData(ref string retVal, int depth = 0)
         {
             retVal = StatCardResponse._addToHtml(depth++, "<table>");
@@ -141,9 +148,10 @@ namespace Statistics2026.Data
             {
                 retVal += StatCardResponse._addToHtml(depth++, "<tr>");
                 retVal += StatCardResponse._addToHtml(depth, "<td>&nbsp;</td>");
-                foreach (var header in Headers)
+                for (var ii = 0; ii < Headers.Count(); ++ii)
                 {
-                    retVal += StatCardResponse._addToHtml(depth, $"<td>{header}</td>");
+                    var header = Headers[ii];
+                    retVal += StatCardResponse._addToHtml(depth, $"<td {StatCard.GetStyleString(alignmentForColumn(ii))}>{header}</td>");
                 }
                 retVal += StatCardResponse._addToHtml(--depth, "</tr>");
             }
@@ -280,7 +288,7 @@ namespace Statistics2026.Data
             string style = "";
             if (AsNumberedList)
             {
-                style = "style=\"text-align: left; white-space: nowrap;\"";
+                style = GetStyleString(EAlignment.eLeft);
                 retVal += StatCardResponse._addToHtml(depth++, $"<ol>");
             }
             foreach (var valueLine in ValueLines)
@@ -310,21 +318,75 @@ namespace Statistics2026.Data
         }
     };
 
+
+    public class TableBasedStatCardRow
+    {
+        public string Name { get; private set; } = String.Empty;
+        public List<long>? Values { get; private set; } = null;
+
+        public TableBasedStatCardRow(string name, List<long>? values)
+        {
+            Name = name;
+            Values = values;
+        }
+
+        public void setValues(List<long> values)
+        {
+            Values = values;
+        }
+
+        public string ToString(int depth = 0, StatCard.EAlignment keyColAlignment = EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null)
+        {
+
+            var retVal = StatCardResponse._addToHtml(depth++, $"<tr {StatCard.GetStyleString()}>");
+
+            retVal += StatCardResponse._addToHtml(depth, $"<td {StatCard.GetStyleString(keyColAlignment)}>{Name}</td>");
+            if (Values != null)
+            {
+                for (var ii = 0; ii < Values.Count(); ++ii)
+                {
+                    retVal += StatCardResponse._addToHtml(depth, $"<td {StatCard.GetStyleString(ii, columnAlignment)}>{Values[ii]}</td>");
+                }
+            }
+
+            retVal += StatCardResponse._addToHtml(--depth, "</tr>");
+
+            return retVal;
+        }
+
+        public override string ToString()
+        {
+            return ToString(0);
+        }
+    }
+
     public class TableBasedStatCard : StatCard
     {
-        private List<StatCardRow> Rows;
+        private List<TableBasedStatCardRow> Rows;
+        private Dictionary<int, StatCard.EAlignment> _columnAlignment = new Dictionary<int, StatCard.EAlignment>();
+        private StatCard.EAlignment _keyColumnAlignment = EAlignment.eLeft;
         public override bool IsEmpty() { return Rows == null || Rows.Count == 0; }
         public TableBasedStatCard()
             : base()
         {
-            Rows = new List<StatCardRow>();
+            Rows = new List<TableBasedStatCardRow>();
         }
         public TableBasedStatCard(string title, string helpText, List<string> headers, string size = "half")
             : base(title, helpText, size)
         {
-            Rows = new List<StatCardRow>();
+            Rows = new List<TableBasedStatCardRow>();
 
             Headers = headers;
+        }
+
+        public void SetDataColumnAlignment(int columnNum, StatCard.EAlignment alignment)
+        {
+            _columnAlignment[columnNum] = alignment;
+        }
+
+        public void SetKeyColumnAlignment(StatCard.EAlignment alignment)
+        {
+            _keyColumnAlignment = alignment;
         }
 
         private int findRow(string name)
@@ -340,18 +402,18 @@ namespace Statistics2026.Data
         public void addRow(string category, List<int> values)
         {
             var longValues = new List<long>();
-            foreach( var value in values )
+            foreach (var value in values)
                 longValues.Add(value);
-            addRow( category, longValues);
+            addRow(category, longValues);
         }
 
         public void addRow(string category, List<long> values)
         {
             int currRow = findRow(category);
-            StatCardRow row;
+            TableBasedStatCardRow row;
             if (currRow == -1)
             {
-                row = new StatCardRow(category, null);
+                row = new TableBasedStatCardRow(category, null);
                 Rows.Add(row);
             }
             else
@@ -359,9 +421,14 @@ namespace Statistics2026.Data
             row.setValues(values);
         }
 
+        public override StatCard.EAlignment alignmentForColumn(int column)
+        {
+            return StatCard.GetAlignmentForColumn(column, _columnAlignment);
+        }
+
         public override string GetDataString(int depth = 0)
         {
-            List<StatCardRow> valuesToUse = Rows;
+            List<TableBasedStatCardRow> valuesToUse = Rows;
             if (SortByKey)
             {
                 valuesToUse = valuesToUse.OrderBy(row => row.Name).ToList();
@@ -370,7 +437,7 @@ namespace Statistics2026.Data
             string retVal = "";
             foreach (var row in valuesToUse)
             {
-                retVal += row.ToString(depth);
+                retVal += row.ToString(depth, _keyColumnAlignment, _columnAlignment);
             }
             return retVal;
         }
