@@ -328,7 +328,7 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
             {
                 var row = statement.Current;
-                var currStudios = row.GetString(0).Split(';');
+                var currStudios = row.GetString(0).Split(',');
                 studios.UnionWith(currStudios);
                 return true;
             });
@@ -614,7 +614,7 @@ namespace Statistics2026.Data
             sql +=
                 "AND UserId=@UserId AND IsPlayed "
               + "GROUP BY StartYear "
-              + "ORDER BY NumVideos DESC "
+              + "ORDER BY NumVideos DESC, StartYear ASC "
               + "LIMIT 5 "
               ;
 
@@ -647,7 +647,8 @@ namespace Statistics2026.Data
             {
                 videoType = "Episodes";
             }
-            var retVal = new TableBasedStatCard(Constants.FavoriteMovieYears, "", new List<string>() { $"# of {videoType} Watched" });
+            var retVal = new TableBasedStatCard(Constants.FavoriteMovieYears, "Genre", new List<string>() { $"# of {videoType} Watched" });
+            retVal.SetDataColumnAlignment(0, StatCard.EAlignment.eCenter);
             var values = FavoriteYearValues(user, movies);
 
             foreach (var value in values)
@@ -693,7 +694,7 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand(sqlCmd, statement =>
             {
                 var row = statement.Current;
-                var genres = row.GetString(0).Split(';');
+                var genres = row.GetString(0).Split(',');
                 foreach (var genre in genres)
                 {
                     if (!genreMap.ContainsKey(genre))
@@ -724,7 +725,9 @@ namespace Statistics2026.Data
             {
                 videoType = "Episodes";
             }
-            var retVal = new TableBasedStatCard(Constants.FavoriteMovieGenres, "", new List<string>() { $"# of {videoType} Watched" });
+            var retVal = new TableBasedStatCard(Constants.FavoriteMovieGenres, "Premiere Year", new List<string>() { $"# of {videoType} Watched" });
+            retVal.SetDataColumnAlignment(0, StatCard.EAlignment.eCenter);
+
             var values = FavoriteGenreValues(user, movies);
             foreach (var value in values)
             {
