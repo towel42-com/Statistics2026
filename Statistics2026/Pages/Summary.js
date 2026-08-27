@@ -87,11 +87,14 @@
             movieStats += Helpers.getSummaryInfo(view, "get_movie/LatestAddition", "", "?serverId=" + config.ServerId, "latest_movie_addition");
             view.querySelector("#movieStats").innerHTML = movieStats;
 
+            var seriesSummaryStats = "";
+            seriesSummaryStats += Helpers.getSummaryInfo(view, "total_tv_count", "");
+            seriesSummaryStats += Helpers.getSummaryInfo(view, "total_tv_studio_count", "");
+            seriesSummaryStats += Helpers.getSummaryInfo(view, "least_watched_shows", "", "?serverId=" + config.ServerId);
+            seriesSummaryStats += Helpers.getSummaryInfo(view, "most_watched_shows", "", "?serverId=" + config.ServerId);
+            view.querySelector("#seriesSummaryStats").innerHTML = seriesSummaryStats;
+
             var seriesStats = "";
-            seriesStats += Helpers.getSummaryInfo(view, "total_tv_count", "");
-            seriesStats += Helpers.getSummaryInfo(view, "total_tv_studio_count", "");
-            seriesStats += Helpers.getSummaryInfo(view, "least_watched_shows", "", "?serverId=" + config.ServerId);
-            seriesStats += Helpers.getSummaryInfo(view, "most_watched_shows", "", "?serverId=" + config.ServerId);
             seriesStats += Helpers.getSummaryInfo(view, "get_series/Largest", "", "?serverId=" + config.ServerId, "largest_series");
             seriesStats += Helpers.getSummaryInfo(view, "get_series/Smallest", "", "?serverId=" + config.ServerId, "smallest_series");
             seriesStats += Helpers.getSummaryInfo(view, "get_series/Longest", "", "?serverId=" + config.ServerId, "longest_series");
