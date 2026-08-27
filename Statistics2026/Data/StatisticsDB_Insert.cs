@@ -613,7 +613,7 @@ namespace Statistics2026.Data
             _dbHelper.Logger?.Debug($"ComputePercentWatchedCache - Starting Analysis");
 
             progress.Report(0);
-            var leastWatched = ComputeWatchedShowValues(null, true, libraryManager);
+            var watchedShows = ComputeWatchedShowValues(null, libraryManager, cancellationToken, progress);
             progress.Report(100);
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -640,7 +640,9 @@ namespace Statistics2026.Data
 
             var sqlCmds = new List<SQLCmdDef>();
 
-            foreach(var watched in leastWatched)
+            progress.Report(0);
+            int curr = 0;
+            foreach(var watched in watchedShows)
             {
                 sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
                 {
@@ -652,9 +654,11 @@ namespace Statistics2026.Data
                     ("@PercentWatched", watched.PercentWatched),
                     ("@PercentWatchedPerUser", watched.PercentWatchedPerUser)
                 }));
+                progress.Report(100.0 * (curr++) / watchedShows.Count());
             }
-
+            progress.Report(80);
             _dbHelper.ExecuteCommands(sqlCmds);
+            progress.Report(100);
         }
 
         public void ComputeCachedStats(ILibraryManager libraryManager, CancellationToken cancellationToken, IProgress<double> progress)
