@@ -30,112 +30,171 @@ namespace Statistics2026.Api
 {
     public partial class Statistics2026API : IService, IRequiresRequest
     {
+        //using (var timer = new AutoTimer($"Adding All Users", _logger))
         public object Get(GetEpisodeList request)
         {
-            _logger.Debug("Request: GetEpisodeList");
-            var retVal = GetVideos<Episode>(null);
-            retVal = retVal.OrderBy(x => x.SortName).ThenBy(x => x.Season).ThenBy(x => x.Episode).ToList();
-            return retVal;
+            using (var timer = new AutoTimer("Request: GetEpisodeList", _logger))
+            {
+                try
+                {
+                    var retVal = GetVideos<Episode>(null);
+                    retVal = retVal.OrderBy(x => x.SortName).ThenBy(x => x.Season).ThenBy(x => x.Episode).ToList();
+                    return retVal;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetMovieList request)
         {
-            _logger.Debug("Request: GetMovieList");
-            var retVal = GetVideos<Movie>(null);
-            retVal = retVal.OrderBy(x => x.SortName).ThenBy(x => x.StartYear).ToList();
-            return retVal;
+            using (var timer = new AutoTimer("Request: GetMovieList", _logger))
+            {
+                try
+                {
+                    var retVal = GetVideos<Movie>(null);
+                    retVal = retVal.OrderBy(x => x.SortName).ThenBy(x => x.StartYear).ToList();
+                    return retVal;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetCodecSummary request)
         {
-            _logger.Debug("Request: GetCodecSummary");
+            using (var timer = new AutoTimer("Request: GetCodecSummary", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var serverId = request.serverId ?? "";
+                    var rootDivName = request.rootDivName ?? "";
+                    var showAllResolutions = request.showAllCodecs;
 
-            var serverId = request.serverId ?? "";
-            var rootDivName = request.rootDivName ?? "";
-            var showAllResolutions = request.showAllCodecs;
+                    var groupData = db.MediaCodecs(showAllResolutions);
+                    groupData.ServerId = serverId;
+                    groupData.HtmlDivId = rootDivName;
+                    groupData.SortByKey = true;
+                    var vgReponse = groupData.createStat();
 
-            var groupData = db.MediaCodecs(showAllResolutions);
-            groupData.ServerId = serverId;
-            groupData.HtmlDivId = rootDivName;
-            groupData.SortByKey = true;
-            var vgReponse = groupData.createStat();
-
-            return vgReponse;
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetResolutionSummary request)
         {
-            _logger.Debug("Request: GetResolutionSummary");
+            using (var timer = new AutoTimer("Request: GetResolutionSummary", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var serverId = request.serverId ?? "";
+                    var rootDivName = request.rootDivName ?? "";
+                    var showAllResolutions = request.showAllResolutions;
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var serverId = request.serverId ?? "";
-            var rootDivName = request.rootDivName ?? "";
-            var showAllResolutions = request.showAllResolutions;
+                    var groupData = db.MediaResolutions(showAllResolutions);
+                    groupData.ServerId = serverId;
+                    groupData.HtmlDivId = rootDivName;
+                    groupData.SortByKey = false;
+                    var vgReponse = groupData.createStat();
 
-            var groupData = db.MediaResolutions(showAllResolutions);
-            groupData.ServerId = serverId;
-            groupData.HtmlDivId = rootDivName;
-            groupData.SortByKey = false;
-            var vgReponse = groupData.createStat();
-
-            return vgReponse;
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetDVProfileSummary request)
         {
-            _logger.Debug("Request: GetDVProfileSummary");
+            using (var timer = new AutoTimer("Request: GetDVProfileSummary", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var serverId = request.serverId ?? "";
+                    var rootDivName = request.rootDivName ?? "";
+                    var showUnknownDVProfiles = request.showUnknownDVProfiles;
+                    var showAllDVProfiles = request.showAllDVProfiles;
 
-            var serverId = request.serverId ?? "";
-            var rootDivName = request.rootDivName ?? "";
-            var showUnknownDVProfiles = request.showUnknownDVProfiles;
-            var showAllDVProfiles = request.showAllDVProfiles;
+                    var groupData = db.DVProfileInfo(showUnknownDVProfiles, showAllDVProfiles);
+                    groupData.ServerId = serverId;
+                    groupData.HtmlDivId = rootDivName;
+                    groupData.SortByKey = true;
+                    var vgReponse = groupData.createStat();
 
-            var groupData = db.DVProfileInfo(showUnknownDVProfiles, showAllDVProfiles);
-            groupData.ServerId = serverId;
-            groupData.HtmlDivId = rootDivName;
-            groupData.SortByKey = true;
-            var vgReponse = groupData.createStat();
-
-            return vgReponse;
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetUserCount request)
         {
-            _logger.Debug("Request: GetUserCount");
+            using (var timer = new AutoTimer("Request: GetUserCount", _logger))
+            {
+                try
+                {
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var hasConnectUserID = request.hasConnectUserID;
-            var excludeAdmin = request.excludeAdmin;
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var hasConnectUserID = request.hasConnectUserID;
+                    var excludeAdmin = request.excludeAdmin;
 
-            var groupData = db.UserCount(hasConnectUserID, excludeAdmin);
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+                    var groupData = db.UserCount(hasConnectUserID, excludeAdmin);
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetMostActiveUsers request)
         {
-            _logger.Debug("Request: GetMostActiveUsers");
+            using (var timer = new AutoTimer("Request: GetMostActiveUsers", _logger))
+            {
+                try
+                {
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var hasConnectUserID = request.hasConnectUserID;
-            var numUsers = request.numUsers;
-            var excludeAdmin = request.excludeAdmin;
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var hasConnectUserID = request.hasConnectUserID;
+                    var numUsers = request.numUsers;
+                    var excludeAdmin = request.excludeAdmin;
 
-            var groupData = db.MostActiveUsers(hasConnectUserID, numUsers, excludeAdmin, _userManager);
-            groupData.SortByKey = false;
-            var vgReponse = groupData.createStat();
+                    var groupData = db.MostActiveUsers(hasConnectUserID, numUsers, excludeAdmin, _userManager);
+                    groupData.SortByKey = false;
+                    var vgReponse = groupData.createStat();
 
-            return vgReponse;
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
-        public object TotalMovieCount(User user)
+        public object TotalMovieCount(User? user)
         {
-            _logger.Debug("Request: TotalMovieCount");
-
             var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
             var groupData = db.TotalMovieCount(user, false);
             var vgReponse = groupData.createStat();
@@ -144,252 +203,368 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalMovieCount request)
         {
-            _logger.Debug("Request: GetTotalMovieCount");
+            using (var timer = new AutoTimer("Request: GetTotalMovieCount", _logger))
+            {
+                try
+                {
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
 
-            var userName = request.user;
-            var user = GetUser(userName);
-            if (user == null)
-                return null;
-
-            return TotalMovieCount(user);
+                    return TotalMovieCount(user);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
+
         public object Get(GetTotalMovieCountNoUser request)
         {
-            _logger.Debug("Request: GetTotalMovieCountNoUser");
-            return TotalMovieCount(null);
+            using (var timer = new AutoTimer("Request: GetTotalMovieCountNoUser", _logger))
+            {
+                try
+                {
+                    return TotalMovieCount(null);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
+
         public object Get(GetTotalMoviesWatched request)
         {
-            _logger.Debug("Request: GetTotalMoviesWatched");
+            using (var timer = new AutoTimer("Request: GetTotalMoviesWatched", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var userName = request.user;
-            var user = GetUser(userName);
-            if (user == null)
-                return null;
-
-            var groupData = db.TotalMovieCount(user, true);
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+                    var groupData = db.TotalMovieCount(user, true);
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetTotalCollectionCount request)
         {
-            _logger.Debug("Request: GetTotalCollectionCount");
-
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var groupData = db.TotalCollectionCount();
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+            using (var timer = new AutoTimer("Request: GetTotalCollectionCount", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var groupData = db.TotalCollectionCount();
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetTotalMovieStudioCount request)
         {
-            _logger.Debug("Request: GetTotalMovieStudioCount ");
+            using (var timer = new AutoTimer("Request: GetTotalMovieStudioCount", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-
-            var groupData = db.TotalMovieStudioCount(null);
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+                    var groupData = db.TotalMovieStudioCount(null);
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetItemImageUrl request)
         {
-            var retVal = new GetItemImageUrlResponse { Name = "", PrimaryImageUrl = "" };
-            var item = _libraryManager.GetItemById(request.ItemId);
-            if (item == null)
-                return null;
+            using (var timer = new AutoTimer("Request: GetItemImageUrl", _logger))
+            {
+                try
+                {
+                    var retVal = new GetItemImageUrlResponse { Name = "", PrimaryImageUrl = "" };
+                    var item = _libraryManager.GetItemById(request.ItemId);
+                    if (item == null)
+                        return null!;
 
-            retVal.PrimaryImageUrl = ItemImageUrl._ItemImageUrl(item);
-            if (retVal.PrimaryImageUrl.IsNullOrEmpty())
-                return retVal;
-            retVal.Name = item.Name;
-            return retVal;
+                    var url = ItemImageUrl._ItemImageUrl(item);
+                    if (url == null)
+                        retVal.PrimaryImageUrl = string.Empty;
+                    else
+                        retVal.PrimaryImageUrl = url;
+                    if (retVal.PrimaryImageUrl.IsNullOrEmpty())
+                        return retVal;
+                    retVal.Name = item.Name;
+                    return retVal;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetTotalTVCount request)
         {
-            _logger.Debug("Request: GetTotalTVCount");
+            using (var timer = new AutoTimer("Request: GetTotalTVCount", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-
-            var groupData = db.TotalTVCount(null);
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+                    var groupData = db.TotalTVCount(null);
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetTotalTVStudioCount request)
         {
-            _logger.Debug("Request: GetTotalTVStudioCount ");
-
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-
-            var groupData = db.TotalTVStudioCount(null);
-            var vgReponse = groupData.createStat();
-            return vgReponse;
-        }
-
-        public object Get(GetMovie request)
-        {
-            _logger.Debug("Request: GetMovie ");
-
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var serverId = request.serverId ?? "";
-            var whichStatistic = request.whichStatistic;
-
-            object retVal = null;
-            try
+            using (var timer = new AutoTimer("Request: GetTotalTVStudioCount", _logger))
             {
-                var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Movie);
-                groupData.ServerId = serverId;
-                retVal = groupData.createStat();
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+
+                    var groupData = db.TotalTVStudioCount(null);
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.Error("Exception thrown in GetMovie: " + ex.Message);
-                return null;
-            }
-
-            return retVal;
-        }
-
-        public object Get(GetSeries request)
-        {
-            _logger.Debug("Request: GetSeries ");
-
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var serverId = request.serverId ?? "";
-            var whichStatistic = request.whichStatistic;
-
-            object retVal = null;
-            try
-            {
-                var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Series);
-                groupData.ServerId = serverId;
-
-                retVal = groupData.createStat();
-            }
-            catch (Exception ex)
-            {
-                _logger.Error("Exception thrown in GetMovie: " + ex.Message);
-                return null;
-            }
-            return retVal;
-        }
-
-        public object Get(GetEpisode request)
-        {
-            _logger.Debug("Request: GetEpisode");
-
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var serverId = request.serverId ?? "";
-            var whichStatistic = request.whichStatistic;
-
-            object retVal = null;
-            try
-            {
-                var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Episode);
-                groupData.ServerId = serverId;
-
-                retVal = groupData.createStat();
-            }
-            catch (Exception ex)
-            {
-                _logger.Error("Exception thrown in GetMovie: " + ex.Message);
-                return null;
-            }
-            return retVal;
         }
 
         public object Get(GetLeastWatchedShows request)
         {
-            _logger.Debug("Request: GetLeastWatchedShows ");
+            using (var timer = new AutoTimer("Request: GetLeastWatchedShows", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var serverId = request.serverId ?? "";
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var serverId = request.serverId ?? "";
+                    var groupData = db.WatchedShows(null, true, _libraryManager);
+                    groupData.ServerId = serverId;
 
-            var groupData = db.WatchedShows(null, true, _libraryManager);
-            groupData.ServerId = serverId;
-
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetMostWatchedShows request)
         {
-            _logger.Debug("Request: GetMostWatchedShows ");
+            using (var timer = new AutoTimer("Request: GetMostWatchedShows", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var serverId = request.serverId ?? "";
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var serverId = request.serverId ?? "";
+                    var groupData = db.WatchedShows(null, false, _libraryManager);
+                    groupData.ServerId = serverId;
 
-            var groupData = db.WatchedShows(null, false,_libraryManager);
-            groupData.ServerId = serverId;
-
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetTotalTimeWatched request)
         {
-            _logger.Debug("Request: GetTotalTimeWatched ");
+            using (var timer = new AutoTimer("Request: GetTotalTimeWatched", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var userName = request.user;
-            var user = GetUser(userName);
-            if (user == null)
-                return null;
+                    var groupData = db.TotalTimeWatched(user);
 
-            var groupData = db.TotalTimeWatched(user);
-
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetTotalWatchableTime request)
         {
-            _logger.Debug("Request: GetTotalWatchableTime");
+            using (var timer = new AutoTimer("Request: GetTotalWatchableTime", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var userName = request.user;
-            var user = GetUser(userName);
-            if (user == null)
-                return null;
+                    var groupData = db.TotalWatchableTime(user);
 
-            var groupData = db.TotalWatchableTime(user);
-
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetMovieFavoriteYears request)
         {
-            _logger.Debug("Request: GetMovieFavoriteYears");
+            using (var timer = new AutoTimer("Request: GetMovieFavoriteYears", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var userName = request.user;
-            var user = GetUser(userName);
-            if (user == null)
-                return null;
-
-            var groupData = db.FavoriteYears(user, true);
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+                    var groupData = db.FavoriteYears(user, true);
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
-        
+
         public object Get(GetMovieFavoriteGenres request)
         {
-            _logger.Debug("Request: GetMovieFavoriteGenres");
+            using (var timer = new AutoTimer("Request: GetMovieFavoriteGenres", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
 
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
-            var userName = request.user;
-            var user = GetUser(userName);
-            if (user == null)
-                return null;
+                    var groupData = db.FavoriteGenre(user, true);
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+        }
 
-            var groupData = db.FavoriteGenre(user, true);
-            var vgReponse = groupData.createStat();
-            return vgReponse;
+        public object Get(GetMovie request)
+        {
+            using (var timer = new AutoTimer("Request: GetMovie", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var serverId = request.serverId ?? "";
+                    var whichStatistic = request.whichStatistic;
+                    timer.Text += $" - {whichStatistic}";
+
+                    var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Movie);
+                    groupData.ServerId = serverId;
+                    return groupData.createStat();
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+        }
+
+        public object Get(GetSeries request)
+        {
+            using (var timer = new AutoTimer("Request: GetSeries", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var serverId = request.serverId ?? "";
+                    var whichStatistic = request.whichStatistic;
+                    timer.Text += $" - {whichStatistic}";
+
+                    var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Series);
+                    groupData.ServerId = serverId;
+                    return groupData.createStat();
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+        }
+
+        public object Get(GetEpisode request)
+        {
+            using (var timer = new AutoTimer("Request: GetEpisode", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var serverId = request.serverId ?? "";
+                    var whichStatistic = request.whichStatistic;
+                    timer.Text += $" - {whichStatistic}";
+
+                    var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Episode);
+                    groupData.ServerId = serverId;
+
+                    return groupData.createStat();
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
     }
 }
