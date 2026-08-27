@@ -15,14 +15,14 @@ namespace Statistics2026.Data
 {
     public class DynamicButton
     {
-        public string id { get; set; }
-        public string info { get; set; }
-        public string title { get; set; }
+        public string id { get; set; } = String.Empty;
+        public string info { get; set; } = String.Empty;
+        public string title { get; set; } = String.Empty;
     };
 
     public class StatCardResponse
     {
-        public string html { get; set; }
+        public string html { get; set; } = String.Empty;
         public DynamicButton[] dynamicButtons { get; set; } = new DynamicButton[] { };
 
         public void addDynamicButton(DynamicButton button)
@@ -56,16 +56,16 @@ namespace Statistics2026.Data
 
     public class StatCardRow
     {
-        public string Name { get; private set; }
-        public List<int> Values { get; private set; }
+        public string Name { get; private set; } = String.Empty;
+        public List<long>? Values { get; private set; } = null;
 
-        public StatCardRow(string name, List<int> values)
+        public StatCardRow(string name, List<long>? values)
         {
             Name = name;
             Values = values;
         }
 
-        public void setValues(List<int> values)
+        public void setValues(List<long> values)
         {
             Values = values;
         }
@@ -75,9 +75,12 @@ namespace Statistics2026.Data
             var retVal = StatCardResponse._addToHtml(depth++, "<tr style=\"white-space: nowrap;\">");
 
             retVal += StatCardResponse._addToHtml(depth, $"<td style=\"text-align: left; white-space: nowrap;\">{Name}</td>");
-            foreach (var value in Values)
+            if (Values != null)
             {
-                retVal += StatCardResponse._addToHtml(depth, $"<td>{value}</td>");
+                foreach (var value in Values)
+                {
+                    retVal += StatCardResponse._addToHtml(depth, $"<td>{value}</td>");
+                }
             }
 
             retVal += StatCardResponse._addToHtml(--depth, "</tr>");
@@ -93,29 +96,32 @@ namespace Statistics2026.Data
 
     public abstract class StatCard
     {
-        public string Title { get; set; }
-        protected List<string> Headers { get; set; }
+        public string Title { get; set; } = String.Empty;
+        protected List<string>? Headers { get; set; } = null;
 
-        public string SubTitle { get; set; }
+        public string SubTitle { get; set; } = String.Empty;
 
-        public string Size { get; set; }
-        public string HelpText { get; set; }
-        public string ImageUrl { get; set; }
-        public string MediaItemId { get; set; }
+        public string Size { get; set; } = String.Empty;
+        public string HelpText { get; set; } = String.Empty;
+        public string ImageUrl { get; set; } = String.Empty;
+        public string MediaItemId { get; set; } = String.Empty;
 
-        public string ServerId { get; set; }
-        public string HtmlDivId { get; set; }
-        public bool SortByKey { get; set; }
+        public string ServerId { get; set; } = String.Empty;
+        public string HtmlDivId { get; set; } = String.Empty;
+        public bool SortByKey { get; set; } = false;
 
         public StatCard()
         {
             Size = "small";
         }
 
-        public StatCard(string title, string helpText, string size = "half")
+        public StatCard(string title, string? helpText, string size = "half")
         {
             Title = title;
-            HelpText = helpText;
+            if ( helpText != null )
+                HelpText = helpText;
+            else
+                HelpText = String.Empty;
             Size = size;
         }
 
@@ -247,7 +253,7 @@ namespace Statistics2026.Data
             ValueLines = new List<(string, string, string)>();
         }
 
-        public TextBasedStatCard(string title, string helpText, string size = "half")
+        public TextBasedStatCard(string title, string? helpText, string size = "half")
             : base(title, helpText, size)
         {
             ValueLines = new List<(string, string, string)>();
@@ -333,8 +339,16 @@ namespace Statistics2026.Data
 
         public void addRow(string category, List<int> values)
         {
+            var longValues = new List<long>();
+            foreach( var value in values )
+                longValues.Add(value);
+            addRow( category, longValues);
+        }
+
+        public void addRow(string category, List<long> values)
+        {
             int currRow = findRow(category);
-            StatCardRow row = null;
+            StatCardRow row;
             if (currRow == -1)
             {
                 row = new StatCardRow(category, null);

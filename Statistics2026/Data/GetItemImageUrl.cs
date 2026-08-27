@@ -38,7 +38,7 @@ namespace Statistics2026.Data
         {
             var item = libManager.GetItemById(itemId);
             if (item == null)
-                return null;
+                return string.Empty;
             return _ItemImageUrl(item, imageType, maxWidth, quality, imageIndex);
         }
 
@@ -46,21 +46,21 @@ namespace Statistics2026.Data
         {
             var item = libManager.GetItemById(itemId);
             if (item == null)
-                return null;
+                return string.Empty;
             return _ItemImageUrl(item, imageType, maxWidth, quality, imageIndex);
         }
 
         public static string _ItemImageUrl(BaseItem item, ImageType imageType=ImageType.Primary, int maxWidth=400, int quality=90, int imageIndex = 0)
         {
             if (item == null)
-                return null;
+                return string.Empty;
 
             if (!item.HasImage(imageType, imageIndex))
-                return null;
+                return string.Empty;
 
             var imageInfo = item.GetImageInfo(imageType, imageIndex);
             if (imageInfo == null)
-                return null;
+                return string.Empty;
 
             var imageTag = imageInfo?.DateModified.Ticks.ToString();
             var retVal = $"/emby/Items/{item.Id}/Images/{imageType}?maxWidth={maxWidth}&quality={quality}&tag={imageTag}";

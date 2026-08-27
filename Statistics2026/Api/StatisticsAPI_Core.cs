@@ -55,41 +55,38 @@ namespace Statistics2026.Api
             _httpServer = httpServer;
         }
 
-        public IRequest Request { get; set; }
+        public IRequest? Request { get; set; } = null;
 
 
-        private IEnumerable<T> GetItems<T>(User user)
+        private IEnumerable<T> GetItems<T>(User? user)
         {
-            return DBHelperFuncs.GetUserItems<T>(user, _libraryManager);
+            return DBHelper.GetUserItems<T>(user, _libraryManager);
         }
 
-        static public (IEnumerable<Video>, IEnumerable<Video>) GetAllEpisodesAndMovies(User user, ILibraryManager libraryManager)
+        static public (IEnumerable<Video> forUser, IEnumerable<Video>? forAll) GetAllEpisodesAndMovies(User? user, ILibraryManager libraryManager, bool computeAll)
         {
-            var episodesForUser = DBHelperFuncs.GetUserItems<Episode>(user, libraryManager).OfType<Video>().ToList();
-            var moviesForUser = DBHelperFuncs.GetUserItems<Movie>(user, libraryManager).OfType<Video>().ToList();
+            var episodesForUser = DBHelper.GetUserItems<Episode>(user, libraryManager).OfType<Video>().ToList();
+            var moviesForUser = DBHelper.GetUserItems<Movie>(user, libraryManager).OfType<Video>().ToList();
             var forUser = episodesForUser.Concat(moviesForUser);
 
-            var allEpisodes = DBHelperFuncs.GetUserItems<Episode>(null, libraryManager).OfType<Video>().ToList();
-            var allMovies = DBHelperFuncs.GetUserItems<Movie>(null, libraryManager).OfType<Video>().ToList();
-            var all = allEpisodes.Concat(allMovies);
+            IEnumerable<Video>? all = null;
+            if (computeAll)
+            {
+                var allEpisodes = DBHelper.GetUserItems<Episode>(null, libraryManager).OfType<Video>().ToList();
+                var allMovies = DBHelper.GetUserItems<Movie>(null, libraryManager).OfType<Video>().ToList();
+                all = allEpisodes.Concat(allMovies);
+            }
             return (forUser, all);
         }
 
         static public IEnumerable<BoxSet> GetAllBoxSets(User user, ILibraryManager libraryManager)
         {
-            var boxSets = DBHelperFuncs.GetUserItems<BoxSet>(user, libraryManager).OfType<BoxSet>().ToList();
+            var boxSets = DBHelper.GetUserItems<BoxSet>(user, libraryManager).OfType<BoxSet>().ToList();
             return boxSets;
         }
 
 
-        private IEnumerable<Video> GetAllEpisodesAndMovies(User user)
-        {
-            var episodes = GetItems<Episode>(user).OfType<Video>().ToList();
-            var movies = GetItems<Movie>(user).OfType<Video>().ToList();
-            return episodes.Concat(movies);
-        }
-
-        private List<MediaInfo> GetVideos<T>(User user) where T : Video
+        private List<MediaInfo> GetVideos<T>(User? user) where T : Video
         {
             List<MediaInfo> mediaInfos = new List<MediaInfo>();
             var items = GetItems<T>(user);
@@ -100,7 +97,7 @@ namespace Statistics2026.Api
             return mediaInfos;
         }
 
-        private User GetUser(string userName)
+        private User? GetUser(string userName)
         {
             if (string.IsNullOrEmpty(userName))
                 return null;

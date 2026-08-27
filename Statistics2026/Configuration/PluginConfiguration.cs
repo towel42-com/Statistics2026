@@ -10,10 +10,10 @@ namespace Statistics2026.Configuration
         {
         }
 
-        public string BuildDate { get; set; }
-        public string LastUpdated { get; set; }
-        public string Version { get; set; }
-        public string ServerId { get; set; }
+        public string BuildDate { get; set; } = string.Empty;
+        public string LastUpdated { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
+        public string ServerId { get; set; } = string.Empty;
 
         public bool hasConnectUserID { get; set; } = false;
         public int numMostActiveUsers { get; set; } = 5;

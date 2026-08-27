@@ -84,7 +84,7 @@ namespace Statistics2026
 
         public override Guid Id => new Guid("4BFE2894-AEA3-4D3C-A429-503B56D61711");
 
-        public static Plugin Instance { get; private set; }
+        public static Plugin? Instance { get; private set; } = null;
 
         public override string Name => "Statistics 2026";
 
