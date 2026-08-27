@@ -64,7 +64,7 @@ namespace Statistics2026.ScheduledTasks
             _apiService = apiService;
         }
 
-        private static PluginConfiguration PluginConfiguration => Plugin.Instance.Configuration;
+        private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
         string IScheduledTask.Name => "Calculate Media and User Information for all library media and users";
 
         string IScheduledTask.Key => "Statistics2026CalculateStatsTask";
@@ -78,12 +78,16 @@ namespace Statistics2026.ScheduledTasks
             _logger.Info("Statistics 2026 : Starting Statistics 2026 calculation task");
             // purely for progress reporting
             var now = DateTime.Now;
+            if (PluginConfiguration == null)
+                throw new ArgumentNullException(nameof(PluginConfiguration));
+
             PluginConfiguration.LastUpdated = now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-            PluginConfiguration.Version = Plugin.Instance.Version.ToString(4);
+            PluginConfiguration.Version = Plugin.Instance?.Version.ToString(4) ?? "<UNKNOWN>";
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
             PluginConfiguration.ServerId = _appHost.SystemId;
 
             var db = StatisticsDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
+            db.SetCancellationToken(cancellationToken);
             db.Initialize();
 
             var overAllTimer = new AutoTimer($"Adding All Data", _logger, false);
@@ -119,6 +123,22 @@ namespace Statistics2026.ScheduledTasks
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
+            long computeStats = 0;
+            using (var timer = new AutoTimer($"Computing Cached Stats", _logger))
+            {
+                db.ComputeCachedStats(_libraryManager, cancellationToken, progress);
+                computeStats = timer.ElapsedMilliseconds();
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            long computePercentWatchedCache  = 0;
+            using (var timer = new AutoTimer($"Computing Percent Watched Cached Stats", _logger))
+            {
+                db.ComputePercentWatchedCache(_libraryManager, cancellationToken, progress);
+                computePercentWatchedCache = timer.ElapsedMilliseconds();
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
             db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -130,10 +150,14 @@ namespace Statistics2026.ScheduledTasks
             _logger.Info($"    Collections: {addCollections} ms");
             _logger.Info($"          Media: {addMedia} ms");
             _logger.Info($"         Series: {addSeries} ms");
+            _logger.Info($"  Compute Cache: {computeStats} ms");
+            _logger.Info($"  Compute Percent Watched Cache: {computePercentWatchedCache} ms");
             _logger.Info($"=======================================");
             _logger.Info("Statistics 2026 : Finished Statistics 2026 calculation task");
 
-            Plugin.Instance.SaveConfiguration();
+            Plugin.Instance?.SaveConfiguration();
+
+            db.SetCancellationToken(null);
             return Task.CompletedTask;
         }
 
