@@ -324,15 +324,62 @@ namespace Statistics2026.Api
             }
         }
 
+        public object TotalTVCount(User? user, bool watched)
+        {
+            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var groupData = db.TotalTVCount(user, watched);
+            var vgReponse = groupData.createStat();
+            return vgReponse;
+        }
+
         public object Get(GetTotalTVCount request)
         {
             using (var timer = new AutoTimer("Request: GetTotalTVCount", _logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
 
-                    var groupData = db.TotalTVCount(null);
+                    return TotalTVCount(user, false);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+        }
+
+        public object Get(GetTotalTVCountNoUser request)
+        {
+            using (var timer = new AutoTimer("Request: GetTotalTVCountNoUser", _logger))
+            {
+                try
+                {
+                    return TotalTVCount(null, false);
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+        }
+
+        public object Get(GetTotalTVWatched request)
+        {
+            using (var timer = new AutoTimer("Request: GetTotalMoviesWatched", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
+
+                    var groupData = db.TotalTVCount(user, true);
                     var vgReponse = groupData.createStat();
                     return vgReponse;
                 }
@@ -418,7 +465,15 @@ namespace Statistics2026.Api
                     if (user == null)
                         return null!;
 
-                    var groupData = db.TotalTimeWatched(user);
+                    bool? showEpisodes = null;
+                    if (request.episodes == "true")
+                        showEpisodes = true;
+                    else if (request.episodes == "all")
+                        showEpisodes = null;
+                    else
+                        showEpisodes = false;
+
+                    var groupData = db.TotalTimeWatched(user, showEpisodes);
 
                     var vgReponse = groupData.createStat();
                     return vgReponse;
@@ -442,7 +497,15 @@ namespace Statistics2026.Api
                     if (user == null)
                         return null!;
 
-                    var groupData = db.TotalWatchableTime(user);
+                    bool? showEpisodes = null;
+                    if (request.episodes == "true")
+                        showEpisodes = true;
+                    else if (request.episodes == "all")
+                        showEpisodes = null;
+                    else
+                        showEpisodes = false;
+
+                    var groupData = db.TotalWatchableTime(user, showEpisodes);
 
                     var vgReponse = groupData.createStat();
                     return vgReponse;
@@ -452,6 +515,11 @@ namespace Statistics2026.Api
                     throw;
                 }
             }
+        }
+
+        public object Get(GetLastSeen request)
+        {
+            return null!;
         }
 
         public object Get(GetMovieFavoriteYears request)

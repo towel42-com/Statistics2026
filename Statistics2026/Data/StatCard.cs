@@ -279,7 +279,7 @@ namespace Statistics2026.Data
 
         public void AddLine(string value, string itemId, string url)
         {
-            ValueLines.Add((CheckMaxLength(value), itemId, url));
+            ValueLines.Add((value, itemId, url));
         }
 
         public override string GetDataString(int depth = 0)
@@ -295,7 +295,10 @@ namespace Statistics2026.Data
             {
                 if (valueLine.data.IsNullOrEmpty())
                     continue;
-                var dataHtml = $"<div class=\"statCard-stats-number\" {style}>{valueLine.data}</div>";
+                var value = valueLine.data;
+                if ( ValueLines.Count() > 1 )
+                    value = CheckMaxLength(value);
+                var dataHtml = $"<div class=\"statCard-stats-number\" {style}>{value}</div>";
 
                 var showImage = !ServerId.IsNullOrEmpty() && !valueLine.url.IsNullOrEmpty() && !valueLine.itemId.IsNullOrEmpty();
                 if (showImage)
@@ -337,7 +340,6 @@ namespace Statistics2026.Data
 
         public string ToString(int depth = 0, StatCard.EAlignment keyColAlignment = EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null)
         {
-
             var retVal = StatCardResponse._addToHtml(depth++, $"<tr {StatCard.GetStyleString()}>");
 
             retVal += StatCardResponse._addToHtml(depth, $"<td {StatCard.GetStyleString(keyColAlignment)}>{Name}</td>");

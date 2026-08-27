@@ -155,7 +155,7 @@ namespace Statistics2026.Data
             var cmd = new SQLCmdDef(sql, parameters);
 
             var retVal = String.Empty;
-            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            _dbHelper.ExecuteCommand(cmd, statement =>
                 {
                     var row = statement.Current;
                     var count = row.GetInt64(0);
@@ -186,13 +186,12 @@ namespace Statistics2026.Data
             List<string> conditions = new List<string>();
 
             if (hasConnectUserID)
-                conditions.Add("( ConnectUserId <> '' AND ConnectUserId IS NOT NULL )");
+                conditions.Add("ConnectUserId <> '' AND ConnectUserId IS NOT NULL");
 
             if (excludeAdmin)
-                conditions.Add("( NOT IsAdministrator )");
+                conditions.Add("NOT IsAdministrator");
 
-            if (conditions.Count > 0)
-                sql += "WHERE " + string.Join(" AND ", conditions) + " ";
+            sql += DBHelper.JoinClauses(conditions);
 
             return ValueGroupForSingleItem(Constants.TotalUsers, null, sql);
         }
@@ -210,12 +209,12 @@ namespace Statistics2026.Data
             List<string> conditions = new List<string>();
 
             if (hasConnectUserID)
-                conditions.Add("( ConnectUserId <> '' AND ConnectUserId IS NOT NULL )");
+                conditions.Add("ConnectUserId <> '' AND ConnectUserId IS NOT NULL");
 
             if (excludeAdmin)
-                conditions.Add("( NOT IsAdministrator )");
-            if (conditions.Count > 0)
-                sql += "WHERE " + string.Join(" AND ", conditions) + " ";
+                conditions.Add("NOT IsAdministrator");
+
+            sql += DBHelper.JoinClauses(conditions);
 
             sql +=
                 "ORDER BY TotalTimeWatched DESC " +
@@ -256,8 +255,8 @@ namespace Statistics2026.Data
             }
             else
             {
-                title = Constants.TotalUserMoviesWatched;
-                help = Constants.HelpTotalUserMoviesWatched;
+                title = watched ? Constants.TotalUserMoviesWatched : Constants.TotalUserMovies;
+                help = watched ? Constants.HelpTotalUserMoviesWatched : Constants.HelpTotalUserMovies;
 
                 sql = "SELECT SUM(NOT IsEpisode) FROM UserVideoList WHERE UserId=@UserId";
                 if (watched)
@@ -286,16 +285,52 @@ namespace Statistics2026.Data
             });
         }
 
-        public StatCard TotalTVCount(User? user)
+        public StatCard TotalTVCount(User? user, bool watched)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
 
-            string sql = "SELECT COUNT(DISTINCT(PrimaryName)) FROM Media WHERE IsEpisode";
-            var retVal = ValueGroupForSingleItem(Constants.TotalTVShows, Constants.HelpTotalTVShows, sql);
+            string sqlSeries = string.Empty;
+            string sqlEpisodes = string.Empty;
+            string titleSeries = string.Empty;
+            string titleEpisodes = string.Empty;
+            string helpEpisodes = string.Empty;
+            List<(string name, object? value)>? paramList = null;
+            if (user == null)
+            {
+                sqlSeries = "SELECT COUNT(DISTINCT(PrimaryName)) FROM Media WHERE IsEpisode";
+                sqlEpisodes = "SELECT SUM(IsEpisode) FROM Media";
+                titleSeries = Constants.TotalTVShows;
+                titleEpisodes = Constants.TotalTVEpisodes;
+                helpEpisodes = Constants.HelpTotalTVShows;
+            }
+            else
+            {
+                paramList = new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) };
 
-            retVal.AddLine(Constants.TotalTVEpisodes);
-            var value = GetSingleValueFromSQL("SELECT SUM(IsEpisode) FROM Media");
+                sqlSeries = "SELECT COUNT(DISTINCT(Media.PrimaryName)) FROM UserVideoList LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId WHERE Media.IsEpisode AND ( UserVideoList.UserId=@UserId )";
+                sqlEpisodes = "SELECT SUM(UserVideoList.IsEpisode) FROM UserVideoList LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId WHERE Media.IsEpisode AND ( UserVideoList.UserId=@UserId )";
+
+                titleSeries = Constants.TotalUserTVShows;
+                titleEpisodes = Constants.TotalUserTVEpisodes;
+                helpEpisodes = Constants.HelpTotalUserTVShows;
+
+                if (watched)
+                {
+                    sqlEpisodes += " AND ( UserVideoList.IsPlayed )";
+                    sqlSeries += " AND ( UserVideoList.IsPlayed )";
+
+                    titleSeries = Constants.TotalTVShowsWatched;
+                    titleEpisodes = Constants.TotalUserTVEpisodesWatched;
+                    helpEpisodes = Constants.HelpTotalTVShowsWatched;
+                }
+
+            }
+
+            var retVal = ValueGroupForSingleItem(titleEpisodes, helpEpisodes, sqlEpisodes, paramList);
+
+            retVal.AddLine(titleSeries);
+            var value = GetSingleValueFromSQL(sqlSeries);
             retVal.AddLine(value);
 
             return retVal;
@@ -486,7 +521,7 @@ namespace Statistics2026.Data
 
             var series = new List<WatchedShowValue>();
 
-            var sql = "SELECT " 
+            var sql = "SELECT "
                 + "  ItemId "
                 + ", Name "
                 + ", ImageUrl "
@@ -566,7 +601,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard TotalTimeWatched(User? user)
+        public StatCard TotalTime(User? user, bool? episodesOnly, bool played)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
@@ -574,20 +609,42 @@ namespace Statistics2026.Data
             if (user == null)
                 throw new ArgumentNullException("user");
 
-            string sql = "SELECT TotalTimeWatched FROM Users  WHERE UserId=@UserId";
-            return ValueGroupForSingleItem(Constants.UserTotalTimeWatched, null, sql, new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) }, DBHelper.FormatTicks);
+            string sql = "SELECT SUM(RunTimeTicks) " +
+                "FROM UserVideoList " +
+                "LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId "
+            ;
+            var clauses = new List<string>() { "UserId=@UserId" };
+            var title = String.Empty;
+
+            if (episodesOnly == null)
+            {
+                title = played ? Constants.UserTotalTimeWatched : Constants.UserTotalWatchableTime;
+            }
+            else if (episodesOnly.Value)
+            {
+                title = played ? Constants.UserTotalEpisodeTimeWatched : Constants.UserTotalEpisodeWatchableTime;
+                clauses.Add("UserVideoList.IsEpisode");
+            }
+            else
+            {
+                title = played ? Constants.UserTotalMovieTimeWatched : Constants.UserTotalMovieWatchableTime;
+                clauses.Add("NOT UserVideoList.IsEpisode");
+            }
+            if (played)
+                clauses.Add("IsPlayed");
+
+            sql += DBHelper.JoinClauses(clauses);
+
+            return ValueGroupForSingleItem(title, null, sql, new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) }, DBHelper.FormatTicks);
         }
 
-        public StatCard TotalWatchableTime(User? user)
+        public StatCard TotalTimeWatched(User? user, bool? episodesOnly)
         {
-            if (!_dbHelper.isValid())
-                throw new ArgumentNullException("dbHelper");
-
-            if (user == null)
-                throw new ArgumentNullException("user");
-
-            string sql = "SELECT TotalWatchableTime FROM Users WHERE UserId=@UserId";
-            return ValueGroupForSingleItem(Constants.UserTotalWatchableTime, null, sql, new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) }, DBHelper.FormatTicks);
+            return TotalTime(user, episodesOnly, true);
+        }
+        public StatCard TotalWatchableTime(User? user, bool? episodesOnly)
+        {
+            return TotalTime(user, episodesOnly, false);
         }
 
         public List<(int year, long count)> FavoriteYearValues(User? user, bool movies)

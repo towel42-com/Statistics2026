@@ -29,36 +29,32 @@
             } 
 
             view.querySelector("#UserTitle").innerHTML = "User statistics for " + user;
-            view.querySelector("#userStats").innerHTML = "";
+            view.querySelector("#generalStats").innerHTML = "";
             view.querySelector("#movieStats").innerHTML = "";
             view.querySelector("#showStats").innerHTML = "";
 
-            var userStats = "";
-            userStats += Helpers.getSummaryInfo(view, "total_time_watched", user);
-            userStats += Helpers.getSummaryInfo(view, "total_watchable_time", user);
-            view.querySelector("#userStats").innerHTML = userStats;
+            var generalStats = "";
+            generalStats += Helpers.getSummaryInfo(view, "total_time_watched", user, "?episodes=all");
+            generalStats += Helpers.getSummaryInfo(view, "total_watchable_time", user, "?episodes=all");
+            view.querySelector("#generalStats").innerHTML = generalStats;
 
             var movieStats = "";
             movieStats += Helpers.getSummaryInfo(view, "total_movie_count", user);
             movieStats += Helpers.getSummaryInfo(view, "total_movies_watched", user);
             movieStats += Helpers.getSummaryInfo(view, "movie_favorite_years", user);
             movieStats += Helpers.getSummaryInfo(view, "movie_favorite_genres", user);
+            movieStats += Helpers.getSummaryInfo(view, "total_time_watched", user, "?episodes=false", "total_movie_time_watched");
+            movieStats += Helpers.getSummaryInfo(view, "total_watchable_time", user, "?episodes=false", "total_movie_watchable_time");
+            movieStats += Helpers.getSummaryInfo(view, "last_seen", user, "?episodes=false", "last_seen_movies");
             view.querySelector("#movieStats").innerHTML = movieStats;
 
             var showStats = "";
+            showStats += Helpers.getSummaryInfo(view, "total_tv_count", user);
+            showStats += Helpers.getSummaryInfo(view, "total_tv_watched", user);
+            showStats += Helpers.getSummaryInfo(view, "total_time_watched", user, "?episodes=true", "total_episode_time_watched");
+            showStats += Helpers.getSummaryInfo(view, "total_watchable_time", user, "?episodes=true", "total_episode_watchable_time");
+            movieStats += Helpers.getSummaryInfo(view, "last_seen", user, "?episodes=true", "last_seen_tv");
             view.querySelector("#showStats").innerHTML = showStats;
-            // var userStat = config.UserStats.find(v => v.UserName === user);
-
-            // userStat.OverallStats.forEach((v) => { createStatDiv(v, "#overallStat", view); });
-            // userStat.MovieStats.forEach((v) => { createStatDiv(v, "#movieStat", view); });
-            // userStat.ShowStats.forEach((v) => { createStatDiv(v, "#showStat", view); });
-
-            // dynamicbuttons.forEach((v) => {
-            //     view.querySelector(`#` + v.id).addEventListener("click",
-            //         function () {
-            //             showInfo(v.info, v.title);
-            //         });
-            // });
 
             Dashboard.hideLoadingMsg();
         });

@@ -149,6 +149,13 @@ namespace Statistics2026.Api
         public string user { get; set; } = String.Empty;
     }
 
+    [Route("/Statistics2026/total_tv_watched/{User}", "GET", Summary = "Get the total Movie Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalTVWatched : IReturn<Object>
+    {
+        public string user { get; set; } = String.Empty;
+    }
+
     [Route("/Statistics2026/movie_favorite_years/{User}", "GET", Summary = "Get the Favorite Movie Years")]
     [Authenticated(Roles = "admin")]
     public class GetMovieFavoriteYears : IReturn<Object>
@@ -183,8 +190,15 @@ namespace Statistics2026.Api
 
     [Route("/Statistics2026/total_tv_count", "GET", Summary = "Get the total TV Count")]
     [Authenticated(Roles = "admin")]
+    public class GetTotalTVCountNoUser : IReturn<Object>
+    {
+    }
+
+    [Route("/Statistics2026/total_tv_count/{User}", "GET", Summary = "Get the total TV Count")]
+    [Authenticated(Roles = "admin")]
     public class GetTotalTVCount : IReturn<Object>
     {
+        public string user { get; set; } = String.Empty;
     }
 
     [Route("/Statistics2026/get_movie/{WhichStatistic}", "GET", Summary = "Get the movie statistic in from the database")]
@@ -238,6 +252,9 @@ namespace Statistics2026.Api
     public class GetTotalTimeWatched : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
+
+        [ApiMember(Name = "episodes", Description = "Episodes", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string episodes { get; set; } = String.Empty;
     }
 
     [Route("/Statistics2026/total_watchable_time/{User}", "GET", Summary = "Get the Total Time Watched for User")]
@@ -245,5 +262,17 @@ namespace Statistics2026.Api
     public class GetTotalWatchableTime : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
+
+        [ApiMember(Name = "episodes", Description = "Episodes", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string episodes { get; set; } = String.Empty;
     }
+
+    [Route("/Statistics2026/last_seen/{User}", "GET", Summary = "Get the Favorite Movie Years")]
+    [Authenticated(Roles = "admin")]
+    public class GetLastSeen : IReturn<Object>
+    {
+        public string user { get; set; } = String.Empty;
+        public bool episodes { get; set; } = false;
+    }
+
 }

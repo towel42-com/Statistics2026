@@ -87,8 +87,8 @@ define(function () {
                     });
             });
         }).catch(error => {
-            var errorMessage = "'" + error + "' - '" + urlText + "'" ;
-            console.error("getSummaryInfo failed:", error, urlText);
+            var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'" ;
+            console.error("getSummaryInfo failed:", errorMessage);
         });
 
         return `<div name="${div}" id="${div}"></div>`;

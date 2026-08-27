@@ -22,8 +22,11 @@ namespace Statistics2026
         internal const string TotalMovies = "Total Movies";
         internal const string HelpTotalMovies = "Total movies in the Emby library.";
 
-        internal const string TotalUserMoviesWatched = "Total Movies Watched";
-        internal const string HelpTotalUserMoviesWatched = "Total Movies in the Emby library for the User.";
+        internal const string TotalUserMovies = "Total Movies for User";
+        internal const string HelpTotalUserMovies = "Total movies in the Emby library available to the User.";
+
+        internal const string TotalUserMoviesWatched = "Total Movies Watched by User";
+        internal const string HelpTotalUserMoviesWatched = "Total Movies Watched by the User in the Emby library.";
 
         internal const string TotalCollections = "Total Collections";
         internal const string HelpTotalCollections = "Total collections in the Emby library.";
@@ -44,8 +47,23 @@ namespace Statistics2026
         internal const string FirstMovieAddition = "First Movie Added to Server";
         internal const string LatestMovieAddition = "Latest Movie Added to Server";
 
+        internal const string TotalTVShowsWatched = "Total TV Series Watched";
+        internal const string HelpTotalTVShowsWatched = "Total TV Series Watched by the user in the Emby library.";
+
         internal const string TotalTVShows = "Total TV Series";
         internal const string HelpTotalTVShows = "Total TV Series the Emby library.";
+        internal const string TotalUserTVShows = "Total TV Series for User";
+        internal const string HelpTotalUserTVShows = "Total TV Series the Emby library available to the User.";
+
+        internal const string TotalTVEpisodes = "Total TV Episodes";
+        internal const string HelpTotalTVEpisodes = "Total TV Series the Emby library (Excludes Specials).";
+
+        internal const string TotalUserTVEpisodes = "Total TV Episodes for User";
+        internal const string HelpTotalUserTVEpisodes = "Total TV Series the Emby library available to the User (Excludes Specials).";
+
+        internal const string TotalUserTVEpisodesWatched = "Total TV Episodes watched by User";
+        internal const string HelpTotalUserTVEpisodesWatched = "Total TV Episodes watched by the user in the Emby library available to the User (Excludes Specials).";
+
         internal const string HelpTotalTVNetworks = "Total TV Networks And Studios in the Emby library.";
         internal const string TotalTVNetworks = "Total TV Networks and Studios";
         internal const string BiggestSeries = "Largest TV Series Total Size";
@@ -71,9 +89,6 @@ namespace Statistics2026
         internal const string HelpMostWatchedShows = "Most watched shows based on the average percent of episodes finished per user.";
         internal const string HelpLeastWatchedShows = "Least watched shows based on the average percent of episodes finished per user.";
 
-        internal const string TotalTVEpisodes = "Total TV Episodes";
-        internal const string HelpTotalTVEpisodes = "Total TV Series the Emby library (Excludes Specials).";
-
         internal const string MissingVideoStream = "Missing Video Stream";
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";
         internal const string NonDolbyVisionCompatibleCodec = "Non Dolby Vision Compatible Codec";
@@ -81,6 +96,12 @@ namespace Statistics2026
 
         internal const string UserTotalTimeWatched = "Total Time Watched";
         internal const string UserTotalWatchableTime = "Total Watchable Time";
+
+        internal const string UserTotalMovieTimeWatched = "Total Time Watching Movies";
+        internal const string UserTotalMovieWatchableTime = "Total Watchable Movie Time";
+
+        internal const string UserTotalEpisodeTimeWatched = "Total Time Watching Episodes";
+        internal const string UserTotalEpisodeWatchableTime = "Total Watchable Episode Time";
 
         internal const string FavoriteMovieYears = "Favorite Movie Years";
         internal const string FavoriteMovieGenres = "Favorite Movie Genres";
