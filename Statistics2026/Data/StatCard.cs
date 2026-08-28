@@ -253,6 +253,7 @@ namespace Statistics2026.Data
     public class TextBasedStatCard : StatCard
     {
         public bool AsNumberedList { get; set; } = false;
+        public bool IgnoreLength { get; set; } = false;
         private List<(string data, string itemId, string url)> ValueLines { get; set; }
         public override bool IsEmpty() { return ValueLines == null || ValueLines.Count == 0; }
         public TextBasedStatCard()
@@ -269,6 +270,8 @@ namespace Statistics2026.Data
 
         private string CheckMaxLength(string value)
         {
+            if (IgnoreLength)
+                return value;
             return value.Length > 30 ? value.Substring(0, 27) + "..." : value;
         }
 

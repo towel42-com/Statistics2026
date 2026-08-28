@@ -53,7 +53,7 @@
             showStats += Helpers.getSummaryInfo(view, "total_tv_watched", user);
             showStats += Helpers.getSummaryInfo(view, "total_time_watched", user, "?episodes=true", "total_episode_time_watched");
             showStats += Helpers.getSummaryInfo(view, "total_watchable_time", user, "?episodes=true", "total_episode_watchable_time");
-            movieStats += Helpers.getSummaryInfo(view, "last_seen", user, "?episodes=true", "last_seen_tv");
+            showStats += Helpers.getSummaryInfo(view, "last_seen", user, "?episodes=true", "last_seen_tv");
             view.querySelector("#showStats").innerHTML = showStats;
 
             Dashboard.hideLoadingMsg();

@@ -125,6 +125,7 @@ namespace Statistics2026.Data
                     "  UserId" +
                     ", ItemId" +
                     ", IsPlayed" +
+                    ", LastPlayedDate" +
                     ", IsEpisode" +
                     ", SeriesId" +
                 ")" +
@@ -133,6 +134,7 @@ namespace Statistics2026.Data
                     "  @UserId" +
                     ", @ItemId" +
                     ", @IsPlayed" +
+                    ", @LastPlayedDate" +
                     ", @IsEpisode" +
                     ", @SeriesId" +
                 ")";
@@ -140,6 +142,7 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             foreach (var video in allVideosForUser)
             {
+                var userData = userDataManager.GetUserData(user, video);
                 bool isEpisode = video is Episode;
                 string seriesId = "";
                 if (isEpisode)
@@ -158,6 +161,7 @@ namespace Statistics2026.Data
                     ( "@ItemId", video.Id.ToString()),
                     ( "@IsEpisode", isEpisode),
                     ( "@IsPlayed", video.IsPlayed(user)),
+                    ( "@LastPlayedDate", userData.LastPlayedDate?.Date ),
                     ( "@SeriesId", seriesId)
                 }));
             }

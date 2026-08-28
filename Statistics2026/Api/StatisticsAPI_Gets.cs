@@ -519,7 +519,26 @@ namespace Statistics2026.Api
 
         public object Get(GetLastSeen request)
         {
-            return null!;
+            using (var timer = new AutoTimer("Request: GetMovieFavoriteYears", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
+                    var episodes = request.episodes;
+
+                    var groupData = db.LastSeen(user, !episodes);
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
         }
 
         public object Get(GetMovieFavoriteYears request)

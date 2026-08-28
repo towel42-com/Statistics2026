@@ -223,6 +223,7 @@ namespace Statistics2026.Data
             }
             return ExecuteCommands(cmdDefs);
         }
+
         private string GetDateTimeKindFormat(DateTimeKind kind)
         {
             return (kind == DateTimeKind.Utc) ? _datetimeFormatUtc : _datetimeFormatLocal;

@@ -27,7 +27,7 @@ namespace Statistics2026.Data
         private static readonly object _padlock = new object();
         private Dictionary<string, TableDef> _tableMap = new Dictionary<string, TableDef>();
         private List<TableDef> _tableList = new List<TableDef>();
-        
+
 
         DBHelper _dbHelper = new DBHelper();
 
@@ -95,7 +95,7 @@ namespace Statistics2026.Data
                     {
                         new TableColDef( "LastUpdated", "DATETIME", true ),
                         new TableColDef( "Version", "TEXT", true ),
-                        new TableColDef( "BuildDate", "TEXT", true )
+                        new TableColDef( "BuildDate", "DATETIME", true )
                     }
                 ),
 
@@ -162,6 +162,7 @@ namespace Statistics2026.Data
                         new TableColDef( "UserId", "TEXT", false ), // user
                         new TableColDef( "ItemId", "TEXT", false ), // video item
                         new TableColDef( "IsPlayed", "BOOLEAN", false ),
+                        new TableColDef( "LastPlayedDate", "DATETIME", true ),
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
                         new TableColDef( "SeriesId", "TEXT", true ) // if episode add seriesid
                     }

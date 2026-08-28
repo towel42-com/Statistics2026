@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Entities;
+﻿using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.MediaEncoding;
@@ -563,24 +564,6 @@ namespace Statistics2026.Data
                 return series.Count <= 5;
             });
 
-            // this sorts it in ascending order
-            series.Sort(
-                (lhs, rhs) =>
-                {
-                    var diff = lhs.PercentWatched - rhs.PercentWatched;
-                    if (diff < 0)
-                        return -1;
-                    if (diff > 0)
-                        return 1;
-                    return 0;
-
-                });
-
-            if (!leastWatched)
-            {
-                series.Reverse();
-            }
-
             return series;
         }
 
@@ -773,6 +756,12 @@ namespace Statistics2026.Data
 
         public StatCard FavoriteGenre(User? user, bool movies)
         {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
             string videoType = "";
             if (movies)
             {
@@ -792,5 +781,90 @@ namespace Statistics2026.Data
             }
             return retVal;
         }
+
+        public List<(string name, DateTime lastPlayed)> LastSeenValues(User? user, bool movies)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
+            string sql = "SELECT ";
+            if (movies)
+                sql += "PrimaryName ";
+            else
+                sql += "PrimaryName || ' - S' || printf('%02d', Season ) || 'E' || printf('%02d', Episode) || ' - ' || SecondaryName ";
+            sql += "AS Name " +
+                   ", LastPlayedDate " +
+                   "FROM UserVideoList " +
+                   "LEFT JOIN Media ON Media.ItemId=UserVideoList.ItemId " +
+                   "WHERE UserVideoList.IsPlayed " +
+                   "AND UserVideoList.LastPlayedDate IS NOT NULL AND  UserVideoList.LastPlayedDate <> '' AND UserVideoList.LastPlayedDate <> '0001-01-01T00:00:00.0000000' " +
+                   "AND UserVideoList.UserId = @UserId " +
+                   "AND "
+                   ;
+            if (movies)
+                sql += "NOT";
+            sql += " UserVideoList.IsEpisode " +
+               "ORDER BY UserVideoList.LastPlayedDate DESC " +
+               "LIMIT 10 "
+               ;
+
+            var sqlCmd = new SQLCmdDef(sql, new List<(string, object?)>()
+            {
+                ( "@UserId", user.Id.ToString())
+            });
+
+            var retVal = new List<(string genre, DateTime lastPlayed)>();
+            _dbHelper.ExecuteCommand(sqlCmd, statement =>
+            {
+                var row = statement.Current;
+                var name = row.GetString(0);
+                var date = row.GetString(1);
+                var lastPlayedDate = DateTime.ParseExact(date, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+                retVal.Add( (name, lastPlayedDate) );
+                return true;
+            });
+
+            return retVal;
+        }
+
+        public StatCard LastSeen(User? user, bool movies)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
+            string videoType = string.Empty;
+            string title = string.Empty;
+            string help = string.Empty;
+            if (movies)
+            {
+                videoType = "Movies";
+                title = Constants.LastSeenMovies;
+                help = Constants.HelpLastSeenMovies;
+            }
+            else
+            {
+                videoType = "TV Series";
+                title = Constants.LastSeenTVSeries;
+                help = Constants.HelpLastSeenTVSeries;
+            }
+            var retVal = new TextBasedStatCard(title, help, "half");
+            retVal.AsNumberedList = true;
+            retVal.IgnoreLength = true;
+            var values = LastSeenValues(user, movies);
+
+            foreach (var value in values)
+            {
+                retVal.AddLine( $"{value.name} - {value.lastPlayed:d}");
+            }
+
+            return retVal;
+        }
+
     }
 }
