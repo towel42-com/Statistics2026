@@ -587,6 +587,28 @@ namespace Statistics2026.Api
             }
         }
 
+        public object Get(GetTVFavoriteGenres request)
+        {
+            using (var timer = new AutoTimer("Request: GetMovieFavoriteGenres", _logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
+
+                    var groupData = db.FavoriteGenre(user, false);
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+        }
         public object Get(GetMovie request)
         {
             using (var timer = new AutoTimer("Request: GetMovie", _logger))

@@ -170,6 +170,14 @@ namespace Statistics2026.Api
         public string user { get; set; } = String.Empty;
     }
 
+    [Route("/Statistics2026/tv_favorite_genres/{User}", "GET", Summary = "Get the Favorite Movie Genres")]
+    [Authenticated(Roles = "admin")]
+    public class GetTVFavoriteGenres : IReturn<Object>
+    {
+        public string user { get; set; } = String.Empty;
+    }
+    
+
     [Route("/Statistics2026/total_collection_count", "GET", Summary = "Get the total Collection Count")]
     [Authenticated(Roles = "admin")]
     public class GetTotalCollectionCount : IReturn<Object>
