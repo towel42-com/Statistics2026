@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using MediaBrowser.Model.Plugins;
-using Statistics2026.Data;
+﻿using MediaBrowser.Model.Plugins;
 
 namespace Statistics2026.Configuration
 {

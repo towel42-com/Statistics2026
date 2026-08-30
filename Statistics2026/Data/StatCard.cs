@@ -1,16 +1,8 @@
 ﻿using Emby.Media.Common.Extensions;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Model.Dto;     // Namespace containing BaseItemDto
-using MediaBrowser.Model.Entities;// Namespace containing ImageType
-using MediaBrowser.Model.Services;
-using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
-using static Emby.Web.GenericEdit.Elements.DxGrid.DxGridColumn;
 using static Statistics2026.Data.StatCard;
 
 namespace Statistics2026.Data
