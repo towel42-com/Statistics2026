@@ -299,21 +299,20 @@ namespace Statistics2026.Data
                 "SELECT " +
                     "  PrimaryName" +
                     ", Media.SeriesId " +
-                    ", SUM(IsPlayed) " +
+                    ", SUM(UserVideoList.NumEpisodes) " +
                     ", Series.NumEpisodes " +
                 "FROM UserVideoList " +
                 "LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId " +
                 "LEFT JOIN Series ON Series.ItemId=Media.SeriesId " +
-                "WHERE Media.IsEpisode AND " +
-                "UserVideoList.UserId=@UserId " +
+                "WHERE Media.IsEpisode AND NOT Media.IsTVSpecial " +
+                "AND UserVideoList.UserId=@UserId " +
                 "GROUP BY Media.SeriesId"
                 ;
 
             var parameters = new List<(string, object?)>() { ("@UserId", user.Id.ToString()) };
-            var cmd = new SQLCmdDef(sql, parameters);
             var seriesInfo = new Dictionary<string, (string name, long watched, long total)>();
 
-            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql, parameters), statement =>
             {
                 var row = statement.Current;
                 var seriesName = row.GetString(0);
@@ -844,7 +843,7 @@ namespace Statistics2026.Data
                    "FROM UserVideoList " +
                    "LEFT JOIN Media ON Media.ItemId=UserVideoList.ItemId " +
                    "WHERE UserVideoList.IsPlayed " +
-                   "AND UserVideoList.LastPlayedDate IS NOT NULL AND  UserVideoList.LastPlayedDate <> '' AND UserVideoList.LastPlayedDate <> '0001-01-01T00:00:00.0000000' " +
+                   "AND " + StatGen.validDateClause( "UserVideoList.LastPlayedDate" ) +
                    "AND UserVideoList.UserId = @UserId " +
                    "AND "
                    ;
