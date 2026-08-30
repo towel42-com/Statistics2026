@@ -160,6 +160,7 @@ namespace Statistics2026.Data
                         new TableColDef( "IsPlayed", "BOOLEAN", false ),
                         new TableColDef( "LastPlayedDate", "DATETIME", true ),
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
+                        new TableColDef( "NumEpisodes", "BOOLEAN", true ), // for multi episode media
                         new TableColDef( "IsTVSpecial", "BOOLEAN", true ),
                         new TableColDef( "SeriesId", "TEXT", true ) // if episode add seriesid
                     }
