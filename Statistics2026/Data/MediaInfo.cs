@@ -55,7 +55,8 @@ namespace Statistics2026.Data
                     Rating = series.CommunityRating ?? 0.0;
                     SeriesId = series.Id.ToString();
                 }
-                IsTVSpecial = episode!.SortParentIndexNumber == 0;
+                IsTVSpecial = (episode.SortParentIndexNumber != null && episode.SortParentIndexNumber == 0) ||
+                              (episode.ParentIndexNumber != null && episode.ParentIndexNumber == 0); // season 0 is the specials season
                 if (episode.IndexNumber != null && episode.IndexNumberEnd != null)
                 {
                     var start = episode.IndexNumber ?? -1;
