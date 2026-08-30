@@ -1,30 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using MediaBrowser.Model.IO;
-using Statistics2026.Data;
-
-
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
+﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Providers;
-
 using MediaBrowser.Model.Entities;
-
-using MediaBrowser.Model.Logging;
-using System.Net.Mime;
-using Statistics2026.Api;
-using Emby.Media.Common.Extensions;
+using System;
+using System.Linq;
 
 namespace Statistics2026.Data
 {
     public class MediaInfo : IDisposable
     {
         public MediaInfo() { }
-        public MediaInfo(Video video, IFileSystem fileSystem)
+        public MediaInfo(Video video)
         {
             var (primaryName, secondaryName, descName) = GetDescName(video);
 
@@ -58,7 +43,11 @@ namespace Statistics2026.Data
             if (IsEpisode)
             {
                 var episode = video as Episode;
-                var series = (episode != null) ? episode.Series : null;
+                if (episode == null)
+                {
+                    throw new ArgumentNullException("episode was not an episode");
+                }
+                var series = episode!.Series;
                 if (series != null)
                 {
                     StudioNames = series.Studios;
@@ -66,10 +55,17 @@ namespace Statistics2026.Data
                     Rating = series.CommunityRating ?? 0.0;
                     SeriesId = series.Id.ToString();
                 }
+                IsTVSpecial = episode!.SortParentIndexNumber == 0;
+                if (episode.IndexNumber != null && episode.IndexNumberEnd != null)
+                {
+                    var start = episode.IndexNumber ?? -1;
+                    var end = episode.IndexNumberEnd ?? start;
+                    NumEpisodes = end - start + 1;
+                }
             }
 
             ServerLocation = video.Path ?? "Unknown";
-            FileSize = (fileSystem != null) ? fileSystem.GetFileSystemInfo(video.Path).Length : 0;
+            FileSize = video.Size;
             RunTimeTicks = video.RunTimeTicks ?? 0;
             ImageUrl = ItemImageUrl._ItemImageUrl(video);
 
@@ -160,9 +156,11 @@ namespace Statistics2026.Data
         public string StartYear { get; set; } = String.Empty; // release year for movies, year of the of the first season of the TV show
 
         public bool IsEpisode { get; set; } = false;
+        public bool IsTVSpecial { get; set; } = false;
         public string SeriesId { get; set; } = String.Empty;
         public int Season { get; set; } = 0;
         public int Episode { get; set; } = 0;
+        public int NumEpisodes { get; set; } = 1;
 
         public string ResolutionBase { get; set; } = String.Empty;// just SD/HD/4k/8k etc
         public string ResolutionDetail { get; set; } = String.Empty;// includes details of resolution
