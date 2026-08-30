@@ -153,8 +153,7 @@ namespace Statistics2026.Data
 
         public bool ExecuteCommand(SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null)
         {
-            var cmds = new List<SQLCmdDef>();
-            cmds.Add(cmd);
+            var cmds = new List<SQLCmdDef>() { cmd };
             return ExecuteCommands(cmds, onStatement);
         }
 
