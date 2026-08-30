@@ -11,6 +11,7 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
+using MediaBrowser.Model.Tasks;
 using Statistics2026.Data;
 using Statistics2026.ScheduledTasks;
 using System.Collections.Generic;
@@ -23,7 +24,7 @@ namespace Statistics2026.Api
         private readonly EmbyManagers _embyManagers;
 
         public Statistics2026API(
-            ILogManager logger,
+            ILogManager logManager,
             IServerConfigurationManager config,
             IUserManager userManager,
             IUserDataManager userDataManager,
@@ -32,10 +33,11 @@ namespace Statistics2026.Api
             IJsonSerializer jsonSerializer,
             IServerApplicationPaths serverApplicationPaths,
             IApplicationHost appHost,
-            IProviderManager providerManager
+            IProviderManager providerManager,
+            ITaskManager taskManager
             )
         {
-            _embyManagers = new EmbyManagers(fileSystem, libraryManager, logger.GetLogger("Statistics2026 - Statistics2026API"), serverApplicationPaths, userDataManager, userManager, appHost, this, jsonSerializer, providerManager, config);
+            _embyManagers = new EmbyManagers(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - Statistics2026API"), serverApplicationPaths, userDataManager, userManager, appHost, this, jsonSerializer, providerManager, config, taskManager);
         }
 
         public IRequest? Request { get; set; } = null;

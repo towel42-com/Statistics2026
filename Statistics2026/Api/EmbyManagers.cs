@@ -6,6 +6,7 @@ using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
+using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
 
 namespace Statistics2026.Api
@@ -15,6 +16,7 @@ namespace Statistics2026.Api
         public EmbyManagers(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
+            ILogManager logManager,
             ILogger logger,
             IServerApplicationPaths serverApplicationPaths,
             IUserDataManager userDataManager,
@@ -23,11 +25,13 @@ namespace Statistics2026.Api
             Statistics2026API apiService,
             IJsonSerializer jsonSerializer,
             IProviderManager providerManager,
-            IServerConfigurationManager appConfig
+            IServerConfigurationManager appConfig,
+            ITaskManager taskManager
         )
         {
             _fileSystem = fileSystem;
             _libraryManager = libraryManager;
+            _logManager = logManager;
             _logger = logger;
             _serverApplicationPaths = serverApplicationPaths;
             _userDataManager = userDataManager;
@@ -37,10 +41,12 @@ namespace Statistics2026.Api
             _jsonSerializer = jsonSerializer;
             _providerManager = providerManager;
             _appConfig = appConfig;
+            _taskManager = taskManager;
         }
 
         public readonly IFileSystem _fileSystem;
         public readonly ILibraryManager _libraryManager;
+        public readonly ILogManager _logManager;
         public readonly ILogger _logger;
         public readonly IServerApplicationPaths _serverApplicationPaths;
         public readonly IUserDataManager _userDataManager;
@@ -50,5 +56,6 @@ namespace Statistics2026.Api
         public readonly IJsonSerializer _jsonSerializer;
         public readonly IProviderManager _providerManager;
         public readonly IServerConfigurationManager _appConfig;
+        public readonly ITaskManager _taskManager;
     }
 }
