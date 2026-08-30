@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Querying;
 using Statistics2026.Api;
 using System;
@@ -58,7 +59,7 @@ namespace Statistics2026.Data
             {
                 foreach (var user in users)
                 {
-                    progress.Report(100.0 * (++curr) / count);
+                    progress.Report(80.0 * (++curr) / count);
                     using (var userTimer = new AutoTimer($"AddUsers -     Processed User ({curr} of {count}) - {user.Name}", _embyManagers?._logger))
                     {
                         sqlCmds.AddRange(AddUser(user));
@@ -122,6 +123,7 @@ namespace Statistics2026.Data
                     ", IsPlayed" +
                     ", LastPlayedDate" +
                     ", IsEpisode" +
+                    ", NumEpisodes" +
                     ", IsTVSpecial" +
                     ", SeriesId" +
                 ")" +
@@ -132,6 +134,7 @@ namespace Statistics2026.Data
                     ", @IsPlayed" +
                     ", @LastPlayedDate" +
                     ", @IsEpisode" +
+                    ", @NumEpisodes" +
                     ", @IsTVSpecial" +
                     ", @SeriesId" +
                 ")";
@@ -140,30 +143,20 @@ namespace Statistics2026.Data
             foreach (var video in allVideosForUser)
             {
                 var userData = _embyManagers!._userDataManager.GetUserData(user, video);
-                bool isEpisode = video is Episode;
-                string seriesId = "";
-                bool isTVSpecial = false;
-                if (isEpisode)
+                using (var mediaInfo = new MediaInfo(video))
                 {
-                    var episode = video as Episode;
-                    var series = (episode != null) ? episode.Series : null;
-                    if (series != null)
-                    {
-                        seriesId = series.Id.ToString();
-                    }
-                    isTVSpecial = episode!.SortParentIndexNumber == 0;
+                    sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
+                        {
+                            ( "@UserId", user.Id.ToString()),
+                            ( "@ItemId", video.Id.ToString()),
+                            ( "@IsEpisode", mediaInfo.IsEpisode),
+                            ( "@NumEpisodes", mediaInfo.NumEpisodes),
+                            ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
+                            ( "@IsPlayed", userData?.Played ?? false),
+                            ( "@LastPlayedDate", userData?.LastPlayedDate?.Date ?? null ),
+                            ( "@SeriesId", mediaInfo.SeriesId)
+                        }));
                 }
-
-                sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
-                {
-                    ( "@UserId", user.Id.ToString()),
-                    ( "@ItemId", video.Id.ToString()),
-                    ( "@IsEpisode", isEpisode),
-                    ( "@IsSpecial", isTVSpecial),
-                    ( "@IsPlayed", video.IsPlayed(user)),
-                    ( "@LastPlayedDate", userData.LastPlayedDate?.Date ),
-                    ( "@SeriesId", seriesId)
-                }));
             }
             return sqlCmds;
         }
@@ -241,7 +234,7 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             foreach (var video in videoList)
             {
-                progress.Report(100.0 * (++curr) / count);
+                progress.Report(80.0 * (++curr) / count);
                 using (var mediaInfo = new MediaInfo(video))
                 {
 
@@ -375,7 +368,7 @@ namespace Statistics2026.Data
 
             foreach (var collection in collections)
             {
-                progress.Report(100.0 * (++curr) / count);
+                progress.Report(80.0 * (++curr) / count);
                 sqlCmds.AddRange(AddCollection(collection, cancellationToken, progress));
                 cancellationToken.ThrowIfCancellationRequested();
                 _embyManagers!._logger?.Debug($"AddAllCollections -     Processed Collection ({curr} of {count}) - {collection.Name} items processed");
@@ -509,7 +502,7 @@ namespace Statistics2026.Data
 
             foreach (Series series in seriesList)
             {
-                progress.Report(100.0 * (++curr) / count);
+                progress.Report(80.0 * (++curr) / count);
                 sqlCmds.AddRange(AddSeries(series, cancellationToken, progress));
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -529,7 +522,26 @@ namespace Statistics2026.Data
 
             var libraryOptions = _embyManagers!._libraryManager.GetLibraryOptions(series);
             var allEpisodes = _embyManagers!._providerManager.GetAllEpisodes(series, libraryOptions, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-            return allEpisodes.Where(e => ((e.SortParentIndexNumber ?? e.ParentIndexNumber) != 0) && e.PremiereDate <= DateTime.Now).Count();
+            var retVal = allEpisodes.Where(e => ((e.SortParentIndexNumber ?? e.ParentIndexNumber) != 0) && e.PremiereDate <= DateTime.Now).Count();
+            if (retVal == 0)// when providers are disabled
+            {
+                var cmd = new SQLCmdDef("SELECT NumEpisodes FROM Series WHERE ItemId=@SeriesId",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        retVal = row.GetInt(0);
+                    }
+                    return false;
+                });
+            }
+            return retVal;
         }
 
         private int GetSpecialCountForSeries(Series series, CancellationToken cancellationToken)
@@ -537,7 +549,27 @@ namespace Statistics2026.Data
             CheckIsValid();
             var libraryOptions = _embyManagers!._libraryManager.GetLibraryOptions(series);
             var allEpisodes = _embyManagers._providerManager.GetAllEpisodes(series, libraryOptions, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-            return allEpisodes.Where(e => (e.SortParentIndexNumber ?? e.ParentIndexNumber) == 0).Count();
+            var retVal = allEpisodes.Where(e => (e.SortParentIndexNumber ?? e.ParentIndexNumber) == 0).Count();
+
+            if (retVal == 0) // when providers are disabled
+            {
+                var cmd = new SQLCmdDef("SELECT NumSpecials FROM Series WHERE ItemId=@SeriesId",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        retVal = row.GetInt(0);
+                    }
+                    return false;
+                });
+            }
+            return retVal;
         }
 
         private List<SQLCmdDef> AddSeries(Series series, CancellationToken cancellationToken, IProgress<double> progress)
@@ -704,6 +736,7 @@ namespace Statistics2026.Data
             int curr = 0;
             foreach (var watched in watchedShows)
             {
+                progress.Report(80.0 * (curr++) / watchedShows.Count());
                 sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
                 {
                     ("@ItemId", watched.ItemId),
@@ -714,7 +747,6 @@ namespace Statistics2026.Data
                     ("@PercentWatched", watched.PercentWatched),
                     ("@PercentWatchedPerUser", watched.PercentWatchedPerUser)
                 }));
-                progress.Report(100.0 * (curr++) / watchedShows.Count());
             }
             progress.Report(80);
             _dbHelper.ExecuteCommands(sqlCmds);
