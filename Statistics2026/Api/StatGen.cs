@@ -228,6 +228,11 @@ namespace Statistics2026.Api
             throwHandleEpisode();
         }
 
+        public static string validDateClause( string columnName )
+        {
+            return $"{columnName} IS NOT NULL AND {columnName} != '' AND {columnName} != '0001-01-01T00:00:00.0000000'";
+        }
+
         private string WhereClause()
         {
             var whereClauseList = new List<string>();
@@ -253,11 +258,11 @@ namespace Statistics2026.Api
                     break;
                 case EStatisticType.OldestPremiereDate:
                 case EStatisticType.LatestPremiereDate:
-                    whereClauseList.Add("PremiereDate IS NOT NULL AND PremiereDate != '' AND PremiereDate != '0001-01-01T00:00:00.0000000'");
+                    whereClauseList.Add(validDateClause("PremiereDate"));
                     break;
                 case EStatisticType.LatestAdditionToServer:
                 case EStatisticType.FirstAdditionToServer:
-                    whereClauseList.Add("DateAdded IS NOT NULL AND DateAdded != '' AND DateAdded != '0001-01-01T00:00:00.0000000'");
+                    whereClauseList.Add(validDateClause("DateAdded"));
                     break;
                 default:
                     break;
