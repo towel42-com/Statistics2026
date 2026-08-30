@@ -1,9 +1,7 @@
-﻿using Emby.Notifications;
-using MediaBrowser.Common;
+﻿using MediaBrowser.Common;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Notifications;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
@@ -22,17 +20,7 @@ namespace Statistics2026.ScheduledTasks
 {
     public class CalculateDataTask : IScheduledTask
     {
-        private readonly IFileSystem _fileSystem;
-        private readonly ILibraryManager _libraryManager;
-        private readonly ILogger _logger;
-        private readonly IServerApplicationPaths _serverApplicationPaths;
-        private readonly IUserDataManager _userDataManager;
-        private readonly IUserManager _userManager;
-        private IApplicationHost _appHost;
-        private Statistics2026API _apiService;
-        private readonly IJsonSerializer _jsonSerializer;
-        private readonly IProviderManager _providerManager;
-        private readonly IServerConfigurationManager _appConfig;
+        private EmbyManagers _providers;
 
         public CalculateDataTask(
             ILogManager logger,
@@ -48,17 +36,7 @@ namespace Statistics2026.ScheduledTasks
             Statistics2026API apiService
             )
         {
-            _logger = logger.GetLogger("Statistics2026 - CalculateDataTask");
-            _libraryManager = libraryManager;
-            _userManager = userManager;
-            _userDataManager = userDataManager;
-            _jsonSerializer = jsonSerializer;
-            _fileSystem = fileSystem;
-            _serverApplicationPaths = serverApplicationPaths;
-            _appHost = appHost;
-            _providerManager = providerManager;
-            _appConfig = config;
-            _apiService = apiService;
+            _providers = new EmbyManagers(fileSystem, libraryManager, logger.GetLogger("Statistics2026 - CalculateDataTask"), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, config);
         }
 
         private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
@@ -72,7 +50,7 @@ namespace Statistics2026.ScheduledTasks
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info("Statistics 2026 : Starting Statistics 2026 calculation task");
+            _providers._logger.Info("Statistics 2026 : Starting Statistics 2026 calculation task");
             // purely for progress reporting
             var now = DateTime.Now;
             if (PluginConfiguration == null)
@@ -81,57 +59,57 @@ namespace Statistics2026.ScheduledTasks
             PluginConfiguration.LastUpdated = now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
             PluginConfiguration.Version = Plugin.Instance?.Version.ToString(4) ?? "<UNKNOWN>";
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-            PluginConfiguration.ServerId = _appHost.SystemId;
+            PluginConfiguration.ServerId = _providers._appHost.SystemId;
 
-            var db = StatisticsDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
+            var db = StatisticsDB.GetInstance(_providers);
             db.SetCancellationToken(cancellationToken);
             db.Initialize();
 
-            var overAllTimer = new AutoTimer($"Adding All Data", _logger, false);
+            var overAllTimer = new AutoTimer($"Adding All Data", _providers._logger, false);
             long addUsers = 0;
-            using (var timer = new AutoTimer($"Adding All Users", _logger))
+            using (var timer = new AutoTimer($"Adding All Users", _providers._logger))
             {
-                db.AddAllUsers(_userManager, _userDataManager, _libraryManager, cancellationToken, progress);
+                db.AddAllUsers(cancellationToken, progress);
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
             long addCollections = 0;
-            using (var timer = new AutoTimer($"Adding Collections", _logger))
+            using (var timer = new AutoTimer($"Adding Collections", _providers._logger))
             {
-                db.AddAllCollections(_libraryManager, cancellationToken, progress);
+                db.AddAllCollections(cancellationToken, progress);
                 addCollections = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
             long addMedia = 0;
-            using (var timer = new AutoTimer($"Adding All Media", _logger))
+            using (var timer = new AutoTimer($"Adding All Media", _providers._logger))
             {
-                db.AddAllMedia(_libraryManager, _fileSystem, cancellationToken, progress);
+                db.AddAllMedia(cancellationToken, progress);
                 addMedia = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
             long addSeries = 0;
-            using (var timer = new AutoTimer($"Adding All Series", _logger))
+            using (var timer = new AutoTimer($"Adding All Series", _providers._logger))
             {
-                db.AddAllSeries(_libraryManager, _fileSystem, cancellationToken, progress);
+                db.AddAllSeries(cancellationToken, progress);
                 addSeries = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
             long computeStats = 0;
-            using (var timer = new AutoTimer($"Computing Cached Stats", _logger))
+            using (var timer = new AutoTimer($"Computing Cached Stats", _providers._logger))
             {
-                db.ComputeCachedStats(_libraryManager, cancellationToken, progress);
+                db.ComputeCachedStats(cancellationToken, progress);
                 computeStats = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
-            long computePercentWatchedCache  = 0;
-            using (var timer = new AutoTimer($"Computing Percent Watched Cached Stats", _logger))
+            long computePercentWatchedCache = 0;
+            using (var timer = new AutoTimer($"Computing Percent Watched Cached Stats", _providers._logger))
             {
-                db.ComputePercentWatchedCache(_libraryManager, cancellationToken, progress);
+                db.ComputePercentWatchedCache(cancellationToken, progress);
                 computePercentWatchedCache = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
@@ -141,16 +119,16 @@ namespace Statistics2026.ScheduledTasks
 
             var overall = overAllTimer.ElapsedMilliseconds();
             overAllTimer.Dispose();
-            _logger.Info($"=======================================");
-            _logger.Info($"Time to Add: {overall} ms");
-            _logger.Info($"          Users: {addUsers} ms");
-            _logger.Info($"    Collections: {addCollections} ms");
-            _logger.Info($"          Media: {addMedia} ms");
-            _logger.Info($"         Series: {addSeries} ms");
-            _logger.Info($"  Compute Cache: {computeStats} ms");
-            _logger.Info($"  Compute Percent Watched Cache: {computePercentWatchedCache} ms");
-            _logger.Info($"=======================================");
-            _logger.Info("Statistics 2026 : Finished Statistics 2026 calculation task");
+            _providers._logger.Info($"=======================================");
+            _providers._logger.Info($"Time to Add: {overall} ms");
+            _providers._logger.Info($"          Users: {addUsers} ms");
+            _providers._logger.Info($"    Collections: {addCollections} ms");
+            _providers._logger.Info($"          Media: {addMedia} ms");
+            _providers._logger.Info($"         Series: {addSeries} ms");
+            _providers._logger.Info($"  Compute Cache: {computeStats} ms");
+            _providers._logger.Info($"  Compute Percent Watched Cache: {computePercentWatchedCache} ms");
+            _providers._logger.Info($"=======================================");
+            _providers._logger.Info("Statistics 2026 : Finished Statistics 2026 calculation task");
 
             Plugin.Instance?.SaveConfiguration();
 
@@ -173,17 +151,7 @@ namespace Statistics2026.ScheduledTasks
 
     public class CalculateWatchedShowsTask : IScheduledTask
     {
-        private readonly IFileSystem _fileSystem;
-        private readonly ILibraryManager _libraryManager;
-        private readonly ILogger _logger;
-        private readonly IServerApplicationPaths _serverApplicationPaths;
-        private readonly IUserDataManager _userDataManager;
-        private readonly IUserManager _userManager;
-        private IApplicationHost _appHost;
-        private Statistics2026API _apiService;
-        private readonly IJsonSerializer _jsonSerializer;
-        private readonly IProviderManager _providerManager;
-        private readonly IServerConfigurationManager _appConfig;
+        private EmbyManagers _providers;
 
         public CalculateWatchedShowsTask(
             ILogManager logger,
@@ -199,17 +167,7 @@ namespace Statistics2026.ScheduledTasks
             Statistics2026API apiService
             )
         {
-            _logger = logger.GetLogger("Statistics2026 - CalculateDataTask");
-            _libraryManager = libraryManager;
-            _userManager = userManager;
-            _userDataManager = userDataManager;
-            _jsonSerializer = jsonSerializer;
-            _fileSystem = fileSystem;
-            _serverApplicationPaths = serverApplicationPaths;
-            _appHost = appHost;
-            _providerManager = providerManager;
-            _appConfig = config;
-            _apiService = apiService;
+            _providers = new EmbyManagers(fileSystem, libraryManager, logger.GetLogger("Statistics2026 - CalculateWatchedShowsTask"), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, config);
         }
 
         private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
@@ -223,13 +181,13 @@ namespace Statistics2026.ScheduledTasks
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            _logger.Info("Statistics 2026 : Starting Statistics 2026 Weighted Watch Analysis");
+            _providers._logger.Info("Statistics 2026 : Starting Statistics 2026 Weighted Watch Analysis");
             // purely for progress reporting
             var now = DateTime.Now;
             if (PluginConfiguration == null)
                 throw new ArgumentNullException(nameof(PluginConfiguration));
 
-            var db = StatisticsDB.GetInstance(_appConfig.ApplicationPaths.DataPath, _logger);
+            var db = StatisticsDB.GetInstance(_providers);
             db.SetCancellationToken(cancellationToken);
             try
             {
@@ -240,19 +198,19 @@ namespace Statistics2026.ScheduledTasks
                 return Task.CompletedTask;
             }
             long computePercentWatchedCache = 0;
-            using (var timer = new AutoTimer($"Computing Percent Watched Cached Stats", _logger))
+            using (var timer = new AutoTimer($"Computing Percent Watched Cached Stats", _providers._logger))
             {
-                db.ComputePercentWatchedCache(_libraryManager, cancellationToken, progress);
+                db.ComputePercentWatchedCache(cancellationToken, progress);
                 computePercentWatchedCache = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            _logger.Info($"=======================================");
-            _logger.Info($"  Compute Percent Watched Cache: {computePercentWatchedCache} ms");
-            _logger.Info($"=======================================");
-            _logger.Info("Statistics 2026 : Finished Statistics 2026 Watched Show Analysis");
+            _providers._logger.Info($"=======================================");
+            _providers._logger.Info($"  Compute Percent Watched Cache: {computePercentWatchedCache} ms");
+            _providers._logger.Info($"=======================================");
+            _providers._logger.Info("Statistics 2026 : Finished Statistics 2026 Watched Show Analysis");
 
             Plugin.Instance?.SaveConfiguration();
 

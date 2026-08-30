@@ -1,23 +1,8 @@
-﻿using MediaBrowser.Controller.Dto;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.IO;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.Querying;
-using Statistics2026.Api;
+﻿using Statistics2026.Api;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
-using System.Xml.Linq;
-using SQLitePCL.pretty;
 using System.ComponentModel;
+using System.Threading;
 
 namespace Statistics2026.Data
 {
@@ -27,18 +12,21 @@ namespace Statistics2026.Data
         private static readonly object _padlock = new object();
         private Dictionary<string, TableDef> _tableMap = new Dictionary<string, TableDef>();
         private List<TableDef> _tableList = new List<TableDef>();
-
+        private EmbyManagers? _embyManagers = null;
 
         DBHelper _dbHelper = new DBHelper();
 
-        public static StatisticsDB GetInstance(string db_file, ILogger log)
+        public static StatisticsDB GetInstance(EmbyManagers? embyManagers)
         {
+            if (embyManagers == null)
+                throw new ArgumentNullException("EmbyManagers is null.");
+
             lock (_padlock)
             {
                 if (instance == null)
                 {
-                    instance = new StatisticsDB(db_file, log);
-                    log.Debug("StatisticsData : New Instance Created : " + instance.GetHashCode());
+                    instance = new StatisticsDB(embyManagers);
+                    embyManagers._logger.Debug("StatisticsData : New Instance Created : " + instance.GetHashCode());
                 }
                 return instance;
             }
@@ -61,13 +49,17 @@ namespace Statistics2026.Data
             ConstructTableList();
         }
 
-        private StatisticsDB(string db_path, ILogger l)
+        private StatisticsDB(EmbyManagers embyManagers)
         {
-            ConstructTableList();
-            _dbHelper = new DBHelper(db_path, l);
-            _dbHelper.Logger?.Debug("StatisticsData : Creating Database");
-            _dbHelper.Logger?.Debug("StatisticsData : Finished Creating Database");
+            if (embyManagers == null)
+                throw new ArgumentNullException("embyManagers is null.");
 
+            ConstructTableList();
+
+            _embyManagers = embyManagers;
+            _dbHelper = new DBHelper(_embyManagers);
+            embyManagers._logger?.Debug("StatisticsData : Creating Database");
+            embyManagers._logger?.Debug("StatisticsData : Finished Creating Database");
         }
 
         ~StatisticsDB()
@@ -108,9 +100,11 @@ namespace Statistics2026.Data
                         new TableColDef( "SecondaryName", "TEXT", true ),
                         new TableColDef( "StartYear", "INT", true ),
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
+                        new TableColDef( "IsTVSpecial", "BOOLEAN", true ),
                         new TableColDef( "SeriesId", "TEXT", true ),
                         new TableColDef( "Season", "INT", true ),
                         new TableColDef( "Episode", "INT", true ),
+                        new TableColDef( "NumEpisodes", "INT", true ),
                         new TableColDef( "ResolutionBase", "TEXT", true ),
                         new TableColDef( "ResolutionDetail", "TEXT", true ),
                         new TableColDef( "Codec", "TEXT", true ),
@@ -135,12 +129,14 @@ namespace Statistics2026.Data
                         new TableColDef( "Name", "TEXT", false ),
                         new TableColDef( "SortName", "TEXT", true ),
                         new TableColDef( "PremiereDate", "DATETIME", true ),
+                        new TableColDef( "NumEpisodes", "INT", true ),
+                        new TableColDef( "NumSpecials", "INT", true ),
                         new TableColDef( "DateAdded", "DATETIME", true ),
                         new TableColDef( "ImageUrl", "TEXT", true ),
                         new TableColDef( "FileSize", "INT", true),
                         new TableColDef( "RunTimeTicks", "INT", true ),
                         new TableColDef( "Rating", "REAL", true ),
-                        new TableColDef( "AverageBitrate", "INT", true )
+                        new TableColDef( "AverageBitrate", "INT", true ),
                     }
                 ),
 
@@ -164,6 +160,7 @@ namespace Statistics2026.Data
                         new TableColDef( "IsPlayed", "BOOLEAN", false ),
                         new TableColDef( "LastPlayedDate", "DATETIME", true ),
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
+                        new TableColDef( "IsTVSpecial", "BOOLEAN", true ),
                         new TableColDef( "SeriesId", "TEXT", true ) // if episode add seriesid
                     }
                 ),
@@ -243,10 +240,10 @@ namespace Statistics2026.Data
             }
         }
 
-        private void CreateTables( TableDef.EAction action )
+        private void CreateTables(TableDef.EAction action)
         {
             if (action != TableDef.EAction.eRecreate && action != TableDef.EAction.eCreate)
-                throw new InvalidEnumArgumentException( $"Action must be {TableDef.EAction.eRecreate} or {TableDef.EAction.eCreate}");
+                throw new InvalidEnumArgumentException($"Action must be {TableDef.EAction.eRecreate} or {TableDef.EAction.eCreate}");
 
             var sqlCmds = new List<string>();
             foreach (var tableDef in _tableList)

@@ -1,98 +1,83 @@
-﻿using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Dto;
+﻿using MediaBrowser.Common;
+using MediaBrowser.Controller;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Net;
-using MediaBrowser.Controller.Session;
-using MediaBrowser.Model.Dto;
-using MediaBrowser.Model.Entities;
+using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
-using MediaBrowser.Model.Users;
-using Statistics2026;
 using Statistics2026.Data;
-using System;
+using Statistics2026.ScheduledTasks;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace Statistics2026.Api
 {
     public partial class Statistics2026API : IService, IRequiresRequest
     {
-        private readonly ISessionManager _sessionManager;
-        private readonly ILogger _logger;
-        private readonly IFileSystem _fileSystem;
-        private readonly IServerConfigurationManager _config;
-        private readonly IUserManager _userManager;
-        private readonly IUserDataManager _userDataManager;
-        private readonly ILibraryManager _libraryManager;
-        private readonly IHttpServer _httpServer;
+        private readonly EmbyManagers _embyManagers;
 
-        public Statistics2026API(ILogManager logger,
-            IFileSystem fileSystem,
+        public Statistics2026API(
+            ILogManager logger,
             IServerConfigurationManager config,
             IUserManager userManager,
-            ILibraryManager libraryManager,
-            ISessionManager sessionManager,
             IUserDataManager userDataManager,
-            IHttpServer httpServer)
+            ILibraryManager libraryManager,
+            IFileSystem fileSystem,
+            IJsonSerializer jsonSerializer,
+            IServerApplicationPaths serverApplicationPaths,
+            IApplicationHost appHost,
+            IProviderManager providerManager
+            )
         {
-            _logger = logger.GetLogger("Statistics2026 - Statistics2026API");
-            _fileSystem = fileSystem;
-            _config = config;
-            _userManager = userManager;
-            _libraryManager = libraryManager;
-            _sessionManager = sessionManager;
-            _userDataManager = userDataManager;
-            _httpServer = httpServer;
+            _embyManagers = new EmbyManagers(fileSystem, libraryManager, logger.GetLogger("Statistics2026 - Statistics2026API"), serverApplicationPaths, userDataManager, userManager, appHost, this, jsonSerializer, providerManager, config);
         }
 
         public IRequest? Request { get; set; } = null;
 
 
-        private IEnumerable<T> GetItems<T>(User? user)
+        private IEnumerable<T>? GetItems<T>(User? user)
         {
-            return DBHelper.GetUserItems<T>(user, _libraryManager);
+            return DBHelper.GetUserItems<T>(user,_embyManagers!._libraryManager);
         }
 
-        static public (IEnumerable<Video> forUser, IEnumerable<Video>? forAll) GetAllEpisodesAndMovies(User? user, ILibraryManager libraryManager, bool computeAll)
+        static public (IEnumerable<Video> forUser, IEnumerable<Video>? forAll) GetAllEpisodesAndMovies(User? user, ILibraryManager libManager, bool computeAll)
         {
-            var episodesForUser = DBHelper.GetUserItems<Episode>(user, libraryManager).OfType<Video>().ToList();
-            var moviesForUser = DBHelper.GetUserItems<Movie>(user, libraryManager).OfType<Video>().ToList();
+            var episodesForUser = DBHelper.GetUserItems<Episode>(user, libManager).OfType<Video>().ToList();
+            var moviesForUser = DBHelper.GetUserItems<Movie>(user, libManager).OfType<Video>().ToList();
             var forUser = episodesForUser.Concat(moviesForUser);
 
             IEnumerable<Video>? all = null;
             if (computeAll)
             {
-                var allEpisodes = DBHelper.GetUserItems<Episode>(null, libraryManager).OfType<Video>().ToList();
-                var allMovies = DBHelper.GetUserItems<Movie>(null, libraryManager).OfType<Video>().ToList();
+                var allEpisodes = DBHelper.GetUserItems<Episode>(null, libManager).OfType<Video>().ToList();
+                var allMovies = DBHelper.GetUserItems<Movie>(null, libManager).OfType<Video>().ToList();
                 all = allEpisodes.Concat(allMovies);
             }
             return (forUser, all);
         }
 
-        static public IEnumerable<BoxSet> GetAllBoxSets(User user, ILibraryManager libraryManager)
+        static public IEnumerable<BoxSet> GetAllBoxSets(User user, ILibraryManager libManager)
         {
-            var boxSets = DBHelper.GetUserItems<BoxSet>(user, libraryManager).OfType<BoxSet>().ToList();
+            var boxSets = DBHelper.GetUserItems<BoxSet>(user, libManager).OfType<BoxSet>().ToList();
             return boxSets;
         }
 
 
-        private List<MediaInfo> GetVideos<T>(User? user) where T : Video
+        private List<MediaInfo>? GetVideos<T>(User? user) where T : Video
         {
             List<MediaInfo> mediaInfos = new List<MediaInfo>();
             var items = GetItems<T>(user);
+            if (items == null)
+                return null;
             foreach (var item in items)
             {
-                mediaInfos.Add(new MediaInfo(item, _fileSystem));
+                mediaInfos.Add(new MediaInfo(item));
             }
             return mediaInfos;
         }
@@ -102,7 +87,7 @@ namespace Statistics2026.Api
             if (string.IsNullOrEmpty(userName))
                 return null;
 
-            var users = _userManager.GetUserList(new UserQuery() { Name = userName }).ToList();
+            var users = _embyManagers._userManager.GetUserList(new UserQuery() { Name = userName }).ToList();
             if (users.Count() == 0)
                 return null;
 

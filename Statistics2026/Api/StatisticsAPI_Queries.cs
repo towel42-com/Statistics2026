@@ -1,27 +1,6 @@
-﻿using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Dto;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Net;
-using MediaBrowser.Controller.Session;
-using MediaBrowser.Model.Dto;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.IO;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.Querying;
-using MediaBrowser.Model.Serialization;
+﻿using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Services;
-using MediaBrowser.Model.Users;
-using Statistics2026;
-using Statistics2026.Data;
 using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text;
 
 namespace Statistics2026.Api
 {
@@ -156,6 +135,13 @@ namespace Statistics2026.Api
         public string user { get; set; } = String.Empty;
     }
 
+    [Route("/Statistics2026/total_series_finished/{User}", "GET", Summary = "Get the total Movie Count")]
+    [Authenticated(Roles = "admin")]
+    public class GetTotalSeriesFinished : IReturn<Object>
+    {
+        public string user { get; set; } = String.Empty;
+    }
+    
     [Route("/Statistics2026/movie_favorite_years/{User}", "GET", Summary = "Get the Favorite Movie Years")]
     [Authenticated(Roles = "admin")]
     public class GetMovieFavoriteYears : IReturn<Object>

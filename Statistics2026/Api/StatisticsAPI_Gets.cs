@@ -1,30 +1,12 @@
 ﻿using Emby.Media.Common.Extensions;
-using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.IO;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Net;
-using MediaBrowser.Controller.Session;
-using MediaBrowser.Model.Dto;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.IO;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.Querying;
-using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
-using MediaBrowser.Model.Users;
-using Statistics2026;
 using Statistics2026.Data;
 using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Xml.Linq;
 
 namespace Statistics2026.Api
 {
@@ -33,7 +15,7 @@ namespace Statistics2026.Api
         //using (var timer = new AutoTimer($"Adding All Users", _logger))
         public object Get(GetEpisodeList request)
         {
-            using (var timer = new AutoTimer("Request: GetEpisodeList", _logger))
+            using (var timer = new AutoTimer("Request: GetEpisodeList", _embyManagers._logger))
             {
                 try
                 {
@@ -50,7 +32,7 @@ namespace Statistics2026.Api
 
         public object Get(GetMovieList request)
         {
-            using (var timer = new AutoTimer("Request: GetMovieList", _logger))
+            using (var timer = new AutoTimer("Request: GetMovieList", _embyManagers._logger))
             {
                 try
                 {
@@ -67,11 +49,11 @@ namespace Statistics2026.Api
 
         public object Get(GetCodecSummary request)
         {
-            using (var timer = new AutoTimer("Request: GetCodecSummary", _logger))
+            using (var timer = new AutoTimer("Request: GetCodecSummary", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance(_embyManagers);
 
                     var serverId = request.serverId ?? "";
                     var rootDivName = request.rootDivName ?? "";
@@ -94,11 +76,11 @@ namespace Statistics2026.Api
 
         public object Get(GetResolutionSummary request)
         {
-            using (var timer = new AutoTimer("Request: GetResolutionSummary", _logger))
+            using (var timer = new AutoTimer("Request: GetResolutionSummary", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance(_embyManagers);
                     var serverId = request.serverId ?? "";
                     var rootDivName = request.rootDivName ?? "";
                     var showAllResolutions = request.showAllResolutions;
@@ -120,11 +102,11 @@ namespace Statistics2026.Api
 
         public object Get(GetDVProfileSummary request)
         {
-            using (var timer = new AutoTimer("Request: GetDVProfileSummary", _logger))
+            using (var timer = new AutoTimer("Request: GetDVProfileSummary", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance(_embyManagers);
 
                     var serverId = request.serverId ?? "";
                     var rootDivName = request.rootDivName ?? "";
@@ -148,12 +130,12 @@ namespace Statistics2026.Api
 
         public object Get(GetUserCount request)
         {
-            using (var timer = new AutoTimer("Request: GetUserCount", _logger))
+            using (var timer = new AutoTimer("Request: GetUserCount", _embyManagers._logger))
             {
                 try
                 {
 
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance(_embyManagers);
                     var hasConnectUserID = request.hasConnectUserID;
                     var excludeAdmin = request.excludeAdmin;
 
@@ -170,17 +152,17 @@ namespace Statistics2026.Api
 
         public object Get(GetMostActiveUsers request)
         {
-            using (var timer = new AutoTimer("Request: GetMostActiveUsers", _logger))
+            using (var timer = new AutoTimer("Request: GetMostActiveUsers", _embyManagers._logger))
             {
                 try
                 {
 
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance(_embyManagers);
                     var hasConnectUserID = request.hasConnectUserID;
                     var numUsers = request.numUsers;
                     var excludeAdmin = request.excludeAdmin;
 
-                    var groupData = db.MostActiveUsers(hasConnectUserID, numUsers, excludeAdmin, _userManager);
+                    var groupData = db.MostActiveUsers(hasConnectUserID, numUsers, excludeAdmin);
                     groupData.SortByKey = false;
                     var vgReponse = groupData.createStat();
 
@@ -195,7 +177,7 @@ namespace Statistics2026.Api
 
         public object TotalMovieCount(User? user)
         {
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var db = StatisticsDB.GetInstance((_embyManagers));
             var groupData = db.TotalMovieCount(user, false);
             var vgReponse = groupData.createStat();
             return vgReponse;
@@ -203,7 +185,7 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalMovieCount request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalMovieCount", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalMovieCount", _embyManagers._logger))
             {
                 try
                 {
@@ -223,7 +205,7 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalMovieCountNoUser request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalMovieCountNoUser", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalMovieCountNoUser", _embyManagers._logger))
             {
                 try
                 {
@@ -238,11 +220,11 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalMoviesWatched request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalMoviesWatched", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalMoviesWatched", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
                     var userName = request.user;
                     var user = GetUser(userName);
                     if (user == null)
@@ -261,11 +243,11 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalCollectionCount request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalCollectionCount", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalCollectionCount", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
                     var groupData = db.TotalCollectionCount();
                     var vgReponse = groupData.createStat();
                     return vgReponse;
@@ -279,11 +261,11 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalMovieStudioCount request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalMovieStudioCount", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalMovieStudioCount", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
 
                     var groupData = db.TotalMovieStudioCount(null);
                     var vgReponse = groupData.createStat();
@@ -298,12 +280,12 @@ namespace Statistics2026.Api
 
         public object Get(GetItemImageUrl request)
         {
-            using (var timer = new AutoTimer("Request: GetItemImageUrl", _logger))
+            using (var timer = new AutoTimer("Request: GetItemImageUrl", _embyManagers._logger))
             {
                 try
                 {
                     var retVal = new GetItemImageUrlResponse { Name = "", PrimaryImageUrl = "" };
-                    var item = _libraryManager.GetItemById(request.ItemId);
+                    var item = _embyManagers._libraryManager.GetItemById(request.ItemId);
                     if (item == null)
                         return null!;
 
@@ -326,7 +308,7 @@ namespace Statistics2026.Api
 
         public object TotalTVCount(User? user, bool watched)
         {
-            var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+            var db = StatisticsDB.GetInstance((_embyManagers));
             var groupData = db.TotalTVCount(user, watched);
             var vgReponse = groupData.createStat();
             return vgReponse;
@@ -334,7 +316,7 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalTVCount request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalTVCount", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalTVCount", _embyManagers._logger))
             {
                 try
                 {
@@ -354,7 +336,7 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalTVCountNoUser request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalTVCountNoUser", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalTVCountNoUser", _embyManagers._logger))
             {
                 try
                 {
@@ -369,11 +351,11 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalTVWatched request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalMoviesWatched", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalMoviesWatched", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
                     var userName = request.user;
                     var user = GetUser(userName);
                     if (user == null)
@@ -390,13 +372,35 @@ namespace Statistics2026.Api
             }
         }
 
-        public object Get(GetTotalTVStudioCount request)
+        public object Get(GetTotalSeriesFinished request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalTVStudioCount", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalSeriesFinished", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
+                    var userName = request.user;
+                    var user = GetUser(userName);
+                    if (user == null)
+                        return null!;
+
+                    var groupData = db.TotalFinishedSeries(user);
+                    var vgReponse = groupData.createStat();
+                    return vgReponse;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
+            }
+        }
+        public object Get(GetTotalTVStudioCount request)
+        {
+            using (var timer = new AutoTimer("Request: GetTotalTVStudioCount", _embyManagers._logger))
+            {
+                try
+                {
+                    var db = StatisticsDB.GetInstance((_embyManagers));
 
                     var groupData = db.TotalTVStudioCount(null);
                     var vgReponse = groupData.createStat();
@@ -411,14 +415,14 @@ namespace Statistics2026.Api
 
         public object Get(GetLeastWatchedShows request)
         {
-            using (var timer = new AutoTimer("Request: GetLeastWatchedShows", _logger))
+            using (var timer = new AutoTimer("Request: GetLeastWatchedShows", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
                     var serverId = request.serverId ?? "";
 
-                    var groupData = db.WatchedShows(null, true, _libraryManager);
+                    var groupData = db.WatchedShows(null, true);
                     groupData.ServerId = serverId;
 
                     var vgReponse = groupData.createStat();
@@ -433,14 +437,14 @@ namespace Statistics2026.Api
 
         public object Get(GetMostWatchedShows request)
         {
-            using (var timer = new AutoTimer("Request: GetMostWatchedShows", _logger))
+            using (var timer = new AutoTimer("Request: GetMostWatchedShows", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
                     var serverId = request.serverId ?? "";
 
-                    var groupData = db.WatchedShows(null, false, _libraryManager);
+                    var groupData = db.WatchedShows(null, false);
                     groupData.ServerId = serverId;
 
                     var vgReponse = groupData.createStat();
@@ -455,11 +459,11 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalTimeWatched request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalTimeWatched", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalTimeWatched", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
                     var userName = request.user;
                     var user = GetUser(userName);
                     if (user == null)
@@ -487,11 +491,11 @@ namespace Statistics2026.Api
 
         public object Get(GetTotalWatchableTime request)
         {
-            using (var timer = new AutoTimer("Request: GetTotalWatchableTime", _logger))
+            using (var timer = new AutoTimer("Request: GetTotalWatchableTime", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
                     var userName = request.user;
                     var user = GetUser(userName);
                     if (user == null)
@@ -519,11 +523,11 @@ namespace Statistics2026.Api
 
         public object Get(GetLastSeen request)
         {
-            using (var timer = new AutoTimer("Request: GetMovieFavoriteYears", _logger))
+            using (var timer = new AutoTimer("Request: GetMovieFavoriteYears", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
                     var userName = request.user;
                     var user = GetUser(userName);
                     if (user == null)
@@ -543,11 +547,11 @@ namespace Statistics2026.Api
 
         public object Get(GetMovieFavoriteYears request)
         {
-            using (var timer = new AutoTimer("Request: GetMovieFavoriteYears", _logger))
+            using (var timer = new AutoTimer("Request: GetMovieFavoriteYears", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance((_embyManagers));
                     var userName = request.user;
                     var user = GetUser(userName);
                     if (user == null)
@@ -566,11 +570,11 @@ namespace Statistics2026.Api
 
         public object Get(GetMovieFavoriteGenres request)
         {
-            using (var timer = new AutoTimer("Request: GetMovieFavoriteGenres", _logger))
+            using (var timer = new AutoTimer("Request: GetMovieFavoriteGenres", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance(_embyManagers);
                     var userName = request.user;
                     var user = GetUser(userName);
                     if (user == null)
@@ -589,11 +593,11 @@ namespace Statistics2026.Api
 
         public object Get(GetTVFavoriteGenres request)
         {
-            using (var timer = new AutoTimer("Request: GetMovieFavoriteGenres", _logger))
+            using (var timer = new AutoTimer("Request: GetTVFavoriteGenres", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance(_embyManagers);
                     var userName = request.user;
                     var user = GetUser(userName);
                     if (user == null)
@@ -611,11 +615,11 @@ namespace Statistics2026.Api
         }
         public object Get(GetMovie request)
         {
-            using (var timer = new AutoTimer("Request: GetMovie", _logger))
+            using (var timer = new AutoTimer("Request: GetMovie", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance(_embyManagers);
                     var serverId = request.serverId ?? "";
                     var whichStatistic = request.whichStatistic;
                     timer.Text += $" - {whichStatistic}";
@@ -633,11 +637,11 @@ namespace Statistics2026.Api
 
         public object Get(GetSeries request)
         {
-            using (var timer = new AutoTimer("Request: GetSeries", _logger))
+            using (var timer = new AutoTimer("Request: GetSeries", _embyManagers?._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance(_embyManagers);
                     var serverId = request.serverId ?? "";
                     var whichStatistic = request.whichStatistic;
                     timer.Text += $" - {whichStatistic}";
@@ -655,11 +659,11 @@ namespace Statistics2026.Api
 
         public object Get(GetEpisode request)
         {
-            using (var timer = new AutoTimer("Request: GetEpisode", _logger))
+            using (var timer = new AutoTimer("Request: GetEpisode", _embyManagers._logger))
             {
                 try
                 {
-                    var db = StatisticsDB.GetInstance(_config.ApplicationPaths.DataPath, _logger);
+                    var db = StatisticsDB.GetInstance(_embyManagers);
                     var serverId = request.serverId ?? "";
                     var whichStatistic = request.whichStatistic;
                     timer.Text += $" - {whichStatistic}";

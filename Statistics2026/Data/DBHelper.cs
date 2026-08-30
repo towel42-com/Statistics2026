@@ -1,32 +1,16 @@
 ﻿using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.IO;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.LiveTv;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.MediaInfo;
-using MediaBrowser.Model.Querying;
-using MediaBrowser.Model.Services;
-using MediaBrowser.Model.Users;
-using RestSharp;
 using ServiceStack;
 using SQLitePCL.pretty;
-using Statistics2026;
 using Statistics2026.Api;
-using Statistics2026.Configuration;
-using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Xml.Linq;
 
 namespace Statistics2026.Data
 {
@@ -68,36 +52,47 @@ namespace Statistics2026.Data
         private static string _datetimeFormatUtc = _datetimeFormats[5];
         private static string _datetimeFormatLocal = _datetimeFormats[19];
 
-        public ILogger? Logger { get; private set; } = null;
+        private EmbyManagers? _embyManagers;
+
         private IDatabaseConnection? Connection { get; set; } = null;
         public CancellationToken? CancellationToken { get; set; } = null;
         public DBHelper()
         {
+            _embyManagers = null;
         }
 
-        public DBHelper(string db_path, ILogger logger)
+        private void CheckIsValid()
         {
-            Logger = logger;
-            string db_file_name = Path.Combine(db_path, "Statistics2026.db");
+            if (_embyManagers == null)
+                throw new ArgumentNullException("_embyManagers");
+        }
+
+        public DBHelper(EmbyManagers embyManagers)
+        {
+            if (embyManagers == null)
+                throw new ArgumentNullException("embyManagers is null.");
+
+            _embyManagers = embyManagers;
+            string db_file_name = Path.Combine(_embyManagers._appConfig.ApplicationPaths.DataPath, "Statistics2026.db");
             CreateConnection(db_file_name);
         }
+
         public bool isValid()
         {
             if (Connection == null)
                 return false;
-            if (Logger == null)
+            if (_embyManagers == null || _embyManagers._logger == null)
                 return false;
             return true;
-
         }
 
         ~DBHelper()
         {
-            Logger?.Debug("StatisticsData : Cleaning up");
+            _embyManagers?._logger?.Debug("StatisticsData : Cleaning up");
             if (Connection != null)
             {
                 Connection.Close();
-                Logger?.Debug("StatisticsData : DB Connection Closed");
+                _embyManagers?._logger?.Debug("StatisticsData : DB Connection Closed");
             }
         }
 
@@ -106,7 +101,7 @@ namespace Statistics2026.Data
             IBindParameter bindParam;
             if (!statement.BindParameters.TryGetValue(name, out bindParam))
             {
-                Logger?.Error($"Error Binding {name} to {value}");
+                _embyManagers!._logger?.Error($"Error Binding {name} to {value}");
                 return false;
             }
 
@@ -253,10 +248,12 @@ namespace Statistics2026.Data
 
         private void CreateConnection(string db_file)
         {
-            Logger?.Debug("CreateConnection : " + db_file);
+            CheckIsValid();
+
+            _embyManagers!._logger?.Debug("CreateConnection : " + db_file);
             ConnectionFlags connectionFlags;
 
-            //Logger.Debug("Opening write _connection");
+            //_embyManagers!._logger?.Debug("Opening write _connection");
             connectionFlags = ConnectionFlags.Create;
             connectionFlags |= ConnectionFlags.ReadWrite;
             connectionFlags |= ConnectionFlags.PrivateCache;
@@ -282,15 +279,16 @@ namespace Statistics2026.Data
             }
 
             Connection = db;
-            Logger?.Debug("ConnectionCreated : " + Connection.GetHashCode());
+            _embyManagers!._logger?.Debug("ConnectionCreated : " + Connection.GetHashCode());
         }
 
-        public IEnumerable<T> GetLibraryItems<T>(ILibraryManager libManager)
+        public IEnumerable<T> GetLibraryItems<T>()
         {
-            return GetUserItems<T>(null, libManager);
+            CheckIsValid();
+            return GetUserItems<T>(null, _embyManagers!._libraryManager);
         }
 
-        static public IEnumerable<T> GetUserItems<T>(User? user, ILibraryManager libraryManager)
+        static public IEnumerable<T> GetUserItems<T>(User? user, ILibraryManager libManager)
         {
             var query = new InternalItemsQuery(user)
             {
@@ -304,7 +302,7 @@ namespace Statistics2026.Data
                 }
             };
 
-            return libraryManager.GetItemList(query).OfType<T>();
+            return libManager.GetItemList(query).OfType<T>();
         }
 
         public static string FormatTicks(long ticks)

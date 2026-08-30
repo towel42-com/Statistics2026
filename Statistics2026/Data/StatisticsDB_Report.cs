@@ -14,6 +14,7 @@ using System.Data.Common;
 using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Runtime.Serialization;
 using System.Threading;
 
@@ -197,7 +198,7 @@ namespace Statistics2026.Data
             return ValueGroupForSingleItem(Constants.TotalUsers, null, sql);
         }
 
-        public StatCard MostActiveUsers(bool hasConnectUserID, int numUsers, bool excludeAdmin, IUserManager userManager)
+        public StatCard MostActiveUsers(bool hasConnectUserID, int numUsers, bool excludeAdmin)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
@@ -284,6 +285,49 @@ namespace Statistics2026.Data
                 }
                 return count.ToString();
             });
+        }
+
+        public StatCard TotalFinishedSeries(User? user)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
+            var sql =
+                "SELECT " +
+                    "  PrimaryName" +
+                    ", Media.SeriesId " +
+                    ", SUM(IsPlayed) " +
+                    ", Series.NumEpisodes " +
+                "FROM UserVideoList " +
+                "LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId " +
+                "LEFT JOIN Series ON Series.ItemId=Media.SeriesId " +
+                "WHERE Media.IsEpisode AND " +
+                "UserVideoList.UserId=@UserId " +
+                "GROUP BY Media.SeriesId"
+                ;
+
+            var parameters = new List<(string, object?)>() { ("@UserId", user.Id.ToString()) };
+            var cmd = new SQLCmdDef(sql, parameters);
+            var seriesInfo = new Dictionary<string, (string name, long watched, long total)>();
+
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            {
+                var row = statement.Current;
+                var seriesName = row.GetString(0);
+                var seriesId = row.GetString(1);
+                var numPlayed = row.GetInt64(2);
+                var numEpisodes = row.GetInt64(3);
+                if (numPlayed == numEpisodes)
+                    seriesInfo[seriesId] = (seriesName, 0, numEpisodes);
+                return true;
+            });
+
+            var retVal = new TextBasedStatCard(Constants.TotalSeriesFinished, Constants.HelpTotalSeriesFinished, "small");
+            retVal.AddLine(seriesInfo.Count().ToString());
+            return retVal;
         }
 
         public StatCard TotalTVCount(User? user, bool watched)
@@ -433,7 +477,7 @@ namespace Statistics2026.Data
             }
         }
 
-        public List<WatchedShowValue> ComputeWatchedShowValues(User? user, ILibraryManager libManager, CancellationToken cancellationToken, IProgress<double> progress)
+        public List<WatchedShowValue> ComputeWatchedShowValues(User? user, CancellationToken cancellationToken, IProgress<double> progress)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
@@ -465,7 +509,7 @@ namespace Statistics2026.Data
                 var row = statement.Current;
                 var itemId = row.GetString(0);
                 var name = row.GetString(1);
-                var url = ItemImageUrl._ItemImageUrl(itemId, libManager);
+                var url = ItemImageUrl._ItemImageUrl(itemId, _embyManagers!._libraryManager);
                 retVal.Add(new WatchedShowValue()
                 {
                     ItemId = itemId,
@@ -480,10 +524,10 @@ namespace Statistics2026.Data
             for (int ii = 0; ii < retVal.Count(); ++ii)
             {
                 var curr = retVal[ii];
-                sqlCommand = new SQLCmdDef("SELECT Count(1) FROM Media WHERE SeriesId=@SeriesId",
+                sqlCommand = new SQLCmdDef("SELECT NumEpisodes FROM Series WHERE ItemId=@ItemId",
                     new List<(string name, object? value)>()
                     {
-                        ("@SeriesId", curr.ItemId)
+                        ("@ItemId", curr.ItemId)
                     });
 
                 _dbHelper.ExecuteCommand(sqlCommand, statement =>
@@ -515,7 +559,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public List<WatchedShowValue> WatchedShowValues(User? user, bool leastWatched, ILibraryManager libManager)
+        public List<WatchedShowValue> WatchedShowValues(User? user, bool leastWatched)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
@@ -567,9 +611,9 @@ namespace Statistics2026.Data
             return series;
         }
 
-        public StatCard WatchedShows(User? user, bool leastWatched, ILibraryManager libManager)
+        public StatCard WatchedShows(User? user, bool leastWatched)
         {
-            var series = WatchedShowValues(user, leastWatched, libManager);
+            var series = WatchedShowValues(user, leastWatched);
             var title = leastWatched ? Constants.LeastWatchedShows : Constants.MostWatchedShows;
             var help = leastWatched ? Constants.HelpLeastWatchedShows : Constants.HelpMostWatchedShows;
 
@@ -823,7 +867,7 @@ namespace Statistics2026.Data
                 var name = row.GetString(0);
                 var date = row.GetString(1);
                 var lastPlayedDate = DateTime.ParseExact(date, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                retVal.Add( (name, lastPlayedDate) );
+                retVal.Add((name, lastPlayedDate));
                 return true;
             });
 
@@ -860,7 +904,7 @@ namespace Statistics2026.Data
 
             foreach (var value in values)
             {
-                retVal.AddLine( $"{value.name} - {value.lastPlayed:d}");
+                retVal.AddLine($"{value.name} - {value.lastPlayed:d}");
             }
 
             return retVal;
