@@ -110,6 +110,10 @@ namespace Statistics2026
         internal const string LastSeenMovies = "Last Seen Movies";
         internal const string HelpLastSeenTVSeries = "The last TV episodes seen by user.";
         internal const string HelpLastSeenMovies = "The last movies seen by user.";
+
+        internal const string TotalSeriesFinished = "Total Series Finished";
+        internal const string HelpTotalSeriesFinished = "Total shows this user has finished watching. Only normal episodes, so no specials are needed to be watched.";
+
         public static readonly string[] UnknownDolbyProfiles =
         {
             MissingVideoStream,
