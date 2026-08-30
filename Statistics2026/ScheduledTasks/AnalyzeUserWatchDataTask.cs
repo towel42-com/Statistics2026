@@ -66,7 +66,7 @@ namespace Statistics2026.ScheduledTasks
             long addUsers = 0;
             using (var timer = new AutoTimer($"Adding All Users", _managers._logger))
             {
-                db.AddAllUsers(cancellationToken, progress);
+                db.AnalyzeUserWatchData(cancellationToken, progress);
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
