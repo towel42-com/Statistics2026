@@ -60,11 +60,9 @@ namespace Statistics2026.Data
                 foreach (var user in users)
                 {
                     progress.Report(80.0 * (++curr) / count);
-                    using (var userTimer = new AutoTimer($"AddUsers -     Processed User ({curr} of {count}) - {user.Name}", _embyManagers?._logger))
+                    using (var userTimer = new AutoTimer($"AddAllUsers -     Processed User ({curr} of {count}) - {user.Name}", _embyManagers?._logger))
                     {
                         sqlCmds.AddRange(AddUser(user));
-                        cancellationToken.ThrowIfCancellationRequested();
-                        sqlCmds.AddRange(AddUserWatchData(user, progress));
                         cancellationToken.ThrowIfCancellationRequested();
                     }
                 }
@@ -79,6 +77,47 @@ namespace Statistics2026.Data
             }
 
             _embyManagers?._logger?.Debug($"AddAllUsers - Finished User Analysis");
+        }
+
+        public void AnalyzeUserWatchData(CancellationToken cancellationToken, IProgress<double> progress)
+        {
+            CheckIsValid();
+
+            progress.Report(0);
+            var users = _embyManagers?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
+            if (users == null)
+                return;
+
+            progress.Report(100);
+
+            _embyManagers?._logger?.Debug($"AnalyzeUserWatchData - Starting User Watch Data Analysis");
+            double count = users.Count;
+            double curr = 0;
+
+            progress.Report(0);
+            var sqlCmds = new List<SQLCmdDef>();
+            using (var timer = new AutoTimer($"    Analyze User Watch Data - Getting Commands", _embyManagers?._logger))
+            {
+                foreach (var user in users)
+                {
+                    progress.Report(80.0 * (++curr) / count);
+                    using (var userTimer = new AutoTimer($"AnalyzeUserWatchData -     Processed User ({curr} of {count}) - {user.Name}", _embyManagers?._logger))
+                    {
+                        sqlCmds.AddRange(AddUserWatchData(user, progress));
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+                }
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            using (var timer = new AutoTimer($"    Analyze User Watch Data - Executing Commands", _embyManagers?._logger))
+            {
+                progress.Report(80);
+                _dbHelper.ExecuteCommands(sqlCmds);
+                progress.Report(100);
+            }
+
+            _embyManagers?._logger?.Debug($"AnalyzeUserWatchData - Finished User Watch Data Analysis");
         }
 
         (long, long) AnalyzeOverallTime(User? user, List<User>? userList)
