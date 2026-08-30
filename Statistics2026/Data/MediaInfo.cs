@@ -26,6 +26,9 @@ namespace Statistics2026.Data
 
             ItemId = video.Id.ToString();
             IsEpisode = video is Episode;
+            IsTVSpecial = isTVSpecial(video);
+            NumEpisodes = numEpisodes(video);
+            SeriesId = seriesId(video);
             DescriptiveName = descName;
             PrimaryName = primaryName;
             SortName = video.SortName;
@@ -37,33 +40,9 @@ namespace Statistics2026.Data
             ResolutionBase = resolutionBase;
             Codec = codec;
             DolbyVisionProfile = dvProfile;
-            StudioNames = video.Studios;
-            Genres = video.Genres;
-            Rating = video.CommunityRating ?? 0.0;
-            if (IsEpisode)
-            {
-                var episode = video as Episode;
-                if (episode == null)
-                {
-                    throw new ArgumentNullException("episode was not an episode");
-                }
-                var series = episode!.Series;
-                if (series != null)
-                {
-                    StudioNames = series.Studios;
-                    Genres = series.Genres;
-                    Rating = series.CommunityRating ?? 0.0;
-                    SeriesId = series.Id.ToString();
-                }
-                IsTVSpecial = (episode.SortParentIndexNumber != null && episode.SortParentIndexNumber == 0) ||
-                              (episode.ParentIndexNumber != null && episode.ParentIndexNumber == 0); // season 0 is the specials season
-                if (episode.IndexNumber != null && episode.IndexNumberEnd != null)
-                {
-                    var start = episode.IndexNumber ?? -1;
-                    var end = episode.IndexNumberEnd ?? start;
-                    NumEpisodes = end - start + 1;
-                }
-            }
+            StudioNames = studioNames(video);
+            Genres = genres( video );
+            Rating = communityRating(video);
 
             ServerLocation = video.Path ?? "Unknown";
             FileSize = video.Size;
@@ -74,6 +53,103 @@ namespace Statistics2026.Data
             if (video.PremiereDate.HasValue)
                 PremiereDate = video.PremiereDate.Value.DateTime;
             DateAdded = video.DateCreated.DateTime;
+        }
+
+        public static string[] studioNames(Video video)
+        {
+            var retVal = video.Studios;
+            var episode = video as Episode;
+            if (episode == null)
+                return retVal;
+
+            var series = episode.Series;
+            if (series != null)
+            {
+                retVal = series.Studios;
+            }
+            return retVal;
+        }
+
+        public static string[] genres(Video video)
+        {
+            var retVal = video.Genres;
+            var episode = video as Episode;
+            if (episode == null)
+                return retVal;
+
+            var series = episode.Series;
+            if (series != null)
+            {
+                retVal = series.Genres;
+            }
+            return retVal;
+        }
+
+        public static double communityRating(Video video)
+        {
+            double retVal = video.CommunityRating ?? 0.0;
+            var episode = video as Episode;
+            if (episode == null)
+                return retVal;
+
+            var series = episode.Series;
+            if (series != null)
+            {
+                retVal = series.CommunityRating ?? 0.0;
+            }
+            return retVal;
+        }
+
+        public static string seriesId(Video video)
+        {
+            var isEpisode = video is Episode;
+            if (!isEpisode)
+                return String.Empty;
+
+            var episode = video as Episode;
+            if (episode == null)
+                return String.Empty;
+
+            var series = episode.Series;
+            if (series != null)
+            {
+                return series.Id.ToString();
+            }
+            return String.Empty;
+        }
+
+        public static bool isTVSpecial(Video video)
+        {
+            var isEpisode = video is Episode;
+            if (!isEpisode)
+                return false;
+
+            var episode = video as Episode;
+            if (episode == null)
+                return false;
+
+            return (episode.SortParentIndexNumber != null && episode.SortParentIndexNumber == 0) ||
+              (episode.ParentIndexNumber != null && episode.ParentIndexNumber == 0); // season 0 is the specials season
+        }
+
+        public static int numEpisodes(Video video)
+        {
+            var isEpisode = video is Episode;
+            if (!isEpisode)
+                return 0;
+
+            var episode = video as Episode;
+            if (episode == null)
+                return 0;
+
+            int retVal = 1;
+            if (episode.IndexNumber != null && episode.IndexNumberEnd != null)
+            {
+                var start = episode.IndexNumber ?? -1;
+                var end = episode.IndexNumberEnd ?? start;
+                retVal = end - start + 1;
+            }
+            return retVal;
         }
 
         public static (string primaryName, string secondaryName, string descName) GetDescName(Video video)
@@ -175,8 +251,8 @@ namespace Statistics2026.Data
         public long RunTimeTicks { get; set; } = 0;
         public double Rating { get; set; } = 0.0;
         public long TotalBitrate { get; set; } = 0;
-        public DateTime? PremiereDate { get; set; }
-        public DateTime DateAdded { get; set; } = DateTime.MinValue;
+        public DateTime? PremiereDate { get; set; } = null;
+        public DateTime? DateAdded { get; set; } = null;
         private bool _disposed = false;
 
     }
