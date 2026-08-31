@@ -1,51 +1,44 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<PropertyGroup>
-		<TargetFrameworks>netstandard2.0;</TargetFrameworks>
-		<Version>1.0.0.0</Version>
-		<AssemblyVersion>1.0.0.0</AssemblyVersion>
-		<FileVersion>1.0.0.0</FileVersion>
-	</PropertyGroup>
-
     <PropertyGroup>
-      <OutputPath>build\$(Configuration)</OutputPath>
-      <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <TargetFrameworks>netstandard2.0;</TargetFrameworks>
+        <Version>1.0.0.0</Version>
+        <AssemblyVersion>1.0.0.0</AssemblyVersion>
+        <FileVersion>1.0.0.0</FileVersion>
+        <LangVersion>9.0</LangVersion>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
-
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="call C:\Users\scott.TOWEL42\Dropbox\home\bin\mediaScripts\InstallAndLaunch.bat -Build -TargetPath &quot;$(TargetPath)&quot; -EmbyRoot &quot;D:\Emby\EmbyServer&quot;" />
-	</Target>
-
-	<ItemGroup>
-		<EmbeddedResource Include="Configuration\PluginConfiguration.cs" />
-
-		<EmbeddedResource Include="Pages\Summary.html" />
-		<EmbeddedResource Include="Pages\Summary.js" />
-
-		<EmbeddedResource Include="Pages\Movies.html" />
-		<EmbeddedResource Include="Pages\Movies.js" />
-
-		<EmbeddedResource Include="Pages\Episodes.html" />
-		<EmbeddedResource Include="Pages\Episodes.js" />
-
-		<EmbeddedResource Include="Pages\Settings.html" />
-		<EmbeddedResource Include="Pages\Settings.js" />
-
-		<EmbeddedResource Include="Pages\Helpers.js" />
-
-		<EmbeddedResource Include="thumb.png" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90" />
-		<PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2" />
-		<PackageReference Include="System.Memory" Version="4.6.3" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-			<_Parameter1>BuildDate</_Parameter1>
-			<_Parameter2>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ssK"))</_Parameter2>
-		</AssemblyAttribute>
-	</ItemGroup>
-
+    <PropertyGroup>
+        <OutputPath>build\$(Configuration)</OutputPath>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    </PropertyGroup>
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <Exec Command="call C:\Users\scott.TOWEL42\Dropbox\home\bin\mediaScripts\InstallAndLaunch.bat -Build -TargetPath &quot;$(TargetPath)&quot; -EmbyRoot &quot;D:\Emby\EmbyServer&quot;"/>
+    </Target>
+    <ItemGroup>
+        <EmbeddedResource Include="Configuration\PluginConfiguration.cs"/>
+        <EmbeddedResource Include="Pages\Summary.html"/>
+        <EmbeddedResource Include="Pages\Summary.js"/>
+        <EmbeddedResource Include="Pages\UserStats.html"/>
+        <EmbeddedResource Include="Pages\UserStats.js"/>
+        <EmbeddedResource Include="Pages\Movies.html"/>
+        <EmbeddedResource Include="Pages\Movies.js"/>
+        <EmbeddedResource Include="Pages\Episodes.html"/>
+        <EmbeddedResource Include="Pages\Episodes.js"/>
+        <EmbeddedResource Include="Pages\Settings.html"/>
+        <EmbeddedResource Include="Pages\Settings.js"/>
+        <EmbeddedResource Include="Pages\Helpers.js"/>
+        <EmbeddedResource Include="thumb.png"/>
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Emby.ApiClient" Version="4.8.10"/>
+        <PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90"/>
+        <PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2"/>
+        <PackageReference Include="System.Memory" Version="4.6.3"/>
+    </ItemGroup>
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>BuildDate</_Parameter1>
+            <_Parameter2>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ssK"))</_Parameter2>
+        </AssemblyAttribute>
+    </ItemGroup>
 </Project>

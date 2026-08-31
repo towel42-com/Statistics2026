@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using MediaBrowser.Model.Plugins;
-using Statistics2026.Data;
+﻿using MediaBrowser.Model.Plugins;
 
 namespace Statistics2026.Configuration
 {
@@ -10,12 +8,14 @@ namespace Statistics2026.Configuration
         {
         }
 
-        public string BuildDate { get; set; }
-        public string LastUpdated { get; set; }
-        public string Version { get; set; }
-        public string ServerId { get; set; }
+        public string BuildDate { get; set; } = string.Empty;
+        public string LastUpdated { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
+        public string ServerId { get; set; } = string.Empty;
 
         public bool hasConnectUserID { get; set; } = false;
+        public int numMostActiveUsers { get; set; } = 5;
+        public bool excludeAdmin { get; set; } = true;
 
         public bool showAllCodecs { get; set; } = false;
         public bool showUnknownDVProfiles { get; set; } = false;

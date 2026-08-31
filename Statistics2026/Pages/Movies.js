@@ -1,4 +1,4 @@
-﻿define(['mainTabsManager', 'appRouter', 'emby-linkbutton', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, appRouter) {
+﻿define(['mainTabsManager', 'appRouter', Dashboard.getConfigurationResourceUrl('Helpers.js'), 'emby-linkbutton'], function (mainTabsManager, appRouter, Helpers) {
     'use strict';
 
     ApiClient.getStatistics20URL = function (url_to_get) {
@@ -29,7 +29,7 @@
         // init code here
         view.addEventListener('viewshow', function (e) {
 
-            mainTabsManager.setTabs(this, getTabIndex("Movies"), getTabs);
+            mainTabsManager.setTabs(this, Helpers.getTabIndex("Movies"), Helpers.getTabs);
 
             var style = document.createElement('style');
             style.innerHTML =
@@ -45,7 +45,7 @@
 
             function process_click() {
 
-                var url = "codec_info/movie_list";
+                var url = "Statistics2026/movie_list";
                 url = ApiClient.getUrl(url);
 
                 var load_status = view.querySelector('#movie_results_status');
