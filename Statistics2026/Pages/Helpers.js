@@ -128,6 +128,22 @@ define(function () {
         document.head.appendChild(link);
     }
 
+    function calculateProgressClass(value) {
+        if (value == 0)
+            return ``;
+        else if (value < 40)
+            return `progress-20`;
+        else if (value < 60)
+            return `progress-40`;
+        else if (value < 80)
+            return `progress-60`;
+        else if (value < 100)
+            return `progress-80`;
+        else
+            return `progress-100`;
+    };
+
+
     return {
         pluginId,
         getTabs,
@@ -135,7 +151,8 @@ define(function () {
         getSummaryInfo,
         showInfo,
         getStatistics2026URL,
-        injectStyleSheet
+        injectStyleSheet,
+        calculateProgressClass
     };
 
 })
