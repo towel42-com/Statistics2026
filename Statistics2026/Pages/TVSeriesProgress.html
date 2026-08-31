@@ -1,0 +1,37 @@
+﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/TVSeriesProgress.js">
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <h1>TV Series Progress Per User</h1>
+            <div style="max-width: 900px;">
+                <div class="selectContainer">
+                    <label class="selectLabel selectLabelUnfocused" for="selectUser">Load TV Series Progress for:</label>
+                    <div class="emby-select-wrapper emby-select-wrapper-smaller">
+                        <select is="emby-select" id="selectUser" label="Load TV Series Progress for:" class="emby-select-backdropfilter emby-select"></select>
+                        <div class="selectArrowContainer">
+                            <div style="visibility: hidden;">0</div>
+                            <i class="md-icon selectArrow"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 id="UserTitle"></h2>
+
+                <!--<table id="ShowsTable" data-role="table" data-mode="reflow" class="tblLibraryReport stripedTable ui-responsive table-stroke detailTable ui-table ui-table-reflow" style="display: table;">
+                    <thead>
+                        <tr>
+                            <th data-priority="persist" data-colstart="1" data-sort="string" class="center" id="defaultColumn"><span>Name</span></th>
+                            <th data-priority="persist" data-colstart="2" data-sort="int" class="center"><span>Started</span></th>
+                            <th data-priority="persist" data-colstart="3" data-sort="float" class="center"><span>Watched</span><div class="infoBlock" id="watchedInfo"><i class="md-icon">info</i></div></th>
+                            <th data-priority="persist" data-colstart="6" data-sort="float" class="center"><span>Collected</span><div class="infoBlock" id="collectedInfo"><i class="md-icon">info</i></div></th>
+                            <th data-priority="persist" data-colstart="7" data-sort="float" class="center"><span>Score</span></th>
+                            <th data-priority="persist" data-colstart="8" data-sort="string" class="center"><span>Status</span></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>-->
+            </div>
+        </div>
+    </div>
+</div>

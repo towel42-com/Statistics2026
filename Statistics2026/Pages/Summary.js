@@ -1,23 +1,12 @@
 ﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, Helpers) {
     'use strict';
 
-    ApiClient.getStatistics2026URL = function (url_to_get) {
-        console.log("getStatistics2026URL Url = " + url_to_get);
-        return this.ajax({
-            type: "GET",
-            url: url_to_get,
-            dataType: "json"
-        });
-    };
-
-    const pluginId = "4BFE2894-AEA3-4D3C-A429-503B56D61711";
-
     function loadDebugInfo(view) {
         var url = ApiClient.getUrl("/emby/System/Configuration");
         ApiClient.getJSON(url).then(response => {
 
             if (response.EnableDebugLevelLogging) {
-                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                     var debugInfo = "Version <b>" + config.Version + "</b> - Build Date - <b>" + config.BuildDate + "</b>";
                     view.querySelector(`#debugInfo`).style.display = '';
                     view.querySelector("#debugInfo").innerHTML = debugInfo;
@@ -33,7 +22,7 @@
     function loadStats(view) {
         Dashboard.showLoadingMsg();
 
-        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+        ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
             var lastRunInfo = "Last Codec Analysis finished at <b> " + config.LastUpdated + "</b>";
 
             view.querySelector("#lastRunInfo").innerHTML = lastRunInfo;
@@ -125,8 +114,8 @@
 
     return function (view, params) {
         view.addEventListener('viewshow', function (e) {
-
             mainTabsManager.setTabs(this, Helpers.getTabIndex("Summary"), Helpers.getTabs);
+            Helpers.injectStyleSheet(e);
         });
 
         view.addEventListener('viewhide', function (e) {

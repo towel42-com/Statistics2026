@@ -15,6 +15,17 @@ along with this program. If not, see<http://www.gnu.org/licenses/>.
 */
 
 define(function () {
+    const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
+
+    getStatistics2026URL = function (url_to_get) {
+        console.log("getStatistics2026URL Url = " + url_to_get);
+        return ApiClient.ajax({
+            type: "GET",
+            url: url_to_get,
+            dataType: "json"
+        });
+    };
+
     function getTabs() {
         var tabs = [
             {
@@ -23,7 +34,11 @@ define(function () {
             }
             , {
                 href: Dashboard.getConfigurationPageUrl('UserStats'),
-                name: 'UserStats'
+                name: 'User Stats'
+            }
+            , {
+                href: Dashboard.getConfigurationPageUrl('TVSeriesProgress'),
+                name: 'TV Series Progress'
             }
             , {
                 href: Dashboard.getConfigurationPageUrl('Episodes'),
@@ -87,7 +102,7 @@ define(function () {
                     });
             });
         }).catch(error => {
-            var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'" ;
+            var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
             console.error("getSummaryInfo failed:", errorMessage);
         });
 
@@ -98,11 +113,29 @@ define(function () {
         Dashboard.alert({ message: text, title: title });
     }
 
+    const STYLE_ID = 'my-plugin-stylesheet';
+    function injectStyleSheet(e) {
+
+        if (document.getElementById(STYLE_ID))  // already added
+            return;
+
+        const link = document.createElement('link');
+        link.id = STYLE_ID;
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = Dashboard.getConfigurationPageUrl('style.css')
+
+        document.head.appendChild(link);
+    }
+
     return {
+        pluginId,
         getTabs,
         getTabIndex,
         getSummaryInfo,
-        showInfo
+        showInfo,
+        getStatistics2026URL,
+        injectStyleSheet
     };
 
 })

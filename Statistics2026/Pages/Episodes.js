@@ -1,15 +1,6 @@
 ﻿define(['mainTabsManager', 'appRouter', Dashboard.getConfigurationResourceUrl('Helpers.js'), 'emby-linkbutton'], function (mainTabsManager, appRouter, Helpers) {
     'use strict';
 
-    ApiClient.getStatistics2026URL = function (url_to_get) {
-        console.log("getStatistics2026URL Url = " + url_to_get);
-        return this.ajax({
-            type: "GET",
-            url: url_to_get,
-            dataType: "json"
-        });
-    };
-
     return function (view, params) {
 
         // init code here
@@ -37,7 +28,7 @@
                 var load_status = view.querySelector('#episode_results_status');
                 load_status.innerHTML = "Loading Data...";
 
-                ApiClient.getStatistics2026URL(url).then(function (videoData) {
+                Helpers.getStatistics2026URL(url).then(function (videoData) {
                     load_status.innerHTML = "&nbsp;";
                     console.log("videoData: " + JSON.stringify(videoData));
 

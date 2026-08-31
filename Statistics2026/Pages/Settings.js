@@ -1,10 +1,8 @@
 ﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, Helpers) {
     'use strict';
 
-    const pluginId = "4BFE2894-AEA3-4D3C-A429-503B56D61711";
-
     function loadPage(view, params) {
-        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+        ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
 
             view.querySelector("#hasConnectUserID").checked = config.hasConnectUserID;
             view.querySelector("#showAllCodecs").checked = config.showAllCodecs;
@@ -24,8 +22,8 @@
 
         // init code here
         view.addEventListener('viewshow', function (e) {
-
             mainTabsManager.setTabs(this, Helpers.getTabIndex("Settings"), Helpers.getTabs);
+            Helpers.injectStyleSheet(e);
         });
 
         view.addEventListener('viewhide', function (e) {
