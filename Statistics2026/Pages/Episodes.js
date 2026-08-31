@@ -21,7 +21,6 @@
             process_click();
 
             function process_click() {
-
                 var url = "Statistics2026/episode_list";
                 url = ApiClient.getUrl(url);
 
