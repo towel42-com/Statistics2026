@@ -71,21 +71,21 @@ namespace Statistics2026.ScheduledTasks
 
             var overAllTimer = new AutoTimer($"Adding All Data", _managers._logger, false);
 
-            var tasks = new List<(string description, string taskName, long rt, string tableName)>
+            var tasks = new List<(string description, Type type, long runTime, string tableName)>
             {
-                ($"Adding All Users", "\u2022 Analyze All User Information", 0, "Users"),
-                ($"Analyzing User Watch Data", "\u2022 Analyze User Watch Data Information", 0, "User Watch Data"),
-                ($"Adding All Media", "\u2022 Analyze Media information", 0, "Collections"),
-                ($"Adding Collections", "\u2022 Analyze Collection information", 0, "Media"),
-                ($"Adding All Series", "\u2022 Analyze Series information", 0, "Series"),
-                ($"Computing Percent Watched Cached Stats", "\u2022 Calculating Watched Shows", 0, "Compute Percent Watched")
+                ($"Adding All Users", typeof(AnalyzeUsersTask), 0, "Users"),
+                ($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "User Watch Data"),
+                ($"Adding All Media", typeof(AnalyzeMediaTask), 0, "Collections"),
+                ($"Adding Collections", typeof(AnalyzeCollectionsTask), 0, "Media"),
+                ($"Adding All Series", typeof(AnalyzeSeriesTask), 0, "Series"),
+                ($"Computing Percent Watched Cached Stats", typeof(CalculateWatchedShowsTask), 0, "Compute Percent Watched")
             };
 
             for (int ii = 0; ii < tasks.Count; ii++)
             {
                 progress.Report((100.0 * ii) / (1.0 * tasks.Count));
                 var task = tasks[ii];
-                task.rt = launchSubTask(task.description, task.taskName, cancellationToken);
+                task.runTime = launchSubTask(task.description, task.type, cancellationToken);
                 tasks[ii] = task;
             }
 
@@ -107,7 +107,7 @@ namespace Statistics2026.ScheduledTasks
 
             foreach (var task in tasks)
             {
-                _managers._logger.Info($"{task.tableName.PadLeft(maxLen)}: {task.rt} ms");
+                _managers._logger.Info($"{task.tableName.PadLeft(maxLen)}: {task.runTime} ms");
             }
             _managers._logger.Info($"=======================================");
             _managers._logger.Info("Statistics 2026 : Finished Statistics 2026 calculate all task");
@@ -117,16 +117,32 @@ namespace Statistics2026.ScheduledTasks
             return Task.CompletedTask;
         }
 
-        long launchSubTask(string description, string taskName, CancellationToken cancellationToken)
+        long launchSubTask(string description, Type taskType, CancellationToken cancellationToken)
         {
             long retVal = 0;
             using (var timer = new AutoTimer(description, _managers._logger))
             {
-                var task = _managers._taskManager.ScheduledTasks.FirstOrDefault(task => task.Name == taskName);
-                if (task == null)
-                    throw new Exception($"Task not found {taskName}");
+                var taskToRun = _managers._taskManager.ScheduledTasks.FirstOrDefault(taskToRun => taskToRun.ScheduledTask.GetType() == taskType);
+                if (taskToRun == null)
+                    throw new Exception($"Task not found {taskType.Name}");
+
                 var options = new TaskOptions() { HasManualInteraction = false };
-                _managers._taskManager.Execute(task, options).GetAwaiter().GetResult();
+                _managers._taskManager.Execute(taskToRun, options).ConfigureAwait(false).GetAwaiter().GetResult();
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var taskResult = taskToRun.LastExecutionResult;
+                switch (taskResult.Status)
+                {
+                    case TaskCompletionStatus.Completed:
+                        break;
+                    case TaskCompletionStatus.Cancelled:
+                        _managers._taskManager.CancelIfRunning<RunAllTasksTask>();
+                        break;
+                    case TaskCompletionStatus.Failed:
+                    case TaskCompletionStatus.Aborted:
+                    default:
+                        throw new Exception($"{taskType.Name} failed to run successfully");
+                }
 
                 retVal = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();

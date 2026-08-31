@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Providers;
 using System;
 using System.Linq;
 
@@ -118,8 +119,16 @@ namespace Statistics2026.Data
             return String.Empty;
         }
 
-        public static bool isTVSpecial(Video video)
+        public static bool isTVSpecial(RemoteSearchResult result)
         {
+            return (result.SortParentIndexNumber ?? result.ParentIndexNumber) == 0;
+        }
+
+        public static bool isTVSpecial(Video? video)
+        {
+            if ( video == null) 
+                return false;
+
             var isEpisode = video is Episode;
             if (!isEpisode)
                 return false;

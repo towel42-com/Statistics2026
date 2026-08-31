@@ -1,21 +1,10 @@
-﻿using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.MediaEncoding;
-using RestSharp;
+﻿using MediaBrowser.Controller.Entities;
 using ServiceStack;
-using ServiceStack.Text;
-using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
-using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
-using System.Runtime.Serialization;
 using System.Threading;
 
 
@@ -304,7 +293,7 @@ namespace Statistics2026.Data
                 "FROM UserVideoList " +
                 "LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId " +
                 "LEFT JOIN Series ON Series.ItemId=Media.SeriesId " +
-                "WHERE Media.IsEpisode AND NOT Media.IsTVSpecial " +
+                "WHERE Media.IsEpisode AND NOT Media.IsTVSpecial AND UserVideoList.IsPlayed " +
                 "AND UserVideoList.UserId=@UserId " +
                 "GROUP BY Media.SeriesId"
                 ;
@@ -334,16 +323,21 @@ namespace Statistics2026.Data
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
 
-            string sqlSeries = string.Empty;
-            string sqlEpisodes = string.Empty;
+            string seriesColumn = string.Empty;
+            string seriesFrom = string.Empty;
+            string episodeColumn = string.Empty;
+            string episodeFrom = string.Empty;
+
             string titleSeries = string.Empty;
             string titleEpisodes = string.Empty;
             string helpEpisodes = string.Empty;
             List<(string name, object? value)>? paramList = null;
             if (user == null)
             {
-                sqlSeries = "SELECT COUNT(DISTINCT(PrimaryName)) FROM Media WHERE IsEpisode";
-                sqlEpisodes = "SELECT SUM(IsEpisode) FROM Media";
+                seriesColumn = "COUNT(DISTINCT(PrimaryName))";
+                episodeColumn = "SUM(NumEpisodes)";
+                episodeFrom = seriesFrom = "Media WHERE IsEpisode";
+
                 titleSeries = Constants.TotalTVShows;
                 titleEpisodes = Constants.TotalTVEpisodes;
                 helpEpisodes = Constants.HelpTotalTVShows;
@@ -352,29 +346,33 @@ namespace Statistics2026.Data
             {
                 paramList = new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) };
 
-                sqlSeries = "SELECT COUNT(DISTINCT(Media.PrimaryName)) FROM UserVideoList LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId WHERE Media.IsEpisode AND ( UserVideoList.UserId=@UserId )";
-                sqlEpisodes = "SELECT SUM(UserVideoList.IsEpisode) FROM UserVideoList LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId WHERE Media.IsEpisode AND ( UserVideoList.UserId=@UserId )";
-
+                seriesColumn = "COUNT(DISTINCT(Media.PrimaryName))"; 
+                episodeColumn = "SUM(UserVideoList.NumEpisodes)";
+                
                 titleSeries = Constants.TotalUserTVShows;
                 titleEpisodes = Constants.TotalUserTVEpisodes;
                 helpEpisodes = Constants.HelpTotalUserTVShows;
 
+                var from = "UserVideoList LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId WHERE Media.IsEpisode AND NOT Media.IsTVSpecial AND ( UserVideoList.UserId=@UserId )";
+
                 if (watched)
                 {
-                    sqlEpisodes += " AND ( UserVideoList.IsPlayed )";
-                    sqlSeries += " AND ( UserVideoList.IsPlayed )";
+                    from += " AND ( UserVideoList.IsPlayed )";
 
                     titleSeries = Constants.TotalTVShowsWatched;
                     titleEpisodes = Constants.TotalUserTVEpisodesWatched;
                     helpEpisodes = Constants.HelpTotalTVShowsWatched;
                 }
 
+                seriesFrom = episodeFrom = from;
             }
 
+            var sqlEpisodes = $"SELECT {episodeColumn} FROM {episodeFrom}";
             var retVal = ValueGroupForSingleItem(titleEpisodes, helpEpisodes, sqlEpisodes, paramList);
 
             retVal.AddLine(titleSeries);
-            var value = GetSingleValueFromSQL(sqlSeries);
+            var sqlSeries = $"SELECT {seriesColumn} FROM {seriesFrom}";
+            var value = GetSingleValueFromSQL(sqlSeries, paramList);
             retVal.AddLine(value);
 
             return retVal;
@@ -460,20 +458,34 @@ namespace Statistics2026.Data
 
         public class WatchedShowValue
         {
+            public WatchedShowValue() {}
+            public WatchedShowValue(long numUsers) { _numUsers = numUsers; }
             public string ItemId { get; set; } = String.Empty;
             public string Name { get; set; } = String.Empty;
             public string ImageUrl { get; set; } = String.Empty;
             public long NumEpisodes { get; set; } = 0;
-            public long NumWatched { get; set; } = 0;
-            public double PercentWatched { get; set; } = 0;
+            public long NumWatched
+            {
+                get
+                {
+                    return _numWatched;
+                }
+                set
+                {
+                    _numWatched = value;
+                    UpdatePercents();
+                }
+            }
             public double PercentWatchedPerUser { get; set; } = 0;
 
-            public void UpdatePercents(long numUsers)
+            private long _numUsers = 0;
+            private long _numWatched = 0;
+            private void UpdatePercents()
             {
-                PercentWatched = (1.0 * NumWatched) / (1.0 * NumEpisodes);
-                PercentWatchedPerUser = PercentWatched / (1.0 * numUsers);
-
+                var percentWatched = (1.0 * NumWatched) / (1.0 * NumEpisodes);
+                PercentWatchedPerUser = percentWatched / (1.0 * _numUsers);
             }
+
         }
 
         public List<WatchedShowValue> ComputeWatchedShowValues(User? user, CancellationToken cancellationToken, IProgress<double> progress)
@@ -500,7 +512,22 @@ namespace Statistics2026.Data
             });
 
             var retVal = new List<WatchedShowValue>();
-            sqlCommand = new SQLCmdDef("SELECT ItemId, Name FROM Series");
+            var sql =
+                "SELECT " +
+                "  Series.ItemId" +
+                ", Series.Name" +
+                ", Series.NumEpisodes" + // number in the series
+                ", SUM(UserVideoList.NumEpisodes) " +  // number watched
+                "FROM Series " +
+                "LEFT JOIN UserVideoList On UserVideoList.SeriesId=Series.ItemId " +
+                "WHERE " +
+                "UserVideoList.IsEpisode AND " +
+                "NOT UserVideoList.IsTVSpecial AND " +
+                "UserVideoList.IsPlayed " +
+                "GROUP BY Series.ItemId "
+                ;
+
+            sqlCommand = new SQLCmdDef(sql);
             progress.Report(0);
             long count = 0;
             _dbHelper.ExecuteCommand(sqlCommand, statement =>
@@ -508,52 +535,21 @@ namespace Statistics2026.Data
                 var row = statement.Current;
                 var itemId = row.GetString(0);
                 var name = row.GetString(1);
+                var numEpisodes = row.GetInt64(2);
+                var numWatched = row.GetInt64(3);
                 var url = ItemImageUrl._ItemImageUrl(itemId, _embyManagers!._libraryManager);
-                retVal.Add(new WatchedShowValue()
+                retVal.Add(new WatchedShowValue(numUsers)
                 {
                     ItemId = itemId,
                     Name = name,
-                    ImageUrl = url
+                    ImageUrl = url,
+                    NumEpisodes = numEpisodes,
+                    NumWatched = numWatched,
                 });
                 cancellationToken.ThrowIfCancellationRequested();
                 progress.Report((100.0 * (count++) / numSeries));
                 return true;
             });
-
-            for (int ii = 0; ii < retVal.Count(); ++ii)
-            {
-                var curr = retVal[ii];
-                sqlCommand = new SQLCmdDef("SELECT NumEpisodes FROM Series WHERE ItemId=@ItemId",
-                    new List<(string name, object? value)>()
-                    {
-                        ("@ItemId", curr.ItemId)
-                    });
-
-                _dbHelper.ExecuteCommand(sqlCommand, statement =>
-                {
-                    var row = statement.Current;
-                    curr.NumEpisodes = row.GetInt64(0);
-                    return false;
-                });
-
-                sqlCommand = new SQLCmdDef("SELECT Count(1) FROM UserVideoList WHERE SeriesId=@SeriesId AND IsPlayed",
-                    new List<(string name, object? value)>()
-                    {
-                        ("@SeriesId", curr.ItemId)
-                    });
-
-                _dbHelper.ExecuteCommand(sqlCommand, statement =>
-                {
-                    var row = statement.Current;
-                    curr.NumWatched = row.GetInt64(0);
-                    return false;
-                });
-
-                curr.UpdatePercents(numUsers);
-                retVal[ii] = curr;
-                progress.Report((100.0 * (ii) / retVal.Count()));
-
-            }
 
             return retVal;
         }
@@ -571,7 +567,6 @@ namespace Statistics2026.Data
                 + ", ImageUrl "
                 + ", NumEpisodes "
                 + ", NumWatched "
-                + ", PercentWatched "
                 + ", PercentWatchedPerUser " +
                 "FROM CachedWatchedAnalysis " +
                 "WHERE PercentWatchedPerUser <> 0 " +
@@ -592,8 +587,7 @@ namespace Statistics2026.Data
                 var url = row.GetString(2);
                 var numEpisodes = row.GetInt(3);
                 var numWatched = row.GetInt(4);
-                var percentWatched = row.GetFloat(5);
-                var percentWatchedPerUser = row.GetFloat(6);
+                var percentWatchedPerUser = row.GetFloat(5);
                 series.Add(new WatchedShowValue()
                 {
                     ItemId = id,
@@ -601,7 +595,6 @@ namespace Statistics2026.Data
                     ImageUrl = url,
                     NumWatched = numWatched,
                     NumEpisodes = numEpisodes,
-                    PercentWatched = percentWatched,
                     PercentWatchedPerUser = percentWatchedPerUser
                 });
                 return series.Count <= 5;
@@ -702,9 +695,9 @@ namespace Statistics2026.Data
               ;
 
             var sqlCmd = new SQLCmdDef(sql, new List<(string, object?)>()
-            {
-                ( "@UserId", user.Id.ToString())
-            });
+{
+    ( "@UserId", user.Id.ToString())
+});
 
             var retVal = new List<(int year, long count)>();
             _dbHelper.ExecuteCommand(sqlCmd, statement =>
@@ -769,9 +762,9 @@ namespace Statistics2026.Data
               ;
 
             var sqlCmd = new SQLCmdDef(sql, new List<(string, object?)>()
-            {
-                ( "@UserId", user.Id.ToString())
-            });
+{
+    ( "@UserId", user.Id.ToString())
+});
 
             Dictionary<string, int> genreMap = new Dictionary<string, int>();
             _dbHelper.ExecuteCommand(sqlCmd, statement =>
@@ -843,7 +836,7 @@ namespace Statistics2026.Data
                    "FROM UserVideoList " +
                    "LEFT JOIN Media ON Media.ItemId=UserVideoList.ItemId " +
                    "WHERE UserVideoList.IsPlayed " +
-                   "AND " + StatGen.validDateClause( "UserVideoList.LastPlayedDate" ) +
+                   "AND " + StatGen.validDateClause("UserVideoList.LastPlayedDate") +
                    "AND UserVideoList.UserId = @UserId " +
                    "AND "
                    ;
@@ -855,9 +848,9 @@ namespace Statistics2026.Data
                ;
 
             var sqlCmd = new SQLCmdDef(sql, new List<(string, object?)>()
-            {
-                ( "@UserId", user.Id.ToString())
-            });
+{
+    ( "@UserId", user.Id.ToString())
+});
 
             var retVal = new List<(string genre, DateTime lastPlayed)>();
             _dbHelper.ExecuteCommand(sqlCmd, statement =>

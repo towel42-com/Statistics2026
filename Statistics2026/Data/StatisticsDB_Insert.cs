@@ -555,16 +555,40 @@ namespace Statistics2026.Data
             _embyManagers!._logger?.Debug($"AddAllSeries - Finished Video Analysis");
         }
 
-        private int GetEpisodeCountForSeries(Series series, CancellationToken cancellationToken)
+        private int GetCountForSeries(Series series, CancellationToken cancellationToken, bool episodes)
         {
             CheckIsValid();
 
             var libraryOptions = _embyManagers!._libraryManager.GetLibraryOptions(series);
             var allEpisodes = _embyManagers!._providerManager.GetAllEpisodes(series, libraryOptions, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-            var retVal = allEpisodes.Where(e => ((e.SortParentIndexNumber ?? e.ParentIndexNumber) != 0) && e.PremiereDate <= DateTime.Now).Count();
+            var retVal = allEpisodes.Where(e => (
+                ((episodes && !MediaInfo.isTVSpecial(e)) ||
+                  (!episodes && MediaInfo.isTVSpecial(e)))
+                && (e.PremiereDate <= DateTime.Now))).Count();
+
             if (retVal == 0)// when providers are disabled
             {
-                var cmd = new SQLCmdDef("SELECT NumEpisodes FROM Series WHERE ItemId=@SeriesId",
+                var fieldName = episodes ? "NumEpisodes" : "NumSpecials";
+                var cmd = new SQLCmdDef($"SELECT {fieldName} FROM Series WHERE ItemId=@SeriesId",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        retVal = row.GetInt(0);
+                    }
+                    return false;
+                });
+            }
+            if (retVal == 0) // Series hasnt been setup yet
+            {
+                var whereClause = episodes ? "NOT IsTVSpecial" : "IsTVSpecial";
+                var cmd = new SQLCmdDef($"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND {whereClause}",
                             new List<(string name, object? value)>()
                             {
                             ("@SeriesId", series.Id.ToString())
@@ -583,32 +607,14 @@ namespace Statistics2026.Data
             return retVal;
         }
 
+        private int GetEpisodeCountForSeries(Series series, CancellationToken cancellationToken)
+        {
+            return GetCountForSeries(series, cancellationToken, true);
+        }
+
         private int GetSpecialCountForSeries(Series series, CancellationToken cancellationToken)
         {
-            CheckIsValid();
-            var libraryOptions = _embyManagers!._libraryManager.GetLibraryOptions(series);
-            var allEpisodes = _embyManagers._providerManager.GetAllEpisodes(series, libraryOptions, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-            var retVal = allEpisodes.Where(e => (e.SortParentIndexNumber ?? e.ParentIndexNumber) == 0).Count();
-
-            if (retVal == 0) // when providers are disabled
-            {
-                var cmd = new SQLCmdDef("SELECT NumSpecials FROM Series WHERE ItemId=@SeriesId",
-                            new List<(string name, object? value)>()
-                            {
-                            ("@SeriesId", series.Id.ToString())
-                            });
-
-                _dbHelper.ExecuteCommand(cmd, statement =>
-                {
-                    if (statement != null)
-                    {
-                        var row = statement.Current;
-                        retVal = row.GetInt(0);
-                    }
-                    return false;
-                });
-            }
-            return retVal;
+            return GetCountForSeries(series, cancellationToken, false);
         }
 
         private List<SQLCmdDef> AddSeries(Series series, CancellationToken cancellationToken, IProgress<double> progress)
@@ -755,7 +761,6 @@ namespace Statistics2026.Data
                         ", ImageUrl" +
                         ", NumEpisodes" +
                         ", NumWatched" +
-                        ", PercentWatched" +
                         ", PercentWatchedPerUser" +
                     ")" +
                     " VALUES " +
@@ -765,7 +770,6 @@ namespace Statistics2026.Data
                         ", @ImageUrl" +
                         ", @NumEpisodes" +
                         ", @NumWatched" +
-                        ", @PercentWatched" +
                         ", @PercentWatchedPerUser" +
                     ")";
 
@@ -783,7 +787,6 @@ namespace Statistics2026.Data
                     ("@ImageUrl", watched.ImageUrl),
                     ("@NumEpisodes", watched.NumEpisodes),
                     ("@NumWatched", watched.NumWatched),
-                    ("@PercentWatched", watched.PercentWatched),
                     ("@PercentWatchedPerUser", watched.PercentWatchedPerUser)
                 }));
             }

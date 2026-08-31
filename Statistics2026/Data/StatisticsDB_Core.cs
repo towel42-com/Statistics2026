@@ -230,7 +230,6 @@ namespace Statistics2026.Data
                         new TableColDef( "ImageUrl", "TEXT", true ),
                         new TableColDef( "NumEpisodes", "INT", true ),
                         new TableColDef( "NumWatched", "INT", true ),
-                        new TableColDef( "PercentWatched", "DOUBLE", true ),
                         new TableColDef( "PercentWatchedPerUser", "DOUBLE", true ),
                     }
                 )

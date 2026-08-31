@@ -43,7 +43,7 @@ namespace Statistics2026.ScheduledTasks
             _managers = new EmbyManagers(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - CalculateWatchedShowsTask"), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, config, taskManager);
         }
 
-        string IScheduledTask.Name => "\u2022 Calculating Watched Shows";
+        string IScheduledTask.Name => "\u2022 Calculate Watched Shows/User";
 
         string IScheduledTask.Key => "Statistics2026CalculateWatchedShowsTask";
 
