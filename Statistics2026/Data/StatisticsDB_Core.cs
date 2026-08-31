@@ -136,6 +136,7 @@ namespace Statistics2026.Data
                         new TableColDef( "FileSize", "INT", true),
                         new TableColDef( "RunTimeTicks", "INT", true ),
                         new TableColDef( "Rating", "REAL", true ),
+                        new TableColDef( "Status", "TEXT" , true ),
                         new TableColDef( "AverageBitrate", "INT", true ),
                     }
                 ),

@@ -7,6 +7,7 @@ using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Threading;
 
 namespace Statistics2026.Data
@@ -656,6 +657,8 @@ namespace Statistics2026.Data
                     return true;
                 });
 
+            var seriesStatus = series.Status?.ToString() ?? "";
+
             cmd = new SQLCmdDef("SELECT COUNT(*) FROM Series where ItemId=@ItemId", new List<(string name, object? value)>() { ("@ItemId", series.Id.ToString()) });
             var exists = false;
             _dbHelper.ExecuteCommand(cmd, statement =>
@@ -684,6 +687,7 @@ namespace Statistics2026.Data
                     ", FileSize" +
                     ", RunTimeTicks" +
                     ", Rating" +
+                    ", Status" +
                     ", AverageBitrate" +
                 ")" +
                 " VALUES " +
@@ -699,6 +703,7 @@ namespace Statistics2026.Data
                     ", @FileSize" +
                     ", @RunTimeTicks" +
                     ", @Rating" +
+                    ", @Status" +
                     ", @AverageBitrate" +
                 ")";
 
@@ -715,6 +720,7 @@ namespace Statistics2026.Data
                            ("@FileSize", totalFileSize),
                            ("@RunTimeTicks", totalRuntime),
                            ("@Rating", averageRating),
+                           ("@Status", seriesStatus),
                            ("@AverageBitrate", averageBitrate),
                        };
             }
@@ -726,6 +732,8 @@ namespace Statistics2026.Data
                     ", NumSpecials=NumSpecials+@NumSpecials" +
                     ", FileSize=FileSize+@FileSize" +
                     ", RunTimeTicks=RunTimeTicks+@RunTimeTicks " +
+                    ", Rating=@Rating " +
+                    ", Status=@Status " +
                     "WHERE ItemId=@ItemId";
 
                 paramsList = new List<(string name, object? value)>()
@@ -735,6 +743,8 @@ namespace Statistics2026.Data
                            ("@NumSpecials", numSpecials),
                            ("@FileSize", totalFileSize),
                            ("@RunTimeTicks", totalRuntime),
+                           ("@Rating", averageRating),
+                           ("@Status", seriesStatus),
                        };
             }
             sqlCmds.Add(new SQLCmdDef(sql, paramsList));
