@@ -1,7 +1,4 @@
 ﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Services;
-using RestSharp;
 using ServiceStack;
 using Statistics2026.Api;
 using System;
