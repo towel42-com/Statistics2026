@@ -11,7 +11,7 @@ It is part of the [Towel42/EmbyPluginUtils](https://github.com/towel42-com/EmbyP
 
     This file gets used in two locations
     
-        * As an optional post build event call
+        * As a post build event call
         * As a launch script for debugging
 
     In the Statistics2026.csproj file, you will find a root level property group defining the variable InstallAndLaunchPath.
@@ -25,12 +25,11 @@ It is part of the [Towel42/EmbyPluginUtils](https://github.com/towel42-com/EmbyP
 
     If you are developing on an installed server, using Default should work fine.
     
+    In the csproj file, you will find a Target with the Name "DetermineEmbyRoot".  Update the values for your installations.
+    
     In Statistics2026/Properties you will find 'launchSettings.json'. Here is where you setup your debugging profiles.  Their names should match the conditionals
     setup in the csproj file.
    
-    Note, since they all use the conditional EmbyServerRoot, each profile is identical.
-    
-
 If you set InstallAndLaunchPath and EmbyServerRoot correctly, no further work should be necessary to install and test the plugin.
 
 ## Installation
