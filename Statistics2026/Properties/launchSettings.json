@@ -1,0 +1,25 @@
+{
+  "profiles": {
+    "Default": {
+      "commandName": "Executable",
+      "executablePath": "%SystemRoot%\\System32\\cmd.exe",
+      "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRoot $(EmbyServerRoot)",
+      "workingDirectory": "$(EmbyServerRoot)",
+      "debugEngines": "native"
+    },
+    "Small": {
+      "commandName": "Executable",
+      "executablePath": "%SystemRoot%\\System32\\cmd.exe",
+      "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRoot $(EmbyServerRoot)",
+      "workingDirectory": "$(EmbyServerRoot)",
+      "debugEngines": "native"
+    },
+    "Full": {
+      "commandName": "Executable",
+      "executablePath": "%SystemRoot%\\System32\\cmd.exe",
+      "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRoot $(EmbyServerRoot)",
+      "workingDirectory": "$(EmbyServerRoot)",
+      "debugEngines": "native"
+    }
+  }
+}
