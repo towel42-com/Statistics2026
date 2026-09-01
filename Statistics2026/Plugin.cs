@@ -92,6 +92,20 @@ namespace Statistics2026
                 {
                     Name = "style.css",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.style.css"
+                },
+                new PluginPageInfo
+                {
+                    Name = "UserStatsPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStatsPage.html",
+                    EnableInUserMenu = true,
+                    MenuSection = "User Statistics",
+                    DisplayName = "User Statistics",
+                    FeatureId = Feature.StaticId
+                },
+                new PluginPageInfo
+                {
+                    Name = "UserStatsPage.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStatsPage.js"
                 }
 
             };
@@ -101,7 +115,12 @@ namespace Statistics2026
 
         public static Plugin? Instance { get; private set; } = null;
 
-        public override string Name => "Statistics 2026";
+        public static string StaticName = "Statistics 2026";
+
+        public override string Name
+        {
+            get { return StaticName; }
+        }
 
         public override string Description => "Get the statistics for your media collection";
 
