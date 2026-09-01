@@ -105,6 +105,7 @@ namespace Statistics2026
 
         internal const string FavoriteMovieYears = "Favorite Movie Years";
         internal const string FavoriteMovieGenres = "Favorite Movie Genres";
+        internal const string FavoriteTVGenres = "Favorite TV Genres";
 
         internal const string LastSeenTVSeries = "Last Seen TV Episodes";
         internal const string LastSeenMovies = "Last Seen Movies";
