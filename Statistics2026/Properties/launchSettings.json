@@ -5,21 +5,21 @@
       "executablePath": "%SystemRoot%\\System32\\cmd.exe",
       "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRootCache \"$(ProjectDir).vs/$(ProjectName)/$(Configuration)/embyroot.cache\"",
       "workingDirectory": "$(ProjectDir)",
-      "debugEngines": "native"
+      "debugEngines": "managed"
     },
     "Small": {
       "commandName": "Executable",
       "executablePath": "%SystemRoot%\\System32\\cmd.exe",
       "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRootCache \"$(ProjectDir).vs/$(ProjectName)/$(Configuration)/embyroot.cache\"",
       "workingDirectory": "$(ProjectDir)",
-      "debugEngines": "native"
+      "debugEngines": "managed"
     },
     "Full": {
       "commandName": "Executable",
       "executablePath": "%SystemRoot%\\System32\\cmd.exe",
       "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRootCache \"$(ProjectDir).vs/$(ProjectName)/$(Configuration)/embyroot.cache\"",
       "workingDirectory": "$(ProjectDir)",
-      "debugEngines": "native"
+      "debugEngines": "managed"
     }
   }
 }
