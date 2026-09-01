@@ -1,0 +1,38 @@
+﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/TVSeriesProgress.js">
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <h1>TV Series Progress Per User</h1>
+            <span style="max-width: 900px;">
+                <div class="selectContainer">
+                    <label class="selectLabel selectLabelUnfocused" for="selectUser">Load TV Series Progress for:</label>
+                    <div class="emby-select-wrapper emby-select-wrapper-smaller">
+                        <select is="emby-select" id="selectUser" label="Load TV Series Progress for:" class="emby-select-backdropfilter emby-select"></select>
+                        <div class="selectArrowContainer">
+                            <div style="visibility: hidden;">0</div>
+                            <i class="md-icon selectArrow"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 id="UserTitle"></h2>
+
+                <div id="TVSeriesProgressStatus">Loading Data...</div>
+
+                <table cellpadding="6" id="TVSeriesProgressTable" style="width:95%;">
+                    <thead>
+                        <tr style="text-align: left; white-space: nowrap;">
+                            <th class="detailTableHeaderCell" data-priority="1">TV Series (Premiere Year)</th>
+                            <th class="detailTableHeaderCell" data-priority="3" style="white-space: nowrap;">Episodes<span class="infoBlock" id="episodesInfo"><i class="md-icon">info</i></span></th>
+                            <th class="detailTableHeaderCell" data-priority="3" style="white-space: nowrap;">Specials<span class="infoBlock" id="specialsInfo"><i class="md-icon">info</i></span></th>
+                            <th class="detailTableHeaderCell" data-priority="4">Score</th>
+                            <th class="detailTableHeaderCell" data-priority="5">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="resultBody" id="TVSeriesProgressTable_results"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

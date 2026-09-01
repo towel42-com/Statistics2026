@@ -1,15 +1,6 @@
 ﻿define(['mainTabsManager', 'appRouter', Dashboard.getConfigurationResourceUrl('Helpers.js'), 'emby-linkbutton'], function (mainTabsManager, appRouter, Helpers) {
     'use strict';
 
-    ApiClient.getStatistics20URL = function (url_to_get) {
-        console.log("getStatistics20URL Url = " + url_to_get);
-        return this.ajax({
-            type: "GET",
-            url: url_to_get,
-            dataType: "json"
-        });
-    };
-
     function displayTime(ticks) {
         var ticksInSeconds = ticks / 10000000;
         var hh = Math.floor(ticksInSeconds / 3600);
@@ -51,7 +42,7 @@
                 var load_status = view.querySelector('#movie_results_status');
                 load_status.innerHTML = "Loading Data...";
 
-                ApiClient.getStatistics20URL(url).then(function (videoData) {
+                Helpers.getStatistics20URL(url, this).then(function (videoData) {
                     load_status.innerHTML = "&nbsp;";
                     console.log("videoData: " + JSON.stringify(videoData));
 

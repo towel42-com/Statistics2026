@@ -1,6 +1,8 @@
 ﻿using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Services;
 using System;
+using System.Collections.Generic;
+using Statistics2026.Data;
 
 namespace Statistics2026.Api
 {
@@ -31,6 +33,14 @@ namespace Statistics2026.Api
     public class GetMovieList : IReturn<Object>
     {
 
+    }
+
+    // http://localhost:8096/emby/Statistics2026/tv_series_progress/{User}
+    [Route("/Statistics2026/tv_series_progress/{User}", "GET", Summary = "Gets Codec Info for Movies")]
+    [Authenticated(Roles = "admin")]
+    public class GetTVSeriesProgress : IReturn<List<GetTVSeriesProgressResponse>>
+    {
+        public string user { get; set; } = String.Empty;
     }
 
     [Route("/Statistics2026/codec_summary", "GET", Summary = "Gets Codec Summary for Library")]
@@ -141,7 +151,7 @@ namespace Statistics2026.Api
     {
         public string user { get; set; } = String.Empty;
     }
-    
+
     [Route("/Statistics2026/movie_favorite_years/{User}", "GET", Summary = "Get the Favorite Movie Years")]
     [Authenticated(Roles = "admin")]
     public class GetMovieFavoriteYears : IReturn<Object>
@@ -162,7 +172,7 @@ namespace Statistics2026.Api
     {
         public string user { get; set; } = String.Empty;
     }
-    
+
 
     [Route("/Statistics2026/total_collection_count", "GET", Summary = "Get the total Collection Count")]
     [Authenticated(Roles = "admin")]

@@ -1,21 +1,10 @@
 ﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, Helpers) {
     'use strict';
 
-    ApiClient.getStatistics2026URL = function (url_to_get) {
-        console.log("getStatistics2026URL Url = " + url_to_get);
-        return this.ajax({
-            type: "GET",
-            url: url_to_get,
-            dataType: "json"
-        });
-    };
-
-    const pluginId = "4BFE2894-AEA3-4D3C-A429-503B56D61711";
-
     function loadStats(view, user) {
         Dashboard.showLoadingMsg();
 
-        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+        ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
             if (config.LastUpdated === undefined) {
                 Dashboard.alert({
                     message:
@@ -64,8 +53,8 @@
 
     return function (view, params) {
         view.addEventListener('viewshow', function (e) {
-
             mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats"), Helpers.getTabs);
+            Helpers.injectStyleSheet(e);
         });
 
         view.addEventListener('viewhide', function (e) {

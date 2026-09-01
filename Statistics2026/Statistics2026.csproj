@@ -16,10 +16,13 @@
     </Target>
     <ItemGroup>
         <EmbeddedResource Include="Configuration\PluginConfiguration.cs"/>
-        <EmbeddedResource Include="Pages\Summary.html"/>
+		<EmbeddedResource Include="Pages\style.css"/>
+		<EmbeddedResource Include="Pages\Summary.html"/>
         <EmbeddedResource Include="Pages\Summary.js"/>
         <EmbeddedResource Include="Pages\UserStats.html"/>
         <EmbeddedResource Include="Pages\UserStats.js"/>
+        <EmbeddedResource Include="Pages\TVSeriesProgress.html"/>
+        <EmbeddedResource Include="Pages\TVSeriesProgress.js"/>
         <EmbeddedResource Include="Pages\Movies.html"/>
         <EmbeddedResource Include="Pages\Movies.js"/>
         <EmbeddedResource Include="Pages\Episodes.html"/>

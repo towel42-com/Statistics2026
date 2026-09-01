@@ -28,6 +28,21 @@ namespace Statistics2026.Api
             }
         }
 
+        public object Get(GetTVSeriesProgress request)
+        {
+            return GetRequest("GetTVSeriesProgress", timer =>
+            {
+                var db = StatisticsDB.GetInstance(_embyManagers);
+                var userName = request.user;
+                var user = GetUser(userName);
+                if (user == null)
+                    return null!;
+
+                var retVal = db.GetTVSeriesProgress(user);
+                return retVal;
+            });
+        }
+
         public object Get(GetEpisodeList request)
         {
             return GetRequest("GetEpisodeList", timer =>

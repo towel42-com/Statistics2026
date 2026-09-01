@@ -10,6 +10,84 @@ using System.Threading;
 
 namespace Statistics2026.Data
 {
+    public class PercentValue
+    {
+        private int? _count = null;
+        public int? Total { get; set; } = null;
+
+        public string _string { get; set; } = string.Empty;
+        public string String
+        {
+            get
+            {
+                if (_string.IsEmpty())
+                {
+                    if (_count == null && Total == null)
+                        _string = "0 of 0 (0%)";
+                    else if (_count == null && Total != null)
+                        _string = $"0 of {Total} (0%)";
+                    else if (_count != null && Total == null)
+                        _string = $"{_count} of 0 (100%)";
+                    else
+                    {
+                        Percent = (100.0 * _count) / (1.0 * Total) ?? 0.0;
+                        _string = $"{_count} of {Total} ({Percent:F0}%)";
+                    }
+                }
+                return _string;
+            }
+            set { _string = value; }
+        }
+        public double Percent { get; set; } = 0.0;
+
+        public int Count
+        {
+            get
+            {
+                return _count ?? 0;
+            }
+            set
+            {
+                _count = value;
+                if (_count == null || Total == null)
+                    return;
+
+                if (Total == 0)
+                {
+                    String = string.Empty;
+                    Percent = 0.0;
+                    return;
+                }
+
+                Percent = (100.0 * _count) / (1.0 * Total) ?? 0.0;
+                _string = $"{_count}/{Total} ({Percent:F0}%)";
+            }
+        }
+    }
+
+    public class GetTVSeriesProgressResponse
+    {
+        public string Name { get; set; } = string.Empty;
+        public string SeriesId { get; set; } = string.Empty;
+        public int PremiereYear { get; set; } = -1;
+
+        public PercentValue Episodes { get; set; } = new PercentValue();
+        public PercentValue Specials { get; set; } = new PercentValue();
+
+        private double _score = 0.0;
+        public double Score
+        {
+            get { return _score; }
+            set
+            {
+                _score = value;
+                ScoreStr = _score.ToString("F1");
+            }
+        }
+        public string ScoreStr { get; set; } = String.Empty;
+        public string SeriesStatus { get; set; } = string.Empty;
+    }
+
     public sealed partial class StatisticsDB
     {
         public StatCard MediaResolutions(bool showAllResolutions)
@@ -346,9 +424,9 @@ namespace Statistics2026.Data
             {
                 paramList = new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) };
 
-                seriesColumn = "COUNT(DISTINCT(Media.PrimaryName))"; 
+                seriesColumn = "COUNT(DISTINCT(Media.PrimaryName))";
                 episodeColumn = "SUM(UserVideoList.NumEpisodes)";
-                
+
                 titleSeries = Constants.TotalUserTVShows;
                 titleEpisodes = Constants.TotalUserTVEpisodes;
                 helpEpisodes = Constants.HelpTotalUserTVShows;
@@ -458,7 +536,7 @@ namespace Statistics2026.Data
 
         public class WatchedShowValue
         {
-            public WatchedShowValue() {}
+            public WatchedShowValue() { }
             public WatchedShowValue(long numUsers) { _numUsers = numUsers; }
             public string ItemId { get; set; } = String.Empty;
             public string Name { get; set; } = String.Empty;
@@ -902,5 +980,104 @@ namespace Statistics2026.Data
             return retVal;
         }
 
+        public List<GetTVSeriesProgressResponse> GetTVSeriesProgress(User? user)
+        {
+            if (!_dbHelper.isValid())
+                throw new ArgumentNullException("dbHelper");
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
+            var getSeriesSQL = "SELECT " +
+                "  Series.Name" +
+                ", strftime('%Y', Series.PremiereDate) AS PremierDate" +
+                ", Series.NumEpisodes" +
+                ", Series.NumSpecials" +
+                ", Series.Rating" +
+                ", Series.Status" +
+                ", Series.ItemId " +
+                " FROM " +
+                "   Series "
+                ;
+
+            var series = new Dictionary<string, GetTVSeriesProgressResponse>();
+            _dbHelper.ExecuteCommand(new SQLCmdDef(getSeriesSQL), statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+                var name = row.GetString(col++);
+                var premiereYear = row.GetInt(col++);
+                var totalEpisodes = row.GetInt(col++);
+                var totalSpecials = row.GetInt(col++);
+                var score = row.GetDouble(col++);
+                var status = row.GetString(col++);
+                var seriesId = row.GetString(col++); // should be true
+                var curr = new GetTVSeriesProgressResponse()
+                {
+                    SeriesId = seriesId,
+                    Name = name,
+                    PremiereYear = premiereYear,
+                    Score = score,
+                    SeriesStatus = status
+                };
+                curr.Episodes.Total = totalEpisodes;
+                curr.Specials.Total = totalSpecials;
+
+                series[seriesId] = curr;
+                return true;
+            });
+
+            var sqlBase = "SELECT " +
+                "  SUM(UserVideoList.NumEpisodes) " +
+                ", UserVideoList.SeriesId " +
+                " FROM " +
+                "   UserVideoList " +
+                " WHERE " +
+                " UserVideoList.IsEpisode AND " +
+                " <isTVSpecial> AND " +
+                " UserVideoList.IsPlayed AND " +
+                " UserVideoList.UserId=@UserId " +
+                " GROUP BY UserVideoList.SeriesId "
+                ;
+
+            var sqlEpisodes = sqlBase.Replace("<isTVSpecial>", "NOT UserVideoList.IsTVSpecial");
+            var sqlSpecials = sqlBase.Replace("<isTVSpecial>", "UserVideoList.IsTVSpecial");
+
+            var paramList = new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) };
+
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sqlEpisodes, paramList), statement =>
+                {
+                    var row = statement.Current;
+                    var col = 0;
+                    var watchedCount = row.GetInt(col++);
+                    var seriesId = row.GetString(col++); // should be true
+
+                    if (series.TryGetValue(seriesId, out var curr))
+                    {
+                        curr.Episodes.Count = watchedCount;
+                        series[seriesId] = curr;
+                    }
+                    return true;
+                });
+
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sqlSpecials, paramList), statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+                var watchedCount = row.GetInt(col++);
+                var seriesId = row.GetString(col++); // should be true
+
+                if (series.TryGetValue(seriesId, out var curr))
+                {
+                    curr.Specials.Count = watchedCount;
+                    series[seriesId] = curr;
+                }
+                return true;
+            });
+
+            var retVal = series.Values.ToList();
+
+            return retVal;
+        }
     }
 }

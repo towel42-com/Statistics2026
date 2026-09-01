@@ -45,6 +45,16 @@ namespace Statistics2026
                 },
                 new PluginPageInfo
                 {
+                    Name = "TVSeriesProgress",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.TVSeriesProgress.html",
+                },
+                new PluginPageInfo
+                {
+                    Name = "TVSeriesProgress.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.TVSeriesProgress.js"
+                },
+                new PluginPageInfo
+                {
                     Name = "Episodes",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.Episodes.html",
                 },
@@ -77,12 +87,17 @@ namespace Statistics2026
                 {
                     Name = "Helpers.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.Helpers.js"
+                },
+                new PluginPageInfo
+                {
+                    Name = "style.css",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.style.css"
                 }
 
             };
         }
 
-        public override Guid Id => new Guid("4BFE2894-AEA3-4D3C-A429-503B56D61711");
+        public override Guid Id => new Guid("23ADB024-F759-438F-B9A7-D5912A75596C");
 
         public static Plugin? Instance { get; private set; } = null;
 
