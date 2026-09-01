@@ -15,21 +15,39 @@
         <InstallAndLaunchPath>$(SolutionDir)\\..\\EmbyPluginUtils\\InstallAndLaunch.bat</InstallAndLaunchPath>
     </PropertyGroup>
 
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-        <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Default'">
-            <EmbyServerRoot>$(APPDATA)\\Emby-Server</EmbyServerRoot>
-        </PropertyGroup>
-        
-        <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Small'">
-            <EmbyServerRoot>D:\\Emby\\EmbyServer</EmbyServerRoot>
-        </PropertyGroup>
-        <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Full'">
-            <EmbyServerRoot>D:\\Emby\\EmbyServer.full</EmbyServerRoot>
-        </PropertyGroup>
-
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent" DependsOnTargets="DetermineEmbyRoot">
         <Exec Command="call $(InstallAndLaunchPath) -Build -TargetPath &quot;$(TargetPath)&quot; -EmbyRoot $(EmbyServerRoot)" />
     </Target>
     
+    <PropertyGroup>
+        <TargetLaunchDependsOn>$(TargetLaunchDependsOn);DetermineEmbyRoot</TargetLaunchDependsOn>
+    </PropertyGroup>
+    
+    <Target Name="DetermineEmbyRoot" BeforeTargets="BeforeBuild">
+        <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Default'">
+            <EmbyServerRoot>$(APPDATA)\Emby-Server</EmbyServerRoot>
+        </PropertyGroup>
+       
+        <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Small'">
+            <EmbyServerRoot>D:\Emby\EmbyServer</EmbyServerRoot>
+        </PropertyGroup>
+
+        <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Full'">
+            <EmbyServerRoot>D:\Emby\EmbyServer.full</EmbyServerRoot>
+        </PropertyGroup>
+
+        <PropertyGroup Condition="'$(ActiveDebugProfile)' == ''">
+            <EmbyServerRoot>###Set Debug Profile###</EmbyServerRoot>
+        </PropertyGroup>
+
+        <MakeDir Directories="$(MSBuildProjectDirectory)\.vs\$(ProjectName)\$(Configuration)" />
+        <WriteLinesToFile 
+            File="$(MSBuildProjectDirectory)/.vs/$(ProjectName)/$(Configuration)/embyroot.cache" 
+            Lines="$(EmbyServerRoot)" 
+            Overwrite="true" 
+            WriteOnlyWhenDifferent="true" />
+    </Target>
+
     <ItemGroup>
         <EmbeddedResource Include="Configuration\PluginConfiguration.cs" />
 		<EmbeddedResource Include="Pages\style.css" />

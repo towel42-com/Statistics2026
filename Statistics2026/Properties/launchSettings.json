@@ -3,22 +3,22 @@
     "Default": {
       "commandName": "Executable",
       "executablePath": "%SystemRoot%\\System32\\cmd.exe",
-      "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRoot $(EmbyServerRoot)",
-      "workingDirectory": "$(EmbyServerRoot)",
+      "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRootCache \"$(ProjectDir).vs/$(ProjectName)/$(Configuration)/embyroot.cache\"",
+      "workingDirectory": "$(ProjectDir)",
       "debugEngines": "native"
     },
     "Small": {
       "commandName": "Executable",
       "executablePath": "%SystemRoot%\\System32\\cmd.exe",
-      "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRoot $(EmbyServerRoot)",
-      "workingDirectory": "$(EmbyServerRoot)",
+      "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRootCache \"$(ProjectDir).vs/$(ProjectName)/$(Configuration)/embyroot.cache\"",
+      "workingDirectory": "$(ProjectDir)",
       "debugEngines": "native"
     },
     "Full": {
       "commandName": "Executable",
       "executablePath": "%SystemRoot%\\System32\\cmd.exe",
-      "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRoot $(EmbyServerRoot)",
-      "workingDirectory": "$(EmbyServerRoot)",
+      "commandLineArgs": "/c $(InstallAndLaunchPath) -Debug -TargetPath $(TargetPath) -EmbyRootCache \"$(ProjectDir).vs/$(ProjectName)/$(Configuration)/embyroot.cache\"",
+      "workingDirectory": "$(ProjectDir)",
       "debugEngines": "native"
     }
   }
