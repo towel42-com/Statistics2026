@@ -877,15 +877,18 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException("user");
 
             string videoType = "";
+            string title = String.Empty;
             if (movies)
             {
                 videoType = "Movies";
+                title = Constants.FavoriteMovieGenres;
             }
             else
             {
                 videoType = "Episodes";
+                title = Constants.FavoriteTVGenres;
             }
-            var retVal = new TableBasedStatCard(Constants.FavoriteMovieGenres, "Premiere Year", new List<string>() { $"# of {videoType} Watched" });
+            var retVal = new TableBasedStatCard(title, "Genre", new List<string>() { $"# of {videoType} Watched" });
             retVal.SetDataColumnAlignment(0, StatCard.EAlignment.eCenter);
 
             var values = FavoriteGenreValues(user, movies);
