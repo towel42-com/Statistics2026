@@ -231,7 +231,7 @@ namespace Statistics2026.Api
 
                 var url = ItemImageUrl._ItemImageUrl(item);
                 if (url == null)
-                    retVal.PrimaryImageUrl = string.Empty;
+                    retVal.PrimaryImageUrl = String.Empty;
                 else
                     retVal.PrimaryImageUrl = url;
                 if (retVal.PrimaryImageUrl.IsNullOrEmpty())
@@ -314,6 +314,41 @@ namespace Statistics2026.Api
             });
         }
 
+        public object Get(GetLeastWatchedMovies request)
+        {
+            return GetRequest("GetLeastWatchedMovies", timer =>
+            {
+                var db = StatisticsDB.GetInstance(_embyManagers);
+                var serverId = request.serverId ?? "";
+                var numMovies = request.numMovies;
+                var excludeAdmin = request.excludeAdmin;
+
+                var groupData = db.WatchedMedia(null, true, numMovies, excludeAdmin, false);
+                groupData.ServerId = serverId;
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            });
+        }
+
+        public object Get(GetMostWatchedMovies request)
+        {
+            return GetRequest("GetMostWatchedMovies", timer =>
+            {
+                var db = StatisticsDB.GetInstance(_embyManagers);
+                var serverId = request.serverId ?? "";
+                var numMovies = request.numMovies;
+                var excludeAdmin = request.excludeAdmin;
+
+                var groupData = db.WatchedMedia(null, false, numMovies, excludeAdmin, false);
+                groupData.ServerId = serverId;
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            });
+        }
+
+
         public object Get(GetLeastWatchedShows request)
         {
             return GetRequest("GetLeastWatchedShows", timer =>
@@ -323,7 +358,7 @@ namespace Statistics2026.Api
                 var numShows = request.numShows;
                 var excludeAdmin = request.excludeAdmin;
 
-                var groupData = db.WatchedShows(null, true, numShows, excludeAdmin);
+                var groupData = db.WatchedMedia(null, true, numShows, excludeAdmin, true);
                 groupData.ServerId = serverId;
 
                 var vgReponse = groupData.createStat();
@@ -340,14 +375,13 @@ namespace Statistics2026.Api
                 var numShows = request.numShows;
                 var excludeAdmin = request.excludeAdmin;
 
-                var groupData = db.WatchedShows(null, false, numShows, excludeAdmin);
+                var groupData = db.WatchedMedia(null, false, numShows, excludeAdmin, true);
                 groupData.ServerId = serverId;
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             });
         }
-
         public object Get(GetTotalTimeWatched request)
         {
             return GetRequest("GetTotalTimeWatched", timer =>

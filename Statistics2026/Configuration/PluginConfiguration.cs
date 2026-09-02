@@ -1,4 +1,5 @@
 ﻿using MediaBrowser.Model.Plugins;
+using System;
 
 namespace Statistics2026.Configuration
 {
@@ -8,10 +9,10 @@ namespace Statistics2026.Configuration
         {
         }
 
-        public string BuildDate { get; set; } = string.Empty;
-        public string LastUpdated { get; set; } = string.Empty;
-        public string Version { get; set; } = string.Empty;
-        public string ServerId { get; set; } = string.Empty;
+        public string BuildDate { get; set; } = String.Empty;
+        public string LastUpdated { get; set; } = String.Empty;
+        public string Version { get; set; } = String.Empty;
+        public string ServerId { get; set; } = String.Empty;
 
         public bool hasConnectUserID { get; set; } = false;
         public int numMostActiveUsers { get; set; } = 5;

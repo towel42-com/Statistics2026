@@ -55,6 +55,8 @@
             movieStats += Helpers.getSummaryInfo(view, "total_movie_count", "");
             movieStats += Helpers.getSummaryInfo(view, "total_collection_count", "");
             movieStats += Helpers.getSummaryInfo(view, "total_movie_studio_count", "");
+            movieStats += Helpers.getSummaryInfo(view, "least_watched_movies", "", "?serverId=" + config.ServerId + "&numMovies=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
+            movieStats += Helpers.getSummaryInfo(view, "most_watched_movies", "", "?serverId=" + config.ServerId + "&numMovies=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
             movieStats += Helpers.getSummaryInfo(view, "get_movie/Largest", "", "?serverId=" + config.ServerId, "largest_movie");
             movieStats += Helpers.getSummaryInfo(view, "get_movie/Smallest", "", "?serverId=" + config.ServerId, "smallest_movie");
             movieStats += Helpers.getSummaryInfo(view, "get_movie/Longest", "", "?serverId=" + config.ServerId, "longest_movie");

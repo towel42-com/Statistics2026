@@ -15,7 +15,7 @@ namespace Statistics2026.Data
         private int? _count = null;
         public int? Total { get; set; } = null;
 
-        public string _string { get; set; } = string.Empty;
+        public string _string { get; set; } = String.Empty;
         public string String
         {
             get
@@ -54,7 +54,7 @@ namespace Statistics2026.Data
 
                 if (Total == 0)
                 {
-                    String = string.Empty;
+                    String = String.Empty;
                     Percent = 0.0;
                     return;
                 }

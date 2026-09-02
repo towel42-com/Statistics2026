@@ -15,8 +15,8 @@ namespace Statistics2026.Api
 
     public class GetItemImageUrlResponse
     {
-        public string Name { get; set; } = string.Empty;
-        public string PrimaryImageUrl { get; set; } = string.Empty;
+        public string Name { get; set; } = String.Empty;
+        public string PrimaryImageUrl { get; set; } = String.Empty;
     }
 
     // http://localhost:8096/emby/Statistics2026/episode_list
@@ -244,6 +244,32 @@ namespace Statistics2026.Api
 
         [ApiMember(Name = "numShows", Description = "Show the top X shows", IsRequired = false, DataType = "int", ParameterType = "query", Verb = "GET")]
         public int numShows { get; set; } = 5;
+    }
+
+    [Route("/Statistics2026/least_watched_movies", "GET", Summary = "Get the List of Least Watched Movies")]
+    public class GetLeastWatchedMovies : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; } = String.Empty;
+
+        [ApiMember(Name = "excludeAdmin", Description = "Exclude Administrators from analysis", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool excludeAdmin { get; set; } = true;
+
+        [ApiMember(Name = "numMovies", Description = "Show the top X watched Movies", IsRequired = false, DataType = "int", ParameterType = "query", Verb = "GET")]
+        public int numMovies { get; set; } = 5;
+    }
+
+    [Route("/Statistics2026/most_watched_movies", "GET", Summary = "Get the List of Most Watched Movies")]
+    public class GetMostWatchedMovies : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; } = String.Empty;
+
+        [ApiMember(Name = "excludeAdmin", Description = "Exclude Administrators from analysis", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool excludeAdmin { get; set; } = true;
+
+        [ApiMember(Name = "numMovies", Description = "Show the top X watched Movies", IsRequired = false, DataType = "int", ParameterType = "query", Verb = "GET")]
+        public int numMovies { get; set; } = 5;
     }
 
     [Route("/Statistics2026/total_time_watched/{User}", "GET", Summary = "Get the Total Time Watched for User")]

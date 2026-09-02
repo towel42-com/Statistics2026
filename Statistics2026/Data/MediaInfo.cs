@@ -201,7 +201,7 @@ namespace Statistics2026.Data
 
             int width = typeInfo.Width.Value;
 
-            var details = string.Empty;
+            var details = String.Empty;
             if (includeDetails)
             {
                 details = $" ({typeInfo.Width}x{typeInfo.Height})";

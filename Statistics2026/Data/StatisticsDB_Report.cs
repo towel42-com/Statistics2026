@@ -17,8 +17,8 @@ namespace Statistics2026.Data
 {
     public class GetTVSeriesProgressResponse
     {
-        public string Name { get; set; } = string.Empty;
-        public string SeriesId { get; set; } = string.Empty;
+        public string Name { get; set; } = String.Empty;
+        public string SeriesId { get; set; } = String.Empty;
         public int PremiereYear { get; set; } = -1;
 
         public PercentValue Episodes { get; set; } = new PercentValue();
@@ -35,7 +35,7 @@ namespace Statistics2026.Data
             }
         }
         public string ScoreStr { get; set; } = String.Empty;
-        public string SeriesStatus { get; set; } = string.Empty;
+        public string SeriesStatus { get; set; } = String.Empty;
     }
 
     public sealed partial class StatisticsDB
@@ -182,10 +182,14 @@ namespace Statistics2026.Data
             return retVal;
         }
 
+        private Dictionary<(bool hasConnectUserID, bool excludeAdmin), long> _numUsersCache = new Dictionary<(bool hasConnectUserID, bool excludeAdmin), long>();
         public long NumUsers(bool hasConnectUserID, bool excludeAdmin)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
+
+            if (_numUsersCache.TryGetValue((hasConnectUserID, excludeAdmin), out var cachedValue))
+                return cachedValue;
 
             string sql = "SELECT COUNT(UserName) FROM Users ";
 
@@ -199,7 +203,9 @@ namespace Statistics2026.Data
 
             sql += DBHelper.JoinClauses(conditions);
 
-            return GetSingleValueFromSQL(sql).ToInt64();
+            var result = GetSingleValueFromSQL(sql).ToInt64();
+            _numUsersCache[(hasConnectUserID, excludeAdmin)] = result;
+            return result;
         }
 
         public StatCard UserCount(bool hasConnectUserID, bool excludeAdmin)
@@ -344,14 +350,14 @@ namespace Statistics2026.Data
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
 
-            string seriesColumn = string.Empty;
-            string seriesFrom = string.Empty;
-            string episodeColumn = string.Empty;
-            string episodeFrom = string.Empty;
+            string seriesColumn = String.Empty;
+            string seriesFrom = String.Empty;
+            string episodeColumn = String.Empty;
+            string episodeFrom = String.Empty;
 
-            string titleSeries = string.Empty;
-            string titleEpisodes = string.Empty;
-            string helpEpisodes = string.Empty;
+            string titleSeries = String.Empty;
+            string titleEpisodes = String.Empty;
+            string helpEpisodes = String.Empty;
             List<(string name, object? value)>? paramList = null;
             if (user == null)
             {
@@ -484,46 +490,78 @@ namespace Statistics2026.Data
             public string ImageUrl { get; set; } = String.Empty;
         }
 
-        public List<WatchedShowValue> WatchedShowValues(User? user, bool leastWatched, int numShows, bool excludeAdmin)
+        public List<WatchedShowValue> WatchedMediaValues(User? user, bool leastWatched, int numShows, bool excludeAdmin, bool series)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
 
-            var series = new List<WatchedShowValue>();
+            var retVal = new List<WatchedShowValue>();
 
-            var numUsers = 28;
-            var sql = "SELECT " +
+            var numUsers = NumUsers(false, excludeAdmin);
+
+            var sql = String.Empty;
+            if (series)
+            {
+                sql = "SELECT " +
                 $"  Series.ItemId" +
                 $", Series.Name" +
-                //$", Series.NumEpisodes as NumEpisodes" +
-                //$", SUM(PlayCount) AS CurrPlayCount" +
                 $", ((100.0 * SUM(PlayCount)) / (1.0 * Series.NumEpisodes))/{numUsers} AS PerUser " +
                 $"FROM Series " +
                 $"LEFT OUTER JOIN UserVideoList ON Series.ItemId = UserVideoList.SeriesId " +
-                $"LEFT OUTER JOIN Users ON UserVideoList.UserId = Users.UserId " +
-                $"WHERE PlayCount > 0 "
-                ;
-            if (excludeAdmin)
-                sql += "AND NOT Users.IsAdministrator ";
-            sql += $"GROUP BY SeriesId " +
-                   $"ORDER BY PerUser "
-                   ;
-            
-            if (leastWatched)
-                sql += "ASC ";
+                $"LEFT OUTER JOIN Users ON UserVideoList.UserId = Users.UserId ";
+
+                var clauses = new List<string>() { "PlayCount > 0" };
+                if (excludeAdmin)
+                {
+                    clauses.Add("NOT Users.IsAdministrator");
+                }
+
+                sql += DBHelper.JoinClauses(clauses);
+
+                sql += $"GROUP BY SeriesId " +
+                       $"ORDER BY PerUser ";
+                if (leastWatched)
+                    sql += "ASC ";
+                else
+                    sql += "DESC ";
+                sql += $"LIMIT {numShows}";
+            }
             else
-                sql += "DESC ";
-            sql += $"LIMIT {numShows}";
+            {
+                sql = "SELECT " +
+                    $"  UserVideoList.ItemId" +
+                    $", Media.PrimaryName" +
+                    $", (SUM(100.0*UserVideoList.PlayCount)/27) AS PerUser " +
+                    $"FROM Users " +
+                    $"FULL JOIN UserVideoList ON UserVideoList.UserId = Users.UserId " +
+                    $"FULL JOIN Media ON UserVideoList.ItemId = Media.ItemId "
+                    ;
+                var clauses = new List<string>()
+                    {
+                        "PlayCount > 0",
+                        "NOT UserVideoList.IsEpisode"
+                    };
+                if (excludeAdmin)
+                {
+                    clauses.Add("NOT Users.IsAdministrator");
+                }
+
+                sql += DBHelper.JoinClauses(clauses);
+                sql += $"GROUP BY UserVideoList.ItemId " +
+                       $"ORDER BY PerUser ";
+                if (leastWatched)
+                    sql += "ASC ";
+                else
+                    sql += "DESC ";
+                sql += $"LIMIT {numShows}";
+            }
 
             _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
             {
                 var row = statement.Current;
                 var id = row.GetString(0);
                 var name = row.GetString(1);
-                //var numEpisodes = row.GetInt(2);
-                //var playCount = row.GetInt(3);
-                //var percentWatchedPerUser = row.GetFloat(4);
-                series.Add(new WatchedShowValue()
+                retVal.Add(new WatchedShowValue()
                 {
                     ItemId = id,
                     Name = name,
@@ -532,21 +570,31 @@ namespace Statistics2026.Data
                 return true;
             });
 
-            return series;
+            return retVal;
         }
 
-        public StatCard WatchedShows(User? user, bool leastWatched, int numShows, bool excludeAdmin)
+        public StatCard WatchedMedia(User? user, bool leastWatched, int numMovies, bool excludeAdmin, bool series)
         {
-            var series = WatchedShowValues(user, leastWatched, numShows, excludeAdmin);
-            var title = leastWatched ? Constants.LeastWatchedShows : Constants.MostWatchedShows;
-            var help = leastWatched ? Constants.HelpLeastWatchedShows : Constants.HelpMostWatchedShows;
-
-            var retVal = new TextBasedStatCard(title, help, "small");
-            retVal.SubTitle = "(Average Percentage Watched across All Users)";
-            retVal.AsNumberedList = true;
-            for (int ii = 0; ii < series.Count; ++ii)
+            var values = WatchedMediaValues(user, leastWatched, numMovies, excludeAdmin, series);
+            var title = String.Empty;
+            var help = String.Empty;
+            if (series)
             {
-                retVal.AddLine($"{series[ii].Name}", series[ii].ItemId, series[ii].ImageUrl);
+                title = leastWatched ? Constants.LeastWatchedShows : Constants.MostWatchedShows;
+                help = leastWatched ? Constants.HelpLeastWatchedShows : Constants.HelpMostWatchedShows;
+            }
+            else
+            {
+                title = leastWatched ? Constants.LeastWatchedMovies : Constants.MostWatchedMovies;
+                help = leastWatched ? Constants.HelpLeastWatchedMovies : Constants.HelpMostWatchedMovies;
+            }
+
+            var retVal = new TextBasedStatCard(title, help, "half");
+            retVal.SubTitle = "(Weighted Watched across Users)";
+            retVal.AsNumberedList = true;
+            for (int ii = 0; ii < values.Count; ++ii)
+            {
+                retVal.AddLine($"{values[ii].Name}", values[ii].ItemId, values[ii].ImageUrl);
             }
 
             return retVal;
@@ -809,9 +857,9 @@ namespace Statistics2026.Data
             if (user == null)
                 throw new ArgumentNullException("user");
 
-            string videoType = string.Empty;
-            string title = string.Empty;
-            string help = string.Empty;
+            string videoType = String.Empty;
+            string title = String.Empty;
+            string help = String.Empty;
             if (movies)
             {
                 videoType = "Movies";

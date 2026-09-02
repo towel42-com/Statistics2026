@@ -168,7 +168,7 @@ namespace Statistics2026.Data
         {
             if (!HelpText.IsNullOrEmpty())
             {
-                string id = Regex.Replace(Title, @"\s", string.Empty);
+                string id = Regex.Replace(Title, @"\s", String.Empty);
 
                 retVal.addToHtml(depth, $"<div id=\"{id}\" class=\"infoBlock\"><i class=\"md-icon\">info</i></div>");
 
@@ -262,9 +262,10 @@ namespace Statistics2026.Data
 
         private string CheckMaxLength(string value)
         {
-            if (IgnoreLength)
-                return value;
-            return value.Length > 30 ? value.Substring(0, 27) + "..." : value;
+            return value;
+            //if (IgnoreLength)
+            //    return value;
+            //return value.Length > 30 ? value.Substring(0, 27) + "..." : value;
         }
 
         public void AddLine(string value)

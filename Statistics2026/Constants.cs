@@ -89,6 +89,11 @@ namespace Statistics2026
         internal const string HelpMostWatchedShows = "Most watched shows based on the average percent of episodes finished per user.";
         internal const string HelpLeastWatchedShows = "Least watched shows based on the average percent of episodes finished per user.";
 
+        internal const string MostWatchedMovies = "Most Watched Movies";
+        internal const string LeastWatchedMovies = "Least Watched Movies";
+        internal const string HelpMostWatchedMovies = "Most watched movies based on the number of watches of the movie per user.";
+        internal const string HelpLeastWatchedMovies = "Least watched movies based on the number of watches of the movie per user.";
+
         internal const string MissingVideoStream = "Missing Video Stream";
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";
         internal const string NonDolbyVisionCompatibleCodec = "Non Dolby Vision Compatible Codec";

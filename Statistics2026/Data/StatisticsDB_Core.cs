@@ -58,6 +58,11 @@ namespace Statistics2026.Data
 
             _embyManagers = embyManagers;
             _dbHelper = new DBHelper(_embyManagers);
+            NumUsers(false, false);
+            NumUsers(false, true);
+            NumUsers(true, false);
+            NumUsers(true, true);
+
             embyManagers._logger?.Debug("StatisticsData : Creating Database");
             embyManagers._logger?.Debug("StatisticsData : Finished Creating Database");
         }
