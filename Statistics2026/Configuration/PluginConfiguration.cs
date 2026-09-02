@@ -19,9 +19,7 @@ namespace Statistics2026.Configuration
 
         public int numWatchedShows { get; set; } = 5;
 
-        public bool showAllCodecs { get; set; } = false;
         public bool showUnknownDVProfiles { get; set; } = false;
-        public bool showAllDVProfiles { get; set; } = false;
         public bool showAllResolutions { get; set; } = false;
     }
 }

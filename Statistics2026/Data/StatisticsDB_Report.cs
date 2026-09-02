@@ -78,24 +78,12 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard MediaCodecs(bool showAllCodecs)
+        public StatCard MediaCodecs()
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
 
             var retVal = new TableBasedStatCard(Constants.MediaCodecs, Constants.HelpMediaCodecs, new List<string> { "Movies", "Episodes" });
-            if (showAllCodecs)
-            {
-                retVal.addRow("av1", new List<int> { 0, 0 });
-                retVal.addRow("h264", new List<int> { 0, 0 });
-                retVal.addRow("hevc", new List<int> { 0, 0 });
-                retVal.addRow("mpeg2video", new List<int> { 0, 0 });
-                retVal.addRow("mpeg4", new List<int> { 0, 0 });
-                retVal.addRow("msmpeg4v3", new List<int> { 0, 0 });
-                retVal.addRow("prores", new List<int> { 0, 0 });
-                retVal.addRow("vc1", new List<int> { 0, 0 });
-            }
-
             string sql =
                 "SELECT " +
                 "Codec as Codec, " +
@@ -119,7 +107,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard DVProfileInfo(bool showUnknownDVProfiles, bool showAllDVProfiles)
+        public StatCard DVProfileInfo(bool showUnknownDVProfiles)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
@@ -141,17 +129,6 @@ namespace Statistics2026.Data
             var retVal = new TableBasedStatCard(Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile, new List<string> { "Movies", "Episodes" });
             if (showUnknownDVProfiles)
                 retVal.addRow("Unknown Dolby Profile", new List<int> { 0, 0 });
-            if (showAllDVProfiles)
-            {
-                retVal.addRow("Profile 5.0", new List<int> { 0, 0 });
-                retVal.addRow("Profile 7.0", new List<int> { 0, 0 });
-                retVal.addRow("Profile 8.0", new List<int> { 0, 0 });
-                retVal.addRow("Profile 8.1", new List<int> { 0, 0 });
-                retVal.addRow("Profile 8.2", new List<int> { 0, 0 });
-                retVal.addRow("Profile 8.4", new List<int> { 0, 0 });
-                retVal.addRow("Profile 9.0", new List<int> { 0, 0 });
-                retVal.addRow("Profile 20.0", new List<int> { 0, 0 });
-            }
 
             _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
             {

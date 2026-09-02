@@ -52,10 +52,6 @@ namespace Statistics2026.Api
 
         [ApiMember(Name = "rootDivName", Description = "Root Division Name", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string rootDivName { get; set; } = String.Empty;
-
-        [ApiMember(Name = "showAllCodecs", Description = "Show All Codecs", IsRequired = true, DataType = "bool", ParameterType = "query", Verb = "GET")]
-        public bool showAllCodecs { get; set; }
-
     }
 
     [Route("/Statistics2026/resolution_summary", "GET", Summary = "Gets Resolution Summary for Library")]
@@ -87,8 +83,6 @@ namespace Statistics2026.Api
 
         [ApiMember(Name = "showUnknownDVProfiles", Description = "Show Unknown Dolby Vision Profile", IsRequired = true, DataType = "bool", ParameterType = "query", Verb = "GET")]
         public bool showUnknownDVProfiles { get; set; } = false;
-        [ApiMember(Name = "showAllDVProfiles", Description = "Show All Dolby Vision Profiles", IsRequired = true, DataType = "bool", ParameterType = "query", Verb = "GET")]
-        public bool showAllDVProfiles { get; set; } = false;
     }
 
     [Route("/Statistics2026/user_count", "GET", Summary = "Gets the total User Count")]

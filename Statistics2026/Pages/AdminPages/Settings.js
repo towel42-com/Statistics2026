@@ -5,15 +5,11 @@
         ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
 
             view.querySelector("#hasConnectUserID").checked = config.hasConnectUserID;
-            view.querySelector("#showAllCodecs").checked = config.showAllCodecs;
             view.querySelector("#showUnknownDVProfiles").checked = config.showUnknownDVProfiles;
-            view.querySelector("#showAllDVProfiles").checked = config.showAllDVProfiles;
             view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
             view.querySelector("#numMostActive").value = config.numMostActiveUsers;
             view.querySelector("#numWatchedShows").value = config.numWatchedShows;
-
             view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
-            
         });
     }
 
@@ -72,27 +68,10 @@
             }
         );
 
-        view.querySelector("#showAllCodecs").addEventListener("click",
-            function () {
-                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                    config.showAllCodecs = view.querySelector("#showAllCodecs").checked;
-                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                });
-            }
-        );
-
         view.querySelector("#showUnknownDVProfiles").addEventListener("click",
             function () {
                 ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                     config.showUnknownDVProfiles = view.querySelector("#showUnknownDVProfiles").checked;
-                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                });
-            }
-        );
-        view.querySelector("#showAllDVProfiles").addEventListener("click",
-            function () {
-                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                    config.showAllDVProfiles = view.querySelector("#showAllDVProfiles").checked;
                     ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                 });
             }
@@ -123,17 +102,9 @@
             function () {
                 Helpers.showInfo("Normally all users are shown, checking this option will display only users with a Connect User ID.", "Show Users with Connect User ID");
             });
-        view.querySelector("#showAllCodecsHelp").addEventListener("click",
-            function () {
-                Helpers.showInfo("Normally only codecs found in use are shown, checking this option will display all codecs.", "Show All Codecs");
-            });
         view.querySelector("#showUnknownDVProfilesHelp").addEventListener("click",
             function () {
                 Helpers.showInfo("Normally unknown Dolby Vision Profiles are hidden, checking this option will display the count of unknown Dolby Vision profiles.", "Show Unknown Dolby Vision Profile Count");
-            });
-        view.querySelector("#showAllDVProfilesHelp").addEventListener("click",
-            function () {
-                Helpers.showInfo("Normally only Dolby Vision Profiles in use are shown, checking this option will display all Dolby Vision profiles.", "Show All Dolby Vision Profiles");
             });
         view.querySelector("#showAllResolutionsHelp").addEventListener("click",
             function () {

@@ -71,9 +71,8 @@ namespace Statistics2026.Api
 
                 var serverId = request.serverId ?? "";
                 var rootDivName = request.rootDivName ?? "";
-                var showAllResolutions = request.showAllCodecs;
 
-                var groupData = db.MediaCodecs(showAllResolutions);
+                var groupData = db.MediaCodecs();
                 groupData.ServerId = serverId;
                 groupData.HtmlDivId = rootDivName;
                 groupData.SortByKey = true;
@@ -111,9 +110,8 @@ namespace Statistics2026.Api
                 var serverId = request.serverId ?? "";
                 var rootDivName = request.rootDivName ?? "";
                 var showUnknownDVProfiles = request.showUnknownDVProfiles;
-                var showAllDVProfiles = request.showAllDVProfiles;
 
-                var groupData = db.DVProfileInfo(showUnknownDVProfiles, showAllDVProfiles);
+                var groupData = db.DVProfileInfo(showUnknownDVProfiles);
                 groupData.ServerId = serverId;
                 groupData.HtmlDivId = rootDivName;
                 groupData.SortByKey = true;

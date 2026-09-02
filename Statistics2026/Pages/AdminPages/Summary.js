@@ -46,9 +46,9 @@
             view.querySelector("#userInfo").innerHTML = (userInfo);
 
             var mediaInfo = "";
-            mediaInfo += Helpers.getSummaryInfo(view, "codec_summary", "", "?showAllCodecs=" + config.showAllCodecs);
+            mediaInfo += Helpers.getSummaryInfo(view, "codec_summary");
             mediaInfo += Helpers.getSummaryInfo(view, "resolution_summary", "", "?showAllResolutions=" + config.showAllResolutions);
-            mediaInfo += Helpers.getSummaryInfo(view, "dvprofile_summary", "", "?showUnknownDVProfiles=" + config.showUnknownDVProfiles + "&showAllDVProfiles=" + config.showAllDVProfiles);
+            mediaInfo += Helpers.getSummaryInfo(view, "dvprofile_summary", "", "?showUnknownDVProfiles=" + config.showUnknownDVProfiles);
             view.querySelector("#mediaInfo").innerHTML = mediaInfo;
 
             var movieStats = "";
