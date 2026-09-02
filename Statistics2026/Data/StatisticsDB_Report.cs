@@ -182,14 +182,10 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private Dictionary<(bool hasConnectUserID, bool excludeAdmin), long> _numUsersCache = new Dictionary<(bool hasConnectUserID, bool excludeAdmin), long>();
         public long NumUsers(bool hasConnectUserID, bool excludeAdmin)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
-
-            if (_numUsersCache.TryGetValue((hasConnectUserID, excludeAdmin), out var cachedValue))
-                return cachedValue;
 
             string sql = "SELECT COUNT(UserName) FROM Users ";
 
@@ -203,9 +199,7 @@ namespace Statistics2026.Data
 
             sql += DBHelper.JoinClauses(conditions);
 
-            var result = GetSingleValueFromSQL(sql).ToInt64();
-            _numUsersCache[(hasConnectUserID, excludeAdmin)] = result;
-            return result;
+            return GetSingleValueFromSQL(sql).ToInt64();
         }
 
         public StatCard UserCount(bool hasConnectUserID, bool excludeAdmin)
@@ -497,7 +491,7 @@ namespace Statistics2026.Data
 
             var retVal = new List<WatchedShowValue>();
 
-            var numUsers = NumUsers(false, excludeAdmin);
+            var numUsers = ( user == null ) ? NumUsers(false, excludeAdmin) : 1;
 
             var sql = String.Empty;
             if (series)
@@ -515,6 +509,10 @@ namespace Statistics2026.Data
                 {
                     clauses.Add("NOT Users.IsAdministrator");
                 }
+                if ( user != null)
+                {
+                    clauses.Add($"UserVideoList.UserId = '{user.Id.ToString()}'");
+                }
 
                 sql += DBHelper.JoinClauses(clauses);
 
@@ -530,23 +528,29 @@ namespace Statistics2026.Data
             {
                 sql = "SELECT " +
                     $"  UserVideoList.ItemId" +
-                    $", Media.PrimaryName" +
-                    $", (SUM(100.0*UserVideoList.PlayCount)/27) AS PerUser " +
-                    $"FROM Users " +
-                    $"FULL JOIN UserVideoList ON UserVideoList.UserId = Users.UserId " +
-                    $"FULL JOIN Media ON UserVideoList.ItemId = Media.ItemId "
+                    $", UserVideoList.Name" +
+                    $", (100.0 * SUM(UserVideoList.PlayCount))/{numUsers} AS PerUser " +
+                    $"FROM UserVideoList " +
+                    $"LEFT OUTER JOIN Users ON UserVideoList.UserId = Users.UserId "
                     ;
+
                 var clauses = new List<string>()
                     {
                         "PlayCount > 0",
                         "NOT UserVideoList.IsEpisode"
                     };
+
                 if (excludeAdmin)
                 {
                     clauses.Add("NOT Users.IsAdministrator");
                 }
+                if (user != null)
+                {
+                    clauses.Add($"UserVideoList.UserId = '{user.Id.ToString()}'");
+                }
 
                 sql += DBHelper.JoinClauses(clauses);
+
                 sql += $"GROUP BY UserVideoList.ItemId " +
                        $"ORDER BY PerUser ";
                 if (leastWatched)
@@ -573,11 +577,12 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard WatchedMedia(User? user, bool leastWatched, int numMovies, bool excludeAdmin, bool series)
+        public StatCard WatchedMedia(User? user, bool leastWatched, int numShows, bool excludeAdmin, bool series)
         {
-            var values = WatchedMediaValues(user, leastWatched, numMovies, excludeAdmin, series);
+            var watchedMedia = WatchedMediaValues(user, leastWatched, numShows, excludeAdmin, series);
             var title = String.Empty;
             var help = String.Empty;
+
             if (series)
             {
                 title = leastWatched ? Constants.LeastWatchedShows : Constants.MostWatchedShows;
@@ -592,9 +597,9 @@ namespace Statistics2026.Data
             var retVal = new TextBasedStatCard(title, help, "half");
             retVal.SubTitle = "(Weighted Watched across Users)";
             retVal.AsNumberedList = true;
-            for (int ii = 0; ii < values.Count; ++ii)
+            for (int ii = 0; ii < watchedMedia.Count; ++ii)
             {
-                retVal.AddLine($"{values[ii].Name}", values[ii].ItemId, values[ii].ImageUrl);
+                retVal.AddLine($"{watchedMedia[ii].Name}", watchedMedia[ii].ItemId, watchedMedia[ii].ImageUrl);
             }
 
             return retVal;

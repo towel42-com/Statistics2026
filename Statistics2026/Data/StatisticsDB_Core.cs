@@ -163,6 +163,7 @@ namespace Statistics2026.Data
                     {
                         new TableColDef( "UserId", "TEXT", false ), // user
                         new TableColDef( "ItemId", "TEXT", false ), // video item
+                        new TableColDef( "Name", "TEXT", false ), // Name of the show to reduce joins
                         new TableColDef( "IsPlayed", "BOOLEAN", false ),
                         new TableColDef( "PlayCount", "INT", false ),
                         new TableColDef( "LastPlayedDate", "DATETIME", true ),
