@@ -110,7 +110,7 @@ namespace Statistics2026.Api
         public bool hasConnectUserID { get; set; } = false;
 
         [ApiMember(Name = "numUsers", Description = "Show the top X users", IsRequired = false, DataType = "int", ParameterType = "query", Verb = "GET")]
-        public int numUsers { get; set; } = 0;
+        public int numUsers { get; set; } = 5;
 
         [ApiMember(Name = "excludeAdmin", Description = "Exclude Administrators from analysis", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
         public bool excludeAdmin { get; set; } = true;
@@ -227,19 +227,29 @@ namespace Statistics2026.Api
     }
 
     [Route("/Statistics2026/least_watched_shows", "GET", Summary = "Get the List of Least Watched Shows")]
-    [Authenticated(Roles = "admin")]
     public class GetLeastWatchedShows : IReturn<Object>
     {
         [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string serverId { get; set; } = String.Empty;
+
+        [ApiMember(Name = "excludeAdmin", Description = "Exclude Administrators from analysis", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool excludeAdmin { get; set; } = true;
+
+        [ApiMember(Name = "numShows", Description = "Show the top X shows", IsRequired = false, DataType = "int", ParameterType = "query", Verb = "GET")]
+        public int numShows { get; set; } = 5;
     }
 
     [Route("/Statistics2026/most_watched_shows", "GET", Summary = "Get the List of Most Watched Shows")]
-    [Authenticated(Roles = "admin")]
     public class GetMostWatchedShows : IReturn<Object>
     {
         [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string serverId { get; set; } = String.Empty;
+
+        [ApiMember(Name = "excludeAdmin", Description = "Exclude Administrators from analysis", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool excludeAdmin { get; set; } = true;
+
+        [ApiMember(Name = "numShows", Description = "Show the top X shows", IsRequired = false, DataType = "int", ParameterType = "query", Verb = "GET")]
+        public int numShows { get; set; } = 5;
     }
 
     [Route("/Statistics2026/total_time_watched/{User}", "GET", Summary = "Get the Total Time Watched for User")]

@@ -10,6 +10,8 @@
             view.querySelector("#showAllDVProfiles").checked = config.showAllDVProfiles;
             view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
             view.querySelector("#numMostActive").value = config.numMostActiveUsers;
+            view.querySelector("#numWatchedShows").value = config.numWatchedShows;
+
             view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
             
         });
@@ -36,61 +38,70 @@
 
         view.querySelector("#hasConnectUserID").addEventListener("click",
             function () {
-                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                     config.hasConnectUserID = view.querySelector("#hasConnectUserID").checked;
-                    ApiClient.updatePluginConfiguration(pluginId, config);
+                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                 });
             }
         );
 
         view.querySelector("#excludeAdmin").addEventListener("click",
             function () {
-                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                     config.excludeAdmin = view.querySelector("#excludeAdmin").checked;
-                    ApiClient.updatePluginConfiguration(pluginId, config);
+                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                 });
             }
         );
 
         view.querySelector("#numMostActive").addEventListener("input",
             function () {
-                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                    config.numMostActiveUsers = view.querySelector("#hasConnectUserID").value.trim();
-                    ApiClient.updatePluginConfiguration(pluginId, config);
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                    config.numMostActiveUsers = parseInt(view.querySelector("#numMostActive").value) || 5;
+                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                });
+            }
+        );
+
+        view.querySelector("#numWatchedShows").addEventListener("input",
+            function () {
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                    config.numWatchedShows = parseInt(view.querySelector("#numWatchedShows").value) || 5;
+                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                 });
             }
         );
 
         view.querySelector("#showAllCodecs").addEventListener("click",
             function () {
-                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                     config.showAllCodecs = view.querySelector("#showAllCodecs").checked;
-                    ApiClient.updatePluginConfiguration(pluginId, config);
+                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                 });
             }
         );
 
         view.querySelector("#showUnknownDVProfiles").addEventListener("click",
             function () {
-                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                     config.showUnknownDVProfiles = view.querySelector("#showUnknownDVProfiles").checked;
-                    ApiClient.updatePluginConfiguration(pluginId, config);
+                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                 });
             }
         );
         view.querySelector("#showAllDVProfiles").addEventListener("click",
             function () {
-                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                     config.showAllDVProfiles = view.querySelector("#showAllDVProfiles").checked;
-                    ApiClient.updatePluginConfiguration(pluginId, config);
+                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                 });
             }
         );
         view.querySelector("#showAllResolutions").addEventListener("click",
             function () {
-                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                     config.showAllResolutions = view.querySelector("#showAllResolutions").checked;
-                    ApiClient.updatePluginConfiguration(pluginId, config);
+                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                 });
             }
         );
@@ -99,6 +110,10 @@
         view.querySelector("#numMostActiveHelp").addEventListener("click",
             function () {
                 Helpers.showInfo("The default is 5, but you can limit how many most active users that are reported", "Number of Most Active Users");
+            });
+        view.querySelector("#numWatchedShowsHelp").addEventListener("click",
+            function () {
+                Helpers.showInfo("The default is 5, but you can limit how many Watched TV Shows to report on", "Number of Watched TV Shows");
             });
         view.querySelector("#excludeAdminHelp").addEventListener("click",
             function () {

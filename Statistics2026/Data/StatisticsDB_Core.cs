@@ -159,6 +159,7 @@ namespace Statistics2026.Data
                         new TableColDef( "UserId", "TEXT", false ), // user
                         new TableColDef( "ItemId", "TEXT", false ), // video item
                         new TableColDef( "IsPlayed", "BOOLEAN", false ),
+                        new TableColDef( "PlayCount", "INT", false ),
                         new TableColDef( "LastPlayedDate", "DATETIME", true ),
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
                         new TableColDef( "NumEpisodes", "BOOLEAN", true ), // for multi episode media

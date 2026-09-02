@@ -322,8 +322,10 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance(_embyManagers);
                 var serverId = request.serverId ?? "";
+                var numShows = request.numShows;
+                var excludeAdmin = request.excludeAdmin;
 
-                var groupData = db.WatchedShows(null, true);
+                var groupData = db.WatchedShows(null, true, numShows, excludeAdmin);
                 groupData.ServerId = serverId;
 
                 var vgReponse = groupData.createStat();
@@ -337,8 +339,10 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance(_embyManagers);
                 var serverId = request.serverId ?? "";
+                var numShows = request.numShows;
+                var excludeAdmin = request.excludeAdmin;
 
-                var groupData = db.WatchedShows(null, false);
+                var groupData = db.WatchedShows(null, false, numShows, excludeAdmin);
                 groupData.ServerId = serverId;
 
                 var vgReponse = groupData.createStat();

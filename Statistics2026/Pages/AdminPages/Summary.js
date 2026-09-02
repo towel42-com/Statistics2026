@@ -72,8 +72,8 @@
             var seriesSummaryStats = "";
             seriesSummaryStats += Helpers.getSummaryInfo(view, "total_tv_count", "");
             seriesSummaryStats += Helpers.getSummaryInfo(view, "total_tv_studio_count", "");
-            seriesSummaryStats += Helpers.getSummaryInfo(view, "least_watched_shows", "", "?serverId=" + config.ServerId);
-            seriesSummaryStats += Helpers.getSummaryInfo(view, "most_watched_shows", "", "?serverId=" + config.ServerId);
+            seriesSummaryStats += Helpers.getSummaryInfo(view, "least_watched_shows", "", "?serverId=" + config.ServerId + "&numShows=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
+            seriesSummaryStats += Helpers.getSummaryInfo(view, "most_watched_shows", "", "?serverId=" + config.ServerId + "&numShows=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
             view.querySelector("#seriesSummaryStats").innerHTML = seriesSummaryStats;
 
             var seriesStats = "";

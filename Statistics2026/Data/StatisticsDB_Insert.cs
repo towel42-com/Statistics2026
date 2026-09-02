@@ -161,6 +161,7 @@ namespace Statistics2026.Data
                     "  UserId" +
                     ", ItemId" +
                     ", IsPlayed" +
+                    ", PlayCount" +
                     ", LastPlayedDate" +
                     ", IsEpisode" +
                     ", NumEpisodes" +
@@ -172,6 +173,7 @@ namespace Statistics2026.Data
                     "  @UserId" +
                     ", @ItemId" +
                     ", @IsPlayed" +
+                    ", @PlayCount" +
                     ", @LastPlayedDate" +
                     ", @IsEpisode" +
                     ", @NumEpisodes" +
@@ -193,6 +195,7 @@ namespace Statistics2026.Data
                             ( "@NumEpisodes", mediaInfo.NumEpisodes),
                             ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
                             ( "@IsPlayed", userData?.Played ?? false),
+                            ( "@PlayCount", userData?.PlayCount ?? 0),
                             ( "@LastPlayedDate", userData?.LastPlayedDate?.Date ?? null ),
                             ( "@SeriesId", mediaInfo.SeriesId)
                         }));
@@ -637,7 +640,16 @@ namespace Statistics2026.Data
             Double averageRating = 0.0;
             long averageBitrate = 0;
 
-            var cmd = new SQLCmdDef("SELECT SUM(FileSize), SUM(RunTimeTicks), SUM(Rating)/Count(1),Sum(TotalBitrate)/Count(1) FROM Media WHERE SeriesId=@SeriesId",
+            var sql = "SELECT " +
+                "  SUM(FileSize)" +
+                ", SUM(RunTimeTicks)" +
+                ", SUM(Rating)/Count(1)" +
+                ", Sum(TotalBitrate)/Count(1) " +
+                "FROM " +
+                "Media " +
+                "WHERE SeriesId=@SeriesId";
+
+            var cmd = new SQLCmdDef(sql,
                         new List<(string name, object? value)>()
                         {
                             ("@SeriesId", series.Id.ToString())
@@ -670,7 +682,7 @@ namespace Statistics2026.Data
 
             int numEpisodes = GetEpisodeCountForSeries(series, cancellationToken);
             int numSpecials = GetSpecialCountForSeries(series, cancellationToken);
-            string sql = String.Empty;
+            sql = String.Empty;
             List<(string name, object? value)>? paramsList = null;
             if (!exists)
             {
@@ -751,151 +763,6 @@ namespace Statistics2026.Data
 
             _embyManagers!._logger?.Debug($"AddAllCollections -     AddCollection - Successfully Added Collection");
             return sqlCmds;
-        }
-
-        public void ComputePercentWatchedCache(CancellationToken cancellationToken, IProgress<double> progress)
-        {
-            CheckIsValid();
-
-            _embyManagers!._logger?.Debug($"ComputePercentWatchedCache - Starting Analysis");
-
-            progress.Report(0);
-            var watchedShows = ComputeWatchedShowValues(null, cancellationToken, progress);
-            progress.Report(100);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var sql = "INSERT INTO CachedWatchedAnalysis" +
-                    "(" +
-                        "  ItemId" +
-                        ", Name" +
-                        ", ImageUrl" +
-                        ", NumEpisodes" +
-                        ", NumWatched" +
-                        ", PercentWatchedPerUser" +
-                    ")" +
-                    " VALUES " +
-                    "(" +
-                        "  @ItemId" +
-                        ", @Name" +
-                        ", @ImageUrl" +
-                        ", @NumEpisodes" +
-                        ", @NumWatched" +
-                        ", @PercentWatchedPerUser" +
-                    ")";
-
-            var sqlCmds = new List<SQLCmdDef>();
-
-            progress.Report(0);
-            int curr = 0;
-            foreach (var watched in watchedShows)
-            {
-                progress.Report(80.0 * (curr++) / watchedShows.Count());
-                sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
-                {
-                    ("@ItemId", watched.ItemId),
-                    ("@Name", watched.Name),
-                    ("@ImageUrl", watched.ImageUrl),
-                    ("@NumEpisodes", watched.NumEpisodes),
-                    ("@NumWatched", watched.NumWatched),
-                    ("@PercentWatchedPerUser", watched.PercentWatchedPerUser)
-                }));
-            }
-            progress.Report(80);
-            _dbHelper.ExecuteCommands(sqlCmds);
-            progress.Report(100);
-        }
-
-        public void ComputeCachedStats(CancellationToken cancellationToken, IProgress<double> progress)
-        {
-            CheckIsValid();
-
-            _embyManagers!._logger?.Debug($"ComputeCachedStats - Starting Analysis");
-
-            progress.Report(0);
-            double percentPer = 100.0 / 11.0;
-            int curr = 0;
-
-            var longestSeries = StatCardValuesFor(null, StatGen.EStatisticType.Longest, StatGen.EVideoType.Series);
-            progress.Report((++curr) * percentPer);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var shortestSeries = StatCardValuesFor(null, StatGen.EStatisticType.Shortest, StatGen.EVideoType.Series);
-            progress.Report((++curr) * percentPer);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var largestSeries = StatCardValuesFor(null, StatGen.EStatisticType.Largest, StatGen.EVideoType.Series);
-            progress.Report((++curr) * percentPer);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var smallestSeries = StatCardValuesFor(null, StatGen.EStatisticType.Smallest, StatGen.EVideoType.Series);
-            progress.Report((++curr) * percentPer);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var longestMovie = StatCardValuesFor(null, StatGen.EStatisticType.Longest, StatGen.EVideoType.Movie);
-            progress.Report((++curr) * percentPer);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var shortestMovie = StatCardValuesFor(null, StatGen.EStatisticType.Shortest, StatGen.EVideoType.Movie);
-            progress.Report((++curr) * percentPer);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var largestMovie = StatCardValuesFor(null, StatGen.EStatisticType.Largest, StatGen.EVideoType.Movie);
-            progress.Report((++curr) * percentPer);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var smallestMovie = StatCardValuesFor(null, StatGen.EStatisticType.Smallest, StatGen.EVideoType.Movie);
-            progress.Report((++curr) * percentPer);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var totalTVStudioCount = TotalStudioCountValue(null, false);
-            progress.Report((++curr) * percentPer);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var totalMovieStudioCount = TotalStudioCountValue(null, true);
-            progress.Report((++curr) * percentPer);
-            cancellationToken.ThrowIfCancellationRequested();
-
-            string sql = "INSERT INTO CachedStats " +
-                        "(" +
-                            "  LongestSeries" +
-                            ", ShortestSeries" +
-                            ", LargestSeries" +
-                            ", SmallestSeries" +
-                            ", TotalTVStudioCount" +
-                            ", LongestMovie" +
-                            ", ShortestMovie" +
-                            ", LargestMovie" +
-                            ", SmallestMovie" +
-                            ", TotalMovieStudioCount" +
-                        ")" +
-                        " VALUES " +
-                        "(" +
-                            "  @LongestSeries" +
-                            ", @ShortestSeries" +
-                            ", @LargestSeries" +
-                            ", @SmallestSeries" +
-                            ", @TotalTVStudioCount" +
-                            ", @LongestMovie" +
-                            ", @ShortestMovie" +
-                            ", @LargestMovie" +
-                            ", @SmallestMovie" +
-                            ", @TotalMovieStudioCount" +
-                        ")";
-            var cmdDef = new SQLCmdDef(sql, new List<(string name, object? value)>()
-            {
-                ("@LongestSeries", longestSeries.ItemId),
-                ("@ShortestSeries", shortestSeries.ItemId),
-                ("@LargestSeries", largestSeries.ItemId),
-                ("@SmallestSeries", smallestSeries.ItemId),
-                ("@TotalTVStudioCount", totalTVStudioCount),
-                ("@LongestMovie", longestMovie.ItemId),
-                ("@ShortestMovie", shortestMovie.ItemId),
-                ("@LargestMovie", largestMovie.ItemId),
-                ("@SmallestMovie", smallestMovie.ItemId),
-                ("@TotalMovieStudioCount", totalMovieStudioCount),
-            });
-            _dbHelper.ExecuteCommand(cmdDef);
-            progress.Report((++curr) * percentPer);
         }
     }
 }

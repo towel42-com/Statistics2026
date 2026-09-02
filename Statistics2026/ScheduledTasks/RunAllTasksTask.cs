@@ -73,12 +73,11 @@ namespace Statistics2026.ScheduledTasks
 
             var tasks = new List<(string description, Type type, long runTime, string tableName)>
             {
-                ($"Adding All Users", typeof(AnalyzeUsersTask), 0, "Users"),
+                ($"Analyzing Users", typeof(AnalyzeUsersTask), 0, "Users"),
                 ($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "User Watch Data"),
-                ($"Adding All Media", typeof(AnalyzeMediaTask), 0, "Collections"),
-                ($"Adding Collections", typeof(AnalyzeCollectionsTask), 0, "Media"),
-                ($"Adding All Series", typeof(AnalyzeSeriesTask), 0, "Series"),
-                ($"Computing Percent Watched Cached Stats", typeof(CalculateWatchedShowsTask), 0, "Compute Percent Watched")
+                ($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Collections"),
+                ($"Analyzing Collections", typeof(AnalyzeCollectionsTask), 0, "Media"),
+                ($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series")
             };
 
             for (int ii = 0; ii < tasks.Count; ii++)
