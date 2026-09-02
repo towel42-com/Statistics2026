@@ -56,6 +56,24 @@ namespace Statistics2026.Data
             DateAdded = video.DateCreated.DateTime;
         }
 
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+        }
+
+        ~MediaInfo()
+        {
+            Dispose(false);
+        }
+
         public static string[] studioNames(Video video)
         {
             var retVal = video.Studios;
@@ -215,23 +233,6 @@ namespace Statistics2026.Data
                 return Constants.NoDolbyProfile;
 
             return dvProfile;
-        }
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_disposed)
-                return;
-            _disposed = true;
-        }
-
-        ~MediaInfo()
-        {
-            Dispose(false);
         }
 
         public string ItemId { get; set; } = String.Empty;
