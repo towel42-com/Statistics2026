@@ -161,6 +161,7 @@ namespace Statistics2026.Data
                     "  UserId" +
                     ", ItemId" +
                     ", IsPlayed" +
+                    ", Name" +
                     ", PlayCount" +
                     ", LastPlayedDate" +
                     ", IsEpisode" +
@@ -173,6 +174,7 @@ namespace Statistics2026.Data
                     "  @UserId" +
                     ", @ItemId" +
                     ", @IsPlayed" +
+                    ", @Name" +
                     ", @PlayCount" +
                     ", @LastPlayedDate" +
                     ", @IsEpisode" +
@@ -191,6 +193,7 @@ namespace Statistics2026.Data
                         {
                             ( "@UserId", user.Id.ToString()),
                             ( "@ItemId", video.Id.ToString()),
+                            ( "@Name", mediaInfo.PrimaryName),
                             ( "@IsEpisode", mediaInfo.IsEpisode),
                             ( "@NumEpisodes", mediaInfo.NumEpisodes),
                             ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
