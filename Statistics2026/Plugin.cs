@@ -95,8 +95,8 @@ namespace Statistics2026
                 },
                 new PluginPageInfo
                 {
-                    Name = "UserStatsPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStatsPage.html",
+                    Name = "UserStats_UserPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStats_UserPage.html",
                     EnableInUserMenu = true,
                     MenuSection = "User Statistics",
                     DisplayName = "User Statistics",
@@ -104,9 +104,29 @@ namespace Statistics2026
                 },
                 new PluginPageInfo
                 {
-                    Name = "UserStatsPage.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStatsPage.js"
-                }
+                    Name = "UserStats_UserPage.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStats_UserPage.js"
+                },
+                new PluginPageInfo
+                {
+                    Name = "TVSeriesProgress_UserPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.TVSeriesProgress_UserPage.html",
+                    //EnableInUserMenu = true,
+                    MenuSection = "User Statistics",
+                    DisplayName = "TV Progress",
+                    FeatureId = Feature.StaticId
+                },
+                new PluginPageInfo
+                {
+                    Name = "TVSeriesProgress_UserPage.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.TVSeriesProgress_UserPage.js",
+                    FeatureId = Feature.StaticId
+                },
+                new PluginPageInfo
+                {
+                    Name = "Helpers_UserPage.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Helpers_UserPage.js"
+                },
 
             };
         }

@@ -1,8 +1,14 @@
-﻿<div is="emby-scroller" class="view flex flex-direction-column scrollFrameY flex-grow" data-horizontal="false" data-forcescrollbar="true" data-centerfocus="true" data-bindheader="true" data-controller="__plugin/UserStatsPage.js" data-title="UserStatsPage">
+﻿<div is="emby-scroller" class="view flex flex-direction-column scrollFrameY flex-grow pluginConfigurationPage withTabs" 
+     data-horizontal="false" 
+     data-forcescrollbar="true" 
+     data-centerfocus="true" 
+     data-bindheader="true" 
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/UserStats_UserPage.js" 
+     data-title="UserStats_UserPage">
     <div class="scrollSlider flex-grow flex-direction-column padded-left padded-left-page padded-right padded-top-page padded-bottom-page">
         <div data-role="content">
             <div class="content-primary" style="padding-top:2px;">
-                <h1>User-based statistics</h1>
                 <h2 id="UserTitle"></h2>
 
                 <h3>General statistics</h3>
