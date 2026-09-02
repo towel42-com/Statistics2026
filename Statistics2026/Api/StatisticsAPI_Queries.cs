@@ -233,8 +233,24 @@ namespace Statistics2026.Api
         public int numShows { get; set; } = 5;
     }
 
-    [Route("/Statistics2026/most_watched_shows", "GET", Summary = "Get the List of Most Watched Shows")]
+    [Route("/Statistics2026/most_watched_shows/{User}", "GET", Summary = "Get the List of Most Watched Shows")]
     public class GetMostWatchedShows : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; } = String.Empty;
+
+        [ApiMember(Name = "excludeAdmin", Description = "Exclude Administrators from analysis", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool excludeAdmin { get; set; } = true;
+
+        [ApiMember(Name = "numShows", Description = "Show the top X shows", IsRequired = false, DataType = "int", ParameterType = "query", Verb = "GET")]
+        public int numShows { get; set; } = 5;
+
+        [ApiMember(Name = "User", Description = "The user for whom to retrieve statistics", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string user { get; set; } = String.Empty;
+    }
+
+    [Route("/Statistics2026/most_watched_shows", "GET", Summary = "Get the List of Most Watched Shows")]
+    public class GetMostWatchedShowsNoUser : IReturn<Object>
     {
         [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string serverId { get; set; } = String.Empty;
@@ -259,8 +275,24 @@ namespace Statistics2026.Api
         public int numMovies { get; set; } = 5;
     }
 
-    [Route("/Statistics2026/most_watched_movies", "GET", Summary = "Get the List of Most Watched Movies")]
+    [Route("/Statistics2026/most_watched_movies/{User}", "GET", Summary = "Get the List of Most Watched Movies")]
     public class GetMostWatchedMovies : IReturn<Object>
+    {
+        [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string serverId { get; set; } = String.Empty;
+
+        [ApiMember(Name = "excludeAdmin", Description = "Exclude Administrators from analysis", IsRequired = false, DataType = "bool", ParameterType = "query", Verb = "GET")]
+        public bool excludeAdmin { get; set; } = true;
+
+        [ApiMember(Name = "numMovies", Description = "Show the top X watched Movies", IsRequired = false, DataType = "int", ParameterType = "query", Verb = "GET")]
+        public int numMovies { get; set; } = 5;
+
+        [ApiMember(Name = "user", Description = "The user for whom to retrieve statistics", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string user { get; set; } = String.Empty;
+    }
+
+    [Route("/Statistics2026/most_watched_movies", "GET", Summary = "Get the List of Most Watched Movies")]
+    public class GetMostWatchedMoviesNoUser : IReturn<Object>
     {
         [ApiMember(Name = "serverId", Description = "Server ID", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET")]
         public string serverId { get; set; } = String.Empty;

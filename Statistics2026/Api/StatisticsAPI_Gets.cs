@@ -340,7 +340,12 @@ namespace Statistics2026.Api
                 var numMovies = request.numMovies;
                 var excludeAdmin = request.excludeAdmin;
 
-                var groupData = db.WatchedMedia(null, false, numMovies, excludeAdmin, false);
+                var userName = request.user;
+                var user = GetUser(userName);
+                if (user == null)
+                    return null!;
+
+                var groupData = db.WatchedMedia(user, false, numMovies, excludeAdmin, false);
                 groupData.ServerId = serverId;
 
                 var vgReponse = groupData.createStat();
@@ -348,6 +353,22 @@ namespace Statistics2026.Api
             });
         }
 
+        public object Get(GetMostWatchedMoviesNoUser request)
+        {
+            return GetRequest("GetMostWatchedMoviesNoUser", timer =>
+            {
+                var db = StatisticsDB.GetInstance(_embyManagers);
+                var serverId = request.serverId ?? "";
+                var numMovies = request.numMovies;
+                var excludeAdmin = request.excludeAdmin;
+
+                var groupData = db.WatchedMedia(null, false, numMovies, excludeAdmin, false);
+                groupData.ServerId = serverId;
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            });
+        }
 
         public object Get(GetLeastWatchedShows request)
         {
@@ -367,6 +388,27 @@ namespace Statistics2026.Api
         }
 
         public object Get(GetMostWatchedShows request)
+        {
+            return GetRequest("GetMostWatchedShows", timer =>
+            {
+                var db = StatisticsDB.GetInstance(_embyManagers);
+                var serverId = request.serverId ?? "";
+                var numShows = request.numShows;
+                var excludeAdmin = request.excludeAdmin;
+                var userName = request.user;
+                var user = GetUser(userName);
+                if (user == null)
+                    return null!;
+
+                var groupData = db.WatchedMedia(user, false, numShows, excludeAdmin, true);
+                groupData.ServerId = serverId;
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            });
+        }
+
+        public object Get(GetMostWatchedShowsNoUser request)
         {
             return GetRequest("GetMostWatchedShows", timer =>
             {
