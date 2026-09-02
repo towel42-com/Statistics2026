@@ -27,7 +27,7 @@ namespace Statistics2026.ScheduledTasks
 
         public CalculateWatchedShowsTask(
             ILogManager logManager,
-            IServerConfigurationManager config,
+            IServerConfigurationManager configManager,
             IUserManager userManager,
             IUserDataManager userDataManager,
             ILibraryManager libraryManager,
@@ -40,7 +40,7 @@ namespace Statistics2026.ScheduledTasks
             ITaskManager taskManager
             )
         {
-            _managers = new EmbyManagers(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - CalculateWatchedShowsTask"), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, config, taskManager);
+            _managers = new EmbyManagers(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - CalculateWatchedShowsTask"), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, configManager, taskManager);
         }
 
         string IScheduledTask.Name => "\u2022 Calculate Watched Shows/User";

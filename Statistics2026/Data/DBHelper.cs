@@ -73,7 +73,7 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException("embyManagers is null.");
 
             _embyManagers = embyManagers;
-            string db_file_name = Path.Combine(_embyManagers._appConfig.ApplicationPaths.DataPath, "Statistics2026.db");
+            string db_file_name = Path.Combine(_embyManagers._configManager.ApplicationPaths.DataPath, "Statistics2026.db");
             CreateConnection(db_file_name);
         }
 

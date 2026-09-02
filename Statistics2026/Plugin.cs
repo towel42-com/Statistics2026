@@ -92,7 +92,41 @@ namespace Statistics2026
                 {
                     Name = "style.css",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.style.css"
-                }
+                },
+                new PluginPageInfo
+                {
+                    Name = "UserStats_UserPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStats_UserPage.html",
+                    EnableInUserMenu = true,
+                    MenuSection = "User Statistics",
+                    DisplayName = "User Statistics",
+                    FeatureId = Feature.StaticId
+                },
+                new PluginPageInfo
+                {
+                    Name = "UserStats_UserPage.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStats_UserPage.js"
+                },
+                new PluginPageInfo
+                {
+                    Name = "TVSeriesProgress_UserPage",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.TVSeriesProgress_UserPage.html",
+                    //EnableInUserMenu = true,
+                    MenuSection = "User Statistics",
+                    DisplayName = "TV Progress",
+                    FeatureId = Feature.StaticId
+                },
+                new PluginPageInfo
+                {
+                    Name = "TVSeriesProgress_UserPage.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.TVSeriesProgress_UserPage.js",
+                    FeatureId = Feature.StaticId
+                },
+                new PluginPageInfo
+                {
+                    Name = "Helpers_UserPage.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Helpers_UserPage.js"
+                },
 
             };
         }
@@ -101,7 +135,12 @@ namespace Statistics2026
 
         public static Plugin? Instance { get; private set; } = null;
 
-        public override string Name => "Statistics 2026";
+        public static string StaticName = "Statistics 2026";
+
+        public override string Name
+        {
+            get { return StaticName; }
+        }
 
         public override string Description => "Get the statistics for your media collection";
 

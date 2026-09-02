@@ -5,6 +5,24 @@ This is a plugin for Emby server. If you do not already have Emby server install
 
 The development environment assumes you are running the server and developing your plugin on on a Windows Device.  See the Unix section below installation on Unix/OSX.
 
+## Reasoning
+Why create a new Statistics plugin?  It started with problems my users were having with DolbyVision Profile 5.0. Complaints about pink or
+blue etc etc, became a nuisance, so I wanted to find any DV 5.0 profile in my library.
+
+Nothing existed, but the existing statistics plugin was close.  So I extended it.
+
+However, I really wanted to dive into creating a plugin, as I had a couple of ideas for them.  So I started playing around.
+
+I decided to re-write most of it, dramatically changing the architecture.
+
+Top Changes:
+1. No longer use the config file for data, its all moved into a SQL database.
+1. Speed improvement.  My library (5311 movies and 17224 episodes) took about 14 minutes on my media server to run the old statistics. It now runs in less than 4.
+1. User pages - Users can now see their statistics.
+
+## Issues - To be added
+1. Sorting of lists
+
 ## Setup
 1. The solution relies on the external file called [InstallAndLaunch.bat](https://raw.githubusercontent.com/towel42-com/EmbyPluginUtils/trunk/InstallAndLaunch.bat).
 It is part of the [Towel42/EmbyPluginUtils](https://github.com/towel42-com/EmbyPluginUtils) repositiory.  

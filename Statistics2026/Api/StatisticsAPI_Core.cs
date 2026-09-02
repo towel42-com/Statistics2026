@@ -25,7 +25,7 @@ namespace Statistics2026.Api
 
         public Statistics2026API(
             ILogManager logManager,
-            IServerConfigurationManager config,
+            IServerConfigurationManager configManager,
             IUserManager userManager,
             IUserDataManager userDataManager,
             ILibraryManager libraryManager,
@@ -37,7 +37,7 @@ namespace Statistics2026.Api
             ITaskManager taskManager
             )
         {
-            _embyManagers = new EmbyManagers(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - Statistics2026API"), serverApplicationPaths, userDataManager, userManager, appHost, this, jsonSerializer, providerManager, config, taskManager);
+            _embyManagers = new EmbyManagers(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - Statistics2026API"), serverApplicationPaths, userDataManager, userManager, appHost, this, jsonSerializer, providerManager, configManager, taskManager);
         }
 
         public IRequest? Request { get; set; } = null;
@@ -94,6 +94,10 @@ namespace Statistics2026.Api
                 return null;
 
             var user = users[0];
+
+            if (user.Policy.IsAdministrator)
+                return user;
+
             return user;
         }
 

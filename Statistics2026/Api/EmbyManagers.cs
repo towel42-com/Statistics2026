@@ -25,7 +25,7 @@ namespace Statistics2026.Api
             Statistics2026API apiService,
             IJsonSerializer jsonSerializer,
             IProviderManager providerManager,
-            IServerConfigurationManager appConfig,
+            IServerConfigurationManager configManager,
             ITaskManager taskManager
         )
         {
@@ -40,7 +40,7 @@ namespace Statistics2026.Api
             _apiService = apiService;
             _jsonSerializer = jsonSerializer;
             _providerManager = providerManager;
-            _appConfig = appConfig;
+            _configManager = configManager;
             _taskManager = taskManager;
         }
 
@@ -55,7 +55,7 @@ namespace Statistics2026.Api
         public Statistics2026API _apiService;
         public readonly IJsonSerializer _jsonSerializer;
         public readonly IProviderManager _providerManager;
-        public readonly IServerConfigurationManager _appConfig;
+        public readonly IServerConfigurationManager _configManager;
         public readonly ITaskManager _taskManager;
     }
 }
