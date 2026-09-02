@@ -37,7 +37,6 @@ namespace Statistics2026.Api
 
     // http://localhost:8096/emby/Statistics2026/tv_series_progress/{User}
     [Route("/Statistics2026/tv_series_progress/{User}", "GET", Summary = "Gets Codec Info for Movies")]
-    [Authenticated(Roles = "admin")]
     public class GetTVSeriesProgress : IReturn<List<GetTVSeriesProgressResponse>>
     {
         public string user { get; set; } = String.Empty;
@@ -118,7 +117,6 @@ namespace Statistics2026.Api
     }
 
     [Route("/Statistics2026/total_movie_count/{User}", "GET", Summary = "Get the total Movie Count")]
-    [Authenticated(Roles = "admin")]
     public class GetTotalMovieCount : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
@@ -132,42 +130,36 @@ namespace Statistics2026.Api
 
 
     [Route("/Statistics2026/total_movies_watched/{User}", "GET", Summary = "Get the total Movie Count")]
-    [Authenticated(Roles = "admin")]
     public class GetTotalMoviesWatched : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
     }
 
     [Route("/Statistics2026/total_tv_watched/{User}", "GET", Summary = "Get the total Movie Count")]
-    [Authenticated(Roles = "admin")]
     public class GetTotalTVWatched : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
     }
 
     [Route("/Statistics2026/total_series_finished/{User}", "GET", Summary = "Get the total Movie Count")]
-    [Authenticated(Roles = "admin")]
     public class GetTotalSeriesFinished : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
     }
 
     [Route("/Statistics2026/movie_favorite_years/{User}", "GET", Summary = "Get the Favorite Movie Years")]
-    [Authenticated(Roles = "admin")]
     public class GetMovieFavoriteYears : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
     }
 
     [Route("/Statistics2026/movie_favorite_genres/{User}", "GET", Summary = "Get the Favorite Movie Genres")]
-    [Authenticated(Roles = "admin")]
     public class GetMovieFavoriteGenres : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
     }
 
     [Route("/Statistics2026/tv_favorite_genres/{User}", "GET", Summary = "Get the Favorite Movie Genres")]
-    [Authenticated(Roles = "admin")]
     public class GetTVFavoriteGenres : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
@@ -199,7 +191,6 @@ namespace Statistics2026.Api
     }
 
     [Route("/Statistics2026/total_tv_count/{User}", "GET", Summary = "Get the total TV Count")]
-    [Authenticated(Roles = "admin")]
     public class GetTotalTVCount : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
@@ -252,7 +243,6 @@ namespace Statistics2026.Api
     }
 
     [Route("/Statistics2026/total_time_watched/{User}", "GET", Summary = "Get the Total Time Watched for User")]
-    [Authenticated(Roles = "admin")]
     public class GetTotalTimeWatched : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
@@ -262,7 +252,6 @@ namespace Statistics2026.Api
     }
 
     [Route("/Statistics2026/total_watchable_time/{User}", "GET", Summary = "Get the Total Time Watched for User")]
-    [Authenticated(Roles = "admin")]
     public class GetTotalWatchableTime : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
@@ -272,7 +261,6 @@ namespace Statistics2026.Api
     }
 
     [Route("/Statistics2026/last_seen/{User}", "GET", Summary = "Get the Favorite Movie Years")]
-    [Authenticated(Roles = "admin")]
     public class GetLastSeen : IReturn<Object>
     {
         public string user { get; set; } = String.Empty;
