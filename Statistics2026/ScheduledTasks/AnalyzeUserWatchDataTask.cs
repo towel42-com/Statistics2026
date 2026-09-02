@@ -84,7 +84,7 @@ namespace Statistics2026.ScheduledTasks
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()
         {
-            return null!;
+            return Array.Empty<TaskTriggerInfo>();
         }
     }
 }

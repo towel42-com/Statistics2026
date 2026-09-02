@@ -38,7 +38,7 @@ namespace Statistics2026.ScheduledTasks
             _managers = new EmbyManagers(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - CalculateDataTask"), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, configManager, taskManager);
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze All User Information";
+        string IScheduledTask.Name => "\u2022 Analyze User Information";
 
         string IScheduledTask.Key => "Statistics2026CalculateAllUsers";
 
@@ -86,7 +86,7 @@ namespace Statistics2026.ScheduledTasks
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()
         {
-            return null!;
+            return Array.Empty<TaskTriggerInfo>();
         }
     }
 }
