@@ -80,7 +80,7 @@ define(function () {
 
     function getSummaryInfo(view, whichSummary, user, parameters = "", div = "") {
         var urlText = "/emby/Statistics2026/" + whichSummary;
-        if (user != "")
+        if (user != "" && user !== undefined)
             urlText += "/" + user;
         urlText += parameters;
         console.info("getSummaryInfo - '" + urlText + "'");
