@@ -483,7 +483,7 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
             {
                 var row = statement.Current;
-                var currStudios = row.GetString(0).Split(',');
+                var currStudios = row.GetString(0)?.Split(',') ?? Array.Empty<string>(); ;
                 studios.UnionWith(currStudios);
                 return true;
             });
@@ -840,15 +840,15 @@ namespace Statistics2026.Data
               ;
 
             var sqlCmd = new SQLCmdDef(sql, new List<(string, object?)>()
-{
-    ( "@UserId", user.Id.ToString())
-});
+                                        {
+                                            ( "@UserId", user.Id.ToString())
+                                        });
 
             Dictionary<string, int> genreMap = new Dictionary<string, int>();
             _dbHelper.ExecuteCommand(sqlCmd, statement =>
             {
                 var row = statement.Current;
-                var genres = row.GetString(0).Split(',');
+                var genres = row.GetString(0)?.Split(',') ?? Array.Empty<string>();
                 foreach (var genre in genres)
                 {
                     if (!genreMap.ContainsKey(genre))
