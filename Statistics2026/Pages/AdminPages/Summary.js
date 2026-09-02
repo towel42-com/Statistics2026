@@ -1,4 +1,4 @@
-﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, Helpers) {
+﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js'), Dashboard.getConfigurationResourceUrl('LoadingHelpers.js')], function (mainTabsManager, Helpers,LoadingHelpers) {
     'use strict';
 
     function loadDebugInfo(view) {
@@ -29,18 +29,11 @@
             view.querySelector(`#debugInfo`).style.display = 'none';
             loadDebugInfo(view);
 
-            if (config.LastUpdated === undefined)
-            {
-                Dashboard.alert({
-                    message:
-                        "No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results."
-                });
-
+            if (!Helpers.CheckForValidConfig(config)) {
                 view.querySelector(`#lastRunInfo`).style.display = 'none';
-
                 Dashboard.hideLoadingMsg();
                 return;
-            } 
+            }
 
             view.querySelector("#pageIntro").innerHTML =
                 "This plugin will calculate media and user statistics "

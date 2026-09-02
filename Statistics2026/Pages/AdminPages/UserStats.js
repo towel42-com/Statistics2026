@@ -1,21 +1,14 @@
-﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, Helpers) {
+﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js'), Dashboard.getConfigurationResourceUrl('LoadingHelpers.js')], function (mainTabsManager, Helpers, LoadingHelpers) {
     'use strict';
 
     function loadStats(view, user) {
         Dashboard.showLoadingMsg();
 
         ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-            if (config.LastUpdated === undefined) {
-                Dashboard.alert({
-                    message:
-                        "No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results."
-                });
-
-                view.querySelector(`#lastRunInfo`).style.display = 'none';
-
+            if (!Helpers.CheckForValidConfig(config)) {
                 Dashboard.hideLoadingMsg();
                 return;
-            } 
+            }
 
             view.querySelector("#UserTitle").innerHTML = "User statistics for " + user;
             view.querySelector("#generalStats").innerHTML = "";

@@ -1,4 +1,4 @@
-﻿define(['baseView', 'loading', 'mainTabsManager', ApiClient.getUrl('web/configurationpage?name=Helpers.js'), ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js') , 'emby-input', 'emby-button', 'emby-checkbox', 'emby-scroller', 'emby-select'], function (BaseView, loading, mainTabsManager, Helpers, UserPageHelpers) {
+﻿define(['baseView', 'loading', 'mainTabsManager', ApiClient.getUrl('web/configurationpage?name=Helpers.js'), ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'), ApiClient.getUrl('web/configurationPage?name=LoadingHelpers.js'), 'emby-input', 'emby-button', 'emby-checkbox', 'emby-scroller', 'emby-select'], function (BaseView, loading, mainTabsManager, Helpers, UserPageHelpers, LoadingHelpers) {
     'use strict';
 
     Object.assign(View.prototype, BaseView.prototype);

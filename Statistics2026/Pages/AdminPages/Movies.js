@@ -1,4 +1,4 @@
-﻿define(['mainTabsManager', 'appRouter', Dashboard.getConfigurationResourceUrl('Helpers.js'), 'emby-linkbutton'], function (mainTabsManager, appRouter, Helpers) {
+﻿define(['mainTabsManager', 'appRouter', Dashboard.getConfigurationResourceUrl('Helpers.js'), Dashboard.getConfigurationResourceUrl('LoadingHelpers.js'), 'emby-linkbutton'], function (mainTabsManager, appRouter, Helpers, LoadingHelpers) {
     'use strict';
 
     function displayTime(ticks) {

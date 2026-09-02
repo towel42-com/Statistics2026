@@ -24,6 +24,16 @@ namespace Statistics2026
             {
                 new PluginPageInfo
                 {
+                    Name = "style.css",
+                    EmbeddedResourcePath = GetType().Namespace + ".style.css"
+                },
+                new PluginPageInfo
+                {
+                    Name = "LoadingHelpers.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.LoadingHelpers.js"
+                },
+                new PluginPageInfo
+                {
                     Name = "Summary",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Summary.html",
                     EnableInMainMenu = true
@@ -87,11 +97,6 @@ namespace Statistics2026
                 {
                     Name = "Helpers.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Helpers.js"
-                },
-                new PluginPageInfo
-                {
-                    Name = "style.css",
-                    EmbeddedResourcePath = GetType().Namespace + ".style.css"
                 },
                 new PluginPageInfo
                 {

@@ -51,7 +51,7 @@
     <ItemGroup>
         <EmbeddedResource Include="Pages\AdminPages\Helpers.js" />
 
-        <EmbeddedResource Include="Pages\AdminPages\Episodes.html" />
+		<EmbeddedResource Include="Pages\AdminPages\Episodes.html" />
         <EmbeddedResource Include="Pages\AdminPages\Episodes.js" />
         <EmbeddedResource Include="Pages\AdminPages\Movies.html" />
         <EmbeddedResource Include="Pages\AdminPages\Movies.js" />
@@ -70,7 +70,8 @@
         <EmbeddedResource Include="Pages\UserPages\UserStats.html" />
         <EmbeddedResource Include="Pages\UserPages\UserStats.js" />
 
-        <EmbeddedResource Include="style.css" />
+		<EmbeddedResource Include="Pages\LoadingHelpers.js" />
+		<EmbeddedResource Include="style.css" />
         <EmbeddedResource Include="thumb.png" />
     </ItemGroup>
     <ItemGroup>

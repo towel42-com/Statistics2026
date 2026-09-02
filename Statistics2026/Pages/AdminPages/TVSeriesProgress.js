@@ -1,59 +1,8 @@
-﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js')], function (mainTabsManager, Helpers) {
+﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js'), Dashboard.getConfigurationResourceUrl('LoadingHelpers.js')], function (mainTabsManager, Helpers,LoadingHelpers) {
     `use strict`;
 
     function loadStats(view, user) {
-        Dashboard.showLoadingMsg();
-
-        ApiClient.getPluginConfiguration(Helpers.pluginId).then( function (config) {
-            if (config.LastUpdated === undefined) {
-                Dashboard.alert({
-                    message:
-                        "No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results."
-                });
-
-                view.querySelector(`#lastRunInfo`).style.display = 'none';
-
-                Dashboard.hideLoadingMsg();
-                return;
-            }
-            var url = "Statistics2026/tv_series_progress/" + user;
-            url = ApiClient.getUrl(url);
-            console.log("tvSeriesProgressData: Url: " + url);
-
-            view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + user;
-
-            var load_status = view.querySelector('#TVSeriesProgressStatus');
-            load_status.innerHTML = "Loading Data...";
-
-            Helpers.getStatistics2026URL(url).then(function (tvSeriesProgressData) {
-                load_status.innerHTML = "&nbsp;";
-                console.log("tvSeriesProgressData: " + JSON.stringify(tvSeriesProgressData));
-
-                var table_body = view.querySelector('#TVSeriesProgressTable_results');
-                var row_html = "";
-
-                for (var index = 0; index < tvSeriesProgressData.length; ++index) {
-                    var info = tvSeriesProgressData[index];
-
-                    var row_bg_col = "#BBBBBB00";
-                    if (index % 2 == 0) {
-                        row_bg_col = "#BBBBBB1C";
-                    }
-
-                    row_html += "<tr style='background:" + row_bg_col + ";'>";
-
-                    row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Name + " (" + info.PremiereYear  + ")</td>";
-                    row_html += "<td class='center " + Helpers.calculateProgressClass(info.Episodes.Percent) + "' style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Episodes.String + "</td>";
-                    row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.ScoreStr + "/10</td>";
-                    row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.SeriesStatus + "</td>";
-
-                    row_html += "</tr>";
-                }
-
-                table_body.innerHTML = row_html;
-                Dashboard.hideLoadingMsg();
-            } );
-        } );
+        LoadingHelpers.LoadTVProgress(view, user, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
     }
 
     return function (view, params) {
