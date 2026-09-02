@@ -25,78 +25,78 @@ namespace Statistics2026
                 new PluginPageInfo
                 {
                     Name = "Summary",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Summary.html",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Summary.html",
                     EnableInMainMenu = true
                 },
                 new PluginPageInfo
                 {
                     Name = "Summary.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Summary.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Summary.js"
                 },
                 new PluginPageInfo
                 {
                     Name = "UserStats",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStats.html"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.UserStats.html"
                 },
                 new PluginPageInfo
                 {
                     Name = "UserStats.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStats.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.UserStats.js"
                 },
                 new PluginPageInfo
                 {
                     Name = "TVSeriesProgress",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.TVSeriesProgress.html",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TVSeriesProgress.html",
                 },
                 new PluginPageInfo
                 {
                     Name = "TVSeriesProgress.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.TVSeriesProgress.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TVSeriesProgress.js"
                 },
                 new PluginPageInfo
                 {
                     Name = "Episodes",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Episodes.html",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Episodes.html",
                 },
                 new PluginPageInfo
                 {
                     Name = "Episodes.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Episodes.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Episodes.js"
                 },
                 new PluginPageInfo
                 {
                     Name = "Movies",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Movies.html",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.html",
                 },
                 new PluginPageInfo
                 {
                     Name = "Movies.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Movies.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.js"
                 },
                 new PluginPageInfo
                 {
                     Name = "Settings",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Settings.html",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Settings.html",
                 },
                 new PluginPageInfo
                 {
                     Name = "Settings.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Settings.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Settings.js"
                 },
                 new PluginPageInfo
                 {
                     Name = "Helpers.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Helpers.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Helpers.js"
                 },
                 new PluginPageInfo
                 {
                     Name = "style.css",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.style.css"
+                    EmbeddedResourcePath = GetType().Namespace + ".style.css"
                 },
                 new PluginPageInfo
                 {
                     Name = "UserStats_UserPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStats_UserPage.html",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.UserStats.html",
                     EnableInUserMenu = true,
                     MenuSection = "User Statistics",
                     DisplayName = "User Statistics",
@@ -105,12 +105,12 @@ namespace Statistics2026
                 new PluginPageInfo
                 {
                     Name = "UserStats_UserPage.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserStats_UserPage.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.UserStats.js"
                 },
                 new PluginPageInfo
                 {
                     Name = "TVSeriesProgress_UserPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.TVSeriesProgress_UserPage.html",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.TVSeriesProgress.html",
                     //EnableInUserMenu = true,
                     MenuSection = "User Statistics",
                     DisplayName = "TV Progress",
@@ -119,13 +119,13 @@ namespace Statistics2026
                 new PluginPageInfo
                 {
                     Name = "TVSeriesProgress_UserPage.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.TVSeriesProgress_UserPage.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.TVSeriesProgress.js",
                     FeatureId = Feature.StaticId
                 },
                 new PluginPageInfo
                 {
                     Name = "Helpers_UserPage.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.Helpers_UserPage.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.Helpers.js"
                 },
 
             };
@@ -147,7 +147,7 @@ namespace Statistics2026
         public Stream GetThumbImage()
         {
             var type = GetType();
-            return type.Assembly.GetManifestResourceStream(type.Namespace + ".Images.plugin-thumb.png");
+            return type.Assembly.GetManifestResourceStream(type.Namespace + ".plugin.png");
         }
 
         public ImageFormat ThumbImageFormat

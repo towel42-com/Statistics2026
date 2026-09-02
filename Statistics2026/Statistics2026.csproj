@@ -49,25 +49,28 @@
     </Target>
 
     <ItemGroup>
-        <EmbeddedResource Include="Pages\Episodes.html" />
-        <EmbeddedResource Include="Pages\Episodes.js" />
-        <EmbeddedResource Include="Pages\Helpers.js" />
-        <EmbeddedResource Include="Pages\Helpers_UserPage.js" />
-        <EmbeddedResource Include="Pages\Movies.html" />
-        <EmbeddedResource Include="Pages\Movies.js" />
-        <EmbeddedResource Include="Pages\Settings.html" />
-        <EmbeddedResource Include="Pages\Settings.js" />
-        <EmbeddedResource Include="Pages\style.css" />
-        <EmbeddedResource Include="Pages\Summary.html" />
-        <EmbeddedResource Include="Pages\Summary.js" />
-        <EmbeddedResource Include="Pages\TVSeriesProgress.html" />
-        <EmbeddedResource Include="Pages\TVSeriesProgress.js" />
-        <EmbeddedResource Include="Pages\TVSeriesProgress_UserPage.html" />
-        <EmbeddedResource Include="Pages\TVSeriesProgress_UserPage.js" />
-        <EmbeddedResource Include="Pages\UserStats.html" />
-        <EmbeddedResource Include="Pages\UserStats.js" />
-        <EmbeddedResource Include="Pages\UserStats_UserPage.html" />
-        <EmbeddedResource Include="Pages\UserStats_UserPage.js" />
+        <EmbeddedResource Include="Pages\AdminPages\Helpers.js" />
+
+        <EmbeddedResource Include="Pages\AdminPages\Episodes.html" />
+        <EmbeddedResource Include="Pages\AdminPages\Episodes.js" />
+        <EmbeddedResource Include="Pages\AdminPages\Movies.html" />
+        <EmbeddedResource Include="Pages\AdminPages\Movies.js" />
+        <EmbeddedResource Include="Pages\AdminPages\Settings.html" />
+        <EmbeddedResource Include="Pages\AdminPages\Settings.js" />
+        <EmbeddedResource Include="Pages\AdminPages\Summary.html" />
+        <EmbeddedResource Include="Pages\AdminPages\Summary.js" />
+        <EmbeddedResource Include="Pages\AdminPages\TVSeriesProgress.html" />
+        <EmbeddedResource Include="Pages\AdminPages\TVSeriesProgress.js" />
+        <EmbeddedResource Include="Pages\AdminPages\UserStats.html" />
+        <EmbeddedResource Include="Pages\AdminPages\UserStats.js" />
+
+        <EmbeddedResource Include="Pages\UserPages\Helpers.js" />
+        <EmbeddedResource Include="Pages\UserPages\TVSeriesProgress.html" />
+        <EmbeddedResource Include="Pages\UserPages\TVSeriesProgress.js" />
+        <EmbeddedResource Include="Pages\UserPages\UserStats.html" />
+        <EmbeddedResource Include="Pages\UserPages\UserStats.js" />
+
+        <EmbeddedResource Include="style.css" />
         <EmbeddedResource Include="thumb.png" />
     </ItemGroup>
     <ItemGroup>
