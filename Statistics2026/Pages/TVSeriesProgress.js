@@ -44,7 +44,6 @@
 
                     row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Name + " (" + info.PremiereYear  + ")</td>";
                     row_html += "<td class='center " + Helpers.calculateProgressClass(info.Episodes.Percent) + "' style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Episodes.String + "</td>";
-                    row_html += "<td class='center " + Helpers.calculateProgressClass(info.Specials.Percent) + "' style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Specials.String + "</td>";
                     row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.ScoreStr + "/10</td>";
                     row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.SeriesStatus + "</td>";
 
@@ -97,9 +96,9 @@
         view.querySelector("#episodesInfo").addEventListener(`click`, function () {
             Helpers.showInfo('This column displays the number of watched episodes and the number of total episodes. You will have 100% when you viewed all normal episodes (no specials, only aired)<br/>. ', 'Watched Episodes');
         });
-        view.querySelector("#specialsInfo").addEventListener(`click`, function () {
-            Helpers.showInfo('This column displays the number of watched specials and the number of total specials. You will have 100% when you viewed all specials<br/>. ', 'Watched Specials');
-        });
+        // view.querySelector("#specialsInfo").addEventListener(`click`, function () {
+        //     Helpers.showInfo('This column displays the number of watched specials and the number of total specials. You will have 100% when you viewed all specials<br/>. ', 'Watched Specials');
+        // });
 
         ApiClient.getUsers().then(function (users) {
             var select = view.querySelector(`#selectUser`);
