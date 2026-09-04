@@ -86,24 +86,28 @@ define(function () {
             movieStats += Helpers.getSummaryInfo(view, "total_movies_watched", userName);
             movieStats += Helpers.getSummaryInfo(view, "movie_favorite_years", userName);
             movieStats += Helpers.getSummaryInfo(view, "movie_favorite_genres", userName);
-
-            movieStats += Helpers.getSummaryInfo(view, "most_watched_movies", userName, "?serverId=" + config.ServerId + "&numMovies=" + config.numWatchedShows);
-
             movieStats += Helpers.getSummaryInfo(view, "total_time_watched", userName, "?episodes=false", "total_movie_time_watched");
             movieStats += Helpers.getSummaryInfo(view, "total_watchable_time", userName, "?episodes=false", "total_movie_watchable_time");
-            movieStats += Helpers.getSummaryInfo(view, "last_seen", userName, "?episodes=false", "last_seen_movies");
             view.querySelector("#movieStats").innerHTML = movieStats;
+
+            var movieMostWatchedStats = "";
+            movieMostWatchedStats += Helpers.getSummaryInfo(view, "last_seen", userName, "?episodes=false", "last_seen_movies");
+            movieMostWatchedStats += Helpers.getSummaryInfo(view, "most_watched_movies", userName, "?serverId=" + config.ServerId + "&numMovies=" + config.numWatchedShows);
+            view.querySelector("#movieMostWatchedStats").innerHTML = movieMostWatchedStats;
 
             var showStats = "";
             showStats += Helpers.getSummaryInfo(view, "total_tv_count", userName);
             showStats += Helpers.getSummaryInfo(view, "total_tv_watched", userName);
             showStats += Helpers.getSummaryInfo(view, "total_series_finished", userName);
             showStats += Helpers.getSummaryInfo(view, "tv_favorite_genres", userName);
-            showStats += Helpers.getSummaryInfo(view, "most_watched_shows", userName, "?serverId=" + config.ServerId + "&numShows=" + config.numWatchedShows);
             showStats += Helpers.getSummaryInfo(view, "total_time_watched", userName, "?episodes=true", "total_episode_time_watched");
             showStats += Helpers.getSummaryInfo(view, "total_watchable_time", userName, "?episodes=true", "total_episode_watchable_time");
-            showStats += Helpers.getSummaryInfo(view, "last_seen", userName, "?episodes=true", "last_seen_tv");
             view.querySelector("#showStats").innerHTML = showStats;
+
+            var seriesMostWatchedStats = "";
+            seriesMostWatchedStats += Helpers.getSummaryInfo(view, "last_seen", userName, "?episodes=true", "last_seen_tv");
+            seriesMostWatchedStats += Helpers.getSummaryInfo(view, "most_watched_shows", userName, "?serverId=" + config.ServerId + "&numShows=" + config.numWatchedShows);
+            view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
 
             hideLoadingFunc();
         });

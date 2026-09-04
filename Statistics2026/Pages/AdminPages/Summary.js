@@ -55,8 +55,6 @@
             movieStats += Helpers.getSummaryInfo(view, "total_movie_count", "");
             movieStats += Helpers.getSummaryInfo(view, "total_collection_count", "");
             movieStats += Helpers.getSummaryInfo(view, "total_movie_studio_count", "");
-            movieStats += Helpers.getSummaryInfo(view, "least_watched_movies", "", "?serverId=" + config.ServerId + "&numMovies=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
-            movieStats += Helpers.getSummaryInfo(view, "most_watched_movies", "", "?serverId=" + config.ServerId + "&numMovies=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
             movieStats += Helpers.getSummaryInfo(view, "get_movie/Largest", "", "?serverId=" + config.ServerId, "largest_movie");
             movieStats += Helpers.getSummaryInfo(view, "get_movie/Smallest", "", "?serverId=" + config.ServerId, "smallest_movie");
             movieStats += Helpers.getSummaryInfo(view, "get_movie/Longest", "", "?serverId=" + config.ServerId, "longest_movie");
@@ -71,12 +69,20 @@
             movieStats += Helpers.getSummaryInfo(view, "get_movie/LatestAdditionToServer", "", "?serverId=" + config.ServerId, "latest_movie_addition");
             view.querySelector("#movieStats").innerHTML = movieStats;
 
+            var movieMostLeastWatchedStats = "";
+            movieMostLeastWatchedStats += Helpers.getSummaryInfo(view, "least_watched_movies", "", "?serverId=" + config.ServerId + "&numMovies=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
+            movieMostLeastWatchedStats += Helpers.getSummaryInfo(view, "most_watched_movies", "", "?serverId=" + config.ServerId + "&numMovies=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
+            view.querySelector("#movieMostLeastWatchedStats").innerHTML = movieMostLeastWatchedStats;
+
             var seriesSummaryStats = "";
             seriesSummaryStats += Helpers.getSummaryInfo(view, "total_tv_count", "");
             seriesSummaryStats += Helpers.getSummaryInfo(view, "total_tv_studio_count", "");
-            seriesSummaryStats += Helpers.getSummaryInfo(view, "least_watched_shows", "", "?serverId=" + config.ServerId + "&numShows=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
-            seriesSummaryStats += Helpers.getSummaryInfo(view, "most_watched_shows", "", "?serverId=" + config.ServerId + "&numShows=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
             view.querySelector("#seriesSummaryStats").innerHTML = seriesSummaryStats;
+
+            var seriesMostLeastWatchedStats = "";
+            seriesMostLeastWatchedStats += Helpers.getSummaryInfo(view, "least_watched_shows", "", "?serverId=" + config.ServerId + "&numShows=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
+            seriesMostLeastWatchedStats += Helpers.getSummaryInfo(view, "most_watched_shows", "", "?serverId=" + config.ServerId + "&numShows=" + config.numWatchedShows + "&excludeAdmin=" + config.excludeAdmin);
+            view.querySelector("#seriesMostLeastWatchedStats").innerHTML = seriesMostLeastWatchedStats;
 
             var seriesStats = "";
             seriesStats += Helpers.getSummaryInfo(view, "get_series/Largest", "", "?serverId=" + config.ServerId, "largest_series");
