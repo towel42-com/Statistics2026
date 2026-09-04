@@ -151,63 +151,58 @@ namespace Statistics2026.Data
             return true;
         }
 
-        public bool ExecuteCommand(SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null)
+        public void ExecuteCommand(SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null)
         {
             var cmds = new List<SQLCmdDef>() { cmd };
-            return ExecuteCommands(cmds, onStatement);
+            ExecuteCommands(cmds, onStatement);
         }
 
-        public bool ExecuteCommands(List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null)
+        public void ExecuteCommands(List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null)
         {
             if (Connection == null)
                 throw new ArgumentNullException("Connection");
 
-            lock (Connection)
+            try
             {
-                try
+                Connection.RunInTransaction(connection =>
                 {
-                    Connection.RunInTransaction(connection =>
+                    foreach (var cmd in cmds)
                     {
-                        foreach (var cmd in cmds)
+                        CancellationToken?.ThrowIfCancellationRequested();
+                        using (var statement = connection.PrepareStatement(cmd.Statement))
                         {
-                            CancellationToken?.ThrowIfCancellationRequested();
-                            using (var statement = connection.PrepareStatement(cmd.Statement))
+                            if (cmd.HasParameters())
                             {
-                                if (cmd.HasParameters())
+                                foreach (var param in cmd.Parameters!)
                                 {
-                                    foreach (var param in cmd.Parameters!)
-                                    {
-                                        TryBind(statement, param.name, param.value);
-                                    }
+                                    TryBind(statement, param.name, param.value);
                                 }
+                            }
 
-                                if (onStatement == null)
+                            if (onStatement == null)
+                            {
+                                statement.MoveNext();
+                            }
+                            else
+                            {
+                                while (statement.MoveNext())
                                 {
-                                    statement.MoveNext();
-                                }
-                                else
-                                {
-                                    while (statement.MoveNext())
-                                    {
-                                        if (!onStatement(statement))
-                                            break;
-                                        CancellationToken?.ThrowIfCancellationRequested();
-                                    }
+                                    if (!onStatement(statement))
+                                        break;
+                                    CancellationToken?.ThrowIfCancellationRequested();
                                 }
                             }
                         }
-                    });
-                }
-                catch (Exception)
-                {
-                    throw;
-                }
+                    }
+                });
             }
-
-            return true;
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
-        public bool ExecuteCommands(List<string> cmds)
+        public void ExecuteCommands(List<string> cmds)
         {
             List<SQLCmdDef> cmdDefs = new List<SQLCmdDef>();
             foreach (var cmd in cmds)
@@ -215,7 +210,7 @@ namespace Statistics2026.Data
                 CancellationToken?.ThrowIfCancellationRequested();
                 cmdDefs.Add(new SQLCmdDef(cmd));
             }
-            return ExecuteCommands(cmdDefs);
+            ExecuteCommands(cmdDefs);
         }
 
         private string GetDateTimeKindFormat(DateTimeKind kind)
@@ -253,8 +248,8 @@ namespace Statistics2026.Data
             ConnectionFlags connectionFlags;
 
             //_embyManagers!._logger?.Debug("Opening write _connection");
-            connectionFlags = ConnectionFlags.Create;
-            connectionFlags |= ConnectionFlags.ReadWrite;
+            connectionFlags = ConnectionFlags.Create; // create if missing
+            connectionFlags |= ConnectionFlags.ReadWrite; // open for read-write
             connectionFlags |= ConnectionFlags.PrivateCache;
             connectionFlags |= ConnectionFlags.NoMutex;
 
@@ -264,8 +259,8 @@ namespace Statistics2026.Data
             {
                 var queries = new List<string>
                 {
-                    //"PRAGMA cache size=-10000"
-                    //"PRAGMA read_uncommitted = true",
+                    "PRAGMA journal_mode=WAL",
+                    "PRAGMA busy_timeout=5000",
                     "PRAGMA synchronous=Normal",
                     "PRAGMA temp_store=file"
                 };

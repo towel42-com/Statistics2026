@@ -8,7 +8,6 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        private static StatisticsDB? instance = null;
         private static readonly object _padlock = new object();
         private Dictionary<string, TableDef> _tableMap = new Dictionary<string, TableDef>();
         private List<TableDef> _tableList = new List<TableDef>();
@@ -23,24 +22,9 @@ namespace Statistics2026.Data
 
             lock (_padlock)
             {
-                if (instance == null)
-                {
-                    instance = new StatisticsDB(embyManagers);
-                    embyManagers._logger.Debug("StatisticsData : New Instance Created : " + instance.GetHashCode());
-                }
-                return instance;
-            }
-        }
-
-        public static StatisticsDB GetExistingInstance()
-        {
-            lock (_padlock)
-            {
-                if (instance == null)
-                {
-                    throw new InvalidOperationException("No existing instance found.");
-                }
-                return instance;
+                var retVal = new StatisticsDB(embyManagers);
+                embyManagers._logger.Debug("StatisticsData : New Instance Created : " + retVal.GetHashCode());
+                return retVal;
             }
         }
 
@@ -262,17 +246,33 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommands(sqlCmds);
         }
 
-        public bool ClearTable(string tableName)
+        public void ClearTable(string tableName)
         {
             if (_tableMap.TryGetValue(tableName, out var tableDef))
             {
                 var sqlCmds = tableDef.GetSQLCommands(TableDef.EAction.eClear);
-                return _dbHelper.ExecuteCommands(sqlCmds);
+                _dbHelper.ExecuteCommands(sqlCmds);
             }
-            else
+        }
+
+        public List<string> allTables( (string regex, bool like)? regex = null )
+        {
+            var retVal = new List<string>();
+            var clauses = new List<string>() { "type='table'", "name NOT LIKE 'sqlite_%'" };
+            if ( regex != null )
             {
-                return false;
+                var clause = "name " + (regex.Value.like ? "LIKE" : "NOT LIKE") + " '" + regex.Value.regex + "'";
+                clauses.Add(clause);
             }
+            var sql = "SELECT name FROM sqlite_master " + DBHelper.JoinClauses(clauses);
+
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            {
+                var row = statement.Current;
+                retVal.Add(row.GetString(0));
+                return true;
+            });
+            return retVal;
         }
     }
 }
