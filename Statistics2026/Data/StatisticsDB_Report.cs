@@ -1,16 +1,10 @@
 ﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.TV;
-using RestSharp;
 using ServiceStack;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.Serialization;
-using System.Security.Cryptography;
-using System.Text.RegularExpressions;
-using System.Threading;
 
 
 namespace Statistics2026.Data
