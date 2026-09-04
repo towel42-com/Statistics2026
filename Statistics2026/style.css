@@ -3,7 +3,7 @@
         padding: 0px;
     }
 
-    .statCard-stats-title, statCard-stats-title-left {
+    .statCard-stats-title, .statCard-stats-title-left {
         font-size: 1rem;
         padding-bottom: 5px;
         text-align: center;
@@ -37,6 +37,7 @@
         -webkit-border-radius: 2px;
         border-radius: 2px;
         height: 100%;
+        width:100%;
     }
 
         .statCard .statCard-content {
@@ -48,7 +49,7 @@
             display: flex;
             min-width: min-content;
             flex-wrap: nowrap;
-            text-overflow: ellipsis ellipsis;
+            text-overflow: ellipsis;
         }
 
             .statCard .statCard-content:has(a) {
@@ -58,7 +59,7 @@
                 flex-direction: row;
                 justify-content: left;
                 min-width: min-content;
-                text-overflow: ellipsis ellipsis;
+                text-overflow: ellipsis;
             }
 
             .statCard .statCard-content img {
@@ -84,6 +85,14 @@
         padding-left: 0.75rem;
         padding-right: 0.75rem;
         padding-top: 0.75rem;
+        position: relative;
+        display: flex;
+        min-width: min-content;
+        text-overflow: ellipsis;
+        justify-content: flex-start;
+        align-content: flex-start;
+        align-items: flex-start;
+        gap: 16px;
     }
 
         .statRow .col.small {
