@@ -153,10 +153,23 @@ namespace Statistics2026.Data
             if (user == null)
                 throw new ArgumentNullException("user");
 
-            var allVideosForUser = Statistics2026API.GetAllEpisodesAndMovies(user, _embyManagers!._libraryManager, false).forUser;
+            var userTableName = getUserTableName(user);
+            if ( _userMediaTemplate == null )
+                throw new Exception($"AddUserWatchData: TableDef for UserMedia_<USER_ID> is null");
 
+            var sqlCmds = new List<SQLCmdDef>();
+
+            var cmds = _userMediaTemplate.GetSQLCommands(TableDef.EAction.eCreate);
+            for(var ii = 0; ii < cmds.Count(); ++ii )
+            {
+                var sqlCmd = cmds[ ii ].Replace("UserMedia_<USER_ID>", userTableName);
+                sqlCmds.Add(new SQLCmdDef(sqlCmd));
+            }
+
+            var allVideosForUser = Statistics2026API.GetAllEpisodesAndMovies(user, _embyManagers!._libraryManager, false).forUser;
+            //_tableList
             string sql =
-                "INSERT INTO UserVideoList " +
+                $"INSERT INTO {userTableName} " +
                 "(" +
                     "  UserId" +
                     ", ItemId" +
@@ -183,7 +196,6 @@ namespace Statistics2026.Data
                     ", @SeriesId" +
                 ")";
 
-            var sqlCmds = new List<SQLCmdDef>();
             foreach (var video in allVideosForUser)
             {
                 var userData = _embyManagers!._userDataManager.GetUserData(user, video);

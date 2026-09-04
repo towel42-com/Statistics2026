@@ -1,10 +1,13 @@
 ﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using ServiceStack;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
+using static ServiceStack.Diagnostics;
 
 
 namespace Statistics2026.Data
@@ -264,14 +267,14 @@ namespace Statistics2026.Data
                 title = watched ? Constants.TotalUserMoviesWatched : Constants.TotalUserMovies;
                 help = watched ? Constants.HelpTotalUserMoviesWatched : Constants.HelpTotalUserMovies;
 
-                sql = "SELECT SUM(NOT IsEpisode) FROM UserVideoList WHERE UserId=@UserId";
+                sql = $"SELECT SUM(NOT IsEpisode) FROM {getUserTableName(user)} WHERE UserId=@UserId";
                 if (watched)
                     sql += " AND IsPlayed";
                 parameters.Add(("@UserId", user.Id.ToString()));
 
                 if (watched)
                 {
-                    total = GetSingleValueFromSQL("SELECT SUM(NOT IsEpisode) FROM UserVideoList WHERE UserId=@UserId", parameters).ToLong();
+                    total = GetSingleValueFromSQL($"SELECT SUM(NOT IsEpisode) FROM {getUserTableName(user)} WHERE UserId=@UserId", parameters).ToLong();
                 }
             }
 
@@ -299,17 +302,18 @@ namespace Statistics2026.Data
             if (user == null)
                 throw new ArgumentNullException("user");
 
+            var tableName = getUserTableName(user);
             var sql =
                 "SELECT " +
                     "  PrimaryName" +
                     ", Media.SeriesId " +
-                    ", SUM(UserVideoList.NumEpisodes) " +
+                    $", SUM({tableName}.NumEpisodes) " +
                     ", Series.NumEpisodes " +
-                "FROM UserVideoList " +
-                "LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId " +
+                $"FROM {tableName} " +
+                $"LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId " +
                 "LEFT JOIN Series ON Series.ItemId=Media.SeriesId " +
-                "WHERE Media.IsEpisode AND NOT Media.IsTVSpecial AND UserVideoList.IsPlayed " +
-                "AND UserVideoList.UserId=@UserId " +
+                $"WHERE Media.IsEpisode AND NOT Media.IsTVSpecial AND {tableName}.IsPlayed " +
+                $"AND {tableName}.UserId=@UserId " +
                 "GROUP BY Media.SeriesId"
                 ;
 
@@ -347,6 +351,8 @@ namespace Statistics2026.Data
             string titleEpisodes = String.Empty;
             string helpEpisodes = String.Empty;
             List<(string name, object? value)>? paramList = null;
+
+            var tableName = getUserTableName(user);
             if (user == null)
             {
                 seriesColumn = "COUNT(DISTINCT(PrimaryName))";
@@ -362,17 +368,17 @@ namespace Statistics2026.Data
                 paramList = new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) };
 
                 seriesColumn = "COUNT(DISTINCT(Media.PrimaryName))";
-                episodeColumn = "SUM(UserVideoList.NumEpisodes)";
+                episodeColumn = $"SUM({tableName}.NumEpisodes)";
 
                 titleSeries = Constants.TotalUserTVShows;
                 titleEpisodes = Constants.TotalUserTVEpisodes;
                 helpEpisodes = Constants.HelpTotalUserTVShows;
 
-                var from = "UserVideoList LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId WHERE Media.IsEpisode AND NOT Media.IsTVSpecial AND ( UserVideoList.UserId=@UserId )";
+                var from = $"{tableName} LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId WHERE Media.IsEpisode AND NOT Media.IsTVSpecial AND ( {tableName}.UserId=@UserId )";
 
                 if (watched)
                 {
-                    from += " AND ( UserVideoList.IsPlayed )";
+                    from += $" AND ( {tableName}.IsPlayed )";
 
                     titleSeries = Constants.TotalTVShowsWatched;
                     titleEpisodes = Constants.TotalUserTVEpisodesWatched;
@@ -471,102 +477,164 @@ namespace Statistics2026.Data
             return statGen.GetStatCardValues();
         }
 
-        public class WatchedShowValue
+        public class WatchedMediaValue
         {
             public string ItemId { get; set; } = String.Empty;
             public string Name { get; set; } = String.Empty;
             public string ImageUrl { get; set; } = String.Empty;
+            public double PlayCountPerUser { get; set; } = 0.0;
+
+            public string Title(User? user, bool isMovie)
+            {
+                string title = Name;
+                if (user != null)
+                {
+                    if (isMovie)
+                    {
+                        title += $" - Watched {PlayCountPerUser:F0} time";
+
+                        if (PlayCountPerUser != 1)
+                            title += "s";
+                    }
+                    else
+                    {
+                        var percentWatched = 100 * PlayCountPerUser;
+                        if (percentWatched > 100)
+                            title += $" - Percent of Episodes Watched: {percentWatched:F0}%";
+                        else
+                            title += $" - Percent of Series Watched: {percentWatched:F2}%";
+                    }
+                }
+
+                return title;
+            }
         }
 
-        public List<WatchedShowValue> WatchedMediaValues(User? user, bool leastWatched, int numShows, bool excludeAdmin, bool series)
+        public List<WatchedMediaValue> WatchedMediaValues(User? user, bool leastWatched, int numShows, bool excludeAdmin, bool series)
         {
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
 
-            var retVal = new List<WatchedShowValue>();
+            var numUsers = (user == null) ? NumUsers(false, excludeAdmin) : 1;
 
-            var numUsers = ( user == null ) ? NumUsers(false, excludeAdmin) : 1;
-
-            var sql = String.Empty;
-            if (series)
-            {
-                sql = "SELECT " +
-                $"  Series.ItemId" +
-                $", Series.Name" +
-                $", ((100.0 * SUM(PlayCount)) / (1.0 * Series.NumEpisodes))/{numUsers} AS PerUser " +
-                $"FROM Series " +
-                $"LEFT OUTER JOIN UserVideoList ON Series.ItemId = UserVideoList.SeriesId " +
-                $"LEFT OUTER JOIN Users ON UserVideoList.UserId = Users.UserId ";
-
-                var clauses = new List<string>() { "PlayCount > 0" };
-                if (excludeAdmin)
-                {
-                    clauses.Add("NOT Users.IsAdministrator");
-                }
-                if ( user != null)
-                {
-                    clauses.Add($"UserVideoList.UserId = '{user.Id.ToString()}'");
-                }
-
-                sql += DBHelper.JoinClauses(clauses);
-
-                sql += $"GROUP BY SeriesId " +
-                       $"ORDER BY PerUser ";
-                if (leastWatched)
-                    sql += "ASC ";
-                else
-                    sql += "DESC ";
-                sql += $"LIMIT {numShows}";
-            }
+            var tableNames = new List<string>();
+            if (user != null)
+                tableNames.Add(getUserTableName(user));
             else
             {
-                sql = "SELECT " +
-                    $"  UserVideoList.ItemId" +
-                    $", UserVideoList.Name" +
-                    $", (100.0 * SUM(UserVideoList.PlayCount))/{numUsers} AS PerUser " +
-                    $"FROM UserVideoList " +
-                    $"LEFT OUTER JOIN Users ON UserVideoList.UserId = Users.UserId "
-                    ;
-
-                var clauses = new List<string>()
-                    {
-                        "PlayCount > 0",
-                        "NOT UserVideoList.IsEpisode"
-                    };
-
-                if (excludeAdmin)
-                {
-                    clauses.Add("NOT Users.IsAdministrator");
-                }
-                if (user != null)
-                {
-                    clauses.Add($"UserVideoList.UserId = '{user.Id.ToString()}'");
-                }
-
-                sql += DBHelper.JoinClauses(clauses);
-
-                sql += $"GROUP BY UserVideoList.ItemId " +
-                       $"ORDER BY PerUser ";
-                if (leastWatched)
-                    sql += "ASC ";
-                else
-                    sql += "DESC ";
-                sql += $"LIMIT {numShows}";
+                tableNames = allUserMediaTables();
             }
 
-            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            var playMap = new Dictionary<string, (string id, string name, double playCountPerUser)>();
+            foreach (var tableName in tableNames)
             {
-                var row = statement.Current;
-                var id = row.GetString(0);
-                var name = row.GetString(1);
-                retVal.Add(new WatchedShowValue()
+                var sql = String.Empty;
+                if (series)
+                {
+                    sql = "SELECT " +
+                    $"  Series.ItemId" +
+                    $", Series.Name" +
+                    $", ((1.0 * SUM(PlayCount)) / (1.0 * Series.NumEpisodes)) AS PerUser " +
+                    $"FROM Series " +
+                    $"LEFT OUTER JOIN {tableName} ON Series.ItemId = {tableName}.SeriesId " +
+                    $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId ";
+
+                    var clauses = new List<string>() { "PlayCount > 0" };
+                    if (excludeAdmin)
+                    {
+                        clauses.Add("NOT Users.IsAdministrator");
+                    }
+                    if (user != null)
+                    {
+                        clauses.Add($"{tableName}.UserId = '{user.Id.ToString()}'");
+                    }
+
+                    sql += DBHelper.JoinClauses(clauses);
+
+                    sql += $"GROUP BY SeriesId " +
+                           $"ORDER BY PerUser ";
+                    if (leastWatched)
+                        sql += "ASC ";
+                    else
+                        sql += "DESC ";
+                }
+                else
+                {
+                    sql = "SELECT " +
+                        $"  {tableName}.ItemId" +
+                        $", {tableName}.Name" +
+                        $", (1.0 * SUM({tableName}.PlayCount)) AS PerUser " +
+                        $"FROM {tableName} " +
+                        $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId "
+                        ;
+
+                    var clauses = new List<string>()
+                    {
+                        "PlayCount > 0",
+                        $"NOT {tableName}.IsEpisode"
+                    };
+
+                    if (excludeAdmin)
+                    {
+                        clauses.Add("NOT Users.IsAdministrator");
+                    }
+                    if (user != null)
+                    {
+                        clauses.Add($"{tableName}.UserId = '{user.Id.ToString()}'");
+                    }
+
+                    sql += DBHelper.JoinClauses(clauses);
+
+                    sql += $"GROUP BY {tableName}.ItemId " +
+                           $"ORDER BY PerUser ";
+                    if (leastWatched)
+                        sql += "ASC ";
+                    else
+                        sql += "DESC ";
+                }
+
+                _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+                {
+                    var row = statement.Current;
+                    var id = row.GetString(0);
+                    var name = row.GetString(1);
+                    var playCountPerUser = row.GetDouble(2);
+                    if (playMap.TryGetValue(id, out var currentValue))
+                    {
+                        // Safely updates based on the current value
+                        playMap[id] = (id, name, currentValue.playCountPerUser + playCountPerUser);
+                    }
+                    else
+                        playMap[id] = (id, name, playCountPerUser);
+                    return true;
+                });
+            }
+
+            List<(string id, string name, double playCountPerUser)> asList = new(playMap.Values);
+
+            asList.Sort((a, b) =>
+            {
+                if (leastWatched)
+                    return a.playCountPerUser.CompareTo(b.playCountPerUser);
+                else
+                    return b.playCountPerUser.CompareTo(a.playCountPerUser);
+            });
+
+            var retVal = new List<WatchedMediaValue>();
+
+            for (int ii = 0; ii < Math.Min(numShows, asList.Count); ++ii)
+            {
+                var id = asList[ii].id;
+                var name = asList[ii].name;
+                var playCountPerUser = asList[ii].playCountPerUser;
+                retVal.Add(new WatchedMediaValue()
                 {
                     ItemId = id,
                     Name = name,
-                    ImageUrl = ItemImageUrl._ItemImageUrl(id, _embyManagers!._libraryManager)
+                    ImageUrl = ItemImageUrl._ItemImageUrl(id, _embyManagers!._libraryManager),
+                    PlayCountPerUser = playCountPerUser
                 });
-                return true;
-            });
+            }
 
             return retVal;
         }
@@ -593,7 +661,12 @@ namespace Statistics2026.Data
             retVal.AsNumberedList = true;
             for (int ii = 0; ii < watchedMedia.Count; ++ii)
             {
-                retVal.AddLine($"{watchedMedia[ii].Name}", watchedMedia[ii].ItemId, watchedMedia[ii].ImageUrl);
+                retVal.AddLine($"{watchedMedia[ii].Title(user, !series)}", watchedMedia[ii].ItemId, watchedMedia[ii].ImageUrl);
+            }
+            if (watchedMedia.IsNullOrEmpty())
+            {
+                var name = series ? "TV Shows" : "Movies";
+                retVal.AddLine($"Watch some {name} already!");
             }
 
             return retVal;
@@ -607,11 +680,12 @@ namespace Statistics2026.Data
             if (user == null)
                 throw new ArgumentNullException("user");
 
+            var tableName = getUserTableName(user);
             string sql = "SELECT SUM(RunTimeTicks) " +
-                "FROM UserVideoList " +
-                "LEFT JOIN Media ON UserVideoList.ItemId=Media.ItemId "
+                $"FROM {tableName} " +
+                $"LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId "
             ;
-            var clauses = new List<string>() { "UserId=@UserId" };
+            var clauses = new List<string>() { $"{tableName}.UserId=@UserId" };
             var title = String.Empty;
 
             if (episodesOnly == null)
@@ -621,15 +695,15 @@ namespace Statistics2026.Data
             else if (episodesOnly.Value)
             {
                 title = played ? Constants.UserTotalEpisodeTimeWatched : Constants.UserTotalEpisodeWatchableTime;
-                clauses.Add("UserVideoList.IsEpisode");
+                clauses.Add($"{tableName}.IsEpisode");
             }
             else
             {
                 title = played ? Constants.UserTotalMovieTimeWatched : Constants.UserTotalMovieWatchableTime;
-                clauses.Add("NOT UserVideoList.IsEpisode");
+                clauses.Add($"NOT {tableName}.IsEpisode");
             }
             if (played)
-                clauses.Add("IsPlayed");
+                clauses.Add($"{tableName}.IsPlayed");
 
             sql += DBHelper.JoinClauses(clauses);
 
@@ -653,9 +727,10 @@ namespace Statistics2026.Data
             if (user == null)
                 throw new ArgumentNullException("user");
 
+            var tableName = getUserTableName(user);
             string sql =
                 "SELECT COUNT(*) as NumVideos, StartYear From Media "
-                + "INNER JOIN UserVideoList On Media.ItemId=UserVideoList.ItemId "
+                + $"INNER JOIN {tableName} On Media.ItemId={tableName}.ItemId "
                 + "WHERE "
                 ;
             if (movies)
@@ -722,9 +797,10 @@ namespace Statistics2026.Data
             if (user == null)
                 throw new ArgumentNullException("user");
 
+            var tableName = getUserTableName(user);
             string sql =
                 "SELECT Genres From Media "
-                + "INNER JOIN UserVideoList On Media.ItemId=UserVideoList.ItemId "
+                + $"INNER JOIN {tableName} On Media.ItemId={tableName}.ItemId "
                 + "WHERE "
 
                 ;
@@ -808,6 +884,8 @@ namespace Statistics2026.Data
             if (user == null)
                 throw new ArgumentNullException("user");
 
+            var tableName = getUserTableName(user);
+
             string sql = "SELECT ";
             if (movies)
                 sql += "PrimaryName ";
@@ -815,17 +893,17 @@ namespace Statistics2026.Data
                 sql += "PrimaryName || ' - S' || printf('%02d', Season ) || 'E' || printf('%02d', Episode) || ' - ' || SecondaryName ";
             sql += "AS Name " +
                    ", LastPlayedDate " +
-                   "FROM UserVideoList " +
-                   "LEFT JOIN Media ON Media.ItemId=UserVideoList.ItemId " +
-                   "WHERE UserVideoList.IsPlayed " +
-                   "AND " + StatGen.validDateClause("UserVideoList.LastPlayedDate") +
-                   "AND UserVideoList.UserId = @UserId " +
+                   $"FROM {tableName} " +
+                   $"LEFT JOIN Media ON Media.ItemId={tableName}.ItemId " +
+                   $"WHERE {tableName}.IsPlayed " +
+                   $"AND " + StatGen.validDateClause($"{tableName}.LastPlayedDate") +
+                   $"AND {tableName}.UserId = @UserId " +
                    "AND "
                    ;
             if (movies)
                 sql += "NOT";
-            sql += " UserVideoList.IsEpisode " +
-               "ORDER BY UserVideoList.LastPlayedDate DESC " +
+            sql += $" {tableName}.IsEpisode " +
+               $"ORDER BY {tableName}.LastPlayedDate DESC " +
                "LIMIT 10 "
                ;
 
@@ -931,21 +1009,22 @@ namespace Statistics2026.Data
                 return true;
             });
 
+            var tableName = getUserTableName(user);
             var sqlBase = "SELECT " +
-                "  SUM(UserVideoList.NumEpisodes) " +
-                ", UserVideoList.SeriesId " +
-                " FROM " +
-                "   UserVideoList " +
-                " WHERE " +
-                " UserVideoList.IsEpisode AND " +
-                " <isTVSpecial> AND " +
-                " UserVideoList.IsPlayed AND " +
-                " UserVideoList.UserId=@UserId " +
-                " GROUP BY UserVideoList.SeriesId "
+                $"  SUM({tableName}.NumEpisodes) " +
+                $", {tableName}.SeriesId " +
+                $" FROM " +
+                $"   {tableName} " +
+                $" WHERE " +
+                $" {tableName}.IsEpisode AND " +
+                $" <isTVSpecial> AND " +
+                $" {tableName}.IsPlayed AND " +
+                $" {tableName}.UserId=@UserId " +
+                $" GROUP BY {tableName}.SeriesId "
                 ;
 
-            var sqlEpisodes = sqlBase.Replace("<isTVSpecial>", "NOT UserVideoList.IsTVSpecial");
-            var sqlSpecials = sqlBase.Replace("<isTVSpecial>", "UserVideoList.IsTVSpecial");
+            var sqlEpisodes = sqlBase.Replace("<isTVSpecial>", $"NOT {tableName}.IsTVSpecial");
+            var sqlSpecials = sqlBase.Replace("<isTVSpecial>", $"{tableName}.IsTVSpecial");
 
             var paramList = new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) };
 

@@ -37,10 +37,10 @@ namespace Statistics2026.Data
             eRecreate, // drops first then recreates
             eCreate,   // only calls create
             eDrop,      // only drops the table and indexes
-            eClear      // deletes all from table
+            eClear,      // deletes all from table
         }
 
-        public TableDef(string name, List<TableColDef> cols, List<string>? indexes=null)
+        public TableDef(string name, List<TableColDef> cols, List<string>? indexes = null)
         {
             Name = name;
             if (Name == null || Name == "")
@@ -60,7 +60,8 @@ namespace Statistics2026.Data
 
         private List<string> createTable()
         {
-            string sql = $"CREATE TABLE IF NOT EXISTS {Name} (\n";
+            var tableName = Name;
+            string sql = $"CREATE TABLE IF NOT EXISTS {tableName} (\n";
             bool first = true;
             foreach (var col in Columns)
             {
@@ -75,8 +76,7 @@ namespace Statistics2026.Data
 
             sql += ");";
 
-            var retVal = new List<string>();
-            retVal.Add(sql);
+            var retVal = new List<string>() { sql };
 
             if (Indexes != null)
             {
@@ -100,16 +100,26 @@ namespace Statistics2026.Data
             return string.Join(";\n", createTable());
         }
 
+        public static string clearTable(string tableName)
+        {
+            string sql = $"DELETE FROM {tableName}";
+            return sql;
+        }
+
         private string clearTable()
         {
-            string sql = $"DELETE FROM {Name}";
+            return clearTable(Name);
+        }
+
+        public static string dropTable(string tableName)
+        {
+            string sql = $"DROP TABLE IF EXISTS {tableName}";
             return sql;
         }
 
         private string dropTable()
         {
-            string sql = $"DROP TABLE IF EXISTS {Name}";
-            return sql;
+            return dropTable(Name);
         }
 
         private string getIndexName(string name)
@@ -124,13 +134,6 @@ namespace Statistics2026.Data
             return sql;
         }
 
-        private List< string > dropIndexes()
-        {
-            var retVal = new List<string>();
-            Indexes.ForEach(colName => retVal.Add(dropIndex(colName)));
-            return retVal;
-        }
-
         public List<string> GetSQLCommands(EAction action)
         {
             var retVal = new List<string>();
@@ -141,7 +144,6 @@ namespace Statistics2026.Data
                     break;
                 case EAction.eDrop:
                     retVal.Add(dropTable());
-                    retVal.AddRange(dropIndexes()); // for many sql this is unnecessary but it doesnt hurt
                     break;
                 case EAction.eCreate:
                     retVal.AddRange(createTable());

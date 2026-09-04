@@ -213,6 +213,11 @@ namespace Statistics2026.Data
             ExecuteCommands(cmdDefs);
         }
 
+        public void ExecuteCommand(string cmd)
+        {
+            ExecuteCommand(new SQLCmdDef(cmd));
+        }
+
         private string GetDateTimeKindFormat(DateTimeKind kind)
         {
             return (kind == DateTimeKind.Utc) ? _datetimeFormatUtc : _datetimeFormatLocal;

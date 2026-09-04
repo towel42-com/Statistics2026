@@ -1,4 +1,5 @@
-﻿using Statistics2026.Api;
+﻿using MediaBrowser.Controller.Entities;
+using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,6 +12,7 @@ namespace Statistics2026.Data
         private static readonly object _padlock = new object();
         private Dictionary<string, TableDef> _tableMap = new Dictionary<string, TableDef>();
         private List<TableDef> _tableList = new List<TableDef>();
+        private TableDef? _userMediaTemplate = null;
         private EmbyManagers? _embyManagers = null;
 
         DBHelper _dbHelper = new DBHelper();
@@ -142,44 +144,6 @@ namespace Statistics2026.Data
                     }
                 ),
 
-                new TableDef("UserVideoList",
-                    new List<TableColDef>()
-                    {
-                        new TableColDef( "UserId", "TEXT", false ), // user
-                        new TableColDef( "ItemId", "TEXT", false ), // video item
-                        new TableColDef( "Name", "TEXT", true ), // Name of the show to reduce joins
-                        new TableColDef( "IsPlayed", "BOOLEAN", true ),
-                        new TableColDef( "PlayCount", "INT", true ),
-                        new TableColDef( "LastPlayedDate", "DATETIME", true ),
-                        new TableColDef( "IsEpisode", "BOOLEAN", true ),
-                        new TableColDef( "NumEpisodes", "BOOLEAN", true ), // for multi episode media
-                        new TableColDef( "IsTVSpecial", "BOOLEAN", true ),
-                        new TableColDef( "SeriesId", "TEXT", true ) // if episode add seriesid
-                    }
-                ),
-
-                //new TableDef("EpisodeProgress",
-                //    new List<TableColDef>()
-                //    {
-                //        new TableColDef( "ItemId", "TEXT", false ),
-                //        new TableColDef( "UserId", "TEXT", false ),
-                //        new TableColDef( "Name", "TEXT", false ),
-                //        new TableColDef( "SortName", "TEXT" , true ),
-                //        new TableColDef( "StartYear", "INT" , true ),
-                //        new TableColDef( "Watched", "INT" , true ),
-                //        new TableColDef( "Score", "REAL" , true ),
-                //        new TableColDef( "Status", "TEXT" , true ),
-                //        new TableColDef( "TotalEpisodes", "INT" , true ),
-                //        new TableColDef( "CollectedEpisodes", "INT" , true ),
-                //        new TableColDef( "SeenEpisodes", "INT" , true ),
-                //        new TableColDef( "TotalSpecials", "INT" , true ),
-                //        new TableColDef( "CollectedSpecials", "INT" , true ),
-                //        new TableColDef( "SeenSpecials", "INT" , true ),
-                //        new TableColDef( "PercentSeen", "INT" , true ),
-                //        new TableColDef( "PercentCollected", "INT" , true ),
-                //    }
-                //),
-
                 new TableDef("Collections",
                     new List<TableColDef>()
                     {
@@ -226,6 +190,23 @@ namespace Statistics2026.Data
                     }
                 )
             };
+
+            _userMediaTemplate = new TableDef("UserMedia_<USER_ID>",
+                    new List<TableColDef>()
+                    {
+                        new TableColDef( "UserId", "TEXT", false ), // user
+                        new TableColDef( "ItemId", "TEXT", false ), // video item
+                        new TableColDef( "Name", "TEXT", true ), // Name of the show to reduce joins
+                        new TableColDef( "IsPlayed", "BOOLEAN", true ),
+                        new TableColDef( "PlayCount", "INT", true ),
+                        new TableColDef( "LastPlayedDate", "DATETIME", true ),
+                        new TableColDef( "IsEpisode", "BOOLEAN", true ),
+                        new TableColDef( "NumEpisodes", "BOOLEAN", true ), // for multi episode media
+                        new TableColDef( "IsTVSpecial", "BOOLEAN", true ),
+                        new TableColDef( "SeriesId", "TEXT", true ) // if episode add seriesid
+                    }
+                );
+
             foreach (var tableDef in _tableList)
             {
                 _tableMap[tableDef.Name] = tableDef;
@@ -243,23 +224,90 @@ namespace Statistics2026.Data
                 sqlCmds.AddRange(tableDef.GetSQLCommands(action));
             }
 
+            sqlCmds.Add($"DROP TABLE IF EXISTS UserVideoList"); // incase running an old schema
+
+            if (action == TableDef.EAction.eRecreate && _userMediaTemplate != null)
+            {
+                sqlCmds.AddRange(DropAllUserMediaCmds());
+            }
+
             _dbHelper.ExecuteCommands(sqlCmds);
         }
 
         public void ClearTable(string tableName)
         {
+            List<string> sqlCmds = new List<string>();
             if (_tableMap.TryGetValue(tableName, out var tableDef))
             {
-                var sqlCmds = tableDef.GetSQLCommands(TableDef.EAction.eClear);
-                _dbHelper.ExecuteCommands(sqlCmds);
+                sqlCmds.AddRange(tableDef.GetSQLCommands(TableDef.EAction.eClear));
             }
+            else
+            {
+                sqlCmds.Add(TableDef.clearTable(tableName));
+            }
+            _dbHelper.ExecuteCommands(sqlCmds);
         }
 
-        public List<string> allTables( (string regex, bool like)? regex = null )
+        private string getUserTableName(User? user)
+        {
+            if (user == null)
+                return string.Empty;
+            var idString = user.Id.ToString().Replace("-", "");
+            return $"UserMedia_{idString}";
+        }
+
+        public List<string> allUserMediaTables()
+        {
+            return allTables((regex: "UserMedia_%", like: true));
+        }
+
+        public void ClearAllUserMedia()
+        {
+            var retVal = new List<string>();
+            if (_userMediaTemplate == null)
+                return;
+
+            var tables = allUserMediaTables();
+
+            foreach (var table in tables)
+                ClearTable(table);
+        }
+
+        public List<string> DropAllUserMediaCmds()
+        {
+            var retVal = new List<string>();
+            if (_userMediaTemplate == null)
+                return retVal;
+
+            var tables = allUserMediaTables();
+
+            foreach (var table in tables)
+                retVal.AddRange(DropTableCmds(table));
+
+            return retVal;
+        }
+
+        public List<string> DropTableCmds(string tableName)
+        {
+            if (_tableMap.TryGetValue(tableName, out var tableDef))
+            {
+                var sqlCmds = tableDef.GetSQLCommands(TableDef.EAction.eDrop);
+                return sqlCmds;
+            }
+            return new List<string>() { TableDef.dropTable(tableName) };
+        }
+
+        public void DropTable(string tableName)
+        {
+            var cmds = DropTableCmds(tableName);
+            _dbHelper.ExecuteCommands(cmds);
+        }
+
+        public List<string> allTables((string regex, bool like)? regex = null)
         {
             var retVal = new List<string>();
             var clauses = new List<string>() { "type='table'", "name NOT LIKE 'sqlite_%'" };
-            if ( regex != null )
+            if (regex != null)
             {
                 var clause = "name " + (regex.Value.like ? "LIKE" : "NOT LIKE") + " '" + regex.Value.regex + "'";
                 clauses.Add(clause);

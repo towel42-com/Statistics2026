@@ -56,7 +56,7 @@ namespace Statistics2026.ScheduledTasks
             db.SetCancellationToken(cancellationToken);
             try
             {
-                db.ClearTable("UserVideoList"); // will throw an exception if the primary has not been run yet
+                db.ClearAllUserMedia();
             }
             catch (Exception /*ex*/)
             {
