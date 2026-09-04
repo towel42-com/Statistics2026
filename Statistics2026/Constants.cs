@@ -86,7 +86,7 @@ namespace Statistics2026
         internal const string LatestEpisodeAddition = "Latest TV Episode Added to Server";
         internal const string MostWatchedShows = "Most Watched Shows";
         internal const string LeastWatchedShows = "Least Watched Shows";
-        internal const string HelpMostWatchedShows = "Most watched shows based on the average percent of episodes finished per user.";
+        internal const string HelpMostWatchedShows = "Most watched shows based on the average percent of episodes finished per user.\nIf the percentage is over 100% it has been watched multiple times.";
         internal const string HelpLeastWatchedShows = "Least watched shows based on the average percent of episodes finished per user.";
 
         internal const string MostWatchedMovies = "Most Watched Movies";
