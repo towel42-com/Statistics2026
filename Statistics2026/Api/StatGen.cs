@@ -79,7 +79,7 @@ namespace Statistics2026.Api
         {
             string title = Title();
             string help = Help();
-            var retVal = new TextBasedStatCard(title, help, "half");
+            var retVal = new TextBasedStatCard(title, help, EStatCardSize.eHalf);
 
             var statCardValues = GetStatCardValues();
 

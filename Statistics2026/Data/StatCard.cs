@@ -1,9 +1,12 @@
 ﻿using Emby.Media.Common.Extensions;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data.SqlTypes;
 using System.Linq;
 using System.Text.RegularExpressions;
 using static Statistics2026.Data.StatCard;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
@@ -45,16 +48,62 @@ namespace Statistics2026.Data
         {
             html += _addToHtml(depth, _html);
         }
+
+        public int cnt(string text, string substring)
+        {
+            int count = 0;
+            int minIndex = text.IndexOf(substring, 0);
+            while (minIndex != -1)
+            {
+                count++;
+                // Advance index past the matched substring to find non-overlapping matches
+                minIndex = text.IndexOf(substring, minIndex + substring.Length);
+            }
+            return count;
+        }
+
+        public void closeDivs(ref int depth)
+        {
+            int divCount = cnt(html, "<div");
+            int closeDivCount = cnt(html, "</div>");
+
+            while (depth > 0)
+            {
+                addToHtml(--depth, "</div>");
+            }
+        }
+
+    };
+
+
+    public enum EStatCardSize
+    {
+        eSmall,  // 33%
+        eHalf,   // 50%
+        eMedium, // 66%
+        eLarge   // 100%
     };
 
     public abstract class StatCard
     {
+        public string ToString(EStatCardSize size)
+        {
+            switch (size)
+            {
+                case EStatCardSize.eSmall: return "small";
+                case EStatCardSize.eHalf: return "half";
+                case EStatCardSize.eMedium: return "medium";
+                case EStatCardSize.eLarge: return "large";
+                default: return String.Empty;
+            }
+        }
+
         public string Title { get; set; } = String.Empty;
         protected List<string>? Headers { get; set; } = null;
 
         public string SubTitle { get; set; } = String.Empty;
 
-        public string Size { get; set; } = String.Empty;
+        public EStatCardSize Size { get; set; } = EStatCardSize.eSmall;
         public string HelpText { get; set; } = String.Empty;
         public string ImageUrl { get; set; } = String.Empty;
         public string MediaItemId { get; set; } = String.Empty;
@@ -106,10 +155,10 @@ namespace Statistics2026.Data
 
         public StatCard()
         {
-            Size = "small";
+            Size = EStatCardSize.eHalf;
         }
 
-        public StatCard(string title, string? helpText, string size = "half")
+        public StatCard(string title, string? helpText, EStatCardSize size = EStatCardSize.eHalf)
         {
             Title = title;
             if (helpText != null)
@@ -178,7 +227,7 @@ namespace Statistics2026.Data
 
         private void addTitle(ref StatCardResponse retVal, int depth)
         {
-            string titleClass = "statCard-stats-title";
+            string titleClass = string.Empty;
             var showImage = !ServerId.IsNullOrEmpty() && !ImageUrl.IsNullOrEmpty() && !MediaItemId.IsNullOrEmpty();
             if (showImage)
             {
@@ -189,13 +238,13 @@ namespace Statistics2026.Data
             }
             else
             {
+                titleClass = "statCard-stats-title";
                 retVal.addToHtml(depth++, "<div style=\"width: 100%;\">");
             }
 
             if (!Title.IsNullOrEmpty())
             {
                 retVal.addToHtml(depth, $"<div class=\"{titleClass}\">{Title}</div>");
-
             }
         }
 
@@ -222,7 +271,7 @@ namespace Statistics2026.Data
             }
 
             int depth = 0;
-            retVal.addToHtml(depth++, $"<div class=\"col {Size}\" {rootDivName}>");
+            retVal.addToHtml(depth++, $"<div class=\"col {ToString(Size)}\" {rootDivName}>");
             retVal.addToHtml(depth++, "<div class=\"statCard\">");
             retVal.addToHtml(depth++, "<div class=\"statCard-content\">");
 
@@ -231,12 +280,7 @@ namespace Statistics2026.Data
 
             depth = addData(depth, ref retVal);
 
-            retVal.addToHtml(--depth, "</div>");
-            retVal.addToHtml(--depth, "</div>");
-            retVal.addToHtml(--depth, "</div>");
-            retVal.addToHtml(--depth, "</div>");
-            retVal.addToHtml(--depth, "</div>"); // not sure why this is here, but it was in the original code.
-
+            retVal.closeDivs(ref depth);
             return retVal;
         }
 
@@ -254,7 +298,7 @@ namespace Statistics2026.Data
             ValueLines = new List<(string, string, string)>();
         }
 
-        public TextBasedStatCard(string title, string? helpText, string size = "half")
+        public TextBasedStatCard(string title, string? helpText, EStatCardSize size = EStatCardSize.eHalf)
             : base(title, helpText, size)
         {
             ValueLines = new List<(string, string, string)>();
@@ -292,7 +336,7 @@ namespace Statistics2026.Data
                 if (valueLine.data.IsNullOrEmpty())
                     continue;
                 var value = valueLine.data;
-                if ( ValueLines.Count() > 1 )
+                if (ValueLines.Count() > 1)
                     value = CheckMaxLength(value);
                 var dataHtml = $"<div class=\"statCard-stats-number\" {style}>{value}</div>";
 
@@ -369,7 +413,7 @@ namespace Statistics2026.Data
         {
             Rows = new List<TableBasedStatCardRow>();
         }
-        public TableBasedStatCard(string title, string helpText, List<string> headers, string size = "half")
+        public TableBasedStatCard(string title, string helpText, List<string> headers, EStatCardSize size = EStatCardSize.eHalf)
             : base(title, helpText, size)
         {
             Rows = new List<TableBasedStatCardRow>();

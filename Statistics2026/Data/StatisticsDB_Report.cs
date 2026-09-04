@@ -163,7 +163,7 @@ namespace Statistics2026.Data
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
 
-            var retVal = new TextBasedStatCard(title, help, "small");
+            var retVal = new TextBasedStatCard(title, help, EStatCardSize.eSmall);
             var value = GetSingleValueFromSQL(sql, parameters, formatter);
             retVal.AddLine(value);
             return retVal;
@@ -174,7 +174,7 @@ namespace Statistics2026.Data
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
 
-            var retVal = new TextBasedStatCard(title, help, "small");
+            var retVal = new TextBasedStatCard(title, help, EStatCardSize.eSmall);
             retVal.AddLine(value.ToString());
             return retVal;
         }
@@ -332,7 +332,7 @@ namespace Statistics2026.Data
                 return true;
             });
 
-            var retVal = new TextBasedStatCard(Constants.TotalSeriesFinished, Constants.HelpTotalSeriesFinished, "small");
+            var retVal = new TextBasedStatCard(Constants.TotalSeriesFinished, Constants.HelpTotalSeriesFinished, EStatCardSize.eSmall);
             retVal.AddLine(seriesInfo.Count().ToString());
             return retVal;
         }
@@ -439,7 +439,7 @@ namespace Statistics2026.Data
             if (!_dbHelper.isValid())
                 throw new ArgumentNullException("dbHelper");
 
-            var retVal = new TextBasedStatCard(movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, "small");
+            var retVal = new TextBasedStatCard(movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, EStatCardSize.eSmall);
             var value = TotalStudioCountValue(user, movies);
             retVal.AddLine(value.ToString());
             return retVal;
@@ -656,7 +656,7 @@ namespace Statistics2026.Data
                 help = leastWatched ? Constants.HelpLeastWatchedMovies : Constants.HelpMostWatchedMovies;
             }
 
-            var retVal = new TextBasedStatCard(title, help, "half");
+            var retVal = new TextBasedStatCard(title, help, EStatCardSize.eMedium);
             retVal.SubTitle = "(Weighted Watched across Users)";
             retVal.AsNumberedList = true;
             for (int ii = 0; ii < watchedMedia.Count; ++ii)
@@ -949,7 +949,7 @@ namespace Statistics2026.Data
                 title = Constants.LastSeenTVSeries;
                 help = Constants.HelpLastSeenTVSeries;
             }
-            var retVal = new TextBasedStatCard(title, help, "half");
+            var retVal = new TextBasedStatCard(title, help, EStatCardSize.eMedium);
             retVal.AsNumberedList = true;
             retVal.IgnoreLength = true;
             var values = LastSeenValues(user, movies);
