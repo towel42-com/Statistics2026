@@ -4,7 +4,7 @@
     <div data-role="content">
         <div class="content-primary" style="padding-top:2px;">
             <h1>TV Series Progress Per User</h1>
-            <span style="max-width: 900px;">
+            <div style="max-width: 900px;">
                 <div class="selectContainer">
                     <label class="selectLabel selectLabelUnfocused" for="selectUser">Load TV Series Progress for:</label>
                     <div class="emby-select-wrapper emby-select-wrapper-smaller">
@@ -20,13 +20,13 @@
 
                 <div id="TVSeriesProgressStatus">Loading Data...</div>
 
-                <table cellpadding="6" id="TVSeriesProgressTable" style="width:95%;">
+                <table class="sortable-table-styled" cellpadding="6" id="TVSeriesProgressTable" style="width:95%;">
                     <thead>
                         <tr style="text-align: left; white-space: nowrap;">
-                            <th class="detailTableHeaderCell" data-priority="1">TV Series (Premiere Year)</th>
-                            <th class="detailTableHeaderCell" data-priority="2" style="white-space: nowrap;">Episodes<span class="infoBlock" id="episodesInfo"><i class="md-icon">info</i></span></th>
-                            <th class="detailTableHeaderCell" data-priority="3">Score</th>
-                            <th class="detailTableHeaderCell" data-priority="4">Series Status</th>
+                            <th data-column="Name" data-type="string" class="info_cell_heading">TV Series (Premiere Year)<span class="sort-icon"></span></th>
+                            <th data-column="EpisodeProgess" data-type="string" class="info_cell_heading" style="white-space: nowrap;">Episodes<span class="sort-icon"></span><span class="infoBlock" id="episodesInfo"><i class="md-icon">info</i></span></th>
+                            <th data-column="Score" data-type="number" class="info_cell_heading">Score<span class="sort-icon"></span></th>
+                            <th data-column="Status" data-type="string" class="info_cell_heading">Series Status<span class="sort-icon"></span></th>
                         </tr>
                     </thead>
                     <tbody class="resultBody" id="TVSeriesProgressTable_results"></tbody>

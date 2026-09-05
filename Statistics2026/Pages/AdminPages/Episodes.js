@@ -2,10 +2,11 @@
     'mainTabsManager',
     'appRouter',
     Dashboard.getConfigurationResourceUrl('Helpers.js'),
+    ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'),
     Dashboard.getConfigurationResourceUrl('LoadingHelpers.js'),
     'emby-linkbutton'
 ],
-    function (mainTabsManager, appRouter, Helpers, LoadingHelpers) {
+    function (mainTabsManager, appRouter, Helpers, UserPageHelpers, LoadingHelpers) {
     'use strict';
 
     return function (view, params) {
@@ -15,6 +16,7 @@
 
             mainTabsManager.setTabs(this, Helpers.getTabIndex("Episodes"), Helpers.getTabs);
 
+            Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
             var style = document.createElement('style');
             style.innerHTML = LoadingHelpers.sortableTableStyle();
 
@@ -36,7 +38,7 @@
             });
 
             function loadTableData() {
-                LoadingHelpers.loadTableData(view, 'episode_results_status', 'episode_results', 'Statistics2026/episode_list', LoadingHelpers.getMediaRowData, Helpers);
+                LoadingHelpers.loadTableData(view, 'episode_results_status', 'episode_results', 'Statistics2026/episode_list', LoadingHelpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
             }
         });
 

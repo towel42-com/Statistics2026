@@ -2,10 +2,11 @@
         'mainTabsManager',
         'appRouter',
         Dashboard.getConfigurationResourceUrl('Helpers.js'),
+        ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'),
         Dashboard.getConfigurationResourceUrl('LoadingHelpers.js'),
         'emby-linkbutton'
 ],
-    function (mainTabsManager, appRouter, Helpers, LoadingHelpers) {
+    function (mainTabsManager, appRouter, Helpers, UserPageHelpers, LoadingHelpers) {
     'use strict';
 
     return function (view, params) {
@@ -15,6 +16,7 @@
 
             mainTabsManager.setTabs(this, Helpers.getTabIndex("Movies"), Helpers.getTabs);
 
+            Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
             var style = document.createElement('style');
             style.innerHTML = LoadingHelpers.sortableTableStyle();
             var ref = document.querySelector('script');
@@ -35,7 +37,7 @@
             });
 
             function loadTableData() {
-                LoadingHelpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', LoadingHelpers.getMediaRowData, Helpers);
+                LoadingHelpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', LoadingHelpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
             }
         });
 
