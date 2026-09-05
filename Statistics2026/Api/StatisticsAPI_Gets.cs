@@ -4,8 +4,10 @@ using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Services;
+using ServiceStack;
 using Statistics2026.Data;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -19,7 +21,7 @@ namespace Statistics2026.Api
             {
                 try
                 {
-                    return requestFunc( timer );
+                    return requestFunc(timer);
                 }
                 catch (Exception)
                 {
@@ -36,7 +38,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 var retVal = db.GetTVSeriesProgress(user);
                 return retVal;
@@ -48,8 +50,22 @@ namespace Statistics2026.Api
             return GetRequest("GetEpisodeList", timer =>
             {
                 var retVal = GetVideos<Episode>(null);
-                retVal = retVal.OrderBy(x => x.SortName).ThenBy(x => x.Season).ThenBy(x => x.Episode).ToList();
-                return retVal;
+
+                if (retVal == null)
+                    return new object();
+
+                try
+                {
+                    var safeData = retVal.OrderBy(x => x.SortName).ThenBy(x => x.Season).ThenBy(x => x.Episode).Select(x => new MediaItemResponse(x)).ToList();
+                    return safeData;
+                }
+                finally
+                {
+                    foreach (var item in retVal)
+                    {
+                        item?.Dispose();
+                    }
+                }
             });
         }
 
@@ -58,8 +74,22 @@ namespace Statistics2026.Api
             return GetRequest("GetMovieList", timer =>
             {
                 var retVal = GetVideos<Movie>(null);
-                retVal = retVal.OrderBy(x => x.SortName).ThenBy(x => x.StartYear).ToList();
-                return retVal;
+
+                if (retVal == null)
+                    return new List<MediaItemResponse>();
+
+                try
+                {
+                    var safeData = retVal.OrderBy(x => x.SortName).ThenBy(x => x.Season).ThenBy(x => x.Episode).Select(x => new MediaItemResponse(x)).ToList();
+                    return safeData;
+                }
+                finally
+                {
+                    foreach (var item in retVal)
+                    {
+                        item?.Dispose();
+                    }
+                }
             });
         }
 
@@ -167,7 +197,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 return TotalMovieCount(user);
             });
@@ -189,7 +219,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 var groupData = db.TotalMovieCount(user, true);
                 var vgReponse = groupData.createStat();
@@ -227,14 +257,14 @@ namespace Statistics2026.Api
                 var retVal = new GetItemImageUrlResponse { Name = "", PrimaryImageUrl = "" };
                 var item = _embyManagers._libraryManager.GetItemById(request.ItemId);
                 if (item == null)
-                    return null!;
+                    return new object();
 
                 var url = ItemImageUrl._ItemImageUrl(item);
                 if (url == null)
                     retVal.PrimaryImageUrl = String.Empty;
                 else
                     retVal.PrimaryImageUrl = url;
-                if (retVal.PrimaryImageUrl.IsNullOrEmpty())
+                if (retVal.PrimaryImageUrl == null || retVal.PrimaryImageUrl == "")
                     return retVal;
                 retVal.Name = item.Name;
                 return retVal;
@@ -256,7 +286,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 return TotalTVCount(user, false);
             });
@@ -278,7 +308,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 var groupData = db.TotalTVCount(user, true);
                 var vgReponse = groupData.createStat();
@@ -294,7 +324,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 var groupData = db.TotalFinishedSeries(user);
                 var vgReponse = groupData.createStat();
@@ -343,7 +373,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 var groupData = db.WatchedMedia(user, false, numMovies, excludeAdmin, false);
                 groupData.ServerId = serverId;
@@ -398,7 +428,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 var groupData = db.WatchedMedia(user, false, numShows, excludeAdmin, true);
                 groupData.ServerId = serverId;
@@ -432,7 +462,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 bool? showEpisodes = null;
                 if (request.episodes == "true")
@@ -457,7 +487,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 bool? showEpisodes = null;
                 if (request.episodes == "true")
@@ -482,7 +512,8 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
+
                 var episodes = request.episodes;
 
                 var groupData = db.LastSeen(user, !episodes);
@@ -499,7 +530,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 var groupData = db.FavoriteYears(user, true);
                 var vgReponse = groupData.createStat();
@@ -515,7 +546,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 var groupData = db.FavoriteGenre(user, true);
                 var vgReponse = groupData.createStat();
@@ -531,7 +562,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
-                    return null!;
+                    return new object();
 
                 var groupData = db.FavoriteGenre(user, false);
                 var vgReponse = groupData.createStat();
