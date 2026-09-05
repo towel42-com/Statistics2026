@@ -1,26 +1,26 @@
 <div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
-	 data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
-	 data-controller="__plugin/Movies.js">
-	<div data-role="content">
-		<div class="content-primary" style="padding-top:2px;">
-			<h2 style="margin-top: 0px;margin-bottom: 0px;">Codec Information for Movies</h2>
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/Movies.js">
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <h2 style="margin-top: 0px;margin-bottom: 0px;">Codec Information for Movies</h2>
 
-			<div id="movie_results_status">Loading Data...</div>
+            <div id="movie_results_status">Loading Data...</div>
 
-			<table cellpadding="6" id="movie_results_table" style="width:95%; padding-bottom: 250px;">
-				<thead>
-					<tr style="text-align: left;">
-						<th class="detailTableHeaderCell" data-priority="1">Name</th>
-						<th class="detailTableHeaderCell" data-priority="2">Release Year</th>
-						<th class="detailTableHeaderCell" data-priority="3">Resolution</th>
-						<th class="detailTableHeaderCell" data-priority="4">Codec</th>
-						<th class="detailTableHeaderCell" data-priority="5">Dolby Vision Profile</th>
-						<th class="detailTableHeaderCell" data-priority="6">Location on Server</th>
-					</tr>
-				</thead>
-				<tbody class="resultBody" id="movie_results"></tbody>
-			</table>
-
-		</div>
-	</div>
+            <table class="sortable-table-styled" id="movie_results_table" cellpadding="6" style="width:95%; padding-bottom: 250px;">
+                <thead>
+                    <tr style="text-align: left;">
+                        <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
+                        <th data-column="StartYear" data-type="number" class="info_cell_heading">Release Year<span class="sort-icon"></span></th>
+                        <th data-column="Resolution" data-type="string" class="info_cell_heading">Resolution<span class="sort-icon"></span></th>
+                        <th data-column="Codec" data-type="string" class="info_cell_heading">Codec<span class="sort-icon"></span></th>
+                        <th data-column="DolbyVisionProfile" data-type="string" class="info_cell_heading">Dolby Vision Profile<span class="sort-icon"></span></th>
+                        <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
+                    </tr>
+                </thead>
+                <tbody class="resultBody" id="movie_results">
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>

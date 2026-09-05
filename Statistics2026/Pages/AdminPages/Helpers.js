@@ -1,8 +1,8 @@
 define(function () {
     const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
 
-    getStatistics2026URL = function (url_to_get) {
-        console.log("getStatistics2026URL Url = " + url_to_get);
+    getStatistics2026Data = function (url_to_get) {
+        console.log("getStatistics2026Data Url = " + url_to_get);
         return ApiClient.ajax({
             type: "GET",
             url: url_to_get,
@@ -138,7 +138,7 @@ define(function () {
         getTabIndex,
         getSummaryInfo,
         showInfo,
-        getStatistics2026URL,
+        getStatistics2026Data,
         injectStyleSheet,
         injectStyleSheetEX,
         CheckForValidConfig

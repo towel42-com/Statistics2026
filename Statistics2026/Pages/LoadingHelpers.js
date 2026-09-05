@@ -32,7 +32,7 @@ define(function () {
             var load_status = view.querySelector('#TVSeriesProgressStatus');
             load_status.innerHTML = "Loading Data...";
 
-            Helpers.getStatistics2026URL(url).then(function (tvSeriesProgressData) {
+            Helpers.getStatistics2026Data(url).then(function (tvSeriesProgressData) {
                 load_status.innerHTML = "&nbsp;";
                 console.log("tvSeriesProgressData: " + JSON.stringify(tvSeriesProgressData));
 
@@ -113,9 +113,150 @@ define(function () {
         });
     }
 
+    function sortableTableStyle() {
+        var retVal = '.tooltip {position: relative;display: inline-block;border-bottom: 1px dotted black;} ' +
+            '.tooltip .tooltiptext {visibility: hidden; background-color: black; color: #fff; border-radius: 6px; padding: 5px 0; position: absolute;z-index: 1;} ' +
+            '.tooltip:hover .tooltiptext {visibility: visible;} ' +
+            '.info_cell {white-space: nowrap; padding-left:45px; padding-right:20px; font-size:smaller;}' +
+            '.info_cell_heading {white-space: nowrap; padding-left:20px; padding-right:20px;font-size:smaller;}' +
+            '.sortable-table-styled - styled {' +
+            '   width: 100 %;' +
+            '   border-collapse: collapse;' +
+            '} ' +
+            '.sortable-table-styled th {' +
+            '    cursor: pointer;' +
+            '    background - color: #f2f2f2;' +
+            '    padding: 10px;' +
+            '    user - select: none;' +
+            '}' +
+            '.sortable-table-styled td {' +
+            '   padding: 10px;' +
+            '   border - bottom: 1px solid #ddd;' +
+            '}' +
+            '.sortable-table-styled th .sort-icon::after {' +
+            '    content: " ↕";' +
+            '    opacity: 0.4;' +
+            '}' +
+            '.sortable-table-styled th.asc .sort-icon::after {' +
+            '    content: " ↑";' +
+            '    opacity: 1;' +
+            '}' +
+            '.sortable-table-styled th.desc .sort-icon::after {' +
+            '    content: " ↓";' +
+            '    opacity: 1;' +
+            '}';
+        return retVal;
+    }
+    const sortDirections = new Map();
+
+    function sortTable(columnIndex, dataType, tableId) {
+        const table = document.getElementById(tableId);
+        const tbody = table.querySelector("tbody");
+        // Convert HTMLCollection of rows into a real Array
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+
+        // Toggle between Ascending ('asc') and Descending ('desc')
+
+        let currentMap = sortDirections.get(tableId);
+        if (currentMap === undefined) {
+            sortDirections.set(tableId, new Map());
+            currentMap = sortDirections.get(tableId);
+        }
+
+        let currentDirection = currentMap.get(columnIndex);
+        if (currentDirection === undefined) {
+            currentDirection = 'asc';
+        } else {
+            currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+        }
+
+        sortDirections.get(tableId).set(columnIndex, currentDirection);
+
+        // Reset indicator classes on all headers
+        table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
+        // Add current sorting indicator class to the active header
+        table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
+
+        // Sort the row elements
+        rows.sort((rowA, rowB) => {
+            const cellA = rowA.children[columnIndex].textContent.trim();
+            const cellB = rowB.children[columnIndex].textContent.trim();
+
+            if (dataType === 'number') {
+                // Strip out currency symbols or non-numeric formatting characters if present
+                const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
+                const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
+                return currentDirection === 'asc' ? numA - numB : numB - numA;
+            } else {
+                // Text comparison using localeCompare for proper alphabetical ordering
+                return currentDirection === 'asc'
+                    ? cellA.localeCompare(cellB)
+                    : cellB.localeCompare(cellA);
+            }
+        });
+
+        // Re-append sorted rows to empty the body and place elements in new order
+        tbody.innerHTML = "";
+        rows.forEach(row => tbody.appendChild(row));
+    }
+
+    function getMediaRowData(info) {
+        var row_html = "";
+
+        row_html += "<td style='align='left'>" + info.ListDisplayName + "</td>";
+        row_html += "<td style='align='right'>" + info.StartYear + "</td>";
+        row_html += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
+        row_html += "<td style='align='left'>" + info.Codec + "</td>";
+        row_html += "<td style='align='left'>" + info.DolbyVisionProfile + "</td>";
+        row_html += "<td style='align='left'>" + info.ServerLocation + "</td>";
+        row_html += "<td style='align='right'>" + info.Count + "</td>";
+        return row_html;
+    }
+
+    function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, Helpers) {
+        var url = ApiClient.getUrl(apiEndpoint);
+
+        var load_status = view.querySelector('#' + statusElementId);
+        load_status.innerHTML = "Loading Data...";
+
+        Helpers.getStatistics2026Data(url).then(function (resultData) {
+            load_status.innerHTML = "&nbsp;";
+            console.log("resultData: " + JSON.stringify(resultData));
+
+            var table_body = view.querySelector('#' + resultsElementId);
+            var row_html = "";
+
+            for (var index = 0; index < resultData.length; ++index) {
+                var info = resultData[index];
+
+                var row_bg_col = "#BBBBBB00";
+                if (index % 2 == 0) {
+                    row_bg_col = "#BBBBBB1C";
+                }
+
+                row_html += "<tr style='background:" + row_bg_col + ";'>";
+
+                row_html += getRowDataFunc(info);
+
+                row_html += "</tr>";
+            }
+
+            table_body.innerHTML = row_html;
+        },
+            function (response) {
+                load_status.innerHTML = response.status + ":" + response.statusText;
+            });
+    }
+
     return {
         LoadTVProgress,
-        LoadUserStats
+        LoadUserStats,
+        sortTable,
+        sortableTableStyle,
+        loadTableData,
+        getMediaRowData
     };
 
 })
+
+//# sourceURL=LoadingHelpers.js
