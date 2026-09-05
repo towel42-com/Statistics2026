@@ -12,28 +12,6 @@ using static ServiceStack.Diagnostics;
 
 namespace Statistics2026.Data
 {
-    public class GetTVSeriesProgressResponse
-    {
-        public string Name { get; set; } = String.Empty;
-        public string SeriesId { get; set; } = String.Empty;
-        public int PremiereYear { get; set; } = -1;
-
-        public PercentValue Episodes { get; set; } = new PercentValue();
-        public PercentValue Specials { get; set; } = new PercentValue();
-
-        private double _score = 0.0;
-        public double Score
-        {
-            get { return _score; }
-            set
-            {
-                _score = value;
-                ScoreStr = _score.ToString("F1");
-            }
-        }
-        public string ScoreStr { get; set; } = String.Empty;
-        public string SeriesStatus { get; set; } = String.Empty;
-    }
 
     public sealed partial class StatisticsDB
     {

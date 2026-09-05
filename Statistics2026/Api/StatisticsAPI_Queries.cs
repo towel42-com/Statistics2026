@@ -13,16 +13,10 @@ namespace Statistics2026.Api
         public string ItemId { get; set; } = String.Empty;
     }
 
-    public class GetItemImageUrlResponse
-    {
-        public string Name { get; set; } = String.Empty;
-        public string PrimaryImageUrl { get; set; } = String.Empty;
-    }
-
     // http://localhost:8096/emby/Statistics2026/episode_list
     [Route("/Statistics2026/episode_list", "GET", Summary = "Gets Codec Info for Episodes")]
     [Authenticated(Roles = "admin")]
-    public class GetEpisodeList : IReturn<Object>
+    public class GetEpisodeList : IReturn<List<MediaItemResponse>>
     {
 
     }
@@ -30,7 +24,7 @@ namespace Statistics2026.Api
     // http://localhost:8096/emby/Statistics2026/movie_list
     [Route("/Statistics2026/movie_list", "GET", Summary = "Gets Codec Info for Movies")]
     [Authenticated(Roles = "admin")]
-    public class GetMovieList : IReturn<Object>
+    public class GetMovieList : IReturn<List<MediaItemResponse>>
     {
 
     }
