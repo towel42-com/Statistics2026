@@ -34,6 +34,8 @@ namespace Statistics2026.Data
             PrimaryName = primaryName;
             SortName = video.SortName;
             SecondaryName = secondaryName;
+
+
             StartYear = video.ProductionYear?.ToString() ?? "Unknown";
             Season = video.ParentIndexNumber ?? -1;
             Episode = video.IndexNumber ?? -1;
@@ -48,7 +50,21 @@ namespace Statistics2026.Data
             ServerLocation = video.Path ?? "Unknown";
             FileSize = video.Size;
             RunTimeTicks = video.RunTimeTicks ?? 0;
-            ImageUrl = ItemImageUrl._ItemImageUrl(video);
+            if (video is Episode episode)
+            {
+                ListDisplayName = $"{PrimaryName} - S{Season:D2}E{Episode:D2} - {SecondaryName}";
+                ImageUrl = ItemImageUrl._ItemImageUrl(episode);
+                if ( episode.Series != null)
+                {
+                    SortName = episode.Series.SortName + " - " + episode.SortName;
+                    SeriesImageUrl = ItemImageUrl._ItemImageUrl(episode.Series);
+                }
+            }
+            else
+            {
+                ImageUrl = ItemImageUrl._ItemImageUrl(video);
+                ListDisplayName = PrimaryName;
+            }
 
             TotalBitrate = video.TotalBitrate;
             if (video.PremiereDate.HasValue)
@@ -238,6 +254,8 @@ namespace Statistics2026.Data
         public string ItemId { get; set; } = String.Empty;
         public string DescriptiveName { get; set; } = String.Empty;
         public string PrimaryName { get; set; } = String.Empty;// movie title or series name
+        public string ListDisplayName { get; set; } = String.Empty;// name suitible for displaying
+        
         public string SortName { get; set; } = String.Empty;
         public string SecondaryName { get; set; } = String.Empty; // episode name
         public string StartYear { get; set; } = String.Empty; // release year for movies, year of the of the first season of the TV show
@@ -245,6 +263,7 @@ namespace Statistics2026.Data
         public bool IsEpisode { get; set; } = false;
         public bool IsTVSpecial { get; set; } = false;
         public string SeriesId { get; set; } = String.Empty;
+        public string? SeriesImageUrl { get; set; } = null;
         public int Season { get; set; } = 0;
         public int Episode { get; set; } = 0;
         public int NumEpisodes { get; set; } = 1;
