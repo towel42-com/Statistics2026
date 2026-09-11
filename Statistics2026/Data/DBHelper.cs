@@ -53,28 +53,28 @@ namespace Statistics2026.Data
         private static string _datetimeFormatUtc = _datetimeFormats[5];
         private static string _datetimeFormatLocal = _datetimeFormats[19];
 
-        private EmbyManagers? _embyManagers;
+        private EmbyInterfaces? _embyInterfaces;
 
         private IDatabaseConnection? Connection { get; set; } = null;
         public CancellationToken? CancellationToken { get; set; } = null;
         public DBHelper()
         {
-            _embyManagers = null;
+            _embyInterfaces = null;
         }
 
         private void CheckIsValid()
         {
-            if (_embyManagers == null)
-                throw new ArgumentNullException("_embyManagers");
+            if (_embyInterfaces == null)
+                throw new ArgumentNullException("_embyInterfaces");
         }
 
-        public DBHelper(EmbyManagers embyManagers)
+        public DBHelper(EmbyInterfaces embyInterfaces)
         {
-            if (embyManagers == null)
-                throw new ArgumentNullException("embyManagers is null.");
+            if (embyInterfaces == null)
+                throw new ArgumentNullException("embyInterfaces is null.");
 
-            _embyManagers = embyManagers;
-            string db_file_name = Path.Combine(_embyManagers._configManager.ApplicationPaths.DataPath, "Statistics2026.db");
+            _embyInterfaces = embyInterfaces;
+            string db_file_name = Path.Combine(_embyInterfaces._configManager.ApplicationPaths.DataPath, "Statistics2026.db");
             CreateConnection(db_file_name);
         }
 
@@ -82,18 +82,18 @@ namespace Statistics2026.Data
         {
             if (Connection == null)
                 return false;
-            if (_embyManagers == null || _embyManagers._logger == null)
+            if (_embyInterfaces == null || _embyInterfaces._logger == null)
                 return false;
             return true;
         }
 
         ~DBHelper()
         {
-            _embyManagers?._logger?.Debug("StatisticsData : Cleaning up");
+            _embyInterfaces?._logger?.Debug("StatisticsData : Cleaning up");
             if (Connection != null)
             {
                 Connection.Close();
-                _embyManagers?._logger?.Debug("StatisticsData : DB Connection Closed");
+                _embyInterfaces?._logger?.Debug("StatisticsData : DB Connection Closed");
             }
         }
 
@@ -102,7 +102,7 @@ namespace Statistics2026.Data
             IBindParameter bindParam;
             if (!statement.BindParameters.TryGetValue(name, out bindParam))
             {
-                _embyManagers!._logger?.Error($"Error Binding {name} to {value}");
+                _embyInterfaces!._logger?.Error($"Error Binding {name} to {value}");
                 return false;
             }
 
@@ -253,10 +253,10 @@ namespace Statistics2026.Data
         {
             CheckIsValid();
 
-            _embyManagers!._logger?.Debug("CreateConnection : " + db_file);
+            _embyInterfaces!._logger?.Debug("CreateConnection : " + db_file);
             ConnectionFlags connectionFlags;
 
-            //_embyManagers!._logger?.Debug("Opening write _connection");
+            //_embyInterfaces!._logger?.Debug("Opening write _connection");
             connectionFlags = ConnectionFlags.Create; // create if missing
             connectionFlags |= ConnectionFlags.ReadWrite; // open for read-write
             connectionFlags |= ConnectionFlags.PrivateCache;
@@ -282,13 +282,13 @@ namespace Statistics2026.Data
             }
 
             Connection = db;
-            _embyManagers!._logger?.Debug("ConnectionCreated : " + Connection.GetHashCode());
+            _embyInterfaces!._logger?.Debug("ConnectionCreated : " + Connection.GetHashCode());
         }
 
         public IEnumerable<T> GetLibraryItems<T>()
         {
             CheckIsValid();
-            return GetUserItems<T>(null, _embyManagers!._libraryManager);
+            return GetUserItems<T>(null, _embyInterfaces!._libraryManager);
         }
 
         static public IEnumerable<T> GetUserItems<T>(User? user, ILibraryManager libManager)

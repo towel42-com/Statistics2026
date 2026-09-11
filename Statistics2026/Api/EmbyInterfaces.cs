@@ -3,6 +3,7 @@ using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
@@ -11,9 +12,12 @@ using Statistics2026.Api;
 
 namespace Statistics2026.Api
 {
-    public class EmbyManagers
+    public class EmbyInterfaces
     {
-        public EmbyManagers(
+        //public EmbyInterfaces()
+        //{
+        //}
+        public EmbyInterfaces(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -42,7 +46,7 @@ namespace Statistics2026.Api
             _providerManager = providerManager;
             _configManager = configManager;
             _taskManager = taskManager;
-            if ( Plugin.Instance != null ) 
+            if (Plugin.Instance != null)
                 Plugin.Instance.ServerId = _appHost.SystemId;
         }
 
@@ -53,11 +57,21 @@ namespace Statistics2026.Api
         public readonly IServerApplicationPaths _serverApplicationPaths;
         public readonly IUserDataManager _userDataManager;
         public readonly IUserManager _userManager;
-        public IApplicationHost _appHost;
-        public Statistics2026API _apiService;
+        public IApplicationHost _appHost
+        {
+            set
+            {
+                field = value;
+                if (Plugin.Instance != null && value != null)
+                    Plugin.Instance.ServerId = value.SystemId;
+            }
+            get;
+        }
+        public readonly Statistics2026API _apiService;
         public readonly IJsonSerializer _jsonSerializer;
         public readonly IProviderManager _providerManager;
         public readonly IServerConfigurationManager _configManager;
         public readonly ITaskManager _taskManager;
+        public ISessionManager? _sessionManager = null;
     }
 }

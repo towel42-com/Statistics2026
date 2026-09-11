@@ -13,19 +13,19 @@ namespace Statistics2026.Data
         private Dictionary<string, TableDef> _tableMap = new Dictionary<string, TableDef>();
         private List<TableDef> _tableList = new List<TableDef>();
         private TableDef? _userMediaTemplate = null;
-        private EmbyManagers? _embyManagers = null;
+        private EmbyInterfaces? _embyInterfaces = null;
 
         DBHelper _dbHelper = new DBHelper();
 
-        public static StatisticsDB GetInstance(EmbyManagers? embyManagers)
+        public static StatisticsDB GetInstance(EmbyInterfaces? embyInterfaces)
         {
-            if (embyManagers == null)
-                throw new ArgumentNullException("EmbyManagers is null.");
+            if (embyInterfaces == null)
+                throw new ArgumentNullException("EmbyInterfaces is null.");
 
             lock (_padlock)
             {
-                var retVal = new StatisticsDB(embyManagers);
-                embyManagers._logger.Debug("StatisticsData : New Instance Created : " + retVal.GetHashCode());
+                var retVal = new StatisticsDB(embyInterfaces);
+                embyInterfaces._logger.Debug("StatisticsData : New Instance Created : " + retVal.GetHashCode());
                 return retVal;
             }
         }
@@ -35,19 +35,19 @@ namespace Statistics2026.Data
             ConstructTableList();
         }
 
-        private StatisticsDB(EmbyManagers embyManagers)
+        private StatisticsDB(EmbyInterfaces embyInterfaces)
         {
-            if (embyManagers == null)
-                throw new ArgumentNullException("embyManagers is null.");
+            if (embyInterfaces == null)
+                throw new ArgumentNullException("embyInterfaces is null.");
 
             ConstructTableList();
 
-            embyManagers._logger?.Debug("StatisticsData : Creating Database");
+            embyInterfaces._logger?.Debug("StatisticsData : Creating Database");
 
-            _embyManagers = embyManagers;
-            _dbHelper = new DBHelper(_embyManagers);
+            _embyInterfaces = embyInterfaces;
+            _dbHelper = new DBHelper(_embyInterfaces);
 
-            embyManagers._logger?.Debug("StatisticsData : Finished Creating Database");
+            embyInterfaces._logger?.Debug("StatisticsData : Finished Creating Database");
         }
 
         ~StatisticsDB()
@@ -56,7 +56,7 @@ namespace Statistics2026.Data
 
         public void Initialize()
         {
-            CreateTables(TableDef.EAction.eRecreate);
+            CreateTables(TableDef.EAction.eCreate);
         }
 
         public void SetCancellationToken(CancellationToken? cancellationToken)
@@ -82,7 +82,7 @@ namespace Statistics2026.Data
                 new TableDef("Media",
                     new List<TableColDef>()
                     {
-                        new TableColDef( "ItemId", "TEXT", false ),
+                        new TableColDef( "ItemId", "TEXT", false, true ),
                         new TableColDef( "PrimaryName", "TEXT", false ),
                         new TableColDef( "SortName", "TEXT", true ),
                         new TableColDef( "SecondaryName", "TEXT", true ),
@@ -113,7 +113,7 @@ namespace Statistics2026.Data
                 new TableDef("Series",
                     new List<TableColDef>()
                     {
-                        new TableColDef( "ItemId", "TEXT", false ),
+                        new TableColDef( "ItemId", "TEXT", false, true ),
                         new TableColDef( "Name", "TEXT", false ),
                         new TableColDef( "SortName", "TEXT", true ),
                         new TableColDef( "PremiereDate", "DATETIME", true ),
@@ -132,7 +132,7 @@ namespace Statistics2026.Data
                 new TableDef("Users",
                     new List<TableColDef>()
                     {
-                        new TableColDef( "UserId", "TEXT", false ),
+                        new TableColDef( "UserId", "TEXT", false, true ),
                         new TableColDef( "UserName", "TEXT", false ),
                         new TableColDef( "ConnectUserId", "TEXT", true ),
                         new TableColDef( "IsAdministrator", "BOOLEAN", true ),
@@ -144,7 +144,7 @@ namespace Statistics2026.Data
                 new TableDef("Collections",
                     new List<TableColDef>()
                     {
-                        new TableColDef( "ItemId", "TEXT", false ),
+                        new TableColDef( "ItemId", "TEXT", false, true),
                         new TableColDef( "Name", "TEXT", false ),
                         new TableColDef( "SortName", "TEXT", false )
                     }
@@ -158,45 +158,19 @@ namespace Statistics2026.Data
                         new TableColDef( "CollectionName", "TEXT", false ) // for debugging purposes
                     }
                 ),
-
-                new TableDef("CachedStats",
-                    new List<TableColDef>()
-                    {
-                        new TableColDef( "LongestSeries", "TEXT", true ),
-                        new TableColDef( "ShortestSeries", "TEXT", true ),
-                        new TableColDef( "LargestSeries", "TEXT", true ),
-                        new TableColDef( "SmallestSeries", "TEXT", true ),
-                        new TableColDef( "TotalTVStudioCount", "INT", true ),
-                        new TableColDef( "LongestMovie", "TEXT", true ),
-                        new TableColDef( "ShortestMovie", "TEXT", true ),
-                        new TableColDef( "LargestMovie", "TEXT", true ),
-                        new TableColDef( "SmallestMovie", "TEXT", true ),
-                        new TableColDef( "TotalMovieStudioCount", "INT", true ),
-                    }
-                ),
-
-                new TableDef("CachedWatchedAnalysis",
-                    new List<TableColDef>()
-                    {
-                        new TableColDef( "ItemId", "TEXT", true ),
-                        new TableColDef( "Name", "TEXT", true ),
-                        new TableColDef( "ImageUrl", "TEXT", true ),
-                        new TableColDef( "NumEpisodes", "INT", true ),
-                        new TableColDef( "NumWatched", "INT", true ),
-                        new TableColDef( "PercentWatchedPerUser", "DOUBLE", true ),
-                    }
-                )
             };
 
             _userMediaTemplate = new TableDef("UserMedia_<USER_ID>",
                     new List<TableColDef>()
                     {
                         new TableColDef( "UserId", "TEXT", false ), // user
-                        new TableColDef( "ItemId", "TEXT", false ), // video item
+                        new TableColDef( "ItemId", "TEXT", false, true ), // video item
                         new TableColDef( "Name", "TEXT", true ), // Name of the show to reduce joins
                         new TableColDef( "IsPlayed", "BOOLEAN", true ),
                         new TableColDef( "PlayCount", "INT", true ),
                         new TableColDef( "LastPlayedDate", "DATETIME", true ),
+                        new TableColDef( "StartTickPos", "INT", true ),
+                        new TableColDef( "EndTickPos", "INT", true ),
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
                         new TableColDef( "NumEpisodes", "BOOLEAN", true ), // for multi episode media
                         new TableColDef( "IsTVSpecial", "BOOLEAN", true ),
@@ -223,7 +197,8 @@ namespace Statistics2026.Data
 
             sqlCmds.Add($"DROP TABLE IF EXISTS UserVideoList"); // incase running an old schema
 
-            if (action == TableDef.EAction.eRecreate && _userMediaTemplate != null)
+            var config = Statistics2026.Plugin.Instance!.Configuration;
+            if (config.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null)
             {
                 sqlCmds.AddRange(DropAllUserMediaCmds());
             }
@@ -249,25 +224,14 @@ namespace Statistics2026.Data
         {
             if (user == null)
                 return string.Empty;
-            var idString = user.Id.ToString().Replace("-", "");
-            return $"UserMedia_{idString}";
+            return getUserTableName(user.Id.ToString());
         }
 
-        public List<string> allUserMediaTables()
+        private string getUserTableName(string userId)
         {
-            return allTables((regex: "UserMedia_%", like: true));
-        }
+            userId = userId.ToString().Replace("-", "");
 
-        public void ClearAllUserMedia()
-        {
-            var retVal = new List<string>();
-            if (_userMediaTemplate == null)
-                return;
-
-            var tables = allUserMediaTables();
-
-            foreach (var table in tables)
-                ClearTable(table);
+            return $"UserMedia_{userId}";
         }
 
         public List<string> DropAllUserMediaCmds()
@@ -282,6 +246,11 @@ namespace Statistics2026.Data
                 retVal.AddRange(DropTableCmds(table));
 
             return retVal;
+        }
+
+        public List<string> allUserMediaTables()
+        {
+            return allTables((regex: "UserMedia_%", like: true));
         }
 
         public List<string> DropTableCmds(string tableName)

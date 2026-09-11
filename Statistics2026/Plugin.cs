@@ -155,7 +155,7 @@ namespace Statistics2026
                     return;
                 _serverId = value;
             }
-        } // set when a embyManagers is constructed
+        } // set when a embyInterfaces is constructed
 
         public override string Name
         {

@@ -627,7 +627,7 @@ namespace Statistics2026.Data
                 {
                     ItemId = curr.id,
                     Name = curr.name,
-                    ImageUrl = ItemImageUrl._ItemImageUrl(curr.id, _embyManagers!._libraryManager),
+                    ImageUrl = ItemImageUrl._ItemImageUrl(curr.id, _embyInterfaces!._libraryManager),
                     PlayCount = curr.playCount,
                     Denominator = curr.denominator,
                     PlayCountPerUser = curr.playCountPerUser,

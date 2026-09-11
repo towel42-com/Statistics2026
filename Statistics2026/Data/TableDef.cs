@@ -6,7 +6,7 @@ namespace Statistics2026.Data
 {
     public class TableColDef
     {
-        public TableColDef(string columnName, string columnType, bool allowNull)
+        public TableColDef(string columnName, string columnType, bool allowNull, bool isPrimaryIndex = false)
         {
             if (columnName == null || columnName == "")
                 throw new ArgumentException("TableColDef: Must define the column name");
@@ -16,6 +16,7 @@ namespace Statistics2026.Data
             Name = columnName;
             Type = columnType;
             AllowNull = allowNull;
+            IsPrimaryIndex = isPrimaryIndex;
         }
 
         public override string ToString()
@@ -23,13 +24,17 @@ namespace Statistics2026.Data
             string retVal = $"{Name} {Type}";
             if (!AllowNull)
                 retVal += " NOT NULL";
+            if (IsPrimaryIndex)
+                retVal += " PRIMARY KEY";
             return retVal;
         }
 
         public string Name { get; private set; }
         public string Type { get; private set; }
         public bool AllowNull { get; private set; }
+        public bool IsPrimaryIndex { get; private set; }
     }
+
     public class TableDef
     {
         public enum EAction
@@ -52,7 +57,12 @@ namespace Statistics2026.Data
             if (indexes == null)
             {
                 Indexes = new List<string>();
-                Columns.ForEach(col => Indexes.Add(col.Name));
+                Columns.ForEach(col =>
+                {
+                    if (!col.IsPrimaryIndex)
+                        Indexes.Add(col.Name);
+                });
+
             }
             else
                 Indexes = indexes;

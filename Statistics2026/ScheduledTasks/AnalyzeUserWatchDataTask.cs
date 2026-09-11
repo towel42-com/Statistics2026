@@ -18,7 +18,7 @@ namespace Statistics2026.ScheduledTasks
 {
     public class AnalyzeUserWatchDataTask : IScheduledTask
     {
-        private EmbyManagers _managers;
+        private EmbyInterfaces _embyInterfaces;
 
         public AnalyzeUserWatchDataTask(
             ILogManager logManager,
@@ -35,7 +35,7 @@ namespace Statistics2026.ScheduledTasks
             ITaskManager taskManager
             )
         {
-            _managers = new EmbyManagers(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - CalculateDataTask"), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, configManager, taskManager);
+            _embyInterfaces = new EmbyInterfaces(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - CalculateDataTask"), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, configManager, taskManager);
         }
 
         string IScheduledTask.Name => "\u2022 Analyze User Watch Data Information";
@@ -49,11 +49,11 @@ namespace Statistics2026.ScheduledTasks
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             var taskName = "Analyze User Watch Data";
-            _managers._logger.Info($"Statistics 2026 : Starting Statistics 2026 {taskName} task");
+            _embyInterfaces._logger.Info($"Statistics 2026 : Starting Statistics 2026 {taskName} task");
             // purely for progress reporting
             var now = DateTime.Now;
 
-            var db = StatisticsDB.GetInstance(_managers);
+            var db = StatisticsDB.GetInstance(_embyInterfaces);
             db.SetCancellationToken(cancellationToken);
             try
             {
@@ -65,17 +65,17 @@ namespace Statistics2026.ScheduledTasks
             }
 
             long addUsers = 0;
-            using (var timer = new AutoTimer($"Adding All Users", _managers._logger))
+            using (var timer = new AutoTimer($"Adding All Users", _embyInterfaces._logger))
             {
                 db.AnalyzeUserWatchData(cancellationToken, progress);
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
-            _managers._logger.Info($"=======================================");
-            _managers._logger.Info($"User Watch Data : {addUsers} ms");
-            _managers._logger.Info($"=======================================");
-            _managers._logger.Info($"Statistics 2026 : Finished Statistics 2026 {taskName} task");
+            _embyInterfaces._logger.Info($"=======================================");
+            _embyInterfaces._logger.Info($"User Watch Data : {addUsers} ms");
+            _embyInterfaces._logger.Info($"=======================================");
+            _embyInterfaces._logger.Info($"Statistics 2026 : Finished Statistics 2026 {taskName} task");
 
             db.SetCancellationToken(null);
             return Task.CompletedTask;
