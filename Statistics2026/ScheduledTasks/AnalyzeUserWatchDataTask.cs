@@ -55,14 +55,6 @@ namespace Statistics2026.ScheduledTasks
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
             db.SetCancellationToken(cancellationToken);
-            try
-            {
-                db.ClearAllUserMedia();
-            }
-            catch (Exception /*ex*/)
-            {
-                throw new Exception("Please run the 'Calculate Media and User Information for all library media and users' task");
-            }
 
             long addUsers = 0;
             using (var timer = new AutoTimer($"Adding All Users", _embyInterfaces._logger))
