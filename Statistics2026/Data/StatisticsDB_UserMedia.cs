@@ -16,6 +16,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
+        /*
         private void CheckIsValid(bool inInit = false)
         {
             if (inInit)
@@ -30,7 +31,7 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException("Statistics2026.Plugin.Instance.Configuration");
 
         }
-
+        */
         public void InitUserWatchData()
         {
             CheckIsValid(true);
@@ -56,7 +57,7 @@ namespace Statistics2026.Data
                     _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
                     using (var userTimer = new AutoTimer($"AnalyzeUserWatchData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger))
                     {
-                        sqlCmds.AddRange(GetInitTableCommands(user));
+                        sqlCmds.AddRange(GetUserWatchInitTableCommands(user));
                         _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
@@ -70,7 +71,7 @@ namespace Statistics2026.Data
                 _dbHelper!.Progress?.Report(100);
             }
         }
-
+        
         public void AnalyzeUserWatchData()
         {
             CheckIsValid();
@@ -117,6 +118,7 @@ namespace Statistics2026.Data
             _embyInterfaces?._logger?.Debug($"AnalyzeUserWatchData - Finished User Watch Data Analysis");
         }
 
+        /*
         (long, long) AnalyzeOverallTime(User? user, List<User>? userList)
         {
             CheckIsValid();
@@ -142,7 +144,7 @@ namespace Statistics2026.Data
             return (watched, watchable);
         }
 
-
+        */
         private Dictionary<string, (bool hit, int playCount)> _baseCount = new Dictionary<string, (bool hit, int playCount)>()
                         {
                             { "Rocky", ( false, 100 ) },
@@ -200,7 +202,7 @@ namespace Statistics2026.Data
             }
             ResetMapFixed = true;
         }
-
+        
         private void ValidateResetMapResults()
         {
             var config = Statistics2026.Plugin.Instance!.Configuration;
@@ -351,14 +353,14 @@ namespace Statistics2026.Data
 
             _embyInterfaces._userDataManager.SaveUserData(user, video, userData, UserDataSaveReason.Import, token);
         }
-
-        public List<SQLCmdDef> GetInitTableCommands(User? user)
+        
+        public List<SQLCmdDef> GetUserWatchInitTableCommands(User? user)
         {
             if (_userMediaTemplate == null)
-                throw new Exception($"GetInitTableCommands: TableDef for UserMedia_<USER_ID> is null");
+                throw new Exception($"GetUserWatchInitTableCommands: TableDef for UserMedia_<USER_ID> is null");
 
             if (user == null)
-                throw new Exception($"GetInitTableCommands: User is null");
+                throw new Exception($"GetUserWatchInitTableCommands: User is null");
 
             var userTableName = getUserTableName(user);
 

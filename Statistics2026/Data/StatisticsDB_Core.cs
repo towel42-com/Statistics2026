@@ -55,7 +55,22 @@ namespace Statistics2026.Data
         {
         }
 
-        public void Initialize(CancellationToken? cancellationToken, IProgress<double>? progress, bool reset=false)
+        private void CheckIsValid(bool inInit = false)
+        {
+            if (inInit)
+                _dbHelper.CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
+            else
+                _dbHelper.CheckIsValid(ECheckLevel.eAllWithThrow);
+
+            if (Statistics2026.Plugin.Instance == null)
+                throw new ArgumentNullException("Statistics2026.Plugin.Instance");
+
+            if (Statistics2026.Plugin.Instance.Configuration == null)
+                throw new ArgumentNullException("Statistics2026.Plugin.Instance.Configuration");
+
+        }
+
+        public void Initialize(CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false)
         {
             SetCancellationToken(cancellationToken, progress);
             CreateTables(reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate);
@@ -153,8 +168,11 @@ namespace Statistics2026.Data
                         new TableColDef( "TotalTimeWatched", "INT", true ),
                         new TableColDef( "TotalWatchableTime", "INT", true )
                     }
-                ),
+                )
 
+            };
+
+            _tableList.Add(
                 new TableDef("CollectionMembership",
                     new List<TableColDef>()
                     {
@@ -162,8 +180,8 @@ namespace Statistics2026.Data
                         new TableColDef( "ItemId", "TEXT", false ),
                         new TableColDef( "CollectionName", "TEXT", false ) // for debugging purposes
                     }
-                )
-            };
+            ));
+            _tableList[_tableList.Count - 1].DeprecatedTable = true;
 
             _tableList.Add(
                 new TableDef("Collections",
