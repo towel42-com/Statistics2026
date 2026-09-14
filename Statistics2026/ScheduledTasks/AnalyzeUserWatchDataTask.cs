@@ -55,12 +55,12 @@ namespace Statistics2026.ScheduledTasks
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
             db.Initialize();
-            db.SetCancellationToken(cancellationToken);
+            db.SetCancellationToken(cancellationToken, progress);
 
             long addUsers = 0;
             using (var timer = new AutoTimer($"Adding User Watch Data", _embyInterfaces._logger))
             {
-                db.AnalyzeUserWatchData(cancellationToken, progress);
+                db.AnalyzeUserWatchData();
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
@@ -70,7 +70,7 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info($"=======================================");
             _embyInterfaces._logger.Info($"Statistics 2026 : Finished Statistics 2026 {taskName} task");
 
-            db.SetCancellationToken(null);
+            db.ResetCancellationToken();
             return Task.CompletedTask;
         }
 

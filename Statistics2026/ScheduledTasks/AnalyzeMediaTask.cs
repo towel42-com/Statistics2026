@@ -59,7 +59,7 @@ namespace Statistics2026.ScheduledTasks
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
             db.Initialize();
-            db.SetCancellationToken(cancellationToken);
+            db.SetCancellationToken(cancellationToken, progress);
             try
             {
                 db.ClearTable("Media"); // will throw an exception if the primary has not been run yet
@@ -72,7 +72,7 @@ namespace Statistics2026.ScheduledTasks
             long addMedia = 0;
             using (var timer = new AutoTimer($"Adding All Media", _embyInterfaces._logger))
             {
-                db.AddAllMedia(cancellationToken, progress);
+                db.AddAllMedia();
                 addMedia = timer.ElapsedMilliseconds();
             }
 
@@ -83,7 +83,7 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info($"=======================================");
             _embyInterfaces._logger.Info($"Statistics 2026 : Finished Statistics 2026 {taskName} task");
 
-            db.SetCancellationToken(null);
+            db.ResetCancellationToken();
             return Task.CompletedTask;
         }
 

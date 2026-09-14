@@ -57,7 +57,7 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info($"Statistics 2026 : Starting Statistics 2026 {taskName} task");
             var db = StatisticsDB.GetInstance(_embyInterfaces);
             db.Initialize();
-            db.SetCancellationToken(cancellationToken);
+            db.SetCancellationToken(cancellationToken, progress);
 
             try
             {
@@ -72,7 +72,7 @@ namespace Statistics2026.ScheduledTasks
             long addSeries = 0;
             using (var timer = new AutoTimer($"Adding All Series", _embyInterfaces._logger))
             {
-                db.AddAllSeries(cancellationToken, progress);
+                db.AddAllSeries();
                 addSeries = timer.ElapsedMilliseconds();
             }
             cancellationToken.ThrowIfCancellationRequested();
@@ -82,7 +82,7 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info($"=======================================");
             _embyInterfaces._logger.Info($"Statistics 2026 : Finished Statistics 2026 {taskName} task");
 
-            db.SetCancellationToken(null);
+            db.ResetCancellationToken();
             return Task.CompletedTask;
         }
 
