@@ -378,8 +378,9 @@ namespace Statistics2026.Data
             var cmds = _userMediaTemplate.GetSQLCommands(TableDef.EAction.eCreate);
             for (var ii = 0; ii < cmds.Count(); ++ii)
             {
-                var sqlCmd = cmds[ii].Replace("UserMedia_<USER_ID>", userTableName);
-                sqlCmds.Add(new SQLCmdDef(sqlCmd));
+                var cmd = new SQLCmdDef(cmds[ii]);
+                cmd.Replace("UserMedia_<USER_ID>", userTableName);
+                sqlCmds.Add(cmd);
             }
 
             var allVideosForUser = Statistics2026API.GetAllEpisodesAndMovies(user, _embyInterfaces!._libraryManager, false).forUser;
@@ -866,21 +867,19 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug($"AddAllSeries - Finished Video Analysis");
         }
 
-        private int GetCountForSeries(Series series, CancellationToken cancellationToken, bool episodes)
+        private (int episodes, int specials) GetCountForSeries(Series series, CancellationToken cancellationToken)
         {
             CheckIsValid();
 
             var libraryOptions = _embyInterfaces!._libraryManager.GetLibraryOptions(series);
             var allEpisodes = _embyInterfaces!._providerManager.GetAllEpisodes(series, libraryOptions, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-            var retVal = allEpisodes.Where(e => (
-                ((episodes && !MediaInfo.isTVSpecial(e)) ||
-                  (!episodes && MediaInfo.isTVSpecial(e)))
-                && (e.PremiereDate <= DateTime.Now))).Count();
 
-            if (retVal == 0)// when providers are disabled
+            var episodes = allEpisodes.Where(e => !MediaInfo.isTVSpecial(e) && (e.PremiereDate <= DateTime.Now)).Count();
+            var specials = allEpisodes.Where(e => MediaInfo.isTVSpecial(e)).Count();
+
+            if (episodes == 0 && specials == 0)// when providers are disabled
             {
-                var fieldName = episodes ? "NumEpisodes" : "NumSpecials";
-                var cmd = new SQLCmdDef($"SELECT {fieldName} FROM Series WHERE ItemId=@SeriesId",
+                var cmd = new SQLCmdDef($"SELECT NumEpisodes FROM Series WHERE ItemId=@SeriesId",
                             new List<(string name, object? value)>()
                             {
                             ("@SeriesId", series.Id.ToString())
@@ -891,15 +890,12 @@ namespace Statistics2026.Data
                     if (statement != null)
                     {
                         var row = statement.Current;
-                        retVal = row.GetInt(0);
+                        episodes = row.GetInt(0);
                     }
                     return false;
                 });
-            }
-            if (retVal == 0) // Series hasnt been setup yet
-            {
-                var whereClause = episodes ? "NOT IsTVSpecial" : "IsTVSpecial";
-                var cmd = new SQLCmdDef($"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND {whereClause}",
+
+                cmd = new SQLCmdDef($"SELECT NumSpecials FROM Series WHERE ItemId=@SeriesId",
                             new List<(string name, object? value)>()
                             {
                             ("@SeriesId", series.Id.ToString())
@@ -910,22 +906,56 @@ namespace Statistics2026.Data
                     if (statement != null)
                     {
                         var row = statement.Current;
-                        retVal = row.GetInt(0);
+                        specials = row.GetInt(0);
                     }
                     return false;
                 });
             }
-            return retVal;
+            if (episodes == 0 && specials == 0) // Series hasnt been setup yet
+            {
+                var cmd = new SQLCmdDef($"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND NOT IsTVSpecial",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        episodes = row.GetInt(0);
+                    }
+                    return false;
+                });
+
+                cmd = new SQLCmdDef($"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND IsTVSpecial",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        specials = row.GetInt(0);
+                    }
+                    return false;
+                });
+            }
+            return (episodes, specials);
         }
 
         private int GetEpisodeCountForSeries(Series series, CancellationToken cancellationToken)
         {
-            return GetCountForSeries(series, cancellationToken, true);
+            return GetCountForSeries(series, cancellationToken).episodes;
         }
 
         private int GetSpecialCountForSeries(Series series, CancellationToken cancellationToken)
         {
-            return GetCountForSeries(series, cancellationToken, false);
+            return GetCountForSeries(series, cancellationToken).specials;
         }
 
         private List<SQLCmdDef> AddSeries(Series series, CancellationToken cancellationToken, IProgress<double> progress)
@@ -986,8 +1016,7 @@ namespace Statistics2026.Data
                 return false;
             });
 
-            int numEpisodes = GetEpisodeCountForSeries(series, cancellationToken);
-            int numSpecials = GetSpecialCountForSeries(series, cancellationToken);
+            var (numEpisodes, numSpecials) = GetCountForSeries( series, cancellationToken);
             sql = String.Empty;
             List<(string name, object? value)>? paramsList = null;
             if (!exists)
