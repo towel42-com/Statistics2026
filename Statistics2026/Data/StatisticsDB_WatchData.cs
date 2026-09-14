@@ -13,49 +13,53 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public void LoadPlaybackState(ref PlaybackInfo info)
+        public (long? startPos, long? endPos, long? total) GetPlaybackState(string userId, string itemId)
         {
-            var tableName = getUserTableName(info.UserId);
+            var tableName = getUserTableName(userId);
 
             string sql =
                 "SELECT " +
                 "StartTickPos, " +
                 "EndTickPos " +
+                "TotalTicks " +
                 $"FROM {tableName} " +
                 $"WHERE ItemId=@ItemId"
                 ;
-            var parameters = new List<(string, object?)>() { ("@ItemId", info.ItemId) };
+            var parameters = new List<(string, object?)>() { ("@ItemId", itemId) };
 
             long? startPos = null;
             long? endPos = null;
+            long? totalTicks = null;
 
             _dbHelper.ExecuteCommand(new SQLCmdDef(sql, parameters), statement =>
             {
                 var row = statement.Current;
                 startPos = row.GetInt64(0);
                 endPos = row.GetInt64(1);
+                totalTicks = row.GetInt64(2);
                 return true;
             });
 
-            info.StartPlaybackPositionTicks = startPos ?? long.MaxValue;
-            info.EndPlaybackPositionTicks = endPos ?? long.MinValue;
+            return (startPos, endPos, totalTicks);
         }
 
-        public void UpdatePlaybackState(PlaybackInfo info)
+        public void UpdatePlaybackState(string userId, string itemId, long startTicks, long endTicks, long totalTicks)
         {
-            var tableName = getUserTableName(info.UserId);
+            var tableName = getUserTableName(userId);
 
             string sql =
                 $"UPDATE {tableName} " +
                 "SET " +
-                "StartTickPos=@StartTickPos, " +
-                "EndTickPos=@EndTickPos " +
+                "  StartTickPos=@StartTickPos " +
+                ", EndTickPos=@EndTickPos " +
+                ", TotalTicks=TotalTicks+@TotalTicks " +
                 "WHERE ItemId=@ItemId"
                 ;
             var parameters = new List<(string, object?)>() {
-                ("@StartTickPos", info.StartPlaybackPositionTicks ),
-                ("@EndTickPos", info.EndPlaybackPositionTicks ),
-                ("@ItemId", info.ItemId) };
+                ("@StartTickPos", startTicks ),
+                ("@EndTickPos", endTicks ),
+                ("@TotalTicks", totalTicks ),
+                ("@ItemId", itemId) };
 
             _dbHelper.ExecuteCommand(new SQLCmdDef(sql, parameters));
         }
