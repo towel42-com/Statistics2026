@@ -19,36 +19,36 @@ namespace Statistics2026.Data
 
             string sql =
                 "SELECT " +
-                "TotalTicks " +
+                "TotalTicksPlayed " +
                 $"FROM {tableName} " +
                 $"WHERE ItemId=@ItemId"
                 ;
             var parameters = new List<(string, object?)>() { ("@ItemId", itemId) };
 
-            long? totalTicks = null;
+            long? totalTicksPlayed = null;
 
             _dbHelper.ExecuteCommand(new SQLCmdDef(sql, parameters), statement =>
             {
                 var row = statement.Current;
-                totalTicks = row.GetInt64(0);
+                totalTicksPlayed = row.GetInt64(0);
                 return true;
             });
 
-            return totalTicks;
+            return totalTicksPlayed;
         }
 
-        public void UpdateTotalTicksPlayed(string userId, string itemId, long totalTicks)
+        public void UpdateTotalTicksPlayed(string userId, string itemId, long totalTicksPlayed)
         {
             var tableName = getUserTableName(userId);
 
             string sql =
                 $"UPDATE {tableName} " +
                 "SET " +
-                " TotalTicks=@TotalTicks " +
+                " TotalTicksPlayed=@TotalTicksPlayed " +
                 "WHERE ItemId=@ItemId"
                 ;
             var parameters = new List<(string, object?)>() {
-                ("@TotalTicks", totalTicks ),
+                ("@TotalTicksPlayed", totalTicksPlayed ),
                 ("@ItemId", itemId) };
 
             _dbHelper.ExecuteCommand(new SQLCmdDef(sql, parameters));
