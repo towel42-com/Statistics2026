@@ -16,6 +16,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
+        /*
         private void CheckIsValid(bool inInit = false)
         {
             if (inInit)
@@ -30,7 +31,48 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException("Statistics2026.Plugin.Instance.Configuration");
 
         }
+        */
+        public void AddAllUsers()
+        {
+            CheckIsValid();
 
+            _dbHelper!.Progress?.Report(0);
+            var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
+            if (users == null)
+                return;
+
+            _dbHelper!.Progress?.Report(100);
+
+            _embyInterfaces?._logger?.Debug($"AddAllUsers - Starting User Analysis");
+            double count = users.Count;
+            double curr = 0;
+
+            _dbHelper!.Progress?.Report(0);
+            var sqlCmds = new List<SQLCmdDef>();
+            using (var timer = new AutoTimer($"    Adding All Users - Getting Commands", _embyInterfaces?._logger))
+            {
+                foreach (var user in users)
+                {
+                    _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
+                    using (var userTimer = new AutoTimer($"AddAllUsers -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger))
+                    {
+                        sqlCmds.AddRange(AddUser(user));
+                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    }
+                }
+                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+            }
+
+            using (var timer = new AutoTimer($"    Adding All Users - Executing Commands", _embyInterfaces?._logger))
+            {
+                _dbHelper!.Progress?.Report(80);
+                _dbHelper.ExecuteCommands(sqlCmds);
+                _dbHelper!.Progress?.Report(100);
+            }
+
+            _embyInterfaces?._logger?.Debug($"AddAllUsers - Finished User Analysis");
+        }
+        /*
         public void InitUserWatchData()
         {
             CheckIsValid(true);
@@ -471,6 +513,69 @@ namespace Statistics2026.Data
 
             if (user.Name == "scott")
                 ValidateResetMapResults();
+            return sqlCmds;
+        }
+*/
+        private List<SQLCmdDef> AddUser(User? user)
+        {
+            CheckIsValid();
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
+            var sqlCmds = new List<SQLCmdDef>();
+            if (user.Id == null)
+            {
+                _embyInterfaces!._logger?.Error($"AddUser {user.Name}: is missing Id");
+                return sqlCmds;
+            }
+
+            if (user.Name == null)
+            {
+                _embyInterfaces!._logger?.Error($"AddUser {user.Id.ToString()}: is missing Name");
+                return sqlCmds;
+            }
+
+            var (timeWatched, totalTime) = AnalyzeOverallTime(user, null);
+
+            var isAdmin = user.Policy.IsAdministrator;
+            string sql =
+                "INSERT INTO Users " +
+                "(" +
+                    "  UserId" +
+                    ", UserName" +
+                    ", ConnectUserId" +
+                    ", IsAdministrator" +
+                    ", TotalTimeWatched" +
+                    ", TotalWatchableTime" +
+                ")" +
+                " VALUES " +
+                "(" +
+                "  @UserId" +
+                ", @UserName" +
+                ", @ConnectUserId" +
+                ", @IsAdministrator" +
+                ", @TotalTimeWatched" +
+                ", @TotalWatchableTime" +
+                ") " +
+                " ON CONFLICT(UserId) " +
+                " DO UPDATE " +
+                " SET " +
+                "  UserName=@UserName" +
+                " ,ConnectUserId=@ConnectUserId" +
+                " ,IsAdministrator=@IsAdministrator" +
+                " ,TotalTimeWatched=@TotalTimeWatched" +
+                " ,TotalWatchableTime=@TotalWatchableTime"
+                ;
+            sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
+            {
+                ( "@UserId", user.Id.ToString()),
+                ( "@UserName", user.Name),
+                ( "@ConnectUserId", user.ConnectUserId),
+                ( "@IsAdministrator", isAdmin),
+                ( "@TotalTimeWatched", timeWatched),
+                ( "@TotalWatchableTime", totalTime),
+            }));
             return sqlCmds;
         }
     }
