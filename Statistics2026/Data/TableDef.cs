@@ -36,21 +36,25 @@ namespace Statistics2026.Data
             return sql;
         }
 
-        public List<string> AlterCmds(string tableName)
+        public List<SQLCmdDef> AlterCmds(string tableName)
         {
+            var retVal = new List<SQLCmdDef>();
             if (DeprecatedColumn)
             {
                 var idxName = getIndexName(tableName);
-                return new List<string>(){
-                    $"DROP INDEX IF EXISTS {idxName}",
-                    $"ALTER TABLE {tableName} DROP COLUMN {Name}"
-                }
-                ;
+                retVal.Add(new SQLCmdDef($"DROP INDEX IF EXISTS {idxName}", true));
+                retVal.Add(new SQLCmdDef($"ALTER TABLE {tableName} DROP COLUMN {Name}", true));                
+            }
+            else if (FormerColumnName != null)
+            {
+                retVal.Add(new SQLCmdDef($"ALTER TABLE {tableName} RENAME COLUMN {FormerColumnName} TO {Name}", true));
             }
             else
             {
-                return new List<string>() { $"ALTER TABLE {tableName} ADD COLUMN {ToString()}" };
+                retVal.Add(new SQLCmdDef($"ALTER TABLE {tableName} ADD COLUMN {ToString()}", true));
             }
+
+            return retVal;
         }
 
         public override string ToString()
@@ -68,6 +72,7 @@ namespace Statistics2026.Data
         public bool AllowNull { get; private set; } = false;
         public bool IsPrimaryIndex { get; private set; } = false;
         public bool DeprecatedColumn { get; set; } = false;
+        public string? FormerColumnName { get; set; } = null;
     }
 
     public class TableDef
@@ -127,9 +132,7 @@ namespace Statistics2026.Data
 
             Columns.ForEach(column =>
             {
-                var cmds = column.AlterCmds(Name);
-                foreach (var cmd in cmds)
-                    retVal.Add(new SQLCmdDef(cmd, true));
+                retVal.AddRange(column.AlterCmds(Name));
             }
             );
 
