@@ -7,10 +7,12 @@ using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Statistics2026.Data
 {
@@ -209,10 +211,14 @@ namespace Statistics2026.Data
             {
                 Connection.RunInTransaction(connection =>
                 {
-                    foreach (var cmd in cmds)
+                    for (var ii = 0; ii < cmds.Count; ++ii )
                     {
                         CancellationToken?.ThrowIfCancellationRequested();
+
+                        var cmd = cmds[ii];
                         cmd.Execute(connection, this, onStatement);
+                        var value = 80 + (20.0 * ii) / (cmds.Count);
+                        Progress?.Report(value);
                     }
                 });
             }
