@@ -58,6 +58,7 @@ namespace Statistics2026.ScheduledTasks
             // purely for progress reporting
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
+            db.Initialize();
             db.SetCancellationToken(cancellationToken);
             try
             {

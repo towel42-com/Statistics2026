@@ -75,8 +75,7 @@ namespace Statistics2026.ScheduledTasks
             {
                 ($"Analyzing Users", typeof(AnalyzeUsersTask), 0, "Users"),
                 ($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "User Watch Data"),
-                ($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Collections"),
-                ($"Analyzing Collections", typeof(AnalyzeCollectionsTask), 0, "Media"),
+                ($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Media"),
                 ($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series")
             };
 
@@ -89,6 +88,7 @@ namespace Statistics2026.ScheduledTasks
             }
 
             db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
+            db.Initialize();
             cancellationToken.ThrowIfCancellationRequested();
 
             var overall = overAllTimer.ElapsedMilliseconds();

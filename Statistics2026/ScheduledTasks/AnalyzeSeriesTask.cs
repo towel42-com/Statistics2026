@@ -56,6 +56,7 @@ namespace Statistics2026.ScheduledTasks
             var taskName = "Analyze Series";
             _embyInterfaces._logger.Info($"Statistics 2026 : Starting Statistics 2026 {taskName} task");
             var db = StatisticsDB.GetInstance(_embyInterfaces);
+            db.Initialize();
             db.SetCancellationToken(cancellationToken);
 
             try

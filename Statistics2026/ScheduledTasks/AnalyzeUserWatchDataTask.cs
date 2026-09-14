@@ -54,10 +54,11 @@ namespace Statistics2026.ScheduledTasks
             var now = DateTime.Now;
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
+            db.Initialize();
             db.SetCancellationToken(cancellationToken);
 
             long addUsers = 0;
-            using (var timer = new AutoTimer($"Adding All Users", _embyInterfaces._logger))
+            using (var timer = new AutoTimer($"Adding User Watch Data", _embyInterfaces._logger))
             {
                 db.AnalyzeUserWatchData(cancellationToken, progress);
                 addUsers = timer.ElapsedMilliseconds();

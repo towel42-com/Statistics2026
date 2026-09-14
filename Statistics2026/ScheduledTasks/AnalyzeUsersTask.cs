@@ -54,6 +54,7 @@ namespace Statistics2026.ScheduledTasks
             var now = DateTime.Now;
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
+            db.Initialize();
             db.SetCancellationToken(cancellationToken);
             try
             {
