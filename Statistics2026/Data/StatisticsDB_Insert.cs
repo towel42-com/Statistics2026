@@ -16,9 +16,9 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        private void CheckIsValid( bool inInit = false )
+        private void CheckIsValid(bool inInit = false)
         {
-            if ( inInit )
+            if (inInit)
                 _dbHelper.CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
             else
                 _dbHelper.CheckIsValid(ECheckLevel.eAllWithThrow);
@@ -91,7 +91,7 @@ namespace Statistics2026.Data
 
         public void InitUserWatchData()
         {
-            CheckIsValid( true );
+            CheckIsValid(true);
 
             _dbHelper!.Progress?.Report(0);
             var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
@@ -512,6 +512,19 @@ namespace Statistics2026.Data
                             ( "@SeriesId", mediaInfo.SeriesId)
                         }));
                 }
+            }
+
+            var config = Statistics2026.Plugin.Instance!.Configuration;
+            if (config.resetPlayCount)
+            {
+                var sqlUpdateTicks =
+                    $"UPDATE {userTableName} " +
+                    $" SET " +
+                    $"  TotalTicksPlayed=PlayCount*Media.RunTimeTicks " +
+                    $" FROM Media " +
+                    $" WHERE Media.ItemId={userTableName}.ItemId"
+                    ;
+                sqlCmds.Add(new SQLCmdDef(sqlUpdateTicks));
             }
 
             if (user.Name == "scott")
