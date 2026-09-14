@@ -55,9 +55,9 @@ namespace Statistics2026.Data
         {
         }
 
-        public void Initialize()
+        public void Initialize(bool reset=false)
         {
-            CreateTables(TableDef.EAction.eCreate);
+            CreateTables(reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate);
         }
 
         public void ResetCancellationToken()

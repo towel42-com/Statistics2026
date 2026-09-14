@@ -67,7 +67,7 @@ namespace Statistics2026.ScheduledTasks
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
             db.SetCancellationToken(cancellationToken, progress);
-            db.Initialize();
+            db.Initialize(PluginConfiguration.resetPlayCount);
 
             var overAllTimer = new AutoTimer($"Adding All Data", _embyInterfaces._logger, false);
 
