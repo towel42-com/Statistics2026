@@ -13,51 +13,41 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public (long? startPos, long? endPos, long? total) GetPlaybackState(string userId, string itemId)
+        public long? GetTotalTicksPlayed(string userId, string itemId)
         {
             var tableName = getUserTableName(userId);
 
             string sql =
                 "SELECT " +
-                "StartTickPos, " +
-                "EndTickPos " +
                 "TotalTicks " +
                 $"FROM {tableName} " +
                 $"WHERE ItemId=@ItemId"
                 ;
             var parameters = new List<(string, object?)>() { ("@ItemId", itemId) };
 
-            long? startPos = null;
-            long? endPos = null;
             long? totalTicks = null;
 
             _dbHelper.ExecuteCommand(new SQLCmdDef(sql, parameters), statement =>
             {
                 var row = statement.Current;
-                startPos = row.GetInt64(0);
-                endPos = row.GetInt64(1);
-                totalTicks = row.GetInt64(2);
+                totalTicks = row.GetInt64(0);
                 return true;
             });
 
-            return (startPos, endPos, totalTicks);
+            return totalTicks;
         }
 
-        public void UpdatePlaybackState(string userId, string itemId, long startTicks, long endTicks, long totalTicks)
+        public void UpdateTotalTicksPlayed(string userId, string itemId, long totalTicks)
         {
             var tableName = getUserTableName(userId);
 
             string sql =
                 $"UPDATE {tableName} " +
                 "SET " +
-                "  StartTickPos=@StartTickPos " +
-                ", EndTickPos=@EndTickPos " +
-                ", TotalTicks=TotalTicks+@TotalTicks " +
+                " TotalTicks=@TotalTicks " +
                 "WHERE ItemId=@ItemId"
                 ;
             var parameters = new List<(string, object?)>() {
-                ("@StartTickPos", startTicks ),
-                ("@EndTickPos", endTicks ),
                 ("@TotalTicks", totalTicks ),
                 ("@ItemId", itemId) };
 
