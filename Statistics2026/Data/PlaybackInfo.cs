@@ -173,9 +173,9 @@ namespace Statistics2026.Data
         {
             var db = StatisticsDB.GetInstance(embyInterfaces);
 
-            long? totalTicks = db.GetTotalTicksPlayed(UserId, ItemId);
+            long? totalTicksPlayed = db.GetTotalTicksPlayed(UserId, ItemId);
 
-            TotalTicks = totalTicks ?? 0;
+            TotalTicksPlayed = totalTicksPlayed ?? 0;
         }
 
         public void setPlaybackPosition(long? ticks)
@@ -194,9 +194,9 @@ namespace Statistics2026.Data
             if (SessionStartTickPos == null || SessionCurrTickPos == null)
                 return;
 
-            TotalTicks += SessionCurrTickPos.Value - SessionStartTickPos.Value;
+            TotalTicksPlayed += SessionCurrTickPos.Value - SessionStartTickPos.Value;
             var db = StatisticsDB.GetInstance(embyInterfaces);
-            db.UpdateTotalTicksPlayed(UserId, ItemId, TotalTicks);
+            db.UpdateTotalTicksPlayed(UserId, ItemId, TotalTicksPlayed);
 
 
             SessionStartTickPos = SessionCurrTickPos;
@@ -213,7 +213,7 @@ namespace Statistics2026.Data
         public string UserId { get; set; } = string.Empty;
         public string ItemId { get; set; } = string.Empty;
         public string ItemName { get; set; } = string.Empty;
-        public long TotalTicks { get; private set; } = 0;
+        public long TotalTicksPlayed { get; private set; } = 0;
 
         private static Dictionary<string, PlaybackInfo>? _PlaybackTracker = null;
 
