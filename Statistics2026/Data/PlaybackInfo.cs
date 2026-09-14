@@ -11,6 +11,7 @@ using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using static System.Collections.Specialized.BitVector32;
 
 namespace Statistics2026.Data
 {
@@ -35,17 +36,10 @@ namespace Statistics2026.Data
                 retVal = new PlaybackInfo();
 
                 retVal.Key = key;
-                retVal.Date = DateTime.Now;
                 retVal.UserId = session.UserId;
-                retVal.DeviceName = session.DeviceName;
-                retVal.ClientName = session.Client;
                 retVal.ItemId = GetNowPlayingItemId(serverItem);
                 retVal.ItemName = GetItemName(session.NowPlayingItem);
-                retVal.PlaybackMethod = GetPlaybackMethod(session);
-                retVal.TranscodeReasons = GetTranscodingReasons(session);
-                retVal.ItemType = session.NowPlayingItem.Type;
-                retVal.RemoteAddress = session.RemoteEndPoint.ToString();
-                retVal._serverItem = serverItem;
+
                 _PlaybackTracker[key] = retVal;
 
                 retVal.LoadPlaybackState(embyInterfaces);
@@ -53,30 +47,10 @@ namespace Statistics2026.Data
 
             if (session.PlayState.PositionTicks != null)
             {
-                retVal.setPlaybackPosition(session.PlayState.PositionTicks);
+                retVal.setPlaybackPosition(session.PlayState.PositionTicks.Value);
             }
 
             return retVal;
-        }
-
-        public void setPlaybackPosition(long? ticks)
-        {
-            if (ticks == null)
-                return;
-
-            if ((StartTickPos == long.MaxValue) || (ticks < StartTickPos))
-                StartTickPos = ticks ?? 0;
-
-            if ((EndTickPos == long.MinValue) || (ticks > EndTickPos))
-                EndTickPos = ticks ?? 0;
-
-            if (CurrentSessionTickPos == null || (ticks < CurrentSessionTickPos))
-                CurrentSessionTickPos = ticks;
-
-            if (CurrentSessionTickPos != null && ticks != null && ticks.Value > CurrentSessionTickPos.Value)
-            {
-                CurrentSessionTotalTicks = ticks.Value - CurrentSessionTickPos.Value;
-            }
         }
 
         public static void RemoveInactivePlayinfo(List<PlaybackInfo> activeSessions, EmbyInterfaces embyInterfaces)
@@ -124,25 +98,6 @@ namespace Statistics2026.Data
             };
 
             return keyComponents.Join("|");
-        }
-
-        private static string GetTranscodingReasons(SessionInfo session)
-        {
-            string retVal = string.Empty;
-
-            if (session.TranscodingInfo != null &&
-                session.TranscodingInfo.TranscodeReasons != null &&
-                session.TranscodingInfo.TranscodeReasons.Length > 0)
-            {
-                List<string> reasons = new List<string>();
-                foreach (var reason in session.TranscodingInfo.TranscodeReasons)
-                {
-                    reasons.Add(reason.ToString());
-                }
-                reasons.Sort();
-                retVal = string.Join(" ", reasons);
-            }
-            return retVal;
         }
 
         static private string GetItemName(MediaBrowser.Model.Dto.BaseItemDto item)
@@ -218,54 +173,51 @@ namespace Statistics2026.Data
         {
             var db = StatisticsDB.GetInstance(embyInterfaces);
 
-            (long? startPos, long? endPos, long? totalTicks) = db.GetPlaybackState(UserId, ItemId);
+            long? totalTicks = db.GetTotalTicksPlayed(UserId, ItemId);
 
-            StartTickPos = startPos ?? long.MaxValue;
-            EndTickPos = endPos ?? long.MinValue;
             TotalTicks = totalTicks ?? 0;
         }
 
-        private bool updateTotalTicks()
+        public void setPlaybackPosition(long? ticks)
         {
-            if (CurrentSessionTotalTicks != null)
-            {
-                TotalTicks += CurrentSessionTotalTicks.Value;
-                return true;
-            }
-            return false;
+            if (ticks == null)
+                return;
+
+            if (!hasInitialPlaybackPosition() || SessionStartTickPos!.Value > ticks.Value)
+                SessionStartTickPos = ticks;
+            else
+                SessionCurrTickPos = ticks;
         }
 
         public void UpdatePlaybackState(EmbyInterfaces embyInterfaces)
         {
-            bool updated = updateTotalTicks();
+            if (SessionStartTickPos == null || SessionCurrTickPos == null)
+                return;
+
+            TotalTicks += SessionCurrTickPos.Value - SessionStartTickPos.Value;
             var db = StatisticsDB.GetInstance(embyInterfaces);
-            db.UpdatePlaybackState(UserId, ItemId, StartTickPos, EndTickPos, TotalTicks);
-            if (updated)
-            {
-                CurrentSessionTickPos = null;
-                CurrentSessionTotalTicks = null;
-            }
+            db.UpdateTotalTicksPlayed(UserId, ItemId, TotalTicks);
+
+
+            SessionStartTickPos = SessionCurrTickPos;
+            SessionCurrTickPos = null;
+        }
+
+        private bool hasInitialPlaybackPosition()
+        {
+            return SessionStartTickPos != null;
         }
 
         public string Key { set; get; } = string.Empty;
-        public DateTime Date { get; set; } = DateTime.MinValue;
 
         public string UserId { get; set; } = string.Empty;
         public string ItemId { get; set; } = string.Empty;
-        public string ItemType { get; set; } = string.Empty;
         public string ItemName { get; set; } = string.Empty;
-        public string PlaybackMethod { get; set; } = string.Empty;
-        public string TranscodeReasons { get; set; } = string.Empty;
-        public string ClientName { get; set; } = string.Empty;
-        public string DeviceName { get; set; } = string.Empty;
-        public string RemoteAddress { get; set; } = string.Empty;
-        public long StartTickPos { get; private set; } = long.MaxValue;
-        public long EndTickPos { get; private set; } = long.MinValue;
         public long TotalTicks { get; private set; } = 0;
-        public long? CurrentSessionTickPos { get; private set; } = null;
-        public long? CurrentSessionTotalTicks { get; private set; } = null;
 
-        private BaseItem? _serverItem { get; set; } = null;
         private static Dictionary<string, PlaybackInfo>? _PlaybackTracker = null;
+
+        public long? SessionStartTickPos { get; private set; } = null;
+        public long? SessionCurrTickPos { get; private set; } = null;
     }
 }
