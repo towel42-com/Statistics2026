@@ -285,5 +285,115 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug($"AddAllSeries -    AddSeries - Successfully Added Series {series.Name}");
             return sqlCmds;
         }
+
+        public List<GetTVSeriesProgressResponse> GetTVSeriesProgress(User? user)
+        {
+            CheckIsValid();
+
+            if (user == null)
+                throw new ArgumentNullException("user");
+
+            var getSeriesSQL = "SELECT " +
+                "  Series.Name" +
+                ", strftime('%Y', Series.PremiereDate) AS PremierDate" +
+                ", Series.NumEpisodes" +
+                ", Series.NumSpecials" +
+                ", Series.Rating" +
+                ", Series.Status" +
+                ", Series.ItemId " +
+                ", Series.ImageUrl " +
+                " FROM " +
+                "   Series "
+                ;
+
+            var series = new Dictionary<string, GetTVSeriesProgressResponse>();
+            _dbHelper.ExecuteCommand(new SQLCmdDef(getSeriesSQL), statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+                var name = row.GetString(col++);
+                var premiereYear = row.GetInt(col++);
+                var totalEpisodes = row.GetInt(col++);
+                var totalSpecials = row.GetInt(col++);
+                var score = row.GetDouble(col++);
+                var status = row.GetString(col++);
+                var seriesId = row.GetString(col++);
+                var imageUrl = row.GetString(col++);
+
+                var curr = new GetTVSeriesProgressResponse()
+                {
+                    SeriesId = seriesId,
+                    Name = name,
+                    PremiereYear = premiereYear,
+                    Score = score,
+                    SeriesStatus = status,
+                    ItemUrl = imageUrl
+                };
+                if (curr.ItemUrl != null && curr.ItemUrl != "")
+                {
+                    curr.ItemUrl = ItemImageUrl.ItemUrl(seriesId, curr.ItemUrl, curr.Name);
+                    curr.Name = curr.ItemUrl;
+                }
+
+                curr.Episodes.Total = totalEpisodes;
+                curr.Specials.Total = totalSpecials;
+
+                series[seriesId] = curr;
+                return true;
+            });
+
+            var tableName = getUserTableName(user);
+            var sqlBase = "SELECT " +
+                $"  SUM({tableName}.NumEpisodes) " +
+                $", {tableName}.SeriesId " +
+                $" FROM " +
+                $"   {tableName} " +
+                $" WHERE " +
+                $" {tableName}.IsEpisode AND " +
+                $" <isTVSpecial> AND " +
+                $" {tableName}.IsPlayed AND " +
+                $" {tableName}.UserId=@UserId " +
+                $" GROUP BY {tableName}.SeriesId "
+                ;
+
+            var sqlEpisodes = sqlBase.Replace("<isTVSpecial>", $"NOT {tableName}.IsTVSpecial");
+            var sqlSpecials = sqlBase.Replace("<isTVSpecial>", $"{tableName}.IsTVSpecial");
+
+            var paramList = new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) };
+
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sqlEpisodes, paramList), statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+                var watchedCount = row.GetInt(col++);
+                var seriesId = row.GetString(col++); // should be true
+
+                if (series.TryGetValue(seriesId, out var curr))
+                {
+                    curr.Episodes.Count = watchedCount;
+                    series[seriesId] = curr;
+                }
+                return true;
+            });
+
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sqlSpecials, paramList), statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+                var watchedCount = row.GetInt(col++);
+                var seriesId = row.GetString(col++); // should be true
+
+                if (series.TryGetValue(seriesId, out var curr))
+                {
+                    curr.Specials.Count = watchedCount;
+                    series[seriesId] = curr;
+                }
+                return true;
+            });
+
+            var retVal = series.Values.ToList();
+
+            return retVal;
+        }
     }
 }

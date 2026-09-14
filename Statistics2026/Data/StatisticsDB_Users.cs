@@ -4,6 +4,7 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
+using ServiceStack;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
@@ -143,6 +144,81 @@ namespace Statistics2026.Data
                 ( "@TotalWatchableTime", totalTime),
             }));
             return sqlCmds;
+        }
+
+        public long NumUsers(bool hasConnectUserId, bool excludeAdmin)
+        {
+            CheckIsValid();
+
+            string sql = "SELECT COUNT(UserName) FROM Users ";
+
+            List<string> conditions = new List<string>();
+
+            if (hasConnectUserId)
+                conditions.Add("ConnectUserId <> '' AND ConnectUserId IS NOT NULL");
+
+            if (excludeAdmin)
+                conditions.Add("NOT IsAdministrator");
+
+            sql += DBHelper.JoinClauses(conditions);
+
+            return GetSingleValueFromSQL(sql).ToInt64();
+        }
+
+        public long NumUsers()
+        {
+            CheckIsValid();
+
+            return NumUsers(Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID, Statistics2026.Plugin.Instance!.Configuration.excludeAdmin);
+        }
+
+        public StatCard UserCount()
+        {
+            var numUsers = NumUsers();
+            return ValueGroupForSingleValue(Constants.TotalUsers, null, numUsers);
+        }
+
+        public StatCard MostActiveUsers()
+        {
+            CheckIsValid();
+
+            string sql =
+                "SELECT " +
+                "UserName, " +
+                "TotalTimeWatched " +
+                "FROM Users ";
+            List<string> conditions = new List<string>();
+
+            if (Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID)
+                conditions.Add("ConnectUserId <> '' AND ConnectUserId IS NOT NULL");
+
+            if (Statistics2026.Plugin.Instance!.Configuration.excludeAdmin)
+                conditions.Add("NOT IsAdministrator");
+
+            sql += DBHelper.JoinClauses(conditions);
+
+            var numUsers = Plugin.Instance.Configuration.numMostActiveUsers;
+            sql +=
+                "ORDER BY TotalTimeWatched DESC " +
+                $"LIMIT {numUsers} "
+                ;
+
+            var help = Constants.HelpMostActiveUsers;
+            help = help.Replace("<numUsers>", numUsers.ToString());
+
+            var groupData = new TableBasedStatCard(Constants.MostActiveUsers, help, new List<string> { "Days", "Hours", "Minutes" });
+            var cmd = new SQLCmdDef(sql);
+            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            {
+                var row = statement.Current;
+                var userName = row.GetString(0);
+                var runtime = new RunTime(row.GetInt64(1));
+
+                groupData.addRow(userName, new List<int> { runtime.Days, runtime.Hours, runtime.Minutes });
+                return true;
+            });
+
+            return groupData;
         }
     }
 }

@@ -8,6 +8,13 @@ using System.Threading;
 
 namespace Statistics2026.Data
 {
+    public enum EMediaType
+    {
+        eMovie,
+        eSeries,
+        eEpisode
+    }
+
     public sealed partial class StatisticsDB
     {
         private static readonly object _padlock = new object();
