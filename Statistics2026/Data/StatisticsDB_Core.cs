@@ -8,6 +8,13 @@ using System.Threading;
 
 namespace Statistics2026.Data
 {
+    public enum EMediaType
+    {
+        eMovie,
+        eSeries,
+        eEpisode
+    }
+
     public sealed partial class StatisticsDB
     {
         private static readonly object _padlock = new object();
@@ -55,7 +62,22 @@ namespace Statistics2026.Data
         {
         }
 
-        public void Initialize(CancellationToken? cancellationToken, IProgress<double>? progress, bool reset=false)
+        private void CheckIsValid(bool inInit = false)
+        {
+            if (inInit)
+                _dbHelper.CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
+            else
+                _dbHelper.CheckIsValid(ECheckLevel.eAllWithThrow);
+
+            if (Statistics2026.Plugin.Instance == null)
+                throw new ArgumentNullException("Statistics2026.Plugin.Instance");
+
+            if (Statistics2026.Plugin.Instance.Configuration == null)
+                throw new ArgumentNullException("Statistics2026.Plugin.Instance.Configuration");
+
+        }
+
+        public void Initialize(CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false)
         {
             SetCancellationToken(cancellationToken, progress);
             CreateTables(reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate);
@@ -154,7 +176,14 @@ namespace Statistics2026.Data
                         new TableColDef( "TotalWatchableTime", "INT", true )
                     }
                 ),
-
+                new TableDef("Collections",
+                    new List<TableColDef>()
+                    {
+                            new TableColDef( "ItemId", "TEXT", false, true),
+                            new TableColDef( "Name", "TEXT", false ),
+                            new TableColDef( "SortName", "TEXT", false )
+                    }
+                ),
                 new TableDef("CollectionMembership",
                     new List<TableColDef>()
                     {
@@ -164,18 +193,6 @@ namespace Statistics2026.Data
                     }
                 )
             };
-
-            _tableList.Add(
-                new TableDef("Collections",
-                    new List<TableColDef>()
-                    {
-                            new TableColDef( "ItemId", "TEXT", false, true),
-                            new TableColDef( "Name", "TEXT", false ),
-                            new TableColDef( "SortName", "TEXT", false )
-                    }
-                )
-            );
-            _tableList[_tableList.Count - 1].DeprecatedTable = true;
 
             _tableList.Add(
                 new TableDef("CachedStats",
@@ -300,25 +317,6 @@ namespace Statistics2026.Data
             userId = userId.ToString().Replace("-", "");
 
             return $"UserMedia_{userId}";
-        }
-
-        public List<SQLCmdDef> DropAllUserMediaCmds()
-        {
-            var retVal = new List<SQLCmdDef>();
-            if (_userMediaTemplate == null)
-                return retVal;
-
-            var tables = allUserMediaTables();
-
-            foreach (var table in tables)
-                retVal.AddRange(DropTableCmds(table));
-
-            return retVal;
-        }
-
-        public List<string> allUserMediaTables()
-        {
-            return allTables((regex: "UserMedia_%", like: true));
         }
 
         public List<SQLCmdDef> DropTableCmds(string tableName)
