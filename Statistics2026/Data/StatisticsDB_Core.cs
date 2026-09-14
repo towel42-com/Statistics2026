@@ -175,22 +175,7 @@ namespace Statistics2026.Data
                         new TableColDef( "TotalTimeWatched", "INT", true ),
                         new TableColDef( "TotalWatchableTime", "INT", true )
                     }
-                )
-
-            };
-
-            _tableList.Add(
-                new TableDef("CollectionMembership",
-                    new List<TableColDef>()
-                    {
-                        new TableColDef( "CollectionId", "TEXT", false ),
-                        new TableColDef( "ItemId", "TEXT", false ),
-                        new TableColDef( "CollectionName", "TEXT", false ) // for debugging purposes
-                    }
-            ));
-            _tableList[_tableList.Count - 1].DeprecatedTable = true;
-
-            _tableList.Add(
+                ),
                 new TableDef("Collections",
                     new List<TableColDef>()
                     {
@@ -198,9 +183,16 @@ namespace Statistics2026.Data
                             new TableColDef( "Name", "TEXT", false ),
                             new TableColDef( "SortName", "TEXT", false )
                     }
+                ),
+                new TableDef("CollectionMembership",
+                    new List<TableColDef>()
+                    {
+                        new TableColDef( "CollectionId", "TEXT", false ),
+                        new TableColDef( "ItemId", "TEXT", false ),
+                        new TableColDef( "CollectionName", "TEXT", false ) // for debugging purposes
+                    }
                 )
-            );
-            _tableList[_tableList.Count - 1].DeprecatedTable = true;
+            };
 
             _tableList.Add(
                 new TableDef("CachedStats",
