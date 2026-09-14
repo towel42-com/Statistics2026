@@ -1,0 +1,289 @@
+﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
+using Statistics2026.Api;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Net.NetworkInformation;
+using System.Threading;
+
+namespace Statistics2026.Data
+{
+    public sealed partial class StatisticsDB
+    {
+        public void AddAllSeries()
+        {
+            CheckIsValid();
+
+            _embyInterfaces!._logger?.Debug($"AddAllSeries- Starting Video Analysis");
+
+            _dbHelper!.Progress?.Report(0);
+            var seriesList = _dbHelper.GetLibraryItems<Series>().Cast<Series>().ToList();
+            _dbHelper!.Progress?.Report(100);
+
+            double count = seriesList.Count;
+            double curr = 0.0;
+
+            _dbHelper!.Progress?.Report(0);
+            var sqlCmds = new List<SQLCmdDef>();
+
+            foreach (Series series in seriesList)
+            {
+                _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
+                sqlCmds.AddRange(AddSeries(series));
+                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+
+                _embyInterfaces!._logger?.Debug($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
+            }
+
+            _dbHelper!.Progress?.Report(80);
+            _dbHelper.ExecuteCommands(sqlCmds);
+            _dbHelper!.Progress?.Report(100);
+            _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+            _embyInterfaces!._logger?.Debug($"AddAllSeries - Finished Video Analysis");
+        }
+
+        private (int episodes, int specials) GetCountForSeries(Series series)
+        {
+            CheckIsValid();
+
+            var libraryOptions = _embyInterfaces!._libraryManager.GetLibraryOptions(series);
+            var allEpisodes = _embyInterfaces!._providerManager.GetAllEpisodes(series, libraryOptions, _dbHelper!.CancellationToken!.Value).ConfigureAwait(false).GetAwaiter().GetResult();
+
+            var episodes = allEpisodes.Where(e => !MediaInfo.isTVSpecial(e) && (e.PremiereDate <= DateTime.Now)).Count();
+            var specials = allEpisodes.Where(e => MediaInfo.isTVSpecial(e)).Count();
+
+            if (episodes == 0 && specials == 0)// when providers are disabled
+            {
+                var cmd = new SQLCmdDef($"SELECT NumEpisodes FROM Series WHERE ItemId=@SeriesId",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        episodes = row.GetInt(0);
+                    }
+                    return false;
+                });
+
+                cmd = new SQLCmdDef($"SELECT NumSpecials FROM Series WHERE ItemId=@SeriesId",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        specials = row.GetInt(0);
+                    }
+                    return false;
+                });
+            }
+            if (episodes == 0 && specials == 0) // Series hasnt been setup yet
+            {
+                var cmd = new SQLCmdDef($"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND NOT IsTVSpecial",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        episodes = row.GetInt(0);
+                    }
+                    return false;
+                });
+
+                cmd = new SQLCmdDef($"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND IsTVSpecial",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        specials = row.GetInt(0);
+                    }
+                    return false;
+                });
+            }
+            return (episodes, specials);
+        }
+
+        private List<SQLCmdDef> AddSeries(Series series)
+        {
+            CheckIsValid();
+
+            var sqlCmds = new List<SQLCmdDef>();
+            if (series.Id == null)
+            {
+                _embyInterfaces!._logger?.Error($"AddSeries {series.SortName}: is missing ItemId");
+                return sqlCmds;
+            }
+
+            _embyInterfaces!._logger?.Debug($"AddAllSeries -    AddSeries - Adding Series {series.Name}");
+
+            long totalFileSize = 0;
+            long totalRuntime = 0;
+            Double averageRating = 0.0;
+            long averageBitrate = 0;
+
+            var sql = "SELECT " +
+                "  SUM(FileSize)" +
+                ", SUM(RunTimeTicks)" +
+                ", SUM(Rating)/Count(1)" +
+                ", Sum(TotalBitrate)/Count(1) " +
+                "FROM " +
+                "Media " +
+                "WHERE SeriesId=@SeriesId";
+
+            var cmd = new SQLCmdDef(sql,
+                        new List<(string name, object? value)>()
+                        {
+                            ("@SeriesId", series.Id.ToString())
+                        });
+            _dbHelper.ExecuteCommands(new List<SQLCmdDef>() { cmd },
+                statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        totalFileSize = row.GetInt64(0);
+                        totalRuntime = row.GetInt64(1);
+                        averageRating = row.GetFloat(2);
+                        averageBitrate = row.GetInt64(3);
+                        return false;
+                    }
+                    return true;
+                });
+
+            var seriesStatus = series.Status?.ToString() ?? "";
+
+            cmd = new SQLCmdDef("SELECT COUNT(*) FROM Series where ItemId=@ItemId", new List<(string name, object? value)>() { ("@ItemId", series.Id.ToString()) });
+            var exists = false;
+            _dbHelper.ExecuteCommand(cmd, statement =>
+            {
+                var row = statement.Current;
+                exists = row.GetInt(0) > 0;
+                return false;
+            });
+
+            var (numEpisodes, numSpecials) = GetCountForSeries(series);
+            sql = String.Empty;
+            List<(string name, object? value)>? paramsList = null;
+            if (!exists)
+            {
+                sql = "INSERT INTO Series " +
+                "(" +
+                    "  ItemId" +
+                    ", Name" +
+                    ", SortName" +
+                    ", PremiereDate" +
+                    ", NumEpisodes" +
+                    ", NumSpecials" +
+                    ", DateAdded" +
+                    ", ImageUrl" +
+                    ", FileSize" +
+                    ", RunTimeTicks" +
+                    ", Rating" +
+                    ", Status" +
+                    ", AverageBitrate" +
+                ")" +
+                " VALUES " +
+                "(" +
+                    "  @ItemId" +
+                    ", @Name" +
+                    ", @SortName" +
+                    ", @PremiereDate" +
+                    ", @NumEpisodes" +
+                    ", @NumSpecials" +
+                    ", @DateAdded" +
+                    ", @ImageUrl" +
+                    ", @FileSize" +
+                    ", @RunTimeTicks" +
+                    ", @Rating" +
+                    ", @Status" +
+                    ", @AverageBitrate" +
+                ")" +
+                " ON CONFLICT(ItemId) " +
+                " DO UPDATE " +
+                " SET " +
+                    "  Name=@Name" +
+                    ", SortName=@SortName" +
+                    ", PremiereDate=@PremiereDate" +
+                    ", NumEpisodes=@NumEpisodes" +
+                    ", NumSpecials=@NumSpecials" +
+                    ", DateAdded=@DateAdded" +
+                    ", ImageUrl=@ImageUrl" +
+                    ", FileSize=@FileSize" +
+                    ", RunTimeTicks=@RunTimeTicks" +
+                    ", Rating=@Rating" +
+                    ", Status=@Status" +
+                    ", AverageBitrate=@AverageBitrate";
+
+                paramsList = new List<(string name, object? value)>()
+                       {
+                           ("@ItemId", series.Id.ToString()),
+                           ("@Name", series.Name),
+                           ("@SortName", series.SortName),
+                           ("@PremiereDate", _dbHelper.ToDateTimeParamValue( series.PremiereDate.HasValue ? series.PremiereDate.Value.DateTime : null )),
+                           ("@NumEpisodes", numEpisodes),
+                           ("@NumSpecials", numSpecials),
+                           ("@DateAdded", _dbHelper.ToDateTimeParamValue( series.DateCreated.DateTime )),
+                           ("@ImageUrl", ItemImageUrl._ItemImageUrl(series)),
+                           ("@FileSize", totalFileSize),
+                           ("@RunTimeTicks", totalRuntime),
+                           ("@Rating", averageRating),
+                           ("@Status", seriesStatus),
+                           ("@AverageBitrate", averageBitrate),
+                       };
+            }
+            else
+            {
+                sql = "UPDATE Series " +
+                    "  SET " +
+                    "  NumEpisodes=NumEpisodes+@NumEpisodes" +
+                    ", NumSpecials=NumSpecials+@NumSpecials" +
+                    ", FileSize=FileSize+@FileSize" +
+                    ", RunTimeTicks=RunTimeTicks+@RunTimeTicks " +
+                    ", Rating=@Rating " +
+                    ", Status=@Status " +
+                    "WHERE ItemId=@ItemId";
+
+                paramsList = new List<(string name, object? value)>()
+                       {
+                           ("@ItemId", series.Id.ToString()),
+                           ("@NumEpisodes", numEpisodes),
+                           ("@NumSpecials", numSpecials),
+                           ("@FileSize", totalFileSize),
+                           ("@RunTimeTicks", totalRuntime),
+                           ("@Rating", averageRating),
+                           ("@Status", seriesStatus),
+                       };
+            }
+            sqlCmds.Add(new SQLCmdDef(sql, paramsList));
+
+            _embyInterfaces!._logger?.Debug($"AddAllSeries -    AddSeries - Successfully Added Series {series.Name}");
+            return sqlCmds;
+        }
+    }
+}
