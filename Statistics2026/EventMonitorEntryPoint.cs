@@ -66,8 +66,10 @@ namespace Statistics2026
         public void Run()
         {
             CheckIsValid();
+            var db = StatisticsDB.GetInstance(_embyInterfaces);
+            db.Initialize();
 
-            _embyInterfaces!._logger!.Info("EventMonitorEntryPoint Running");
+            _embyInterfaces!._logger!.Debug("EventMonitorEntryPoint Running");
 
             _embyInterfaces._sessionManager!.PlaybackStart += _sessionManager_PlaybackStart;
             _embyInterfaces._sessionManager!.PlaybackStopped += _sessionManager_PlaybackStop;
@@ -123,7 +125,7 @@ namespace Statistics2026
                     {
                         currThreadSleep = currThreadSleep + 10;
                     }
-                    _embyInterfaces!._logger!.Info("PlaybackMonitoringTask New Thread Sleep : " + currThreadSleep);
+                    _embyInterfaces!._logger!.Debug("PlaybackMonitoringTask New Thread Sleep : " + currThreadSleep);
                 }
 
                 await Task.Delay(currThreadSleep * 1000);
@@ -150,11 +152,10 @@ namespace Statistics2026
                 var playbackInfo = PlaybackInfo.Create(session, _embyInterfaces);
                 ActiveSessions.Add(playbackInfo);
 
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
-                db.UpdatePlaybackState(playbackInfo);
+                playbackInfo.UpdatePlaybackState(_embyInterfaces);
             }
 
-            PlaybackInfo.RemoveOldPlayinfo(ActiveSessions,_embyInterfaces);
+            PlaybackInfo.RemoveInactivePlayinfo(ActiveSessions,_embyInterfaces);
             ActiveSessions.Clear();
             _embyInterfaces!._logger!.Debug("PlaybackMonitoringTask : ProcessSessions End");
         }
