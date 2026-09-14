@@ -66,8 +66,7 @@ namespace Statistics2026.ScheduledTasks
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
-            db.SetCancellationToken(cancellationToken, progress);
-            db.Initialize(PluginConfiguration.resetPlayCount);
+            db.Initialize(cancellationToken, progress,PluginConfiguration.resetPlayCount);
 
             var overAllTimer = new AutoTimer($"Adding All Data", _embyInterfaces._logger, false);
 
@@ -88,7 +87,7 @@ namespace Statistics2026.ScheduledTasks
             }
 
             db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
-            db.Initialize();
+            db.Initialize(cancellationToken, progress);
             cancellationToken.ThrowIfCancellationRequested();
 
             var overall = overAllTimer.ElapsedMilliseconds();

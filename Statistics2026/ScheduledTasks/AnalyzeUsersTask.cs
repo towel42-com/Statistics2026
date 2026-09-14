@@ -54,8 +54,7 @@ namespace Statistics2026.ScheduledTasks
             var now = DateTime.Now;
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
-            db.Initialize();
-            db.SetCancellationToken(cancellationToken, progress);
+            db.Initialize(cancellationToken, progress);
             try
             {
                 db.ClearTable("Users"); // will throw an exception if the primary has not been run yet
