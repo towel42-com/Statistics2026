@@ -42,7 +42,7 @@ namespace Statistics2026.Data
             Statement = Statement.Replace(from, to);
         }
 
-        private void _Execute(IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement, CancellationToken? cancellationToken)
+        private void _Execute(IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement)
         {
             using (var statement = connection.PrepareStatement(Statement))
             {
@@ -64,19 +64,19 @@ namespace Statistics2026.Data
                     {
                         if (!onStatement(statement))
                             break;
-                        cancellationToken?.ThrowIfCancellationRequested();
+                        dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
             }
 
         }
-        public void Execute(IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement, CancellationToken? cancellationToken)
+        public void Execute(IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement)
         {
             if (FailureAllowed)
             {
                 try
                 {
-                    _Execute(connection, dbHelper, onStatement, cancellationToken);
+                    _Execute(connection, dbHelper, onStatement);
                 }
                 catch
                 { 
@@ -84,7 +84,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                _Execute(connection, dbHelper, onStatement, cancellationToken);
+                _Execute(connection, dbHelper, onStatement);
             }
 
         }
