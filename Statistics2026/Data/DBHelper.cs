@@ -7,13 +7,25 @@ using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Statistics2026.Data
 {
+    public enum ECheckLevel
+    {
+        eInterfaces = 0x0001,
+        eConnection = 0x0002,
+        eProgress = 0x0004,
+        eAll = eInterfaces | eConnection | eProgress,
+        eThrowOnFailure = 0x010000,
+        eAllWithThrow = eAll | eThrowOnFailure
+    }
+
     public sealed class DBHelper
     {
         private static string[] _datetimeFormats = new string[] {
@@ -53,47 +65,80 @@ namespace Statistics2026.Data
         private static string _datetimeFormatUtc = _datetimeFormats[5];
         private static string _datetimeFormatLocal = _datetimeFormats[19];
 
-        private EmbyManagers? _embyManagers;
+        private EmbyInterfaces? _embyInterfaces;
 
         private IDatabaseConnection? Connection { get; set; } = null;
         public CancellationToken? CancellationToken { get; set; } = null;
+        public IProgress<double>? Progress { get; set; } = null;
+
         public DBHelper()
         {
-            _embyManagers = null;
+            _embyInterfaces = null;
         }
 
-        private void CheckIsValid()
+        public DBHelper(EmbyInterfaces embyInterfaces)
         {
-            if (_embyManagers == null)
-                throw new ArgumentNullException("_embyManagers");
-        }
+            if (embyInterfaces == null)
+                throw new ArgumentNullException("embyInterfaces is null.");
 
-        public DBHelper(EmbyManagers embyManagers)
-        {
-            if (embyManagers == null)
-                throw new ArgumentNullException("embyManagers is null.");
-
-            _embyManagers = embyManagers;
-            string db_file_name = Path.Combine(_embyManagers._configManager.ApplicationPaths.DataPath, "Statistics2026.db");
+            _embyInterfaces = embyInterfaces;
+            string db_file_name = Path.Combine(_embyInterfaces._configManager.ApplicationPaths.DataPath, "Statistics2026.db");
             CreateConnection(db_file_name);
         }
 
-        public bool isValid()
+        public bool CheckIsValid(ECheckLevel checkLevel)
         {
-            if (Connection == null)
-                return false;
-            if (_embyManagers == null || _embyManagers._logger == null)
-                return false;
-            return true;
+            var msgs = new List<string>() { $"DBHelper is not valid 0x{checkLevel:X}" };
+            var retVal = true;
+            if ((checkLevel & ECheckLevel.eInterfaces) != 0)
+            {
+                if (_embyInterfaces == null || _embyInterfaces._logger == null)
+                {
+                    retVal = false;
+                    msgs.Add("_embyInterfaces is null");
+                }
+            }
+
+            if ((checkLevel & ECheckLevel.eConnection) != 0)
+            {
+                if (Connection == null)
+                {
+                    retVal = false;
+                    msgs.Add("Connection is null");
+                }
+            }
+
+            if ((checkLevel & ECheckLevel.eProgress) != 0)
+            {
+                if (CancellationToken == null)
+                {
+                    retVal = false;
+                    msgs.Add("CancellationToken is null");
+                }
+
+                if (Progress == null)
+                {
+                    retVal = false;
+                    msgs.Add("Progress is null");
+                }
+            }
+
+            if (retVal == false && ((checkLevel & ECheckLevel.eThrowOnFailure) != 0))
+            {
+                var msg = String.Join("\n", msgs);
+
+                throw new ArgumentNullException(msg);
+            }
+            return retVal;
         }
 
         ~DBHelper()
         {
-            _embyManagers?._logger?.Debug("StatisticsData : Cleaning up");
+            _embyInterfaces?._logger?.Debug("Statistics2026 : Cleaning up");
             if (Connection != null)
             {
                 Connection.Close();
-                _embyManagers?._logger?.Debug("StatisticsData : DB Connection Closed");
+                _embyInterfaces?._logger?.Debug("Statistics2026 : DB Connection Closed");
             }
         }
 
@@ -102,7 +147,7 @@ namespace Statistics2026.Data
             IBindParameter bindParam;
             if (!statement.BindParameters.TryGetValue(name, out bindParam))
             {
-                _embyManagers!._logger?.Error($"Error Binding {name} to {value}");
+                _embyInterfaces!._logger?.Error($"Error Binding {name} to {value}");
                 return false;
             }
 
@@ -160,40 +205,20 @@ namespace Statistics2026.Data
 
         public void ExecuteCommands(List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null)
         {
-            if (Connection == null)
-                throw new ArgumentNullException("Connection");
+            CheckIsValid(ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure);
 
             try
             {
                 Connection.RunInTransaction(connection =>
                 {
-                    foreach (var cmd in cmds)
+                    for (var ii = 0; ii < cmds.Count; ++ii )
                     {
                         CancellationToken?.ThrowIfCancellationRequested();
-                        using (var statement = connection.PrepareStatement(cmd.Statement))
-                        {
-                            if (cmd.HasParameters())
-                            {
-                                foreach (var param in cmd.Parameters!)
-                                {
-                                    TryBind(statement, param.name, param.value);
-                                }
-                            }
 
-                            if (onStatement == null)
-                            {
-                                statement.MoveNext();
-                            }
-                            else
-                            {
-                                while (statement.MoveNext())
-                                {
-                                    if (!onStatement(statement))
-                                        break;
-                                    CancellationToken?.ThrowIfCancellationRequested();
-                                }
-                            }
-                        }
+                        var cmd = cmds[ii];
+                        cmd.Execute(connection, this, onStatement);
+                        var value = 80 + (20.0 * ii) / (cmds.Count);
+                        Progress?.Report(value);
                     }
                 });
             }
@@ -251,12 +276,12 @@ namespace Statistics2026.Data
 
         private void CreateConnection(string db_file)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
 
-            _embyManagers!._logger?.Debug("CreateConnection : " + db_file);
+            _embyInterfaces!._logger?.Debug("CreateConnection : " + db_file);
             ConnectionFlags connectionFlags;
 
-            //_embyManagers!._logger?.Debug("Opening write _connection");
+            //_embyInterfaces!._logger?.Debug("Opening write _connection");
             connectionFlags = ConnectionFlags.Create; // create if missing
             connectionFlags |= ConnectionFlags.ReadWrite; // open for read-write
             connectionFlags |= ConnectionFlags.PrivateCache;
@@ -282,13 +307,13 @@ namespace Statistics2026.Data
             }
 
             Connection = db;
-            _embyManagers!._logger?.Debug("ConnectionCreated : " + Connection.GetHashCode());
+            _embyInterfaces!._logger?.Debug("ConnectionCreated : " + Connection.GetHashCode());
         }
 
         public IEnumerable<T> GetLibraryItems<T>()
         {
-            CheckIsValid();
-            return GetUserItems<T>(null, _embyManagers!._libraryManager);
+            CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
+            return GetUserItems<T>(null, _embyInterfaces!._libraryManager);
         }
 
         static public IEnumerable<T> GetUserItems<T>(User? user, ILibraryManager libManager)

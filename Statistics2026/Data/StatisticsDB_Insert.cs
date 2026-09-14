@@ -2,11 +2,12 @@
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Threading;
@@ -15,13 +16,12 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        private void CheckIsValid()
+        private void CheckIsValid(bool inInit = false)
         {
-            if (!_dbHelper.isValid())
-                throw new ArgumentNullException("dbHelper");
-
-            if (_embyManagers == null)
-                throw new ArgumentNullException("_embyManagers");
+            if (inInit)
+                _dbHelper.CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
+            else
+                _dbHelper.CheckIsValid(ECheckLevel.eAllWithThrow);
 
             if (Statistics2026.Plugin.Instance == null)
                 throw new ArgumentNullException("Statistics2026.Plugin.Instance");
@@ -48,90 +48,131 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommands(sqlCmds);
         }
 
-        public void AddAllUsers(CancellationToken cancellationToken, IProgress<double> progress)
+        public void AddAllUsers()
         {
             CheckIsValid();
 
-            progress.Report(0);
-            var users = _embyManagers?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
+            _dbHelper!.Progress?.Report(0);
+            var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
             if (users == null)
                 return;
 
-            progress.Report(100);
+            _dbHelper!.Progress?.Report(100);
 
-            _embyManagers?._logger?.Debug($"AddAllUsers - Starting User Analysis");
+            _embyInterfaces?._logger?.Debug($"AddAllUsers - Starting User Analysis");
             double count = users.Count;
             double curr = 0;
 
-            progress.Report(0);
+            _dbHelper!.Progress?.Report(0);
             var sqlCmds = new List<SQLCmdDef>();
-            using (var timer = new AutoTimer($"    Adding All Users - Getting Commands", _embyManagers?._logger))
+            using (var timer = new AutoTimer($"    Adding All Users - Getting Commands", _embyInterfaces?._logger))
             {
                 foreach (var user in users)
                 {
-                    progress.Report(80.0 * (++curr) / count);
-                    using (var userTimer = new AutoTimer($"AddAllUsers -     Processed User ({curr} of {count}) - {user.Name}", _embyManagers?._logger))
+                    _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
+                    using (var userTimer = new AutoTimer($"AddAllUsers -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger))
                     {
                         sqlCmds.AddRange(AddUser(user));
-                        cancellationToken.ThrowIfCancellationRequested();
+                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
-                cancellationToken.ThrowIfCancellationRequested();
+                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
             }
 
-            using (var timer = new AutoTimer($"    Adding All Users - Executing Commands", _embyManagers?._logger))
+            using (var timer = new AutoTimer($"    Adding All Users - Executing Commands", _embyInterfaces?._logger))
             {
-                progress.Report(80);
+                _dbHelper!.Progress?.Report(80);
                 _dbHelper.ExecuteCommands(sqlCmds);
-                progress.Report(100);
+                _dbHelper!.Progress?.Report(100);
             }
 
-            _embyManagers?._logger?.Debug($"AddAllUsers - Finished User Analysis");
+            _embyInterfaces?._logger?.Debug($"AddAllUsers - Finished User Analysis");
         }
 
-        public void AnalyzeUserWatchData(CancellationToken cancellationToken, IProgress<double> progress)
+        public void InitUserWatchData()
+        {
+            CheckIsValid(true);
+
+            _dbHelper!.Progress?.Report(0);
+            var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
+            if (users == null)
+            {
+                _dbHelper!.Progress?.Report(100);
+                return;
+            }
+            _dbHelper!.Progress?.Report(100);
+
+            var sqlCmds = new List<SQLCmdDef>();
+            double curr = 0.0;
+            double count = users.Count;
+
+            using (var timer = new AutoTimer($"    Analyze User Watch Data - Getting Init Table Commands", _embyInterfaces?._logger))
+            {
+                curr = 0;
+                foreach (var user in users)
+                {
+                    _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
+                    using (var userTimer = new AutoTimer($"AnalyzeUserWatchData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger))
+                    {
+                        sqlCmds.AddRange(GetInitTableCommands(user));
+                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    }
+                }
+                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+            }
+
+            using (var timer = new AutoTimer($"    Analyze User Watch Data - Executing Init Table Commands", _embyInterfaces?._logger))
+            {
+                _dbHelper!.Progress?.Report(80);
+                _dbHelper.ExecuteCommands(sqlCmds);
+                _dbHelper!.Progress?.Report(100);
+            }
+        }
+
+        public void AnalyzeUserWatchData()
         {
             CheckIsValid();
 
-            progress.Report(0);
-            var users = _embyManagers?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
+            _dbHelper!.Progress?.Report(0);
+            var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
             if (users == null)
                 return;
+            _dbHelper!.Progress?.Report(100);
 
-            progress.Report(100);
+            _embyInterfaces?._logger?.Debug($"AnalyzeUserWatchData - Starting User Watch Data Analysis");
 
-            _embyManagers?._logger?.Debug($"AnalyzeUserWatchData - Starting User Watch Data Analysis");
             double count = users.Count;
             double curr = 0;
 
-            progress.Report(0);
+            _dbHelper!.Progress?.Report(0);
             var sqlCmds = new List<SQLCmdDef>();
-            using (var timer = new AutoTimer($"    Analyze User Watch Data - Getting Commands", _embyManagers?._logger))
+            using (var timer = new AutoTimer($"    Analyze User Watch Data - Getting Commands", _embyInterfaces?._logger))
             {
+                curr = 0;
                 foreach (var user in users)
                 {
-                    progress.Report(80.0 * (++curr) / count);
-                    using (var userTimer = new AutoTimer($"AnalyzeUserWatchData -     Processed User ({curr} of {count}) - {user.Name}", _embyManagers?._logger))
+                    _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
+                    using (var userTimer = new AutoTimer($"AnalyzeUserWatchData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger))
                     {
-                        sqlCmds.AddRange(AddUserWatchData(user, progress, cancellationToken));
-                        cancellationToken.ThrowIfCancellationRequested();
+                        sqlCmds.AddRange(AddUserWatchData(user));
+                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
-                cancellationToken.ThrowIfCancellationRequested();
+                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
             }
 
             var config = Statistics2026.Plugin.Instance!.Configuration;
             config.resetPlayCount = false;
             Statistics2026.Plugin.Instance.UpdateConfiguration(config);
 
-            using (var timer = new AutoTimer($"    Analyze User Watch Data - Executing Commands", _embyManagers?._logger))
+            using (var timer = new AutoTimer($"    Analyze User Watch Data - Executing Commands", _embyInterfaces?._logger))
             {
-                progress.Report(80);
+                _dbHelper!.Progress?.Report(80);
                 _dbHelper.ExecuteCommands(sqlCmds);
-                progress.Report(100);
+                _dbHelper!.Progress?.Report(100);
             }
 
-            _embyManagers?._logger?.Debug($"AnalyzeUserWatchData - Finished User Watch Data Analysis");
+            _embyInterfaces?._logger?.Debug($"AnalyzeUserWatchData - Finished User Watch Data Analysis");
         }
 
         (long, long) AnalyzeOverallTime(User? user, List<User>? userList)
@@ -141,18 +182,18 @@ namespace Statistics2026.Data
             if (user == null && userList == null)
                 throw new ArgumentException("Either user or allUsers must be provided.");
 
-            var (allVideosForUser, allVideos) = Statistics2026API.GetAllEpisodesAndMovies(user, _embyManagers!._libraryManager, true);
+            var (allVideosForUser, allVideos) = Statistics2026API.GetAllEpisodesAndMovies(user, _embyInterfaces!._libraryManager, true);
 
             long watchable = 0;
             long watched = 0;
             if (user == null && userList != null) // use the list of users
             {
-                watched = allVideos.Where(video => userList.Any(u => _embyManagers!._userDataManager.GetUserData(u, video).Played)).Sum(item => item.RunTimeTicks ?? 0);
+                watched = allVideos.Where(video => userList.Any(u => _embyInterfaces!._userDataManager.GetUserData(u, video).Played)).Sum(item => item.RunTimeTicks ?? 0);
                 watchable = allVideos.Sum(item => item.RunTimeTicks ?? 0);
             }
             else
             {
-                watched = allVideosForUser.Where(video => _embyManagers!._userDataManager.GetUserData(user, video).Played).Sum(item => item.RunTimeTicks ?? 0);
+                watched = allVideosForUser.Where(video => _embyInterfaces!._userDataManager.GetUserData(user, video).Played).Sum(item => item.RunTimeTicks ?? 0);
                 watchable = allVideosForUser.Sum(item => item.RunTimeTicks ?? 0);
             }
 
@@ -228,13 +269,15 @@ namespace Statistics2026.Data
             {
                 if (curr.Value.hit == false)
                 {
-                    _embyManagers!._logger!.Warn($"Video {curr.Key} not hit for scott");
+                    _embyInterfaces!._logger!.Warn($"Video {curr.Key} not hit for scott");
                 }
             }
         }
 
-        private void ResetPlayCount(User user, Video video, CancellationToken cancellationToken, ref bool isPlayed, ref int playCount)
+        private void ResetPlayCount(User user, Video video, ref bool isPlayed, ref int playCount)
         {
+            CheckIsValid();
+
             if (Statistics2026.Plugin.Instance == null || Statistics2026.Plugin.Instance!.Configuration == null)
                 return;
 
@@ -251,7 +294,7 @@ namespace Statistics2026.Data
             bool? newFavorite = null;
             bool updateLastPlayedDate = false;
 
-            var userData = _embyManagers!._userDataManager.GetUserData(user, video);
+            var userData = _embyInterfaces!._userDataManager.GetUserData(user, video);
             if (userData == null)
                 return;
 
@@ -354,15 +397,43 @@ namespace Statistics2026.Data
                 update = true;
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
+            _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
 
             if (!update)
                 return;
 
-            _embyManagers._userDataManager.SaveUserData(user, video, userData, UserDataSaveReason.Import, cancellationToken);
+            if (_dbHelper.CancellationToken == null)
+                return;
+
+            CancellationToken token = _dbHelper!.CancellationToken.Value;
+
+            _embyInterfaces._userDataManager.SaveUserData(user, video, userData, UserDataSaveReason.Import, token);
         }
 
-        private List<SQLCmdDef> AddUserWatchData(User? user, IProgress<double> progress, CancellationToken cancellationToken)
+        public List<SQLCmdDef> GetInitTableCommands(User? user)
+        {
+            if (_userMediaTemplate == null)
+                throw new Exception($"GetInitTableCommands: TableDef for UserMedia_<USER_ID> is null");
+
+            if (user == null)
+                throw new Exception($"GetInitTableCommands: User is null");
+
+            var userTableName = getUserTableName(user);
+
+            var sqlCmds = new List<SQLCmdDef>();
+
+            var cmds = _userMediaTemplate.GetSQLCommands(TableDef.EAction.eCreate);
+            for (var ii = 0; ii < cmds.Count(); ++ii)
+            {
+                var cmd = new SQLCmdDef(cmds[ii]);
+                cmd.Replace("UserMedia_<USER_ID>", userTableName);
+                sqlCmds.Add(cmd);
+            }
+
+            return sqlCmds;
+        }
+
+        private List<SQLCmdDef> AddUserWatchData(User? user)
         {
             CheckIsValid();
 
@@ -375,14 +446,7 @@ namespace Statistics2026.Data
 
             var sqlCmds = new List<SQLCmdDef>();
 
-            var cmds = _userMediaTemplate.GetSQLCommands(TableDef.EAction.eCreate);
-            for (var ii = 0; ii < cmds.Count(); ++ii)
-            {
-                var sqlCmd = cmds[ii].Replace("UserMedia_<USER_ID>", userTableName);
-                sqlCmds.Add(new SQLCmdDef(sqlCmd));
-            }
-
-            var allVideosForUser = Statistics2026API.GetAllEpisodesAndMovies(user, _embyManagers!._libraryManager, false).forUser;
+            var allVideosForUser = Statistics2026API.GetAllEpisodesAndMovies(user, _embyInterfaces!._libraryManager, false).forUser;
             //_tableList
             string sql =
                 $"INSERT INTO {userTableName} " +
@@ -410,7 +474,16 @@ namespace Statistics2026.Data
                     ", @NumEpisodes" +
                     ", @IsTVSpecial" +
                     ", @SeriesId" +
-                ")";
+                ") " +
+                " ON CONFLICT(ItemId) " +
+                " DO UPDATE " +
+                " SET " +
+                    "  IsPlayed=@IsPlayed" +
+                    ", PlayCount=@PlayCount" +
+                    ", LastPlayedDate=@LastPlayedDate" +
+                " WHERE " +
+                " ItemId=@ItemId"
+                ;
 
             foreach (var video in allVideosForUser)
             {
@@ -420,7 +493,7 @@ namespace Statistics2026.Data
                 var isPlayed = video.Played;
                 var playCount = video.PlayCount;
 
-                ResetPlayCount(user, video, cancellationToken, ref isPlayed, ref playCount);
+                ResetPlayCount(user, video, ref isPlayed, ref playCount);
                 var lastPlayedDate = video?.LastPlayedDate ?? null;
 
                 using (var mediaInfo = new MediaInfo(video!))
@@ -441,6 +514,19 @@ namespace Statistics2026.Data
                 }
             }
 
+            var config = Statistics2026.Plugin.Instance!.Configuration;
+            if (config.resetPlayCount)
+            {
+                var sqlUpdateTicks =
+                    $"UPDATE {userTableName} " +
+                    $" SET " +
+                    $"  TotalTicksPlayed=PlayCount*Media.RunTimeTicks " +
+                    $" FROM Media " +
+                    $" WHERE Media.ItemId={userTableName}.ItemId"
+                    ;
+                sqlCmds.Add(new SQLCmdDef(sqlUpdateTicks));
+            }
+
             if (user.Name == "scott")
                 ValidateResetMapResults();
             return sqlCmds;
@@ -456,13 +542,13 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             if (user.Id == null)
             {
-                _embyManagers!._logger?.Error($"AddUser {user.Name}: is missing Id");
+                _embyInterfaces!._logger?.Error($"AddUser {user.Name}: is missing Id");
                 return sqlCmds;
             }
 
             if (user.Name == null)
             {
-                _embyManagers!._logger?.Error($"AddUser {user.Id.ToString()}: is missing Name");
+                _embyInterfaces!._logger?.Error($"AddUser {user.Id.ToString()}: is missing Name");
                 return sqlCmds;
             }
 
@@ -487,7 +573,16 @@ namespace Statistics2026.Data
                 ", @IsAdministrator" +
                 ", @TotalTimeWatched" +
                 ", @TotalWatchableTime" +
-                ")";
+                ") " +
+                " ON CONFLICT(UserId) " +
+                " DO UPDATE " +
+                " SET " +
+                "  UserName=@UserName" +
+                " ,ConnectUserId=@ConnectUserId" +
+                " ,IsAdministrator=@IsAdministrator" +
+                " ,TotalTimeWatched=@TotalTimeWatched" +
+                " ,TotalWatchableTime=@TotalWatchableTime"
+                ;
             sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
             {
                 ( "@UserId", user.Id.ToString()),
@@ -500,22 +595,22 @@ namespace Statistics2026.Data
             return sqlCmds;
         }
 
-        public void AddAllMedia(CancellationToken cancellationToken, IProgress<double> progress)
+        public void AddAllMedia()
         {
             CheckIsValid();
 
-            _embyManagers!._logger?.Debug($"AddAllMedia - Starting Video Analysis");
+            _embyInterfaces!._logger?.Debug($"AddAllMedia - Starting Video Analysis");
 
-            progress.Report(0);
+            _dbHelper!.Progress?.Report(0);
             var videoList = _dbHelper.GetLibraryItems<Episode>().Cast<Video>().ToList();
-            progress.Report(50);
+            _dbHelper!.Progress?.Report(50);
             videoList.AddRange(_dbHelper.GetLibraryItems<Movie>().Cast<Video>().ToList());
-            progress.Report(100);
+            _dbHelper!.Progress?.Report(100);
 
             double count = videoList.Count;
             double curr = 0.0;
 
-            progress.Report(0);
+            _dbHelper!.Progress?.Report(0);
             var sqlCmds = new List<SQLCmdDef>();
             var existing = new Dictionary<string, bool>();
 
@@ -524,7 +619,7 @@ namespace Statistics2026.Data
                 if (video == null)
                     continue;
 
-                progress.Report(80.0 * (++curr) / count);
+                _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
 
                 if (existing.ContainsKey(video.Id.ToString()))
                     continue;
@@ -535,15 +630,15 @@ namespace Statistics2026.Data
                 {
 
                     sqlCmds.AddRange(AddMediaInfo(mediaInfo));
-                    _embyManagers!._logger?.Debug($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
+                    _embyInterfaces!._logger?.Debug($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
                 }
 
-                cancellationToken.ThrowIfCancellationRequested();
+                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
             }
-            progress.Report(80);
+            _dbHelper!.Progress?.Report(80);
             _dbHelper.ExecuteCommands(sqlCmds);
-            progress.Report(100);
-            _embyManagers!._logger?.Debug($"AddAllMedia - Finished Video Analysis");
+            _dbHelper!.Progress?.Report(100);
+            _embyInterfaces!._logger?.Debug($"AddAllMedia - Finished Video Analysis");
         }
 
         public List<SQLCmdDef> AddMediaInfo(MediaInfo mediaInfo)
@@ -553,7 +648,7 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             if (mediaInfo == null || mediaInfo.ItemId == null)
             {
-                _embyManagers!._logger?.Error($"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId");
+                _embyInterfaces!._logger?.Error($"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId");
                 return sqlCmds;
             }
 
@@ -613,7 +708,36 @@ namespace Statistics2026.Data
                     ", @TotalBitrate" +
                     ", @PremiereDate" +
                     ", @DateAdded" +
-               ")";
+               ")" +
+                " ON CONFLICT(ItemId) " +
+                " DO UPDATE " +
+                " SET " +
+                    "  PrimaryName=@PrimaryName" +
+                    ", SortName=@SortName" +
+                    ", SecondaryName=@SecondaryName" +
+                    ", StartYear=@StartYear" +
+                    ", IsEpisode=@IsEpisode" +
+                    ", IsTVSpecial=@IsTVSpecial" +
+                    ", SeriesId=@SeriesId" +
+                    ", Season=@Season" +
+                    ", Episode=@Episode" +
+                    ", NumEpisodes=@NumEpisodes" +
+                    ", ResolutionBase=@ResolutionBase" +
+                    ", ResolutionDetail=@ResolutionDetail" +
+                    ", Codec=@Codec" +
+                    ", DolbyVisionProfile=@DolbyVisionProfile" +
+                    ", StudioNames =@StudioNames " +
+                    ", Genres =@Genres " +
+                    ", ServerLocation=@ServerLocation" +
+                    ", FileSize=@FileSize" +
+                    ", ImageUrl=@ImageUrl" +
+                    ", RunTimeTicks=@RunTimeTicks" +
+                    ", Rating=@Rating" +
+                    ", TotalBitrate=@TotalBitrate" +
+                    ", PremiereDate=@PremiereDate" +
+                    ", DateAdded=@DateAdded"
+                    ;
+            ;
 
             sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
             {
@@ -647,186 +771,51 @@ namespace Statistics2026.Data
             return sqlCmds;
         }
 
-        public void AddAllCollections(CancellationToken cancellationToken, IProgress<double> progress)
+        public void AddAllSeries()
         {
             CheckIsValid();
 
-            _embyManagers!._logger?.Debug($"AddAllCollections - Starting Collection Analysis");
-            progress.Report(0);
-            var collections = _dbHelper.GetLibraryItems<BoxSet>();
-            progress.Report(100);
+            _embyInterfaces!._logger?.Debug($"AddAllSeries- Starting Video Analysis");
 
-            double count = collections.Count();
-            double curr = 0.0;
-
-            progress.Report(0);
-            var sqlCmds = new List<SQLCmdDef>();
-
-            foreach (var collection in collections)
-            {
-                progress.Report(80.0 * (++curr) / count);
-                sqlCmds.AddRange(AddCollection(collection, cancellationToken, progress));
-                cancellationToken.ThrowIfCancellationRequested();
-                _embyManagers!._logger?.Debug($"AddAllCollections -     Processed Collection ({curr} of {count}) - {collection.Name} items processed");
-            }
-            cancellationToken.ThrowIfCancellationRequested();
-
-            progress.Report(80);
-            _dbHelper.ExecuteCommands(sqlCmds);
-            progress.Report(100);
-            _embyManagers!._logger?.Debug($"AddAllCollections - Finished Collection Analysis");
-        }
-
-        private List<SQLCmdDef> AddChildToCollection(Video video, BoxSet collection)
-        {
-            CheckIsValid();
-
-            var sqlCmds = new List<SQLCmdDef>();
-
-            if (video == null || collection == null)
-            {
-                _embyManagers!._logger?.Error($"AddChildToCollection video, collection must be set");
-                return sqlCmds;
-            }
-
-            string sql =
-                "INSERT INTO CollectionMembership " +
-                "(" +
-                    "  CollectionId" +
-                    ", ItemId" +
-                    ", CollectionName" +
-                ")" +
-                " VALUES " +
-                "(" +
-                "  @CollectionId" +
-                ", @ItemId" +
-                ", @CollectionName" +
-                ")";
-
-            sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>
-            {
-                ("@CollectionId", collection.Id.ToString()),
-                ("@ItemId", video.Id.ToString()),
-                ("@CollectionName", collection.Name),
-            }));
-            return sqlCmds;
-        }
-
-        private List<SQLCmdDef> AddCollectionMembers(BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress)
-        {
-            CheckIsValid();
-
-            _embyManagers!._logger?.Debug($"AddAllCollections - AddCollectionMembers -     Adding members of Collection - {collection.Name}");
-
-            var query = new InternalItemsQuery
-            {
-                CollectionIds = new[] { collection.InternalId },
-                Recursive = true
-            };
-
-            var baseItems = _embyManagers._libraryManager.GetItemList(query);
-            var videos = baseItems.OfType<Video>().ToList();
-
-            double count = videos.Count;
-            double curr = 0.0;
-
-            var sqlCmds = new List<SQLCmdDef>();
-
-            videos.ForEach(video =>
-            {
-                progress.Report(100.0 * (++curr) / count);
-                sqlCmds.AddRange(AddChildToCollection(video, collection));
-                cancellationToken.ThrowIfCancellationRequested();
-            });
-            _embyManagers!._logger?.Debug($"AddAllCollections - AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} ");
-            return sqlCmds;
-        }
-
-        public List<SQLCmdDef> AddCollection(BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress)
-        {
-            CheckIsValid();
-
-            var sqlCmds = new List<SQLCmdDef>();
-            if (collection.Id == null)
-            {
-                _embyManagers!._logger?.Error($"AddCollection {collection.SortName}: is missing ItemId");
-                return sqlCmds;
-            }
-
-            _embyManagers!._logger?.Debug($"AddAllCollections - AddCollection - Adding Collection {collection.Name}");
-
-            string sql =
-                "INSERT INTO Collections " +
-                "(" +
-                    "  ItemId" +
-                    ", Name" +
-                    ", SortName" +
-                ")" +
-                " VALUES " +
-                "(" +
-                "  @ItemId" +
-                ", @Name" +
-                ", @SortName" +
-                ")";
-            sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
-            {
-                ("@ItemId", collection.Id.ToString()),
-                ("@Name", collection.Name),
-                ("@SortName", collection.SortName),
-            }));
-            _embyManagers!._logger?.Debug($"AddAllCollections -     AddCollection - Successfully Added Collection");
-
-            sqlCmds.AddRange(AddCollectionMembers(collection, cancellationToken, progress));
-            return sqlCmds;
-        }
-
-        public void AddAllSeries(CancellationToken cancellationToken, IProgress<double> progress)
-        {
-            CheckIsValid();
-
-            _embyManagers!._logger?.Debug($"AddAllSeries- Starting Video Analysis");
-
-            progress.Report(0);
+            _dbHelper!.Progress?.Report(0);
             var seriesList = _dbHelper.GetLibraryItems<Series>().Cast<Series>().ToList();
-            progress.Report(100);
+            _dbHelper!.Progress?.Report(100);
 
             double count = seriesList.Count;
             double curr = 0.0;
 
-            progress.Report(0);
+            _dbHelper!.Progress?.Report(0);
             var sqlCmds = new List<SQLCmdDef>();
 
             foreach (Series series in seriesList)
             {
-                progress.Report(80.0 * (++curr) / count);
-                sqlCmds.AddRange(AddSeries(series, cancellationToken, progress));
-                cancellationToken.ThrowIfCancellationRequested();
+                _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
+                sqlCmds.AddRange(AddSeries(series));
+                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
 
-                _embyManagers!._logger?.Debug($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
+                _embyInterfaces!._logger?.Debug($"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}");
             }
 
-            progress.Report(80);
+            _dbHelper!.Progress?.Report(80);
             _dbHelper.ExecuteCommands(sqlCmds);
-            progress.Report(100);
-            cancellationToken.ThrowIfCancellationRequested();
-            _embyManagers!._logger?.Debug($"AddAllSeries - Finished Video Analysis");
+            _dbHelper!.Progress?.Report(100);
+            _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+            _embyInterfaces!._logger?.Debug($"AddAllSeries - Finished Video Analysis");
         }
 
-        private int GetCountForSeries(Series series, CancellationToken cancellationToken, bool episodes)
+        private (int episodes, int specials) GetCountForSeries(Series series)
         {
             CheckIsValid();
 
-            var libraryOptions = _embyManagers!._libraryManager.GetLibraryOptions(series);
-            var allEpisodes = _embyManagers!._providerManager.GetAllEpisodes(series, libraryOptions, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-            var retVal = allEpisodes.Where(e => (
-                ((episodes && !MediaInfo.isTVSpecial(e)) ||
-                  (!episodes && MediaInfo.isTVSpecial(e)))
-                && (e.PremiereDate <= DateTime.Now))).Count();
+            var libraryOptions = _embyInterfaces!._libraryManager.GetLibraryOptions(series);
+            var allEpisodes = _embyInterfaces!._providerManager.GetAllEpisodes(series, libraryOptions, _dbHelper!.CancellationToken!.Value).ConfigureAwait(false).GetAwaiter().GetResult();
 
-            if (retVal == 0)// when providers are disabled
+            var episodes = allEpisodes.Where(e => !MediaInfo.isTVSpecial(e) && (e.PremiereDate <= DateTime.Now)).Count();
+            var specials = allEpisodes.Where(e => MediaInfo.isTVSpecial(e)).Count();
+
+            if (episodes == 0 && specials == 0)// when providers are disabled
             {
-                var fieldName = episodes ? "NumEpisodes" : "NumSpecials";
-                var cmd = new SQLCmdDef($"SELECT {fieldName} FROM Series WHERE ItemId=@SeriesId",
+                var cmd = new SQLCmdDef($"SELECT NumEpisodes FROM Series WHERE ItemId=@SeriesId",
                             new List<(string name, object? value)>()
                             {
                             ("@SeriesId", series.Id.ToString())
@@ -837,15 +826,12 @@ namespace Statistics2026.Data
                     if (statement != null)
                     {
                         var row = statement.Current;
-                        retVal = row.GetInt(0);
+                        episodes = row.GetInt(0);
                     }
                     return false;
                 });
-            }
-            if (retVal == 0) // Series hasnt been setup yet
-            {
-                var whereClause = episodes ? "NOT IsTVSpecial" : "IsTVSpecial";
-                var cmd = new SQLCmdDef($"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND {whereClause}",
+
+                cmd = new SQLCmdDef($"SELECT NumSpecials FROM Series WHERE ItemId=@SeriesId",
                             new List<(string name, object? value)>()
                             {
                             ("@SeriesId", series.Id.ToString())
@@ -856,37 +842,60 @@ namespace Statistics2026.Data
                     if (statement != null)
                     {
                         var row = statement.Current;
-                        retVal = row.GetInt(0);
+                        specials = row.GetInt(0);
                     }
                     return false;
                 });
             }
-            return retVal;
+            if (episodes == 0 && specials == 0) // Series hasnt been setup yet
+            {
+                var cmd = new SQLCmdDef($"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND NOT IsTVSpecial",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        episodes = row.GetInt(0);
+                    }
+                    return false;
+                });
+
+                cmd = new SQLCmdDef($"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND IsTVSpecial",
+                            new List<(string name, object? value)>()
+                            {
+                            ("@SeriesId", series.Id.ToString())
+                            });
+
+                _dbHelper.ExecuteCommand(cmd, statement =>
+                {
+                    if (statement != null)
+                    {
+                        var row = statement.Current;
+                        specials = row.GetInt(0);
+                    }
+                    return false;
+                });
+            }
+            return (episodes, specials);
         }
 
-        private int GetEpisodeCountForSeries(Series series, CancellationToken cancellationToken)
-        {
-            return GetCountForSeries(series, cancellationToken, true);
-        }
-
-        private int GetSpecialCountForSeries(Series series, CancellationToken cancellationToken)
-        {
-            return GetCountForSeries(series, cancellationToken, false);
-        }
-
-        private List<SQLCmdDef> AddSeries(Series series, CancellationToken cancellationToken, IProgress<double> progress)
+        private List<SQLCmdDef> AddSeries(Series series)
         {
             CheckIsValid();
 
             var sqlCmds = new List<SQLCmdDef>();
             if (series.Id == null)
             {
-                _embyManagers!._logger?.Error($"AddSeries {series.SortName}: is missing ItemId");
+                _embyInterfaces!._logger?.Error($"AddSeries {series.SortName}: is missing ItemId");
                 return sqlCmds;
             }
 
-            _embyManagers!._logger?.Debug($"AddAllSeries - AddSeries - Adding Series {series.Name}");
-
+            _embyInterfaces!._logger?.Debug($"AddAllSeries -    AddSeries - Adding Series {series.Name}");
 
             long totalFileSize = 0;
             long totalRuntime = 0;
@@ -933,8 +942,7 @@ namespace Statistics2026.Data
                 return false;
             });
 
-            int numEpisodes = GetEpisodeCountForSeries(series, cancellationToken);
-            int numSpecials = GetSpecialCountForSeries(series, cancellationToken);
+            var (numEpisodes, numSpecials) = GetCountForSeries(series);
             sql = String.Empty;
             List<(string name, object? value)>? paramsList = null;
             if (!exists)
@@ -970,7 +978,22 @@ namespace Statistics2026.Data
                     ", @Rating" +
                     ", @Status" +
                     ", @AverageBitrate" +
-                ")";
+                ")" +
+                " ON CONFLICT(ItemId) " +
+                " DO UPDATE " +
+                " SET " +
+                    "  Name=@Name" +
+                    ", SortName=@SortName" +
+                    ", PremiereDate=@PremiereDate" +
+                    ", NumEpisodes=@NumEpisodes" +
+                    ", NumSpecials=@NumSpecials" +
+                    ", DateAdded=@DateAdded" +
+                    ", ImageUrl=@ImageUrl" +
+                    ", FileSize=@FileSize" +
+                    ", RunTimeTicks=@RunTimeTicks" +
+                    ", Rating=@Rating" +
+                    ", Status=@Status" +
+                    ", AverageBitrate=@AverageBitrate";
 
                 paramsList = new List<(string name, object? value)>()
                        {
@@ -1014,7 +1037,7 @@ namespace Statistics2026.Data
             }
             sqlCmds.Add(new SQLCmdDef(sql, paramsList));
 
-            _embyManagers!._logger?.Debug($"AddAllCollections -     AddCollection - Successfully Added Collection");
+            _embyInterfaces!._logger?.Debug($"AddAllSeries -    AddSeries - Successfully Added Series {series.Name}");
             return sqlCmds;
         }
     }

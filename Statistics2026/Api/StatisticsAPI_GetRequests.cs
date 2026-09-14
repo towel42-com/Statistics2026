@@ -17,7 +17,7 @@ namespace Statistics2026.Api
     {
         private object GetRequest(string requestName, Func<AutoTimer, object> requestFunc)
         {
-            using (var timer = new AutoTimer($"Request: {requestName}", _embyManagers._logger))
+            using (var timer = new AutoTimer($"Request: {requestName}", _embyInterfaces._logger))
             {
                 try
                 {
@@ -34,7 +34,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetTVSeriesProgress", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -49,7 +49,7 @@ namespace Statistics2026.Api
         {
             var retVal = GetRequest("GetEpisodeList", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var episodes = db.GetEpisodeList();
 
                 if (episodes == null)
@@ -64,7 +64,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetMovieList", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var movies = db.GetMovieList();
 
                 if (movies == null)
@@ -78,7 +78,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetCodecSummary", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var rootDivName = request.rootDivName ?? "";
 
@@ -95,7 +95,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetResolutionSummary", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var rootDivName = request.rootDivName ?? "";
 
                 var groupData = db.MediaResolutions();
@@ -111,7 +111,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetDVProfileSummary", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var rootDivName = request.rootDivName ?? "";
 
@@ -128,7 +128,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetUserCount", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var groupData = db.UserCount();
                 var vgReponse = groupData.createStat();
@@ -140,7 +140,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetMostActiveUsers", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var groupData = db.MostActiveUsers();
                 groupData.SortByKey = false;
@@ -152,7 +152,7 @@ namespace Statistics2026.Api
 
         public object TotalMovieCount(User? user)
         {
-            var db = StatisticsDB.GetInstance(_embyManagers);
+            var db = StatisticsDB.GetInstance(_embyInterfaces);
             var groupData = db.TotalMovieCount(user, false);
             var vgReponse = groupData.createStat();
             return vgReponse;
@@ -183,7 +183,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetTotalMoviesWatched", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -199,7 +199,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetTotalCollectionCount", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var groupData = db.TotalCollectionCount();
                 var vgReponse = groupData.createStat();
                 return vgReponse;
@@ -210,7 +210,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetTotalMovieStudioCount", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var groupData = db.TotalMovieStudioCount(null);
                 var vgReponse = groupData.createStat();
@@ -223,7 +223,7 @@ namespace Statistics2026.Api
             return GetRequest("GetItemImageUrl", timer =>
             {
                 var retVal = new GetItemImageUrlResponse { Name = "", PrimaryImageUrl = "" };
-                var item = _embyManagers._libraryManager.GetItemById(request.ItemId);
+                var item = _embyInterfaces._libraryManager.GetItemById(request.ItemId);
                 if (item == null)
                     return new object();
 
@@ -241,7 +241,7 @@ namespace Statistics2026.Api
 
         public object TotalTVCount(User? user, bool watched)
         {
-            var db = StatisticsDB.GetInstance(_embyManagers);
+            var db = StatisticsDB.GetInstance(_embyInterfaces);
             var groupData = db.TotalTVCount(user, watched);
             var vgReponse = groupData.createStat();
             return vgReponse;
@@ -272,7 +272,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetTotalTVWatched", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -288,7 +288,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetTotalSeriesFinished", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -304,7 +304,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetTotalTVStudioCount", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var groupData = db.TotalTVStudioCount(null);
                 var vgReponse = groupData.createStat();
@@ -316,7 +316,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetLeastWatchedMovies", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var groupData = db.WatchedMedia(null, true, EMediaType.eMovie);
 
@@ -329,7 +329,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetMostWatchedMovies", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var userName = request.user;
                 var user = GetUser(userName);
@@ -348,7 +348,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetMostWatchedMoviesNoUser", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var groupData = db.WatchedMedia(null, false, EMediaType.eMovie);
 
@@ -361,7 +361,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetLeastWatchedShows", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var groupData = db.WatchedMedia(null, true, EMediaType.eSeries);
 
@@ -374,7 +374,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetMostWatchedShows", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -391,7 +391,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetMostWatchedShows", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
 
                 var groupData = db.WatchedMedia(null, false, EMediaType.eSeries);
 
@@ -403,7 +403,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetTotalTimeWatched", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -428,7 +428,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetTotalWatchableTime", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -453,7 +453,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetLastSeen", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -471,7 +471,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetMovieFavoriteYears", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -487,7 +487,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetMovieFavoriteGenres", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -503,7 +503,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetTVFavoriteGenres", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var userName = request.user;
                 var user = GetUser(userName);
                 if (user == null)
@@ -519,7 +519,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetMovie", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
@@ -532,7 +532,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetSeries", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
@@ -545,7 +545,7 @@ namespace Statistics2026.Api
         {
             return GetRequest("GetEpisode", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyManagers);
+                var db = StatisticsDB.GetInstance(_embyInterfaces);
                 var whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 

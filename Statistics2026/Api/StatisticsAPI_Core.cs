@@ -21,7 +21,7 @@ namespace Statistics2026.Api
 {
     public partial class Statistics2026API : IService, IRequiresRequest
     {
-        private readonly EmbyManagers _embyManagers;
+        private readonly EmbyInterfaces _embyInterfaces;
 
         public Statistics2026API(
             ILogManager logManager,
@@ -37,7 +37,7 @@ namespace Statistics2026.Api
             ITaskManager taskManager
             )
         {
-            _embyManagers = new EmbyManagers(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - Statistics2026API"), serverApplicationPaths, userDataManager, userManager, appHost, this, jsonSerializer, providerManager, configManager, taskManager);
+            _embyInterfaces = new EmbyInterfaces(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - Statistics2026API"), serverApplicationPaths, userDataManager, userManager, appHost, this, jsonSerializer, providerManager, configManager, taskManager);
         }
 
         public IRequest? Request { get; set; } = null;
@@ -45,7 +45,7 @@ namespace Statistics2026.Api
 
         private IEnumerable<T>? GetItems<T>(User? user)
         {
-            return DBHelper.GetUserItems<T>(user,_embyManagers!._libraryManager);
+            return DBHelper.GetUserItems<T>(user,_embyInterfaces._libraryManager!);
         }
 
         static public (IEnumerable<Video> forUser, IEnumerable<Video>? forAll) GetAllEpisodesAndMovies(User? user, ILibraryManager libManager, bool computeAll)
@@ -89,7 +89,7 @@ namespace Statistics2026.Api
             if (string.IsNullOrEmpty(userName))
                 return null;
 
-            var users = _embyManagers._userManager.GetUserList(new UserQuery() { Name = userName }).ToList();
+            var users = _embyInterfaces._userManager!.GetUserList(new UserQuery() { Name = userName }).ToList();
             if (users.Count() == 0)
                 return null;
 

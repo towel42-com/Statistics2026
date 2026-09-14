@@ -23,7 +23,7 @@ namespace Statistics2026.ScheduledTasks
 {
     public class RunAllTasksTask : IScheduledTask
     {
-        private EmbyManagers _managers;
+        private EmbyInterfaces _embyInterfaces;
 
         public RunAllTasksTask(
             ILogManager logManager,
@@ -40,7 +40,7 @@ namespace Statistics2026.ScheduledTasks
             ITaskManager taskManager
             )
         {
-            _managers = new EmbyManagers(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - CalculateDataTask"), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, configManager, taskManager);
+            _embyInterfaces = new EmbyInterfaces(fileSystem, libraryManager, logManager, logManager.GetLogger("Statistics2026 - CalculateDataTask"), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, configManager, taskManager);
         }
 
         private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
@@ -55,7 +55,7 @@ namespace Statistics2026.ScheduledTasks
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
             var taskName = "Analyze All";
-            _managers._logger.Info($"Statistics 2026 : Starting Statistics 2026 {taskName} task");
+            _embyInterfaces._logger.Info($"Statistics 2026 : Starting Statistics 2026 {taskName} task");
             // purely for progress reporting
             var now = DateTime.Now;
             if (PluginConfiguration == null)
@@ -65,18 +65,16 @@ namespace Statistics2026.ScheduledTasks
             PluginConfiguration.Version = Plugin.Instance?.Version.ToString(4) ?? "<UNKNOWN>";
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
-            var db = StatisticsDB.GetInstance(_managers);
-            db.SetCancellationToken(cancellationToken);
-            db.Initialize();
+            var db = StatisticsDB.GetInstance(_embyInterfaces);
+            db.Initialize(cancellationToken, progress,PluginConfiguration.resetPlayCount);
 
-            var overAllTimer = new AutoTimer($"Adding All Data", _managers._logger, false);
+            var overAllTimer = new AutoTimer($"Adding All Data", _embyInterfaces._logger, false);
 
             var tasks = new List<(string description, Type type, long runTime, string tableName)>
             {
                 ($"Analyzing Users", typeof(AnalyzeUsersTask), 0, "Users"),
                 ($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "User Watch Data"),
-                ($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Collections"),
-                ($"Analyzing Collections", typeof(AnalyzeCollectionsTask), 0, "Media"),
+                ($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Media"),
                 ($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series")
             };
 
@@ -89,12 +87,13 @@ namespace Statistics2026.ScheduledTasks
             }
 
             db.UpdateLastUpdated(now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version);
+            db.Initialize(cancellationToken, progress);
             cancellationToken.ThrowIfCancellationRequested();
 
             var overall = overAllTimer.ElapsedMilliseconds();
             overAllTimer.Dispose();
-            _managers._logger.Info($"=======================================");
-            _managers._logger.Info($"Time to Add: {overall} ms");
+            _embyInterfaces._logger.Info($"=======================================");
+            _embyInterfaces._logger.Info($"Time to Add: {overall} ms");
             int maxLen = 0;
             foreach (var task in tasks)
             {
@@ -106,27 +105,27 @@ namespace Statistics2026.ScheduledTasks
 
             foreach (var task in tasks)
             {
-                _managers._logger.Info($"{task.tableName.PadLeft(maxLen)}: {task.runTime} ms");
+                _embyInterfaces._logger.Info($"{task.tableName.PadLeft(maxLen)}: {task.runTime} ms");
             }
-            _managers._logger.Info($"=======================================");
-            _managers._logger.Info($"Statistics 2026 : Finished Statistics 2026 {taskName} task");
+            _embyInterfaces._logger.Info($"=======================================");
+            _embyInterfaces._logger.Info($"Statistics 2026 : Finished Statistics 2026 {taskName} task");
 
-            Plugin.Instance?.SaveConfiguration(); 
-            db.SetCancellationToken(null);
+            Plugin.Instance?.SaveConfiguration();
+            db.ResetCancellationToken();
             return Task.CompletedTask;
         }
 
         long launchSubTask(string description, Type taskType, CancellationToken cancellationToken)
         {
             long retVal = 0;
-            using (var timer = new AutoTimer(description, _managers._logger))
+            using (var timer = new AutoTimer(description, _embyInterfaces._logger))
             {
-                var taskToRun = _managers._taskManager.ScheduledTasks.FirstOrDefault(taskToRun => taskToRun.ScheduledTask.GetType() == taskType);
+                var taskToRun = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault(taskToRun => taskToRun.ScheduledTask.GetType() == taskType);
                 if (taskToRun == null)
                     throw new Exception($"Task not found {taskType.Name}");
 
                 var options = new TaskOptions() { HasManualInteraction = false };
-                _managers._taskManager.Execute(taskToRun, options).ConfigureAwait(false).GetAwaiter().GetResult();
+                _embyInterfaces._taskManager.Execute(taskToRun, options).ConfigureAwait(false).GetAwaiter().GetResult();
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var taskResult = taskToRun.LastExecutionResult;
@@ -135,7 +134,7 @@ namespace Statistics2026.ScheduledTasks
                     case TaskCompletionStatus.Completed:
                         break;
                     case TaskCompletionStatus.Cancelled:
-                        _managers._taskManager.CancelIfRunning<RunAllTasksTask>();
+                        _embyInterfaces._taskManager.CancelIfRunning<RunAllTasksTask>();
                         break;
                     case TaskCompletionStatus.Failed:
                     case TaskCompletionStatus.Aborted:
