@@ -3,6 +3,7 @@ using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Threading;
 
 namespace Statistics2026.Data
@@ -25,7 +26,7 @@ namespace Statistics2026.Data
             lock (_padlock)
             {
                 var retVal = new StatisticsDB(embyInterfaces);
-                embyInterfaces._logger.Debug("StatisticsData : New Instance Created : " + retVal.GetHashCode());
+                embyInterfaces._logger.Debug("Statistics2026 : New Instance Created : " + retVal.GetHashCode());
                 return retVal;
             }
         }
@@ -42,12 +43,12 @@ namespace Statistics2026.Data
 
             ConstructTableList();
 
-            embyInterfaces._logger?.Debug("StatisticsData : Creating Database");
+            embyInterfaces._logger?.Debug("Statistics2026 : Creating Database");
 
             _embyInterfaces = embyInterfaces;
             _dbHelper = new DBHelper(_embyInterfaces);
 
-            embyInterfaces._logger?.Debug("StatisticsData : Finished Creating Database");
+            embyInterfaces._logger?.Debug("Statistics2026 : Finished Creating Database");
         }
 
         ~StatisticsDB()
@@ -59,10 +60,22 @@ namespace Statistics2026.Data
             CreateTables(TableDef.EAction.eCreate);
         }
 
-        public void SetCancellationToken(CancellationToken? cancellationToken)
+        public void ResetCancellationToken()
         {
             if (_dbHelper != null)
+            {
+                _dbHelper.CancellationToken = null;
+                _dbHelper.Progress = null;
+            }
+        }
+
+        public void SetCancellationToken(CancellationToken cancellationToken, IProgress<double> progress)
+        {
+            if (_dbHelper != null)
+            {
                 _dbHelper.CancellationToken = cancellationToken;
+                _dbHelper.Progress = progress;
+            }
         }
 
 
@@ -221,7 +234,7 @@ namespace Statistics2026.Data
                         new TableColDef( "LastPlayedDate", "DATETIME", true ),
                         new TableColDef( "StartTickPos", "INT", true){DeprecatedColumn= true},
                         new TableColDef( "EndTickPos", "INT", true ){DeprecatedColumn= true},
-                        new TableColDef( "TotalTicks", "INT", true ),
+                        new TableColDef( "TotalTicksPlayed", "INT", true ){FormerColumnName="TotalTicks"},
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
                         new TableColDef( "NumEpisodes", "BOOLEAN", true ), // for multi episode media
                         new TableColDef( "IsTVSpecial", "BOOLEAN", true ),
@@ -256,6 +269,8 @@ namespace Statistics2026.Data
             }
 
             _dbHelper.ExecuteCommands(sqlCmds);
+
+            InitUserWatchData();
         }
 
         public void ClearTable(string tableName)
