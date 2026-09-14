@@ -55,8 +55,9 @@ namespace Statistics2026.Data
         {
         }
 
-        public void Initialize(bool reset=false)
+        public void Initialize(CancellationToken? cancellationToken, IProgress<double>? progress, bool reset=false)
         {
+            SetCancellationToken(cancellationToken, progress);
             CreateTables(reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate);
         }
 
@@ -69,7 +70,7 @@ namespace Statistics2026.Data
             }
         }
 
-        public void SetCancellationToken(CancellationToken cancellationToken, IProgress<double> progress)
+        private void SetCancellationToken(CancellationToken? cancellationToken, IProgress<double>? progress)
         {
             if (_dbHelper != null)
             {
