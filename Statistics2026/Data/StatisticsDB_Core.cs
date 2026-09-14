@@ -141,15 +141,6 @@ namespace Statistics2026.Data
                     }
                 ),
 
-                new TableDef("Collections",
-                    new List<TableColDef>()
-                    {
-                        new TableColDef( "ItemId", "TEXT", false, true),
-                        new TableColDef( "Name", "TEXT", false ),
-                        new TableColDef( "SortName", "TEXT", false )
-                    }
-                ),
-
                 new TableDef("CollectionMembership",
                     new List<TableColDef>()
                     {
@@ -157,8 +148,67 @@ namespace Statistics2026.Data
                         new TableColDef( "ItemId", "TEXT", false ),
                         new TableColDef( "CollectionName", "TEXT", false ) // for debugging purposes
                     }
-                ),
+                )
             };
+
+            _tableList.Add(
+                new TableDef("Collections",
+                    new List<TableColDef>()
+                    {
+                            new TableColDef( "ItemId", "TEXT", false, true),
+                            new TableColDef( "Name", "TEXT", false ),
+                            new TableColDef( "SortName", "TEXT", false )
+                    }
+                )
+            );
+            _tableList[_tableList.Count - 1].DeprecatedTable = true;
+
+            _tableList.Add(
+                new TableDef("CachedStats",
+                    new List<TableColDef>()
+                    {
+                        new TableColDef( "LongestSeries", "TEXT", true ),
+                        new TableColDef( "ShortestSeries", "TEXT", true ),
+                        new TableColDef( "LargestSeries", "TEXT", true ),
+                        new TableColDef( "SmallestSeries", "TEXT", true ),
+                        new TableColDef( "TotalTVStudioCount", "INT", true ),
+                        new TableColDef( "LongestMovie", "TEXT", true ),
+                        new TableColDef( "ShortestMovie", "TEXT", true ),
+                        new TableColDef( "LargestMovie", "TEXT", true ),
+                        new TableColDef( "SmallestMovie", "TEXT", true ),
+                        new TableColDef( "TotalMovieStudioCount", "INT", true ),
+                    }
+                ));
+            _tableList[_tableList.Count - 1].DeprecatedTable = true;
+
+            _tableList.Add(
+                new TableDef("CachedWatchedAnalysis",
+                    new List<TableColDef>()
+                    {
+                        new TableColDef( "ItemId", "TEXT", true ),
+                        new TableColDef( "Name", "TEXT", true ),
+                        new TableColDef( "ImageUrl", "TEXT", true ),
+                        new TableColDef( "NumEpisodes", "INT", true ),
+                        new TableColDef( "NumWatched", "INT", true ),
+                        new TableColDef( "PercentWatchedPerUser", "DOUBLE", true ),
+                    }
+                ));
+            _tableList[_tableList.Count - 1].DeprecatedTable = true;
+
+            _tableList.Add(
+                new TableDef("UserVideoList",
+                    new List<TableColDef>()
+                    {
+                        new TableColDef( "ItemId", "TEXT", true ),
+                        new TableColDef( "Name", "TEXT", true ),
+                        new TableColDef( "ImageUrl", "TEXT", true ),
+                        new TableColDef( "NumEpisodes", "INT", true ),
+                        new TableColDef( "NumWatched", "INT", true ),
+                        new TableColDef( "PercentWatchedPerUser", "DOUBLE", true ),
+                    }
+                )
+            );
+            _tableList[_tableList.Count - 1].DeprecatedTable = true;
 
             _userMediaTemplate = new TableDef("UserMedia_<USER_ID>",
                     new List<TableColDef>()
@@ -169,8 +219,9 @@ namespace Statistics2026.Data
                         new TableColDef( "IsPlayed", "BOOLEAN", true ),
                         new TableColDef( "PlayCount", "INT", true ),
                         new TableColDef( "LastPlayedDate", "DATETIME", true ),
-                        new TableColDef( "StartTickPos", "INT", true ),
-                        new TableColDef( "EndTickPos", "INT", true ),
+                        new TableColDef( "StartTickPos", "INT", true){DeprecatedColumn= true},
+                        new TableColDef( "EndTickPos", "INT", true ){DeprecatedColumn= true},
+                        new TableColDef( "TotalTicks", "INT", true ),
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
                         new TableColDef( "NumEpisodes", "BOOLEAN", true ), // for multi episode media
                         new TableColDef( "IsTVSpecial", "BOOLEAN", true ),
@@ -180,6 +231,9 @@ namespace Statistics2026.Data
 
             foreach (var tableDef in _tableList)
             {
+                if (tableDef.DeprecatedTable)
+                    continue;
+
                 _tableMap[tableDef.Name] = tableDef;
             }
         }
@@ -189,13 +243,11 @@ namespace Statistics2026.Data
             if (action != TableDef.EAction.eRecreate && action != TableDef.EAction.eCreate)
                 throw new InvalidEnumArgumentException($"Action must be {TableDef.EAction.eRecreate} or {TableDef.EAction.eCreate}");
 
-            var sqlCmds = new List<string>();
+            var sqlCmds = new List<SQLCmdDef>();
             foreach (var tableDef in _tableList)
             {
                 sqlCmds.AddRange(tableDef.GetSQLCommands(action));
             }
-
-            sqlCmds.Add($"DROP TABLE IF EXISTS UserVideoList"); // incase running an old schema
 
             var config = Statistics2026.Plugin.Instance!.Configuration;
             if (config.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null)
@@ -208,35 +260,35 @@ namespace Statistics2026.Data
 
         public void ClearTable(string tableName)
         {
-            List<string> sqlCmds = new List<string>();
+            List<SQLCmdDef> sqlCmds = new List<SQLCmdDef>();
             if (_tableMap.TryGetValue(tableName, out var tableDef))
             {
                 sqlCmds.AddRange(tableDef.GetSQLCommands(TableDef.EAction.eClear));
             }
             else
             {
-                sqlCmds.Add(TableDef.clearTable(tableName));
+                sqlCmds.Add(new SQLCmdDef(TableDef.clearTable(tableName)));
             }
             _dbHelper.ExecuteCommands(sqlCmds);
         }
 
-        private string getUserTableName(User? user)
+        public string getUserTableName(User? user)
         {
             if (user == null)
                 return string.Empty;
             return getUserTableName(user.Id.ToString());
         }
 
-        private string getUserTableName(string userId)
+        public string getUserTableName(string userId)
         {
             userId = userId.ToString().Replace("-", "");
 
             return $"UserMedia_{userId}";
         }
 
-        public List<string> DropAllUserMediaCmds()
+        public List<SQLCmdDef> DropAllUserMediaCmds()
         {
-            var retVal = new List<string>();
+            var retVal = new List<SQLCmdDef>();
             if (_userMediaTemplate == null)
                 return retVal;
 
@@ -253,14 +305,14 @@ namespace Statistics2026.Data
             return allTables((regex: "UserMedia_%", like: true));
         }
 
-        public List<string> DropTableCmds(string tableName)
+        public List<SQLCmdDef> DropTableCmds(string tableName)
         {
             if (_tableMap.TryGetValue(tableName, out var tableDef))
             {
                 var sqlCmds = tableDef.GetSQLCommands(TableDef.EAction.eDrop);
                 return sqlCmds;
             }
-            return new List<string>() { TableDef.dropTable(tableName) };
+            return new List<SQLCmdDef>() { new SQLCmdDef(TableDef.dropTable(tableName)) };
         }
 
         public void DropTable(string tableName)

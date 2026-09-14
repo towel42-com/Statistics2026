@@ -170,30 +170,7 @@ namespace Statistics2026.Data
                     foreach (var cmd in cmds)
                     {
                         CancellationToken?.ThrowIfCancellationRequested();
-                        using (var statement = connection.PrepareStatement(cmd.Statement))
-                        {
-                            if (cmd.HasParameters())
-                            {
-                                foreach (var param in cmd.Parameters!)
-                                {
-                                    TryBind(statement, param.name, param.value);
-                                }
-                            }
-
-                            if (onStatement == null)
-                            {
-                                statement.MoveNext();
-                            }
-                            else
-                            {
-                                while (statement.MoveNext())
-                                {
-                                    if (!onStatement(statement))
-                                        break;
-                                    CancellationToken?.ThrowIfCancellationRequested();
-                                }
-                            }
-                        }
+                        cmd.Execute(connection, this, onStatement, CancellationToken);
                     }
                 });
             }

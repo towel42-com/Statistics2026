@@ -19,6 +19,40 @@ namespace Statistics2026.Data
             IsPrimaryIndex = isPrimaryIndex;
         }
 
+        public static string getIndexName(string tableName, string columnName)
+        {
+            return $"idx_{tableName}_{columnName}";
+        }
+
+        private string getIndexName(string tableName)
+        {
+            return getIndexName(tableName, Name);
+        }
+
+        public string createIndex(string tableName)
+        {
+            var idxName = getIndexName(tableName);
+            var sql = $"CREATE INDEX IF NOT EXISTS {idxName} on {tableName} ({Name});";
+            return sql;
+        }
+
+        public List<string> AlterCmds(string tableName)
+        {
+            if (DeprecatedColumn)
+            {
+                var idxName = getIndexName(tableName);
+                return new List<string>(){
+                    $"DROP INDEX IF EXISTS {idxName}",
+                    $"ALTER TABLE {tableName} DROP COLUMN {Name}"
+                }
+                ;
+            }
+            else
+            {
+                return new List<string>() { $"ALTER TABLE {tableName} ADD COLUMN {ToString()}" };
+            }
+        }
+
         public override string ToString()
         {
             string retVal = $"{Name} {Type}";
@@ -29,10 +63,11 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public string Name { get; private set; }
-        public string Type { get; private set; }
-        public bool AllowNull { get; private set; }
-        public bool IsPrimaryIndex { get; private set; }
+        public string Name { get; private set; } = string.Empty;
+        public string Type { get; private set; } = string.Empty;
+        public bool AllowNull { get; private set; } = false;
+        public bool IsPrimaryIndex { get; private set; } = false;
+        public bool DeprecatedColumn { get; set; } = false;
     }
 
     public class TableDef
@@ -68,13 +103,15 @@ namespace Statistics2026.Data
                 Indexes = indexes;
         }
 
-        private List<string> createTable()
+        private List<SQLCmdDef> createTable()
         {
             var tableName = Name;
             string sql = $"CREATE TABLE IF NOT EXISTS {tableName} (\n";
             bool first = true;
             foreach (var col in Columns)
             {
+                if (col.DeprecatedColumn)
+                    continue;
                 if (first)
                     sql += "      ";
                 else
@@ -86,7 +123,15 @@ namespace Statistics2026.Data
 
             sql += ");";
 
-            var retVal = new List<string>() { sql };
+            var retVal = new List<SQLCmdDef>() { new SQLCmdDef(sql) };
+
+            Columns.ForEach(column =>
+            {
+                var cmds = column.AlterCmds(Name);
+                foreach (var cmd in cmds)
+                    retVal.Add(new SQLCmdDef(cmd, true));
+            }
+            );
 
             if (Indexes != null)
             {
@@ -95,9 +140,22 @@ namespace Statistics2026.Data
                     if (columnName == null || columnName == "")
                         return;
 
-                    var idxName = getIndexName(columnName);
-                    sql = $"CREATE INDEX IF NOT EXISTS {idxName} on {Name} ({columnName});";
-                    retVal.Add(sql);
+                    TableColDef? column = null;
+                    foreach( var col in Columns)
+                    {
+                        if (col.Name == columnName)
+                        {
+                            column = col;
+                            break;
+                        }
+                    }
+                    if (column == null)
+                        throw new Exception($"Index's column '{columnName}' does not exist");
+
+                    if (column.DeprecatedColumn)
+                        return;
+
+                    retVal.Add(new SQLCmdDef(column.createIndex(Name)));
                 }
                 );
             }
@@ -107,7 +165,9 @@ namespace Statistics2026.Data
 
         public override string ToString()
         {
-            return string.Join(";\n", createTable());
+            List<string> tmp = new List<string>();
+            createTable().ForEach(cmd => { tmp.Add(cmd.ToString()); });
+            return string.Join(";\n", tmp);
         }
 
         public static string clearTable(string tableName)
@@ -132,35 +192,30 @@ namespace Statistics2026.Data
             return dropTable(Name);
         }
 
-        private string getIndexName(string name)
+        public List<SQLCmdDef> GetSQLCommands(EAction action)
         {
-            return $"idx_{Name}_{name}";
-        }
-
-        private string dropIndex(string name)
-        {
-            var idxName = getIndexName(name);
-            string sql = $"DROP INDEX IF EXISTS {idxName}";
-            return sql;
-        }
-
-        public List<string> GetSQLCommands(EAction action)
-        {
-            var retVal = new List<string>();
+            var retVal = new List<SQLCmdDef>();
             switch (action)
             {
                 case EAction.eClear:
-                    retVal.Add(clearTable());
+                    retVal.Add(new SQLCmdDef(clearTable()));
                     break;
                 case EAction.eDrop:
-                    retVal.Add(dropTable());
+                    retVal.Add(new SQLCmdDef(dropTable()));
                     break;
                 case EAction.eCreate:
-                    retVal.AddRange(createTable());
+                    {
+                        if (DeprecatedTable)
+                            retVal.Add(new SQLCmdDef(dropTable()));
+                        else
+                            retVal.AddRange(createTable());
+                    }
                     break;
                 case EAction.eRecreate:
-                    retVal.AddRange(GetSQLCommands(EAction.eDrop));
-                    retVal.AddRange(GetSQLCommands(EAction.eCreate));
+                    {
+                        retVal.AddRange(GetSQLCommands(EAction.eDrop));
+                        retVal.AddRange(GetSQLCommands(EAction.eCreate));
+                    }
                     break;
             }
             return retVal;
@@ -169,5 +224,6 @@ namespace Statistics2026.Data
         public string Name { get; private set; }
         public List<TableColDef> Columns { get; private set; }
         public List<string> Indexes { get; private set; }
+        public bool DeprecatedTable { get; set; } = false;
     }
 }
