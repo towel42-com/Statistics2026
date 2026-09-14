@@ -14,6 +14,16 @@ using System.Threading;
 
 namespace Statistics2026.Data
 {
+    public enum ECheckLevel
+    {
+        eInterfaces = 0x0001,
+        eConnection = 0x0002,
+        eProgress = 0x0004,
+        eAll = eInterfaces | eConnection | eProgress,
+        eThrowOnFailure = 0x010000,
+        eAllWithThrow = eAll | eThrowOnFailure
+    }
+
     public sealed class DBHelper
     {
         private static string[] _datetimeFormats = new string[] {
@@ -57,15 +67,11 @@ namespace Statistics2026.Data
 
         private IDatabaseConnection? Connection { get; set; } = null;
         public CancellationToken? CancellationToken { get; set; } = null;
+        public IProgress<double>? Progress { get; set; } = null;
+
         public DBHelper()
         {
             _embyInterfaces = null;
-        }
-
-        private void CheckIsValid()
-        {
-            if (_embyInterfaces == null)
-                throw new ArgumentNullException("_embyInterfaces");
         }
 
         public DBHelper(EmbyInterfaces embyInterfaces)
@@ -78,22 +84,59 @@ namespace Statistics2026.Data
             CreateConnection(db_file_name);
         }
 
-        public bool isValid()
+        public bool CheckIsValid(ECheckLevel checkLevel)
         {
-            if (Connection == null)
-                return false;
-            if (_embyInterfaces == null || _embyInterfaces._logger == null)
-                return false;
-            return true;
+            var msgs = new List<string>() { $"DBHelper is not valid 0x{checkLevel:X}" };
+            var retVal = true;
+            if ((checkLevel & ECheckLevel.eInterfaces) != 0)
+            {
+                if (_embyInterfaces == null || _embyInterfaces._logger == null)
+                {
+                    retVal = false;
+                    msgs.Add("_embyInterfaces is null");
+                }
+            }
+
+            if ((checkLevel & ECheckLevel.eConnection) != 0)
+            {
+                if (Connection == null)
+                {
+                    retVal = false;
+                    msgs.Add("Connection is null");
+                }
+            }
+
+            if ((checkLevel & ECheckLevel.eProgress) != 0)
+            {
+                if (CancellationToken == null)
+                {
+                    retVal = false;
+                    msgs.Add("CancellationToken is null");
+                }
+
+                if (Progress == null)
+                {
+                    retVal = false;
+                    msgs.Add("Progress is null");
+                }
+            }
+
+            if (retVal == false && ((checkLevel & ECheckLevel.eThrowOnFailure) != 0))
+            {
+                var msg = String.Join("\n", msgs);
+
+                throw new ArgumentNullException(msg);
+            }
+            return retVal;
         }
 
         ~DBHelper()
         {
-            _embyInterfaces?._logger?.Debug("StatisticsData : Cleaning up");
+            _embyInterfaces?._logger?.Debug("Statistics2026 : Cleaning up");
             if (Connection != null)
             {
                 Connection.Close();
-                _embyInterfaces?._logger?.Debug("StatisticsData : DB Connection Closed");
+                _embyInterfaces?._logger?.Debug("Statistics2026 : DB Connection Closed");
             }
         }
 
@@ -160,8 +203,7 @@ namespace Statistics2026.Data
 
         public void ExecuteCommands(List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null)
         {
-            if (Connection == null)
-                throw new ArgumentNullException("Connection");
+            CheckIsValid(ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure);
 
             try
             {
@@ -170,7 +212,7 @@ namespace Statistics2026.Data
                     foreach (var cmd in cmds)
                     {
                         CancellationToken?.ThrowIfCancellationRequested();
-                        cmd.Execute(connection, this, onStatement, CancellationToken);
+                        cmd.Execute(connection, this, onStatement);
                     }
                 });
             }
@@ -228,7 +270,7 @@ namespace Statistics2026.Data
 
         private void CreateConnection(string db_file)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
 
             _embyInterfaces!._logger?.Debug("CreateConnection : " + db_file);
             ConnectionFlags connectionFlags;
@@ -264,7 +306,7 @@ namespace Statistics2026.Data
 
         public IEnumerable<T> GetLibraryItems<T>()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
             return GetUserItems<T>(null, _embyInterfaces!._libraryManager);
         }
 
