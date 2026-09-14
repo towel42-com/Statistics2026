@@ -16,22 +16,6 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        /*
-        private void CheckIsValid(bool inInit = false)
-        {
-            if (inInit)
-                _dbHelper.CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
-            else
-                _dbHelper.CheckIsValid(ECheckLevel.eAllWithThrow);
-
-            if (Statistics2026.Plugin.Instance == null)
-                throw new ArgumentNullException("Statistics2026.Plugin.Instance");
-
-            if (Statistics2026.Plugin.Instance.Configuration == null)
-                throw new ArgumentNullException("Statistics2026.Plugin.Instance.Configuration");
-
-        }
-        */
         public void InitUserWatchData()
         {
             CheckIsValid(true);
@@ -118,33 +102,26 @@ namespace Statistics2026.Data
             _embyInterfaces?._logger?.Debug($"AnalyzeUserWatchData - Finished User Watch Data Analysis");
         }
 
-        /*
-        (long, long) AnalyzeOverallTime(User? user, List<User>? userList)
+
+        public List<SQLCmdDef> DropAllUserMediaCmds()
         {
-            CheckIsValid();
+            var retVal = new List<SQLCmdDef>();
+            if (_userMediaTemplate == null)
+                return retVal;
 
-            if (user == null && userList == null)
-                throw new ArgumentException("Either user or allUsers must be provided.");
+            var tables = allUserMediaTables();
 
-            var (allVideosForUser, allVideos) = Statistics2026API.GetAllEpisodesAndMovies(user, _embyInterfaces!._libraryManager, true);
+            foreach (var table in tables)
+                retVal.AddRange(DropTableCmds(table));
 
-            long watchable = 0;
-            long watched = 0;
-            if (user == null && userList != null) // use the list of users
-            {
-                watched = allVideos.Where(video => userList.Any(u => _embyInterfaces!._userDataManager.GetUserData(u, video).Played)).Sum(item => item.RunTimeTicks ?? 0);
-                watchable = allVideos.Sum(item => item.RunTimeTicks ?? 0);
-            }
-            else
-            {
-                watched = allVideosForUser.Where(video => _embyInterfaces!._userDataManager.GetUserData(user, video).Played).Sum(item => item.RunTimeTicks ?? 0);
-                watchable = allVideosForUser.Sum(item => item.RunTimeTicks ?? 0);
-            }
-
-            return (watched, watchable);
+            return retVal;
         }
 
-        */
+        public List<string> allUserMediaTables()
+        {
+            return allTables((regex: "UserMedia_%", like: true));
+        }
+
         private Dictionary<string, (bool hit, int playCount)> _baseCount = new Dictionary<string, (bool hit, int playCount)>()
                         {
                             { "Rocky", ( false, 100 ) },

@@ -320,25 +320,6 @@ namespace Statistics2026.Data
             return $"UserMedia_{userId}";
         }
 
-        public List<SQLCmdDef> DropAllUserMediaCmds()
-        {
-            var retVal = new List<SQLCmdDef>();
-            if (_userMediaTemplate == null)
-                return retVal;
-
-            var tables = allUserMediaTables();
-
-            foreach (var table in tables)
-                retVal.AddRange(DropTableCmds(table));
-
-            return retVal;
-        }
-
-        public List<string> allUserMediaTables()
-        {
-            return allTables((regex: "UserMedia_%", like: true));
-        }
-
         public List<SQLCmdDef> DropTableCmds(string tableName)
         {
             if (_tableMap.TryGetValue(tableName, out var tableDef))
