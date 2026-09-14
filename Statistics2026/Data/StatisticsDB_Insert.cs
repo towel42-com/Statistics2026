@@ -31,23 +31,6 @@ namespace Statistics2026.Data
 
         }
 
-        public void UpdateLastUpdated(DateTime lastUpdate, DateTime buildDate, string version)
-        {
-            CheckIsValid();
-
-            var sqlCmds = new List<SQLCmdDef>();
-            sqlCmds.Add(new SQLCmdDef("delete from LastUpdateTable"));
-            sqlCmds.Add(new SQLCmdDef("INSERT INTO LastUpdateTable (LastUpdated, BuildDate, Version) values (@LastUpdated, @BuildDate, @Version)",
-                        new List<(string name, object? value)>()
-                        {
-                            ("@LastUpdated", _dbHelper.ToDateTimeParamValue(lastUpdate)),
-                            ("@BuildDate", _dbHelper.ToDateTimeParamValue(buildDate)),
-                            ("@Version", version)
-                        }));
-
-            _dbHelper.ExecuteCommands(sqlCmds);
-        }
-
         public void AddAllUsers()
         {
             CheckIsValid();
