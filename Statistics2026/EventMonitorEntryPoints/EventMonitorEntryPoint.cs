@@ -15,6 +15,8 @@ using Statistics2026.Api;
 using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 //using System.Diagnostics;
 //using System.Linq;
@@ -65,9 +67,10 @@ namespace Statistics2026
 
         public void Run()
         {
-            CheckIsValid();
             var db = StatisticsDB.GetInstance(_embyInterfaces);
-            db.Initialize();
+            db.Initialize(null, null);
+
+            CheckIsValid();
 
             _embyInterfaces!._logger!.Debug("EventMonitorEntryPoint Running");
 
