@@ -201,9 +201,10 @@ namespace Statistics2026
             var tasks = new List<TaskDef>
             {
                 new TaskDef($"Analyzing Users", typeof(AnalyzeUsersTask), 0, "Users"),
-                new TaskDef($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "User Watch Data"),
+                new TaskDef($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "UserWatchData"),
                 new TaskDef($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Media"),
-                new TaskDef($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series")
+                new TaskDef($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series"),
+                new TaskDef($"Analyzing Collections", typeof(AnalyzeCollectionsTask), 0, "Collections"),
             };
             if ( includeRunAll )
             {
