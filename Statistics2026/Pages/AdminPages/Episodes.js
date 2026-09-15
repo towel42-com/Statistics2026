@@ -14,9 +14,9 @@
         // init code here
         view.addEventListener('viewshow', function (e) {
 
-            mainTabsManager.setTabs(this, Helpers.getTabIndex("Episodes"), Helpers.getTabs);
+            mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("Episodes", Helpers.getTabs), Helpers.getTabs);
 
-            Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
+            SharedHelpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
             var style = document.createElement('style');
             style.innerHTML = SharedHelpers.sortableTableStyle();
 
@@ -38,7 +38,7 @@
             });
 
             function loadTableData() {
-                SharedHelpers.loadTableData(view, 'episode_results_status', 'episode_results', 'Statistics2026/episode_list', SharedHelpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+                SharedHelpers.loadTableData(view, 'episode_results_status', 'episode_results', 'Statistics2026/episode_list', SharedHelpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, SharedHelpers);
             }
         });
 

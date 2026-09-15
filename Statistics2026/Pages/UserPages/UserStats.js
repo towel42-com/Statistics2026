@@ -5,7 +5,7 @@
 
     function loadData(view, userId) {
         ApiClient.getUser(userId).then(function (user) {
-            SharedHelpers.LoadUserStats(view, user.Name, loading.show, loading.hide, Helpers);
+            SharedHelpers.LoadUserStats(view, user.Name, loading.show, loading.hide, SharedHelpers);
         });
     }
 
@@ -25,10 +25,10 @@
         BaseView.apply(this, arguments);
 
         view.addEventListener('viewshow', function (e) {
-            mainTabsManager.setTabs(this, Helpers.getTabIndexEX("UserStats_UserPage", UserPageHelpers.getTabs()), UserPageHelpers.getTabs);
-            Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
+            mainTabsManager.setTabs(this, SharedHelpers.getTabIndexEX("UserStats_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
+            SharedHelpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
         });
-}
+    }
 
     return View;
 });

@@ -1,6 +1,4 @@
 define(function () {
-    const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
-
     function getTabs() {
         var tabs = [
             {

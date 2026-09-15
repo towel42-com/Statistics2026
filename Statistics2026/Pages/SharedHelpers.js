@@ -1,4 +1,6 @@
 define(function () {
+    const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
+
     function calculateProgressClass(value) {
         if (value == 0)
             return ``;
@@ -23,9 +25,9 @@ define(function () {
         return row_html;
     }
 
-    function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc, Helpers) {
-        ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-            if (!Helpers.CheckForValidConfig(config)) {
+    function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc, SharedHelpers) {
+        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            if (!CheckForValidConfig(config)) {
                 hideLoadingFunc();
                 return;
             }
@@ -33,14 +35,14 @@ define(function () {
             view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
 
             var url = "Statistics2026/tv_series_progress/" + userName;
-            loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, Helpers);
+            loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, SharedHelpers);
         });
     }
 
-    function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc, Helpers) {
+    function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc, SharedHelpers) {
         showLoadingFunc();
-        ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-            if (!Helpers.CheckForValidConfig(config)) {
+        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            if (!CheckForValidConfig(config)) {
                 hideLoadingFunc();
                 return;
             }
@@ -51,36 +53,36 @@ define(function () {
             view.querySelector("#showStats").innerHTML = "";
 
             var generalStats = "";
-            generalStats += Helpers.getSummaryInfo(view, "total_time_watched", userName, "?episodes=all");
-            generalStats += Helpers.getSummaryInfo(view, "total_watchable_time", userName, "?episodes=all");
+            generalStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=all");
+            generalStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=all");
             view.querySelector("#generalStats").innerHTML = generalStats;
 
             var movieStats = "";
-            movieStats += Helpers.getSummaryInfo(view, "total_movie_count", userName);
-            movieStats += Helpers.getSummaryInfo(view, "total_movies_watched", userName);
-            movieStats += Helpers.getSummaryInfo(view, "movie_favorite_years", userName);
-            movieStats += Helpers.getSummaryInfo(view, "movie_favorite_genres", userName);
-            movieStats += Helpers.getSummaryInfo(view, "total_time_watched", userName, "?episodes=false", "total_movie_time_watched");
-            movieStats += Helpers.getSummaryInfo(view, "total_watchable_time", userName, "?episodes=false", "total_movie_watchable_time");
+            movieStats += getSummaryInfo(view, "total_movie_count", userName);
+            movieStats += getSummaryInfo(view, "total_movies_watched", userName);
+            movieStats += getSummaryInfo(view, "movie_favorite_years", userName);
+            movieStats += getSummaryInfo(view, "movie_favorite_genres", userName);
+            movieStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=false", "total_movie_time_watched");
+            movieStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=false", "total_movie_watchable_time");
             view.querySelector("#movieStats").innerHTML = movieStats;
 
             var movieMostWatchedStats = "";
-            movieMostWatchedStats += Helpers.getSummaryInfo(view, "last_seen", userName, "?episodes=false", "last_seen_movies");
-            movieMostWatchedStats += Helpers.getSummaryInfo(view, "most_watched_movies", userName);
+            movieMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=false", "last_seen_movies");
+            movieMostWatchedStats += getSummaryInfo(view, "most_watched_movies", userName);
             view.querySelector("#movieMostWatchedStats").innerHTML = movieMostWatchedStats;
 
             var showStats = "";
-            showStats += Helpers.getSummaryInfo(view, "total_tv_count", userName);
-            showStats += Helpers.getSummaryInfo(view, "total_tv_watched", userName);
-            showStats += Helpers.getSummaryInfo(view, "total_series_finished", userName);
-            showStats += Helpers.getSummaryInfo(view, "tv_favorite_genres", userName);
-            showStats += Helpers.getSummaryInfo(view, "total_time_watched", userName, "?episodes=true", "total_episode_time_watched");
-            showStats += Helpers.getSummaryInfo(view, "total_watchable_time", userName, "?episodes=true", "total_episode_watchable_time");
+            showStats += getSummaryInfo(view, "total_tv_count", userName);
+            showStats += getSummaryInfo(view, "total_tv_watched", userName);
+            showStats += getSummaryInfo(view, "total_series_finished", userName);
+            showStats += getSummaryInfo(view, "tv_favorite_genres", userName);
+            showStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=true", "total_episode_time_watched");
+            showStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=true", "total_episode_watchable_time");
             view.querySelector("#showStats").innerHTML = showStats;
 
             var seriesMostWatchedStats = "";
-            seriesMostWatchedStats += Helpers.getSummaryInfo(view, "last_seen", userName, "?episodes=true", "last_seen_tv");
-            seriesMostWatchedStats += Helpers.getSummaryInfo(view, "most_watched_shows", userName, "");
+            seriesMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=true", "last_seen_tv");
+            seriesMostWatchedStats += getSummaryInfo(view, "most_watched_shows", userName, "");
             view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
 
             hideLoadingFunc();
@@ -161,7 +163,7 @@ define(function () {
                 const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
                 const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
                 return currentDirection === 'asc' ? numA - numB : numB - numA;
-            } else if ( dataType == 'string' ) {
+            } else if (dataType == 'string') {
                 // Text comparison using localeCompare for proper alphabetical ordering
                 return currentDirection === 'asc'
                     ? cellA.localeCompare(cellB)
@@ -191,9 +193,19 @@ define(function () {
         return row_html;
     }
 
-    function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, Helpers) {
-        ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-            if (!Helpers.CheckForValidConfig(config)) {
+    function CheckForValidConfig(config) {
+        if (config.LastUpdated === undefined) {
+            Dashboard.alert({ message: text, title: title });
+            showInfo("No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
+            return false;
+        }
+        return true;
+    }
+
+
+    function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, SharedHelpers) {
+        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            if (!CheckForValidConfig(config)) {
                 hideLoadingFunc();
                 return;
             }
@@ -205,7 +217,7 @@ define(function () {
 
             showLoadingFunc();
 
-            Helpers.getStatistics2026Data(url).then(function (resultData) {
+            getStatistics2026Data(url).then(function (resultData) {
                 load_status.innerHTML = "&nbsp;";
                 console.log("resultData: " + JSON.stringify(resultData));
 
@@ -236,15 +248,110 @@ define(function () {
         });
     }
 
+    if (!String.prototype.endsWith2) {
+        String.prototype.endsWith2 = function (searchString, position) {
+            var subjectString = this.toString();
+            if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
+                position = subjectString.length;
+            }
+            position -= searchString.length;
+            var lastIndex = subjectString.indexOf(searchString, position);
+            return lastIndex !== -1 && lastIndex === position;
+        };
+    }
+
+    function getTabIndex(tab_name, getTabsFn) {
+        var index = 0;
+
+        var tabs = getTabsFn();
+        for (index = 0; index < tabs.length; ++index) {
+            var path = tabs[index].href;
+            if (path.endsWith2("=" + tab_name)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    const STYLE_ID = 'my-plugin-stylesheet';
+    function injectStyleSheet(e) {
+
+        const cssUrl = Dashboard.getConfigurationPageUrl('style.css');
+        return injectStyleSheetEX(e, cssUrl);
+    }
+
+    function injectStyleSheetEX(e, cssUrl) {
+
+        if (document.getElementById(STYLE_ID))  // already added
+            return;
+
+        const link = document.createElement('link');
+        link.id = STYLE_ID;
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = cssUrl;
+
+        document.head.appendChild(link);
+    }
+
+    getStatistics2026Data = function (url_to_get) {
+        console.log("getStatistics2026Data Url = " + url_to_get);
+        return ApiClient.ajax({
+            type: "GET",
+            url: url_to_get,
+            dataType: "json"
+        });
+    };
+
+    function getSummaryInfo(view, whichSummary, user, parameters = "", div = "") {
+        var urlText = "/emby/Statistics2026/" + whichSummary;
+        if (user != "" && user !== undefined)
+            urlText += "/" + user;
+        urlText += parameters;
+        console.info("getSummaryInfo - '" + urlText + "'");
+        var url = ApiClient.getUrl(urlText);
+
+        if (div == "")
+            div = whichSummary;
+
+        ApiClient.getJSON(url).then(response => {
+            view.querySelector("#" + div).innerHTML = response.html;
+
+            response.dynamicButtons.forEach((v) => {
+                view.querySelector("#" + v.id).addEventListener("click",
+                    function () {
+                        showInfo(v.info, v.title);
+                    });
+            });
+        }).catch(error => {
+            var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
+            console.error("getSummaryInfo failed:", errorMessage);
+        });
+
+        return `<div name="${div}" id="${div}"></div>`;
+    }
+
+    function showInfo(text, title) {
+        Dashboard.alert({ message: text, title: title });
+    }
+
     return {
+        pluginId,
         LoadTVProgress,
         LoadUserStats,
         sortTable,
         sortableTableStyle,
         loadTableData,
-        getMediaRowData
+        getMediaRowData,
+        CheckForValidConfig,
+        getTabIndex,
+        injectStyleSheet,
+        injectStyleSheetEX,
+        getStatistics2026Data,
+        getSummaryInfo,
+        showInfo
     };
 
 })
 
-//# sourceURL=SharedHelpers.js
+//# sourceURL=js

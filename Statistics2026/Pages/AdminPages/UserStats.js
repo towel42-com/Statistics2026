@@ -2,13 +2,13 @@
     'use strict';
 
     function loadStats(view, userName) {
-        SharedHelpers.LoadUserStats(view, userName, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+        SharedHelpers.LoadUserStats(view, userName, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, SharedHelpers);
     }
 
     return function (view, params) {
         view.addEventListener('viewshow', function (e) {
-            mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats"), Helpers.getTabs);
-            Helpers.injectStyleSheet(e);
+            mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("UserStats", Helpers.getTabs), Helpers.getTabs);
+            SharedHelpers.injectStyleSheet(e);
         });
 
         view.addEventListener('viewhide', function (e) {

@@ -7,15 +7,15 @@
     `use strict`;
 
         function loadData(view, user) {
-        SharedHelpers.LoadTVProgress(view, user, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+        SharedHelpers.LoadTVProgress(view, user, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, SharedHelpers);
     }
 
     return function (view, params) {
         view.addEventListener('viewshow', function (e) {
-            mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress"), Helpers.getTabs);
-            Helpers.injectStyleSheet(e);
+            mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("TVSeriesProgress", Helpers.getTabs), Helpers.getTabs);
+            SharedHelpers.injectStyleSheet(e);
 
-            Helpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
+            SharedHelpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
             var style = document.createElement('style');
             style.innerHTML = SharedHelpers.sortableTableStyle();
             var ref = document.querySelector('script');

@@ -14,9 +14,9 @@
         // init code here
         view.addEventListener('viewshow', function (e) {
 
-            mainTabsManager.setTabs(this, Helpers.getTabIndex("Movies"), Helpers.getTabs);
+            mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("Movies", Helpers.getTabs), Helpers.getTabs);
 
-            Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
+            SharedHelpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
             var style = document.createElement('style');
             style.innerHTML = SharedHelpers.sortableTableStyle();
             var ref = document.querySelector('script');
@@ -37,7 +37,7 @@
             });
 
             function loadTableData() {
-                SharedHelpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', SharedHelpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+                SharedHelpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', SharedHelpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers, SharedHelpers);
             }
         });
 
