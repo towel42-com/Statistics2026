@@ -48,8 +48,13 @@ namespace Statistics2026.ScheduledTasks
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
+            if (_embyInterfaces != null && _embyInterfaces.IsStatistics2026TaskRunning(this.GetType()))
+            {
+                throw new Exception("Statistics 2026 task is running");
+            }
+
             var taskName = "Analyze User Watch Data";
-            _embyInterfaces._logger.Info($"Statistics 2026 : Starting Statistics 2026 {taskName} task");
+            _embyInterfaces!._logger.Info($"Statistics 2026 : Starting Statistics 2026 {taskName} task");
             // purely for progress reporting
             var now = DateTime.Now;
 
