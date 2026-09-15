@@ -1,15 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using MediaBrowser.Common.Configuration;
+﻿using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 using Statistics2026.Configuration;
+using Statistics2026.ScheduledTasks;
+using System;
+using System.Collections.Generic;
+using System.IO;
 
 namespace Statistics2026
 {
+    public class TaskDef
+    {
+        public TaskDef() { }
+        public TaskDef(string description, Type? typeOf, long runTime, string tableName)
+        {
+            Description = description;
+            TaskType = typeOf;
+            RunTime = runTime;
+            TableName = tableName;
+        }
+
+        public string Description { get; private set; } = string.Empty;
+        public Type? TaskType { get; private set; } = null;
+        public long RunTime { get; set; } = 0;
+        public string TableName { get; private set; } = string.Empty;
+    }
+
     public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
         public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
@@ -176,6 +194,23 @@ namespace Statistics2026
             {
                 return ImageFormat.Png;
             }
+        }
+
+        public List<TaskDef> GetKnownTasks( bool includeRunAll )
+        {
+            var tasks = new List<TaskDef>
+            {
+                new TaskDef($"Analyzing Users", typeof(AnalyzeUsersTask), 0, "Users"),
+                new TaskDef($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "User Watch Data"),
+                new TaskDef($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Media"),
+                new TaskDef($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series")
+            };
+            if ( includeRunAll )
+            {
+                tasks.Add(new TaskDef($"RunAll", typeof(RunAllTasksTask), 0, ""));
+            }
+            
+            return tasks;
         }
     }
 }
