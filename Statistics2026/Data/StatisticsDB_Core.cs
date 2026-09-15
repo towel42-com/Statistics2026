@@ -77,7 +77,7 @@ namespace Statistics2026.Data
             else if (checkType == ECheckType.eUpdate)
                 _dbHelper.CheckIsValid(ECheckLevel.eAllWithThrow);
 
-            if (_embyInterfaces != null && (checkType == ECheckType.eReport) && _embyInterfaces.IsTaskRunning())
+            if (_embyInterfaces != null && (checkType == ECheckType.eReport) && _embyInterfaces.IsStatistics2026TaskRunning())
             {
                 throw new Exception("Statistics 2026 task is running");
             }
