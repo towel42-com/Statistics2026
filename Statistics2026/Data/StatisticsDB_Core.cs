@@ -62,19 +62,25 @@ namespace Statistics2026.Data
         {
         }
 
-        private void CheckIsValid(bool inInit = false)
+        private void CheckIsValid(ECheckType checkType)
         {
-            if (inInit)
-                _dbHelper.CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
-            else
-                _dbHelper.CheckIsValid(ECheckLevel.eAllWithThrow);
-
             if (Statistics2026.Plugin.Instance == null)
                 throw new ArgumentNullException("Statistics2026.Plugin.Instance");
 
             if (Statistics2026.Plugin.Instance.Configuration == null)
                 throw new ArgumentNullException("Statistics2026.Plugin.Instance.Configuration");
 
+            if (checkType == ECheckType.eInit)
+                _dbHelper.CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
+            else if (checkType == ECheckType.eReport)
+                _dbHelper.CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure);
+            else if (checkType == ECheckType.eUpdate)
+                _dbHelper.CheckIsValid(ECheckLevel.eAllWithThrow);
+
+            if (_embyInterfaces != null && (checkType == ECheckType.eReport) && _embyInterfaces.IsTaskRunning())
+            {
+                throw new Exception("Statistics 2026 task is running");
+            }
         }
 
         public void Initialize(CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false)

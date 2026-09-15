@@ -57,7 +57,7 @@ namespace Statistics2026.Data
 
         public void InitUserWatchData()
         {
-            CheckIsValid(true);
+            CheckIsValid(ECheckType.eInit);
 
             _dbHelper!.Progress?.Report(0);
             var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
@@ -138,7 +138,7 @@ namespace Statistics2026.Data
 
         public void AnalyzeUserWatchData()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             _dbHelper!.Progress?.Report(0);
             var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
@@ -277,7 +277,7 @@ namespace Statistics2026.Data
 
         private void ResetPlayCount(User user, Video video, ref bool isPlayed, ref int playCount)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             if (Statistics2026.Plugin.Instance == null || Statistics2026.Plugin.Instance!.Configuration == null)
                 return;
@@ -436,7 +436,7 @@ namespace Statistics2026.Data
 
         private List<SQLCmdDef> AddUserWatchData(User? user)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             if (user == null)
                 throw new ArgumentNullException("user");
@@ -535,7 +535,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalFinishedSeries(User? user)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             if (user == null)
                 throw new ArgumentNullException("user");
@@ -577,7 +577,7 @@ namespace Statistics2026.Data
 
         public Dictionary<long, List<WatchedMediaValue>> WatchedMediaValues(User? user, bool leastWatched, EMediaType mediaType)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             var excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
             var numUsers = (user == null) ? NumUsers(false, excludeAdmin) : 1;
@@ -766,7 +766,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalTime(User? user, bool? episodesOnly, bool played)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             if (user == null)
                 throw new ArgumentNullException("user");
@@ -812,7 +812,7 @@ namespace Statistics2026.Data
 
         public List<(string name, DateTime lastPlayed)> LastSeenValues(User? user, bool movies)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             if (user == null)
                 throw new ArgumentNullException("user");
@@ -861,7 +861,7 @@ namespace Statistics2026.Data
 
         public StatCard LastSeen(User? user, bool movies)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             if (user == null)
                 throw new ArgumentNullException("user");

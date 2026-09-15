@@ -19,7 +19,7 @@ namespace Statistics2026.Data
     {
         public void AddAllUsers()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             _dbHelper!.Progress?.Report(0);
             var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
@@ -60,7 +60,7 @@ namespace Statistics2026.Data
 
         private (long watched, long watchable) AnalyzeOverallTime(User? user, List<User>? userList)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eNone);
 
             if (user == null && userList == null)
                 throw new ArgumentException("Either user or allUsers must be provided.");
@@ -85,7 +85,7 @@ namespace Statistics2026.Data
 
         private List<SQLCmdDef> AddUser(User? user)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             if (user == null)
                 throw new ArgumentNullException("user");
@@ -148,7 +148,7 @@ namespace Statistics2026.Data
 
         public long NumUsers(bool hasConnectUserId, bool excludeAdmin)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             string sql = "SELECT COUNT(UserName) FROM Users ";
 
@@ -167,7 +167,7 @@ namespace Statistics2026.Data
 
         public long NumUsers()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             return NumUsers(Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID, Statistics2026.Plugin.Instance!.Configuration.excludeAdmin);
         }
@@ -180,7 +180,7 @@ namespace Statistics2026.Data
 
         public StatCard MostActiveUsers()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             string sql =
                 "SELECT " +

@@ -66,23 +66,17 @@ namespace Statistics2026.ScheduledTasks
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
-            db.Initialize(cancellationToken, progress,PluginConfiguration.resetPlayCount);
+            db.Initialize(cancellationToken, progress, PluginConfiguration.resetPlayCount);
 
             var overAllTimer = new AutoTimer($"Adding All Data", _embyInterfaces._logger, false);
 
-            var tasks = new List<(string description, Type type, long runTime, string tableName)>
-            {
-                ($"Analyzing Users", typeof(AnalyzeUsersTask), 0, "Users"),
-                ($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "User Watch Data"),
-                ($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Media"),
-                ($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series")
-            };
+            var tasks = Plugin.Instance?.GetKnownTasks( false );
 
-            for (int ii = 0; ii < tasks.Count; ii++)
+            for (int ii = 0; ii < tasks?.Count; ii++)
             {
                 progress.Report((100.0 * ii) / (1.0 * tasks.Count));
                 var task = tasks[ii];
-                task.runTime = launchSubTask(task.description, task.type, cancellationToken);
+                task.RunTime = launchSubTask(task, cancellationToken);
                 tasks[ii] = task;
             }
 
@@ -94,18 +88,21 @@ namespace Statistics2026.ScheduledTasks
             overAllTimer.Dispose();
             _embyInterfaces._logger.Info($"=======================================");
             _embyInterfaces._logger.Info($"Time to Add: {overall} ms");
-            int maxLen = 0;
-            foreach (var task in tasks)
+            if (tasks != null)
             {
-                if (task.tableName.Length > maxLen)
-                    maxLen = task.tableName.Length;
-            }
-            if (maxLen > 20)
-                maxLen = 20;
+                int maxLen = 0;
+                foreach (var task in tasks)
+                {
+                    if (task.TableName.Length > maxLen)
+                        maxLen = task.TableName.Length;
+                }
+                if (maxLen > 20)
+                    maxLen = 20;
 
-            foreach (var task in tasks)
-            {
-                _embyInterfaces._logger.Info($"{task.tableName.PadLeft(maxLen)}: {task.runTime} ms");
+                foreach (var task in tasks)
+                {
+                    _embyInterfaces._logger.Info($"{task.TableName.PadLeft(maxLen)}: {task.RunTime} ms");
+                }
             }
             _embyInterfaces._logger.Info($"=======================================");
             _embyInterfaces._logger.Info($"Statistics 2026 : Finished Statistics 2026 {taskName} task");
@@ -115,14 +112,14 @@ namespace Statistics2026.ScheduledTasks
             return Task.CompletedTask;
         }
 
-        long launchSubTask(string description, Type taskType, CancellationToken cancellationToken)
+        long launchSubTask(TaskDef task, CancellationToken cancellationToken)
         {
             long retVal = 0;
-            using (var timer = new AutoTimer(description, _embyInterfaces._logger))
+            using (var timer = new AutoTimer(task.Description, _embyInterfaces._logger))
             {
-                var taskToRun = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault(taskToRun => taskToRun.ScheduledTask.GetType() == taskType);
+                var taskToRun = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault(taskToRun => taskToRun.ScheduledTask.GetType() == task.TaskType);
                 if (taskToRun == null)
-                    throw new Exception($"Task not found {taskType.Name}");
+                    throw new Exception($"Task not found {task.TaskType?.Name}");
 
                 var options = new TaskOptions() { HasManualInteraction = false };
                 _embyInterfaces._taskManager.Execute(taskToRun, options).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -139,7 +136,7 @@ namespace Statistics2026.ScheduledTasks
                     case TaskCompletionStatus.Failed:
                     case TaskCompletionStatus.Aborted:
                     default:
-                        throw new Exception($"{taskType.Name} failed to run successfully");
+                        throw new Exception($"{task.TaskType?.Name} failed to run successfully");
                 }
 
                 retVal = timer.ElapsedMilliseconds();

@@ -18,7 +18,7 @@ namespace Statistics2026.Data
     {
         public void AddAllSeries()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             _embyInterfaces!._logger?.Debug($"AddAllSeries- Starting Video Analysis");
 
@@ -50,7 +50,7 @@ namespace Statistics2026.Data
 
         private (int episodes, int specials) GetCountForSeries(Series series)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             var libraryOptions = _embyInterfaces!._libraryManager.GetLibraryOptions(series);
             var allEpisodes = _embyInterfaces!._providerManager.GetAllEpisodes(series, libraryOptions, _dbHelper!.CancellationToken!.Value).ConfigureAwait(false).GetAwaiter().GetResult();
@@ -131,7 +131,7 @@ namespace Statistics2026.Data
 
         private List<SQLCmdDef> AddSeries(Series series)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             var sqlCmds = new List<SQLCmdDef>();
             if (series.Id == null)
@@ -288,7 +288,7 @@ namespace Statistics2026.Data
 
         public List<GetTVSeriesProgressResponse> GetTVSeriesProgress(User? user)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             if (user == null)
                 throw new ArgumentNullException("user");

@@ -26,6 +26,14 @@ namespace Statistics2026.Data
         eAllWithThrow = eAll | eThrowOnFailure
     }
 
+    public enum ECheckType
+    {
+        eNone,
+        eInit,
+        eUpdate,
+        eReport
+    }
+
     public sealed class DBHelper
     {
         private static string[] _datetimeFormats = new string[] {

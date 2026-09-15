@@ -16,7 +16,7 @@ namespace Statistics2026.Data
     {
         public void AddAllCollections(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            CheckIsValid();
+            CheckIsValid( ECheckType.eUpdate );
 
             _embyInterfaces!._logger?.Debug($"AddAllCollections - Starting Collection Analysis");
             progress.Report(0);
@@ -46,7 +46,7 @@ namespace Statistics2026.Data
 
         private List<SQLCmdDef> AddChildToCollection(Video video, BoxSet collection)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             var sqlCmds = new List<SQLCmdDef>();
 
@@ -81,7 +81,7 @@ namespace Statistics2026.Data
 
         private List<SQLCmdDef> AddCollectionMembers(BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             _embyInterfaces!._logger?.Debug($"AddAllCollections - AddCollectionMembers -     Adding members of Collection - {collection.Name}");
 
@@ -111,7 +111,7 @@ namespace Statistics2026.Data
 
         public List<SQLCmdDef> AddCollection(BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             var sqlCmds = new List<SQLCmdDef>();
             if (collection.Id == null)
@@ -149,7 +149,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalCollectionCount()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             string sql = "SELECT COUNT( ItemId ) FROM Collections";
 

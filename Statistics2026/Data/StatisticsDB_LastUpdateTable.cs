@@ -18,7 +18,7 @@ namespace Statistics2026.Data
     {
         public void UpdateLastUpdated(DateTime lastUpdate, DateTime buildDate, string version)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             var sqlCmds = new List<SQLCmdDef>();
             sqlCmds.Add(new SQLCmdDef("delete from LastUpdateTable"));

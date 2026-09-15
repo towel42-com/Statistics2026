@@ -19,7 +19,7 @@ namespace Statistics2026.Data
     {
         public void AddAllMedia()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             _embyInterfaces!._logger?.Debug($"AddAllMedia - Starting Video Analysis");
 
@@ -65,7 +65,7 @@ namespace Statistics2026.Data
 
         public List<SQLCmdDef> AddMediaInfo(MediaInfo mediaInfo)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eUpdate);
 
             var sqlCmds = new List<SQLCmdDef>();
             if (mediaInfo == null || mediaInfo.ItemId == null)
@@ -195,7 +195,7 @@ namespace Statistics2026.Data
 
         public StatCard MediaResolutions()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             var retVal = new TableBasedStatCard(Constants.MediaResolutions, Constants.HelpMediaResolutions, new List<string> { "Movies", "Episodes" });
 
@@ -232,7 +232,7 @@ namespace Statistics2026.Data
 
         public StatCard MediaCodecs()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             var retVal = new TableBasedStatCard(Constants.MediaCodecs, Constants.HelpMediaCodecs, new List<string> { "Movies", "Episodes" });
             string sql =
@@ -260,7 +260,7 @@ namespace Statistics2026.Data
 
         public StatCard DVProfileInfo()
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             string sql =
                 "SELECT " +
@@ -295,7 +295,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalMovieCount(User? user, bool watched)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             string sql = "";
             var parameters = new List<(string, object?)>();
@@ -340,7 +340,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalTVCount(User? user, bool watched)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             string seriesColumn = String.Empty;
             string seriesFrom = String.Empty;
@@ -401,7 +401,7 @@ namespace Statistics2026.Data
 
         public long TotalStudioCountValue(User? user, bool movies)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             string sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
             if (movies)
@@ -425,7 +425,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalStudioCount(User? user, bool movies)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             var retVal = new TextBasedStatCard(movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, EStatCardSize.eSmall);
             var value = TotalStudioCountValue(user, movies);
@@ -435,21 +435,21 @@ namespace Statistics2026.Data
 
         public StatCard TotalMovieStudioCount(User? user)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             return TotalStudioCount(user, true);
         }
 
         public StatCard TotalTVStudioCount(User? user)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             return TotalStudioCount(user, false);
         }
 
         public List<(int year, long count)> FavoriteYearValues(User? user, bool movies)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             if (user == null)
                 throw new ArgumentNullException("user");
@@ -518,7 +518,7 @@ namespace Statistics2026.Data
 
         public List<(string genre, long count)> FavoriteGenreValues(User? user, bool movies)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             if (user == null)
                 throw new ArgumentNullException("user");
@@ -573,7 +573,7 @@ namespace Statistics2026.Data
 
         public StatCard FavoriteGenre(User? user, bool movies)
         {
-            CheckIsValid();
+            CheckIsValid(ECheckType.eReport);
 
             if (user == null)
                 throw new ArgumentNullException("user");
