@@ -9,14 +9,13 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
+using Statistics2026.ScheduledTasks;
+using System.Collections.Generic;
 
 namespace Statistics2026.Api
 {
     public class EmbyInterfaces
     {
-        //public EmbyInterfaces()
-        //{
-        //}
         public EmbyInterfaces(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
@@ -50,7 +49,17 @@ namespace Statistics2026.Api
                 Plugin.Instance.ServerId = _appHost.SystemId;
         }
 
-        public bool IsTaskRunning()
+        public bool IsStatistics2026TaskRunning()
+        {
+            return IsStatistics2026TaskRunning(new List<System.Type>());
+        }
+
+        public bool IsStatistics2026TaskRunning(System.Type okIfRunning)
+        {
+            return IsStatistics2026TaskRunning(new List<System.Type>() { typeof(RunAllTasksTask), okIfRunning });
+        }
+
+        public bool IsStatistics2026TaskRunning(List<System.Type> okIfRunning)
         {
             if (_taskManager == null)
                 return false;
@@ -67,6 +76,19 @@ namespace Statistics2026.Api
 
                 foreach (var currTask in knownTasks)
                 {
+                    bool okToBeRunning = false;
+                    foreach (var okTask in okIfRunning)
+                    {
+                        if (okTask == task.ScheduledTask.GetType())
+                        {
+                            okToBeRunning = true;
+                            break;
+                        }
+                    }
+
+                    if (okToBeRunning)
+                        continue;
+
                     if (currTask.TaskType == task.ScheduledTask.GetType())
                     {
                         return true;
