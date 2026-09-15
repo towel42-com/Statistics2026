@@ -1,8 +1,8 @@
-﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js'), Dashboard.getConfigurationResourceUrl('LoadingHelpers.js')], function (mainTabsManager, Helpers, LoadingHelpers) {
+﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js'), Dashboard.getConfigurationResourceUrl('SharedHelpers.js')], function (mainTabsManager, Helpers, SharedHelpers) {
     'use strict';
 
     function loadStats(view, userName) {
-        LoadingHelpers.LoadUserStats(view, userName, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+        SharedHelpers.LoadUserStats(view, userName, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
     }
 
     return function (view, params) {

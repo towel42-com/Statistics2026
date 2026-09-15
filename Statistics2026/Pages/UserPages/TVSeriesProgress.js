@@ -4,21 +4,21 @@
     'mainTabsManager',
     ApiClient.getUrl('web/configurationpage?name=Helpers.js'),
     ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'),
-    ApiClient.getUrl('web/configurationpage?name=LoadingHelpers.js'),
+    ApiClient.getUrl('web/configurationpage?name=SharedHelpers.js'),
     'emby-input',
     'emby-button',
     'emby-checkbox',
     'emby-scroller',
     'emby-select'
 ],
-    function (BaseView, loading, mainTabsManager, Helpers, UserPageHelpers, LoadingHelpers) {
+    function (BaseView, loading, mainTabsManager, Helpers, UserPageHelpers, SharedHelpers) {
         `use strict`;
 
         Object.assign(View.prototype, BaseView.prototype);
 
         function loadData(view, userId) {
             ApiClient.getUser(userId).then(function (user) {
-                LoadingHelpers.LoadTVProgress(view, user.Name, loading.show, loading.hide, Helpers);
+                SharedHelpers.LoadTVProgress(view, user.Name, loading.show, loading.hide, Helpers);
             });
         }
 
@@ -39,7 +39,7 @@
                         console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
 
                         // Pass these variables straight into your sort function
-                        LoadingHelpers.sortTable(index, columnType, 'TVSeriesProgressTable');
+                        SharedHelpers.sortTable(index, columnType, 'TVSeriesProgressTable');
                     });
                 });
             }
@@ -53,7 +53,7 @@
 
                 Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
                 var style = document.createElement('style');
-                style.innerHTML = LoadingHelpers.sortableTableStyle();
+                style.innerHTML = SharedHelpers.sortableTableStyle();
                 var ref = document.querySelector('script');
                 ref.parentNode.insertBefore(style, ref);
 

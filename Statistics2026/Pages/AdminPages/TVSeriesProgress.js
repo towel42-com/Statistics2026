@@ -1,13 +1,13 @@
 ﻿define([
     'mainTabsManager', 
     Dashboard.getConfigurationResourceUrl('Helpers.js'), 
-    Dashboard.getConfigurationResourceUrl('LoadingHelpers.js')
+    Dashboard.getConfigurationResourceUrl('SharedHelpers.js')
 ], 
-    function (mainTabsManager, Helpers, LoadingHelpers) {
+    function (mainTabsManager, Helpers, SharedHelpers) {
     `use strict`;
 
-    function loadData(view, user) {
-        LoadingHelpers.LoadTVProgress(view, user, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+        function loadData(view, user) {
+        SharedHelpers.LoadTVProgress(view, user, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
     }
 
     return function (view, params) {
@@ -17,7 +17,7 @@
 
             Helpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
             var style = document.createElement('style');
-            style.innerHTML = LoadingHelpers.sortableTableStyle();
+            style.innerHTML = SharedHelpers.sortableTableStyle();
             var ref = document.querySelector('script');
             ref.parentNode.insertBefore(style, ref);
 
@@ -62,7 +62,7 @@
                     console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
 
                     // Pass these variables straight into your sort function
-                    LoadingHelpers.sortTable(index, columnType, 'TVSeriesProgressTable');
+                    SharedHelpers.sortTable(index, columnType, 'TVSeriesProgressTable');
                 });
             });
 

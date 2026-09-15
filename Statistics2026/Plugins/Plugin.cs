@@ -47,8 +47,8 @@ namespace Statistics2026
                 },
                 new PluginPageInfo
                 {
-                    Name = "LoadingHelpers.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.LoadingHelpers.js"
+                    Name = "SharedHelpers.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.SharedHelpers.js"
                 },
                 new PluginPageInfo
                 {

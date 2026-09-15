@@ -1,11 +1,11 @@
-﻿define(['baseView', 'loading', 'mainTabsManager', ApiClient.getUrl('web/configurationpage?name=Helpers.js'), ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'), ApiClient.getUrl('web/configurationPage?name=LoadingHelpers.js'), 'emby-input', 'emby-button', 'emby-checkbox', 'emby-scroller', 'emby-select'], function (BaseView, loading, mainTabsManager, Helpers, UserPageHelpers, LoadingHelpers) {
+﻿define(['baseView', 'loading', 'mainTabsManager', ApiClient.getUrl('web/configurationpage?name=Helpers.js'), ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'), ApiClient.getUrl('web/configurationPage?name=SharedHelpers.js'), 'emby-input', 'emby-button', 'emby-checkbox', 'emby-scroller', 'emby-select'], function (BaseView, loading, mainTabsManager, Helpers, UserPageHelpers, SharedHelpers) {
     'use strict';
 
     Object.assign(View.prototype, BaseView.prototype);
 
     function loadData(view, userId) {
         ApiClient.getUser(userId).then(function (user) {
-            LoadingHelpers.LoadUserStats(view, user.Name, loading.show, loading.hide, Helpers);
+            SharedHelpers.LoadUserStats(view, user.Name, loading.show, loading.hide, Helpers);
         });
     }
 

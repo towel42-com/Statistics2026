@@ -1,4 +1,4 @@
-﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js'), Dashboard.getConfigurationResourceUrl('LoadingHelpers.js')], function (mainTabsManager, Helpers, LoadingHelpers) {
+﻿define(['mainTabsManager', Dashboard.getConfigurationResourceUrl('Helpers.js'), Dashboard.getConfigurationResourceUrl('SharedHelpers.js')], function (mainTabsManager, Helpers, SharedHelpers) {
     'use strict';
 
     function loadPage(view, params) {

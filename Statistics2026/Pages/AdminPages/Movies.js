@@ -3,10 +3,10 @@
         'appRouter',
         Dashboard.getConfigurationResourceUrl('Helpers.js'),
         ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'),
-        Dashboard.getConfigurationResourceUrl('LoadingHelpers.js'),
+        Dashboard.getConfigurationResourceUrl('SharedHelpers.js'),
         'emby-linkbutton'
 ],
-    function (mainTabsManager, appRouter, Helpers, UserPageHelpers, LoadingHelpers) {
+    function (mainTabsManager, appRouter, Helpers, UserPageHelpers, SharedHelpers) {
     'use strict';
 
     return function (view, params) {
@@ -18,7 +18,7 @@
 
             Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
             var style = document.createElement('style');
-            style.innerHTML = LoadingHelpers.sortableTableStyle();
+            style.innerHTML = SharedHelpers.sortableTableStyle();
             var ref = document.querySelector('script');
             ref.parentNode.insertBefore(style, ref);
 
@@ -32,12 +32,12 @@
                     console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
 
                     // Pass these variables straight into your sort function
-                    LoadingHelpers.sortTable(index, columnType, 'movie_results_table');
+                    SharedHelpers.sortTable(index, columnType, 'movie_results_table');
                 });
             });
 
             function loadTableData() {
-                LoadingHelpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', LoadingHelpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+                SharedHelpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', SharedHelpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
             }
         });
 
