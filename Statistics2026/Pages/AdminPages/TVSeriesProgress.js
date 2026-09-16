@@ -6,7 +6,7 @@
     function (mainTabsManager, Helpers, SharedHelpers) {
     `use strict`;
 
-        function loadData(view, user) {
+    function loadData(view, user) {
         SharedHelpers.LoadTVProgress(view, user, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, SharedHelpers);
     }
 
