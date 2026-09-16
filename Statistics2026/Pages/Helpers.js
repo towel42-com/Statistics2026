@@ -25,16 +25,16 @@ define(function () {
         return row_html;
     }
 
-    function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc, SharedHelpers) {
+    function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc, Helpers) {
         ApiClient.getPluginConfiguration(pluginId).then(function (config) {
             view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
 
             var url = "Statistics2026/tv_series_progress/" + userName;
-            loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, SharedHelpers);
+            loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, Helpers);
         });
     }
 
-    function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc, SharedHelpers) {
+    function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc, Helpers) {
         showLoadingFunc();
 
         try {
@@ -207,7 +207,7 @@ define(function () {
     }
 
 
-    function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, SharedHelpers) {
+    function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, Helpers) {
         ApiClient.getPluginConfiguration(pluginId).then(function (config) {
             if (!CheckForValidConfig(config)) {
                 hideLoadingFunc();

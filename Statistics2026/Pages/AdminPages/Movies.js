@@ -2,10 +2,10 @@
         'mainTabsManager',
         'appRouter',
         Dashboard.getConfigurationResourceUrl('AdminHelpers.js'),
-        Dashboard.getConfigurationResourceUrl('SharedHelpers.js'),
+        Dashboard.getConfigurationResourceUrl('Helpers.js'),
         'emby-linkbutton'
 ],
-    function (mainTabsManager, appRouter, AdminHelpers, UserPageHelpers, SharedHelpers) {
+    function (mainTabsManager, appRouter, AdminHelpers, Helpers) {
         'use strict';
 
         return function (view, params) {
@@ -13,11 +13,11 @@
             // init code here
             view.addEventListener('viewshow', function (e) {
 
-                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("Movies", AdminHelpers.getTabs), AdminHelpers.getTabs);
+                mainTabsManager.setTabs(this, Helpers.getTabIndex("Movies", AdminHelpers.getTabs), AdminHelpers.getTabs);
 
-                SharedHelpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
+                Helpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
                 var style = document.createElement('style');
-                style.innerHTML = SharedHelpers.sortableTableStyle();
+                style.innerHTML = Helpers.sortableTableStyle();
                 var ref = document.querySelector('script');
                 ref.parentNode.insertBefore(style, ref);
 
@@ -31,12 +31,12 @@
                         console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
 
                         // Pass these variables straight into your sort function
-                        SharedHelpers.sortTable(index, columnType, 'movie_results_table');
+                        Helpers.sortTable(index, columnType, 'movie_results_table');
                     });
                 });
 
                 function loadTableData() {
-                    SharedHelpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', SharedHelpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, AdminHelpers, SharedHelpers);
+                    Helpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, AdminHelpers, Helpers);
                 }
             });
 

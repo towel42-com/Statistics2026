@@ -70,7 +70,7 @@
         <EmbeddedResource Include="Pages\UserPages\UserStats.html" />
         <EmbeddedResource Include="Pages\UserPages\UserStats.js" />
 
-		<EmbeddedResource Include="Pages\SharedHelpers.js" />
+		<EmbeddedResource Include="Pages\Helpers.js" />
 		<EmbeddedResource Include="style.css" />
         <EmbeddedResource Include="thumb.png" />
     </ItemGroup>

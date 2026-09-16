@@ -1,19 +1,19 @@
 ﻿define([
     'mainTabsManager',
     Dashboard.getConfigurationResourceUrl('AdminHelpers.js'),
-    Dashboard.getConfigurationResourceUrl('SharedHelpers.js')
+    Dashboard.getConfigurationResourceUrl('Helpers.js')
 ],
-    function (mainTabsManager, AdminHelpers, SharedHelpers) {
+    function (mainTabsManager, AdminHelpers, Helpers) {
         'use strict';
 
         function loadStats(view, userName) {
-            SharedHelpers.LoadUserStats(view, userName, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, SharedHelpers);
+            Helpers.LoadUserStats(view, userName, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
         }
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("UserStats", AdminHelpers.getTabs), AdminHelpers.getTabs);
-                SharedHelpers.injectStyleSheet(e);
+                mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats", AdminHelpers.getTabs), AdminHelpers.getTabs);
+                Helpers.injectStyleSheet(e);
             });
 
             view.addEventListener('viewhide', function (e) {

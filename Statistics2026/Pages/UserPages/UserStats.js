@@ -3,21 +3,21 @@
     'loading',
     'mainTabsManager',
     ApiClient.getUrl('web/configurationpage?name=UserPageHelpers.js'),
-    ApiClient.getUrl('web/configurationPage?name=SharedHelpers.js'),
+    ApiClient.getUrl('web/configurationPage?name=Helpers.js'),
     'emby-input',
     'emby-button',
     'emby-checkbox',
     'emby-scroller',
     'emby-select'
 ],
-    function (BaseView, loading, mainTabsManager, UserPageHelpers, SharedHelpers) {
+    function (BaseView, loading, mainTabsManager, UserPageHelpers, Helpers) {
         'use strict';
 
         Object.assign(View.prototype, BaseView.prototype);
 
         function loadData(view, userId) {
             ApiClient.getUser(userId).then(function (user) {
-                SharedHelpers.LoadUserStats(view, user.Name, loading.show, loading.hide, SharedHelpers);
+                Helpers.LoadUserStats(view, user.Name, loading.show, loading.hide, Helpers);
             });
         }
 
@@ -37,8 +37,8 @@
             BaseView.apply(this, arguments);
 
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, SharedHelpers.getTabIndexEX("UserStats_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
-                SharedHelpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
+                mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
+                Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
             });
         }
 

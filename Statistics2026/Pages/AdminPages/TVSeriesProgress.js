@@ -1,23 +1,23 @@
 ﻿define([
     'mainTabsManager', 
     Dashboard.getConfigurationResourceUrl('AdminHelpers.js'), 
-    Dashboard.getConfigurationResourceUrl('SharedHelpers.js')
+    Dashboard.getConfigurationResourceUrl('Helpers.js')
 ], 
-    function (mainTabsManager, AdminHelpers, SharedHelpers) {
+    function (mainTabsManager, AdminHelpers, Helpers) {
         `use strict`;
 
         function loadData(view, user) {
-            SharedHelpers.LoadTVProgress(view, user, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, SharedHelpers);
+            Helpers.LoadTVProgress(view, user, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
         }
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("TVSeriesProgress", AdminHelpers.getTabs), AdminHelpers.getTabs);
-                SharedHelpers.injectStyleSheet(e);
+                mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress", AdminHelpers.getTabs), AdminHelpers.getTabs);
+                Helpers.injectStyleSheet(e);
 
-                SharedHelpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
+                Helpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
                 var style = document.createElement('style');
-                style.innerHTML = SharedHelpers.sortableTableStyle();
+                style.innerHTML = Helpers.sortableTableStyle();
                 var ref = document.querySelector('script');
                 ref.parentNode.insertBefore(style, ref);
 
@@ -46,7 +46,7 @@
             });
 
             view.querySelector("#episodesInfo").addEventListener(`click`, function () {
-                SharedHelpers.showInfo('This column displays the number of watched episodes and the number of total episodes. You will have 100% when you viewed all normal episodes (no specials, only aired)<br/>. ', 'Watched Episodes');
+                Helpers.showInfo('This column displays the number of watched episodes and the number of total episodes. You will have 100% when you viewed all normal episodes (no specials, only aired)<br/>. ', 'Watched Episodes');
             });
 
             ApiClient.getUsers().then(function (users) {
@@ -62,7 +62,7 @@
                         console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
 
                         // Pass these variables straight into your sort function
-                        SharedHelpers.sortTable(index, columnType, 'TVSeriesProgressTable');
+                        Helpers.sortTable(index, columnType, 'TVSeriesProgressTable');
                     });
                 });
 

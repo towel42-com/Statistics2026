@@ -3,21 +3,21 @@
     'loading',
     'mainTabsManager',
     ApiClient.getUrl('web/configurationpage?name=UserPageHelpers.js'),
-    ApiClient.getUrl('web/configurationpage?name=SharedHelpers.js'),
+    ApiClient.getUrl('web/configurationpage?name=Helpers.js'),
     'emby-input',
     'emby-button',
     'emby-checkbox',
     'emby-scroller',
     'emby-select'
 ],
-    function (BaseView, loading, mainTabsManager, UserPageHelpers, SharedHelpers) {
+    function (BaseView, loading, mainTabsManager, UserPageHelpers, Helpers) {
         `use strict`;
 
         Object.assign(View.prototype, BaseView.prototype);
 
         function loadData(view, userId) {
             ApiClient.getUser(userId).then(function (user) {
-                SharedHelpers.LoadTVProgress(view, user.Name, loading.show, loading.hide, SharedHelpers);
+                Helpers.LoadTVProgress(view, user.Name, loading.show, loading.hide, Helpers);
             });
         }
 
@@ -38,7 +38,7 @@
                         console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
 
                         // Pass these variables straight into your sort function
-                        SharedHelpers.sortTable(index, columnType, 'TVSeriesProgressTable');
+                        Helpers.sortTable(index, columnType, 'TVSeriesProgressTable');
                     });
                 });
             }
@@ -48,11 +48,11 @@
             BaseView.apply(this, arguments);
 
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, SharedHelpers.getTabIndexEX("TVSeriesProgress_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
+                mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
 
-                SharedHelpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
+                Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
                 var style = document.createElement('style');
-                style.innerHTML = SharedHelpers.sortableTableStyle();
+                style.innerHTML = Helpers.sortableTableStyle();
                 var ref = document.querySelector('script');
                 ref.parentNode.insertBefore(style, ref);
 
