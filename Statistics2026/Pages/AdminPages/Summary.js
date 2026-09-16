@@ -1,9 +1,9 @@
 ﻿define([
     'mainTabsManager',
-    Dashboard.getConfigurationResourceUrl('Helpers.js'),
+    Dashboard.getConfigurationResourceUrl('AdminHelpers.js'),
     Dashboard.getConfigurationResourceUrl('SharedHelpers.js')
 ],
-    function (mainTabsManager, Helpers, SharedHelpers) {
+    function (mainTabsManager, AdminHelpers, SharedHelpers) {
         'use strict';
 
         function loadDebugInfo(view) {
@@ -120,7 +120,7 @@
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("Summary", Helpers.getTabs), Helpers.getTabs);
+                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("Summary", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 SharedHelpers.injectStyleSheet(e);
             });
 

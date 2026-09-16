@@ -2,7 +2,6 @@
     'baseView',
     'loading',
     'mainTabsManager',
-    ApiClient.getUrl('web/configurationpage?name=Helpers.js'),
     ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'),
     ApiClient.getUrl('web/configurationPage?name=SharedHelpers.js'),
     'emby-input',
@@ -11,7 +10,7 @@
     'emby-scroller',
     'emby-select'
 ],
-    function (BaseView, loading, mainTabsManager, Helpers, UserPageHelpers, SharedHelpers) {
+    function (BaseView, loading, mainTabsManager, UserPageHelpers, SharedHelpers) {
         'use strict';
 
         Object.assign(View.prototype, BaseView.prototype);

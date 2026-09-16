@@ -1,12 +1,12 @@
 ﻿define([
     'mainTabsManager',
     'appRouter',
-    Dashboard.getConfigurationResourceUrl('Helpers.js'),
+    Dashboard.getConfigurationResourceUrl('AdminHelpers.js'),
     ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'),
     Dashboard.getConfigurationResourceUrl('SharedHelpers.js'),
     'emby-linkbutton'
 ],
-    function (mainTabsManager, appRouter, Helpers, UserPageHelpers, SharedHelpers) {
+    function (mainTabsManager, appRouter, AdminHelpers, UserPageHelpers, SharedHelpers) {
         'use strict';
 
         return function (view, params) {
@@ -14,7 +14,7 @@
             // init code here
             view.addEventListener('viewshow', function (e) {
 
-                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("Episodes", Helpers.getTabs), Helpers.getTabs);
+                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("Episodes", AdminHelpers.getTabs), AdminHelpers.getTabs);
 
                 SharedHelpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
                 var style = document.createElement('style');

@@ -1,9 +1,9 @@
 ﻿define([
     'mainTabsManager', 
-    Dashboard.getConfigurationResourceUrl('Helpers.js'), 
+    Dashboard.getConfigurationResourceUrl('AdminHelpers.js'), 
     Dashboard.getConfigurationResourceUrl('SharedHelpers.js')
 ], 
-    function (mainTabsManager, Helpers, SharedHelpers) {
+    function (mainTabsManager, AdminHelpers, SharedHelpers) {
         `use strict`;
 
         function loadData(view, user) {
@@ -12,7 +12,7 @@
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("TVSeriesProgress", Helpers.getTabs), Helpers.getTabs);
+                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("TVSeriesProgress", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 SharedHelpers.injectStyleSheet(e);
 
                 SharedHelpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
@@ -46,7 +46,7 @@
             });
 
             view.querySelector("#episodesInfo").addEventListener(`click`, function () {
-                Helpers.showInfo('This column displays the number of watched episodes and the number of total episodes. You will have 100% when you viewed all normal episodes (no specials, only aired)<br/>. ', 'Watched Episodes');
+                SharedHelpers.showInfo('This column displays the number of watched episodes and the number of total episodes. You will have 100% when you viewed all normal episodes (no specials, only aired)<br/>. ', 'Watched Episodes');
             });
 
             ApiClient.getUsers().then(function (users) {

@@ -1,9 +1,9 @@
 ﻿define([
     'mainTabsManager',
-    Dashboard.getConfigurationResourceUrl('Helpers.js'),
+    Dashboard.getConfigurationResourceUrl('AdminHelpers.js'),
     Dashboard.getConfigurationResourceUrl('SharedHelpers.js')
 ],
-    function (mainTabsManager, Helpers, SharedHelpers) {
+    function (mainTabsManager, AdminHelpers, SharedHelpers) {
         'use strict';
 
         function loadPage(view, params) {
@@ -24,7 +24,7 @@
 
             // init code here
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("Settings", Helpers.getTabs), Helpers.getTabs);
+                mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("Settings", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 SharedHelpers.injectStyleSheet(e);
             });
 
@@ -101,36 +101,36 @@
 
             view.querySelector("#numMostActiveHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("The default is 5, but you can limit how many most active users that are reported", "Number of Most Active Users");
+                    SharedHelpers.showInfo("The default is 5, but you can limit how many most active users that are reported", "Number of Most Active Users");
                 });
 
             view.querySelector("#numWatchedToReportHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("The default is 5, but you can limit how many Watched Videos to report on", "Number of Watched Videos");
+                    SharedHelpers.showInfo("The default is 5, but you can limit how many Watched Videos to report on", "Number of Watched Videos");
                 });
 
             view.querySelector("#excludeAdminHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("For security reasons, Administrators are not typically viewers of media and likely should be excluded from analysis.", "Exclude Administrators");
+                    SharedHelpers.showInfo("For security reasons, Administrators are not typically viewers of media and likely should be excluded from analysis.", "Exclude Administrators");
                 });
 
             view.querySelector("#resetPlayCountHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("When computing the user watch data, reset the playcount to the default value (typically 1), and show Administrators as watched for every video. This settings resets to false after the Reset has occured.", "Reset Play Count");
+                    SharedHelpers.showInfo("When computing the user watch data, reset the playcount to the default value (typically 1), and show Administrators as watched for every video. This settings resets to false after the Reset has occured.", "Reset Play Count");
                 });
 
 
             view.querySelector("#hasConnectUserIDHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Normally all users are shown, checking this option will display only users with a Connect User ID.", "Show Users with Connect User ID");
+                    SharedHelpers.showInfo("Normally all users are shown, checking this option will display only users with a Connect User ID.", "Show Users with Connect User ID");
                 });
             view.querySelector("#showUnknownDVProfilesHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Normally unknown Dolby Vision Profiles are hidden, checking this option will display the count of unknown Dolby Vision profiles.", "Show Unknown Dolby Vision Profile Count");
+                    SharedHelpers.showInfo("Normally unknown Dolby Vision Profiles are hidden, checking this option will display the count of unknown Dolby Vision profiles.", "Show Unknown Dolby Vision Profile Count");
                 });
             view.querySelector("#showAllResolutionsHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Normally only resolutions in use are show, checking this option will display all resolutions.", "Show All Resolutions");
+                    SharedHelpers.showInfo("Normally only resolutions in use are show, checking this option will display all resolutions.", "Show All Resolutions");
                 });
 
         };

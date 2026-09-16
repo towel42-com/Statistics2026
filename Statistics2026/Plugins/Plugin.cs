@@ -124,8 +124,8 @@ namespace Statistics2026
                 },
                 new PluginPageInfo
                 {
-                    Name = "Helpers.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Helpers.js"
+                    Name = "AdminHelpers.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.AdminHelpers.js"
                 },
                 new PluginPageInfo
                 {

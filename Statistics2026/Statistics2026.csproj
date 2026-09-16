@@ -49,7 +49,7 @@
     </Target>
 
     <ItemGroup>
-        <EmbeddedResource Include="Pages\AdminPages\Helpers.js" />
+        <EmbeddedResource Include="Pages\AdminPages\AdminHelpers.js" />
 
 		<EmbeddedResource Include="Pages\AdminPages\Episodes.html" />
         <EmbeddedResource Include="Pages\AdminPages\Episodes.js" />
