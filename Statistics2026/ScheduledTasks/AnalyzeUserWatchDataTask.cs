@@ -75,6 +75,8 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info($"Statistics 2026 : Finished Statistics 2026 {taskName} task");
 
             db.ResetCancellationToken();
+            db.UpdateDBState(EDBState.eUserTablesCreated);
+
             return Task.CompletedTask;
         }
 

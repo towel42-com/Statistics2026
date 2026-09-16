@@ -64,14 +64,6 @@ namespace Statistics2026.ScheduledTasks
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
             db.Initialize(cancellationToken, progress);
-            try
-            {
-                db.ClearTable("Media"); // will throw an exception if the primary has not been run yet
-            }
-            catch (Exception /*ex*/)
-            {
-                throw new Exception("Please run the 'Calculate Media and User Information for all library media and users' task");
-            }
 
             long addMedia = 0;
             using (var timer = new AutoTimer($"Adding All Media", _embyInterfaces._logger))

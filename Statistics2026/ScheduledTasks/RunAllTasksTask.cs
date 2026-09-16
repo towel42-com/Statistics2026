@@ -69,6 +69,7 @@ namespace Statistics2026.ScheduledTasks
             PluginConfiguration.LastUpdated = now.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
             PluginConfiguration.Version = Plugin.Instance?.Version.ToString(4) ?? "<UNKNOWN>";
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+            Plugin.Instance?.UpdateConfiguration(PluginConfiguration);
 
             var db = StatisticsDB.GetInstance(_embyInterfaces);
             db.Initialize(cancellationToken, progress, PluginConfiguration.resetPlayCount);
@@ -112,6 +113,7 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info($"=======================================");
             _embyInterfaces._logger.Info($"Statistics 2026 : Finished Statistics 2026 {taskName} task");
 
+            db.UpdateDBState(EDBState.eFullyInitialized);
             Plugin.Instance?.SaveConfiguration();
             db.ResetCancellationToken();
             return Task.CompletedTask;

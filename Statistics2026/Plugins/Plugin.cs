@@ -28,6 +28,17 @@ namespace Statistics2026
         public string TableName { get; private set; } = string.Empty;
     }
 
+    public enum EDBState
+    {
+        eEmpty = 0x00,  // a tables created
+        eSystemTablesCreated = 0x01,
+        eUserTablesCreated = 0x02,
+        eSystemDataInitialized = 0x04,
+        eUserDataInitialized = 0x08,
+        eFullyInitialized = eSystemTablesCreated | eUserTablesCreated | eSystemDataInitialized | eUserDataInitialized,
+        eOKToTrackUserData = eSystemTablesCreated | eUserTablesCreated | eUserDataInitialized
+    }
+
     public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
         public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
@@ -161,6 +172,26 @@ namespace Statistics2026
 
         private string? _serverId { get; set; } = null;
 
+        private static readonly object _padlock = new object();
+
+        public EDBState? DBState
+        {
+            get
+            {
+                lock (_padlock)
+                {
+                    return field;
+                }
+            }
+            set
+            {
+                lock (_padlock)
+                {
+                    field = value;
+                }
+            }
+        } = null;
+
         public string? ServerId
         {
             get
@@ -196,21 +227,21 @@ namespace Statistics2026
             }
         }
 
-        public List<TaskDef> GetKnownTasks( bool includeRunAll )
+        public List<TaskDef> GetKnownTasks(bool includeRunAll)
         {
             var tasks = new List<TaskDef>
             {
                 new TaskDef($"Analyzing Users", typeof(AnalyzeUsersTask), 0, "Users"),
                 new TaskDef($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "UserWatchData"),
                 new TaskDef($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Media"),
-                new TaskDef($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series"),
                 new TaskDef($"Analyzing Collections", typeof(AnalyzeCollectionsTask), 0, "Collections"),
+                new TaskDef($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series"),
             };
-            if ( includeRunAll )
+            if (includeRunAll)
             {
                 tasks.Add(new TaskDef($"RunAll", typeof(RunAllTasksTask), 0, ""));
             }
-            
+
             return tasks;
         }
     }
