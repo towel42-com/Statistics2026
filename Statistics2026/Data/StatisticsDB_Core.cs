@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Entities;
+﻿using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Entities;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,9 @@ namespace Statistics2026.Data
         private List<TableDef> _tableList = new List<TableDef>();
         private TableDef? _userMediaTemplate = null;
         private EmbyInterfaces? _embyInterfaces = null;
+        public bool AllTablesExisted { get; private set; } = false;
+        public bool DataExists { get; private set; } = false;
+        public bool UserDataExists { get; private set; } = false;
 
         DBHelper _dbHelper = new DBHelper();
 
@@ -56,6 +60,7 @@ namespace Statistics2026.Data
             _dbHelper = new DBHelper(_embyInterfaces);
 
             embyInterfaces._logger?.Debug("Statistics2026 : Finished Creating Database");
+            ComputeDBState();
         }
 
         ~StatisticsDB()
@@ -275,10 +280,91 @@ namespace Statistics2026.Data
             }
         }
 
+        private void ComputeDBState()
+        {
+            if (Plugin.Instance == null)
+                throw new ArgumentNullException("Plugin.Instance is null");
+
+            if (Plugin.Instance.DBState != null)
+                return;
+
+            var aTableMissing = false;
+            var aTableNeedsData = false;
+            foreach (var tableDef in _tableList)
+            {
+                if (!tableDef.DeprecatedTable)
+                {
+                    var tableMissing = !_dbHelper.TableExists(tableDef.Name);
+                    var tableNeedsData = true;
+                    if (!tableMissing)
+                    {
+                        var sql = $"SELECT COUNT(*) FROM {tableDef.Name} LIMIT 1";
+
+                        _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+                        {
+                            var row = statement.Current;
+                            tableNeedsData = row.GetInt64(0) == 0;
+                            return false;
+                        }
+                        );
+                    }
+                    aTableMissing = aTableMissing || tableMissing;
+                    aTableNeedsData = aTableNeedsData || tableNeedsData;
+                    if (aTableMissing && aTableNeedsData)
+                        break;
+                }
+            }
+
+            if (aTableMissing)
+                UpdateDBState(~EDBState.eSystemTablesCreated, true);
+            else
+                UpdateDBState(EDBState.eSystemTablesCreated);
+
+            if (aTableNeedsData)
+                UpdateDBState(~EDBState.eSystemDataInitialized, true);
+            else
+                UpdateDBState(EDBState.eSystemDataInitialized);
+
+            ComputeUserDataDBState();
+        }
+
+        public void UpdateDBState(EDBState? state, bool andValue = false)
+        {
+            EDBState? value = EDBState.eEmpty;
+
+            if (Plugin.Instance != null && Plugin.Instance.DBState != null)
+                value = Plugin.Instance.DBState;
+
+            if (andValue)
+                value = value & state;
+            else
+                value = value | state;
+            SetDBState(value);
+        }
+
+        private void SetDBState(EDBState? state)
+        {
+            if (Plugin.Instance == null)
+                throw new ArgumentNullException("Plugin.Instance is null");
+
+            Plugin.Instance.DBState = state;
+            var config = Plugin.Instance.Configuration;
+            config.dbStateOK = (Plugin.Instance.DBState == EDBState.eFullyInitialized);
+            Plugin.Instance.UpdateConfiguration(config);
+        }
+
         private void CreateTables(TableDef.EAction action)
         {
             if (action != TableDef.EAction.eRecreate && action != TableDef.EAction.eCreate)
                 throw new InvalidEnumArgumentException($"Action must be {TableDef.EAction.eRecreate} or {TableDef.EAction.eCreate}");
+
+            if (Plugin.Instance == null)
+                throw new NullReferenceException($"Plugin.Instance is null");
+
+            if (Plugin.Instance.DBState == null)
+            {
+                SetDBState(EDBState.eEmpty);
+            }
 
             var sqlCmds = new List<SQLCmdDef>();
             foreach (var tableDef in _tableList)
@@ -290,10 +376,12 @@ namespace Statistics2026.Data
             if (config.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null)
             {
                 sqlCmds.AddRange(DropAllUserMediaCmds());
+                UpdateDBState(~EDBState.eUserTablesCreated & ~EDBState.eUserDataInitialized, true);
             }
 
             _dbHelper.ExecuteCommands(sqlCmds);
 
+            UpdateDBState(EDBState.eSystemTablesCreated);
             InitUserWatchData();
         }
 

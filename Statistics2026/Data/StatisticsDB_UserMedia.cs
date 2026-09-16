@@ -55,6 +55,77 @@ namespace Statistics2026.Data
             }
         }
 
+        private void ComputeUserDataDBState()
+        {
+            if (Plugin.Instance == null || Plugin.Instance.DBState == null)
+            {
+                throw new ArgumentNullException("Plugin.Instance is null or Plugin.Instance.DBState is null");
+            }
+
+            var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
+
+            UpdateDBState(~EDBState.eUserTablesCreated, true);
+            if (users == null)
+            {
+                return;
+            }
+
+            var aTableMissing = false;
+            var aTableNeedsInit = false;
+            foreach (var user in users)
+            {
+                var tableName = getUserTableName(user);
+                var tableExists = _dbHelper.TableExists(tableName);
+                var tableNeedsInit = true;
+                if (tableExists)
+                {
+                    var sqlTicks = $"SELECT COUNT(*) FROM {tableName} WHERE TotalTicksPlayed IS NOT NULL AND TotalTicksPlayed != 0";
+                    var sqlPlayed = $"SELECT COUNT(*) FROM {tableName} WHERE PlayCount>0 AND IsPlayed";
+
+                    long? ticksPlayed = null;
+                    long systemPlayed = 0;
+
+                    var cmds = new List<SQLCmdDef>()
+                    {
+                        new SQLCmdDef( sqlTicks ),
+                        new SQLCmdDef( sqlPlayed )
+                    };
+
+                    _dbHelper.ExecuteCommands(cmds, statement =>
+                    {
+                        var row = statement.Current;
+                        var value = row.GetInt64(0);
+                        if (ticksPlayed == null)
+                            ticksPlayed = value;
+                        else
+                            systemPlayed = value;
+                        return true;
+                    }
+                    );
+
+                    if (ticksPlayed == null)
+                        tableNeedsInit = true;
+                    else
+                        tableNeedsInit = (ticksPlayed != systemPlayed);
+                }
+
+                aTableMissing = aTableMissing || !tableExists;
+                aTableNeedsInit = aTableNeedsInit || tableNeedsInit;
+                if (aTableMissing && aTableNeedsInit)
+                    break;
+            }
+
+            if (aTableMissing)
+                UpdateDBState(~EDBState.eUserTablesCreated, true);
+            else
+                UpdateDBState(EDBState.eUserTablesCreated);
+
+            if (aTableNeedsInit)
+                UpdateDBState(~EDBState.eUserDataInitialized, true);
+            else
+                UpdateDBState(EDBState.eUserDataInitialized);
+        }
+
         public void InitUserWatchData()
         {
             CheckIsValid(ECheckType.eInit);
@@ -93,6 +164,7 @@ namespace Statistics2026.Data
                 _dbHelper.ExecuteCommands(sqlCmds);
                 _dbHelper!.Progress?.Report(100);
             }
+            UpdateDBState(EDBState.eUserTablesCreated);
         }
 
         public long? GetTotalTicksPlayed(string userId, string itemId)
@@ -178,7 +250,7 @@ namespace Statistics2026.Data
                 _dbHelper.ExecuteCommands(sqlCmds);
                 _dbHelper!.Progress?.Report(100);
             }
-
+            UpdateDBState(EDBState.eUserDataInitialized);
             _embyInterfaces?._logger?.Debug($"AnalyzeUserWatchData - Finished User Watch Data Analysis");
         }
 
@@ -259,7 +331,7 @@ namespace Statistics2026.Data
             }
             ResetMapFixed = true;
         }
-        
+
         private void ValidateResetMapResults()
         {
             var config = Statistics2026.Plugin.Instance!.Configuration;
@@ -410,7 +482,7 @@ namespace Statistics2026.Data
 
             _embyInterfaces._userDataManager.SaveUserData(user, video, userData, UserDataSaveReason.Import, token);
         }
-        
+
         public List<SQLCmdDef> GetUserWatchInitTableCommands(User? user)
         {
             if (_userMediaTemplate == null)
@@ -499,6 +571,9 @@ namespace Statistics2026.Data
 
                 using (var mediaInfo = new MediaInfo(video!))
                 {
+                    if (!mediaInfo.aOK)
+                        continue;
+
                     sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
                         {
                             ( "@UserId", user.Id.ToString()),
@@ -516,7 +591,7 @@ namespace Statistics2026.Data
             }
 
             var config = Statistics2026.Plugin.Instance!.Configuration;
-            if (config.resetPlayCount)
+            if (config.resetPlayCount || ( ( Plugin.Instance!.DBState & EDBState.eUserDataInitialized ) == 0 ) )
             {
                 var sqlUpdateTicks =
                     $"UPDATE {userTableName} " +

@@ -50,6 +50,8 @@ namespace Statistics2026.Data
 
                 using (var mediaInfo = new MediaInfo(video))
                 {
+                    if (!mediaInfo.aOK)
+                        continue;
 
                     sqlCmds.AddRange(AddMediaInfo(mediaInfo));
                     _embyInterfaces!._logger?.Debug($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
@@ -68,7 +70,7 @@ namespace Statistics2026.Data
             CheckIsValid(ECheckType.eUpdate);
 
             var sqlCmds = new List<SQLCmdDef>();
-            if (mediaInfo == null || mediaInfo.ItemId == null)
+            if (mediaInfo == null || !mediaInfo.aOK)
             {
                 _embyInterfaces!._logger?.Error($"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId");
                 return sqlCmds;
@@ -159,7 +161,6 @@ namespace Statistics2026.Data
                     ", PremiereDate=@PremiereDate" +
                     ", DateAdded=@DateAdded"
                     ;
-            ;
 
             sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
             {
