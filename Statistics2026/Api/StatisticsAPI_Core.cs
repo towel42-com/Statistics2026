@@ -79,7 +79,11 @@ namespace Statistics2026.Api
                 return null;
             foreach (var item in items)
             {
-                mediaInfos.Add(new MediaInfo(item));
+                var curr = new MediaInfo(item);
+                if (!curr.aOK)
+                    continue;
+
+                mediaInfos.Add( curr );
             }
             return mediaInfos;
         }

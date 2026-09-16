@@ -1,6 +1,8 @@
-﻿using MediaBrowser.Controller.Entities;
+﻿using Emby.Media.Common.Extensions;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Providers;
 using System;
 using System.Linq;
@@ -12,6 +14,7 @@ namespace Statistics2026.Data
         public MediaInfo() { }
         public MediaInfo(Video video)
         {
+            aOK = false;
             var (primaryName, secondaryName, descName) = GetDescName(video);
 
             var mediaStream = video.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video);
@@ -44,7 +47,7 @@ namespace Statistics2026.Data
             Codec = codec;
             DolbyVisionProfile = dvProfile;
             StudioNames = studioNames(video);
-            Genres = genres( video );
+            Genres = genres(video);
             Rating = communityRating(video);
 
             ServerLocation = video.Path ?? "Unknown";
@@ -54,7 +57,7 @@ namespace Statistics2026.Data
             {
                 ListDisplayName = $"{PrimaryName} - S{Season:D2}E{Episode:D2} - {SecondaryName}";
                 ImageUrl = ItemImageUrl._ItemImageUrl(episode);
-                if ( episode.Series != null)
+                if (episode.Series != null)
                 {
                     SortName = episode.Series.SortName + " - " + episode.SortName;
                     SeriesImageUrl = ItemImageUrl._ItemImageUrl(episode.Series);
@@ -70,6 +73,8 @@ namespace Statistics2026.Data
             if (video.PremiereDate.HasValue)
                 PremiereDate = video.PremiereDate.Value.DateTime;
             DateAdded = video.DateCreated.DateTime;
+
+            aOK = !ItemId.IsNullOrEmpty() && (RunTimeTicks != 0);
         }
 
         public void Dispose()
@@ -160,7 +165,7 @@ namespace Statistics2026.Data
 
         public static bool isTVSpecial(Video? video)
         {
-            if ( video == null) 
+            if (video == null)
                 return false;
 
             var isEpisode = video is Episode;
@@ -255,7 +260,7 @@ namespace Statistics2026.Data
         public string DescriptiveName { get; set; } = String.Empty;
         public string PrimaryName { get; set; } = String.Empty;// movie title or series name
         public string ListDisplayName { get; set; } = String.Empty;// name suitible for displaying
-        
+
         public string SortName { get; set; } = String.Empty;
         public string SecondaryName { get; set; } = String.Empty; // episode name
         public string StartYear { get; set; } = String.Empty; // release year for movies, year of the of the first season of the TV show
@@ -282,6 +287,7 @@ namespace Statistics2026.Data
         public long TotalBitrate { get; set; } = 0;
         public DateTime? PremiereDate { get; set; } = null;
         public DateTime? DateAdded { get; set; } = null;
+        public bool aOK = false;
         private bool _disposed = false;
 
     }
