@@ -2,6 +2,7 @@
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
+using RestSharp;
 using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Api;
@@ -215,11 +216,12 @@ namespace Statistics2026.Data
         {
             CheckIsValid(ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure);
 
+            var ii = 0;
             try
             {
                 Connection.RunInTransaction(connection =>
                 {
-                    for (var ii = 0; ii < cmds.Count; ++ii )
+                    for (ii = 0; ii < cmds.Count; ++ii )
                     {
                         CancellationToken?.ThrowIfCancellationRequested();
 
@@ -341,6 +343,23 @@ namespace Statistics2026.Data
             return libManager.GetItemList(query).OfType<T>();
         }
 
+        public bool TableExists(string tableName)
+        {
+            var sql = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@TableName";
+            var parameters = new List<(string name, object? value)> { ("@TableName", tableName) };
+
+            var exists = false;
+
+            ExecuteCommand(new SQLCmdDef(sql, parameters), statement =>
+            {
+                var row = statement.Current;
+                var value = row.GetInt64(0);
+                exists = value != 0;
+                return true;
+            });
+
+            return exists;
+        }
         public static string FormatTicks(long ticks)
         {
             var runtime = new RunTime(ticks);
