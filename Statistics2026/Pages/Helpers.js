@@ -90,6 +90,14 @@ define(function () {
 
     }
 
+    function injectSortableTableStyle(document)
+    {
+        var style = document.createElement('style');
+        style.innerHTML = sortableTableStyle();
+        var ref = document.querySelector('script');
+        ref.parentNode.insertBefore(style, ref);
+    }
+
     function sortableTableStyle() {
         var retVal = '.tooltip {position: relative;display: inline-block;border-bottom: 1px dotted black;} ' +
             '.tooltip .tooltiptext {visibility: hidden; background-color: black; color: #fff; border-radius: 6px; padding: 5px 0; position: absolute;z-index: 1;} ' +
@@ -281,8 +289,7 @@ define(function () {
 
     const STYLE_ID = 'my-plugin-stylesheet';
     function injectStyleSheet(e) {
-
-        const cssUrl = Dashboard.getConfigurationPageUrl('style.css');
+        const cssUrl = 'configurationpage?name=style.css';
         return injectStyleSheetEX(e, cssUrl);
     }
 
@@ -337,8 +344,36 @@ define(function () {
         return `<div name="${div}" id="${div}"></div>`;
     }
 
-    function showInfo(text, title) {
-        Dashboard.alert({ message: text, title: title });
+    function showInfo(_text, _title) {
+        ApiClient.getJSON(ApiClient.getUrl('Sessions'))
+            .then((sessions) => {
+                // 2. Find the session that matches this browser's unique Device ID
+                const myCurrentDevice = ApiClient.deviceId();
+                const mySession = sessions.find(s => s.DeviceId === myCurrentDevice);
+
+                if (mySession) {
+                    const urlString = ApiClient.getUrl(`Sessions/${mySession.Id}/Message`);
+                    const payload = {
+                        Header: _title,
+                        Text: _text
+                    };
+                    ApiClient.ajax(
+                        {
+                            type: 'POST',
+                            url: urlString,
+                            data: JSON.stringify(payload),
+                            contentType: 'application/json'
+                        })
+                        .then(function (response) {
+                            console.log("Message sent successfully!");
+                        })
+                        .catch(function (error) {
+                            console.error("Failed to send message:", error);
+                        });
+                } else {
+                }
+            })
+            .catch((err) => console.error("Error fetching sessions:", err));
     }
 
     return {
@@ -346,13 +381,12 @@ define(function () {
         LoadTVProgress,
         LoadUserStats,
         sortTable,
-        sortableTableStyle,
+        injectSortableTableStyle,
         loadTableData,
         getMediaRowData,
         CheckForValidConfig,
         getTabIndex,
         injectStyleSheet,
-        injectStyleSheetEX,
         getStatistics2026Data,
         getSummaryInfo,
         showInfo
