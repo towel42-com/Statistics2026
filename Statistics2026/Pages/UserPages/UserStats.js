@@ -1,34 +1,48 @@
-﻿define(['baseView', 'loading', 'mainTabsManager', ApiClient.getUrl('web/configurationpage?name=Helpers.js'), ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'), ApiClient.getUrl('web/configurationPage?name=SharedHelpers.js'), 'emby-input', 'emby-button', 'emby-checkbox', 'emby-scroller', 'emby-select'], function (BaseView, loading, mainTabsManager, Helpers, UserPageHelpers, SharedHelpers) {
-    'use strict';
+﻿define([
+    'baseView',
+    'loading',
+    'mainTabsManager',
+    ApiClient.getUrl('web/configurationpage?name=Helpers.js'),
+    ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'),
+    ApiClient.getUrl('web/configurationPage?name=SharedHelpers.js'),
+    'emby-input',
+    'emby-button',
+    'emby-checkbox',
+    'emby-scroller',
+    'emby-select'
+],
+    function (BaseView, loading, mainTabsManager, Helpers, UserPageHelpers, SharedHelpers) {
+        'use strict';
 
-    Object.assign(View.prototype, BaseView.prototype);
+        Object.assign(View.prototype, BaseView.prototype);
 
-    function loadData(view, userId) {
-        ApiClient.getUser(userId).then(function (user) {
-            SharedHelpers.LoadUserStats(view, user.Name, loading.show, loading.hide, SharedHelpers);
-        });
-    }
-
-
-    View.prototype.onResume = function (options) {
-        BaseView.prototype.onResume.apply(this, arguments);
-
-        if (options.refresh) {
-            var view = this.view;
-            var instance = this;
-
-            loadData(view, instance.params.userId);
+        function loadData(view, userId) {
+            ApiClient.getUser(userId).then(function (user) {
+                SharedHelpers.LoadUserStats(view, user.Name, loading.show, loading.hide, SharedHelpers);
+            });
         }
-    };
 
-    function View(view, params) {
-        BaseView.apply(this, arguments);
 
-        view.addEventListener('viewshow', function (e) {
-            mainTabsManager.setTabs(this, SharedHelpers.getTabIndexEX("UserStats_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
-            SharedHelpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
-        });
+        View.prototype.onResume = function (options) {
+            BaseView.prototype.onResume.apply(this, arguments);
+
+            if (options.refresh) {
+                var view = this.view;
+                var instance = this;
+
+                loadData(view, instance.params.userId);
+            }
+        };
+
+        function View(view, params) {
+            BaseView.apply(this, arguments);
+
+            view.addEventListener('viewshow', function (e) {
+                mainTabsManager.setTabs(this, SharedHelpers.getTabIndexEX("UserStats_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
+                SharedHelpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
+            });
+        }
+
+        return View;
     }
-
-    return View;
-});
+);
