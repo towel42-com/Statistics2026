@@ -2,7 +2,7 @@
     'baseView',
     'loading',
     'mainTabsManager',
-    ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'),
+    ApiClient.getUrl('web/configurationpage?name=UserPageHelpers.js'),
     ApiClient.getUrl('web/configurationPage?name=SharedHelpers.js'),
     'emby-input',
     'emby-button',

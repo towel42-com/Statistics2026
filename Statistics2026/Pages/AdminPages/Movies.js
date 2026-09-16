@@ -2,7 +2,6 @@
         'mainTabsManager',
         'appRouter',
         Dashboard.getConfigurationResourceUrl('AdminHelpers.js'),
-        ApiClient.getUrl('web/configurationpage?name=Helpers_UserPage.js'),
         Dashboard.getConfigurationResourceUrl('SharedHelpers.js'),
         'emby-linkbutton'
 ],
@@ -16,7 +15,7 @@
 
                 mainTabsManager.setTabs(this, SharedHelpers.getTabIndex("Movies", AdminHelpers.getTabs), AdminHelpers.getTabs);
 
-                SharedHelpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
+                SharedHelpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
                 var style = document.createElement('style');
                 style.innerHTML = SharedHelpers.sortableTableStyle();
                 var ref = document.querySelector('script');
