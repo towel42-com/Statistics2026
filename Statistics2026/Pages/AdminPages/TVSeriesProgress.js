@@ -14,12 +14,7 @@
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet(e);
-
-                Helpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
-                var style = document.createElement('style');
-                style.innerHTML = Helpers.sortableTableStyle();
-                var ref = document.querySelector('script');
-                ref.parentNode.insertBefore(style, ref);
+                Helpers.injectSortableTableStyle(document);
 
                 const selectElement = document.getElementById("selectUser");
                 const user = selectElement.options[selectElement.selectedIndex].innerHTML;

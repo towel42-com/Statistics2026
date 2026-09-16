@@ -15,12 +15,8 @@
 
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Episodes", AdminHelpers.getTabs), AdminHelpers.getTabs);
 
-                Helpers.injectStyleSheetEX(e, Dashboard.getConfigurationResourceUrl('style.css'));
-                var style = document.createElement('style');
-                style.innerHTML = Helpers.sortableTableStyle();
-
-                var ref = document.querySelector('script');
-                ref.parentNode.insertBefore(style, ref);
+                Helpers.injectStyleSheet(e);
+                Helpers.injectSortableTableStyle(document);
 
                 loadTableData();
 

@@ -49,13 +49,8 @@
 
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
-
-                Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
-                var style = document.createElement('style');
-                style.innerHTML = Helpers.sortableTableStyle();
-                var ref = document.querySelector('script');
-                ref.parentNode.insertBefore(style, ref);
-
+                Helpers.injectStyleSheet(e);
+                Helpers.injectSortableTableStyle(document);
             });
 
             view.querySelector("#episodesInfo").addEventListener(`click`, function () {

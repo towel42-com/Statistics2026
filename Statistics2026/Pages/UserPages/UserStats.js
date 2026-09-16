@@ -38,7 +38,7 @@
 
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
-                Helpers.injectStyleSheetEX(e, UserPageHelpers.getConfigPageUrl('style.css'));
+                Helpers.injectStyleSheet(e);
             });
         }
 
