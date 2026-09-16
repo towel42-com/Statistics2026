@@ -67,9 +67,6 @@ namespace Statistics2026
 
         public void Run()
         {
-            var db = StatisticsDB.GetInstance(_embyInterfaces);
-            db.Initialize(null, null);
-
             CheckIsValid();
 
             _embyInterfaces!._logger!.Debug("EventMonitorEntryPoint Running");
@@ -140,6 +137,26 @@ namespace Statistics2026
         private void ProcessSessions()
         {
             CheckIsValid();
+
+            if (Plugin.Instance == null)
+                return;
+
+            if (Plugin.Instance.DBState == null)
+            {
+                StatisticsDB.GetInstance(_embyInterfaces);
+                if (Plugin.Instance.DBState == null)
+                {
+                    _embyInterfaces!._logger!.Warn("PlaybackMonitoringTask : Databases have not been initialized");
+                    return;
+                }
+            }
+
+            if ((Plugin.Instance.DBState & EDBState.eOKToTrackUserData) != EDBState.eOKToTrackUserData)
+            {
+                _embyInterfaces!._logger!.Warn("PlaybackMonitoringTask : Databases have not been initialized");
+                return;
+            }
+
             _embyInterfaces!._logger!.Debug("PlaybackMonitoringTask : ProcessSessions Start");
             ActiveSessions = new List<PlaybackInfo>();
 
@@ -158,7 +175,7 @@ namespace Statistics2026
                 playbackInfo.UpdatePlaybackState(_embyInterfaces);
             }
 
-            PlaybackInfo.RemoveInactivePlayinfo(ActiveSessions,_embyInterfaces);
+            PlaybackInfo.RemoveInactivePlayinfo(ActiveSessions, _embyInterfaces);
             ActiveSessions.Clear();
             _embyInterfaces!._logger!.Debug("PlaybackMonitoringTask : ProcessSessions End");
         }
