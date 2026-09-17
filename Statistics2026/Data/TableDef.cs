@@ -43,7 +43,7 @@ namespace Statistics2026.Data
             {
                 var idxName = getIndexName(tableName);
                 retVal.Add(new SQLCmdDef($"DROP INDEX IF EXISTS {idxName}", true));
-                retVal.Add(new SQLCmdDef($"ALTER TABLE {tableName} DROP COLUMN {Name}", true));                
+                retVal.Add(new SQLCmdDef($"ALTER TABLE {tableName} DROP COLUMN {Name}", true));
             }
             else if (FormerColumnName != null)
             {
@@ -51,20 +51,24 @@ namespace Statistics2026.Data
             }
             else
             {
-                retVal.Add(new SQLCmdDef($"ALTER TABLE {tableName} ADD COLUMN {ToString()}", true));
+                retVal.Add(new SQLCmdDef($"ALTER TABLE {tableName} ADD COLUMN {ToString(true)}", true));
             }
 
             return retVal;
         }
 
-        public override string ToString()
+        public string ToString(bool alter)
         {
             string retVal = $"{Name} {Type}";
-            if (!AllowNull)
+            if (!alter && !AllowNull)
                 retVal += " NOT NULL";
             if (IsPrimaryIndex)
                 retVal += " PRIMARY KEY";
             return retVal;
+        }
+        public override string ToString()
+        {
+            return ToString(false);
         }
 
         public string Name { get; private set; } = string.Empty;
@@ -117,6 +121,9 @@ namespace Statistics2026.Data
             {
                 if (col.DeprecatedColumn)
                     continue;
+                //if (!col.IsPrimaryIndex)
+                //    continue;
+
                 if (first)
                     sql += "      ";
                 else
@@ -144,7 +151,7 @@ namespace Statistics2026.Data
                         return;
 
                     TableColDef? column = null;
-                    foreach( var col in Columns)
+                    foreach (var col in Columns)
                     {
                         if (col.Name == columnName)
                         {
@@ -220,6 +227,18 @@ namespace Statistics2026.Data
                         retVal.AddRange(GetSQLCommands(EAction.eCreate));
                     }
                     break;
+            }
+            return retVal;
+        }
+
+        public List<string> ColumnNames()
+        {
+            var retVal = new List<string>();
+            foreach (var col in Columns)
+            {
+                if (col.DeprecatedColumn)
+                    continue;
+                retVal.Add(col.Name);
             }
             return retVal;
         }
