@@ -284,38 +284,6 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private void ComputeDBState()
-        {
-            CheckIsValid(ECheckType.eInit);
-
-            if (Plugin.Instance!.DBStateInitialized())
-                return;
-
-            Plugin.Instance.ResetDBState();
-
-            var tableNames = this.tableNames();
-
-            _dbHelper.ValidateTables(tableNames,
-                tableName =>
-                {
-                    if (_tableMap.TryGetValue(tableName, out var tableDef))
-                    {
-                        return tableDef.ColumnNames();
-                    }
-                    else
-                        return new List<string>();
-                },
-                null,
-                (createTableNeeded, initDataNeeded) =>
-                {
-                    Plugin.Instance.SetDBState(EDBState.eSystemTablesCreated, !createTableNeeded);
-                    Plugin.Instance.SetDBState(EDBState.eSystemDataInitialized, !initDataNeeded);
-                }
-            );
-
-            ComputeUserDataDBState();
-        }
-
         private void CreateTables(TableDef.EAction action)
         {
             if (action != TableDef.EAction.eRecreate && action != TableDef.EAction.eCreate)
