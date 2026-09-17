@@ -49,7 +49,7 @@ namespace Statistics2026.Data
 
             var serverId = Plugin.Instance.ServerId;
 
-            return $"<a is=\"emby-linkbutton\" href=\"/item?id={itemId}&serverId={serverId}\"><img src=\"{itemUrl}\" height=\"{height}\"/>{text}</a>";
+            return $"<a is=\"emby-linkbutton\" href=\"/item?id={itemId}&serverId={serverId}\"><img loading=\"lazy\" src=\"{itemUrl}\" height=\"{height}\"/>{text}</a>";
         }
     }
 }
