@@ -44,12 +44,6 @@ namespace Statistics2026.Api
         public string SeriesStatus { get; set; } = string.Empty;
     }
 
-    public class GetItemImageUrlResponse
-    {
-        public string Name { get; set; } = string.Empty;
-        public string PrimaryImageUrl { get; set; } = string.Empty;
-    }
-
     public class MediaItemResponse
     {
         public MediaItemResponse() { }

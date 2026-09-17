@@ -202,24 +202,6 @@ namespace Statistics2026.Api
             } );
         }
 
-        public object Get( GetItemImageUrl request )
-        {
-            return GetRequest( "GetItemImageUrl", timer =>
-            {
-                var retVal = new GetItemImageUrlResponse { Name = "", PrimaryImageUrl = "" };
-                var item = _embyInterfaces._libraryManager.GetItemById( request.ItemId );
-                if( item == null )
-                    return new object();
-
-                var url = ItemImageUrl._ItemImageUrl( item );
-                retVal.PrimaryImageUrl = url ?? string.Empty;
-                if( retVal.PrimaryImageUrl == null || retVal.PrimaryImageUrl == "" )
-                    return retVal;
-                retVal.Name = item.Name;
-                return retVal;
-            } );
-        }
-
         public object TotalTVCount( User? user, bool watched )
         {
             var db = StatisticsDB.GetInstance( _embyInterfaces );

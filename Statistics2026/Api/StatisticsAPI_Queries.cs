@@ -4,13 +4,6 @@ using System.Collections.Generic;
 
 namespace Statistics2026.Api
 {
-    [Route( "/Statistics2026/GetItemImageUrl/{ItemId}", "GET" )]
-    [Authenticated( Roles = "admin" )]
-    public class GetItemImageUrl : IReturn<GetItemImageUrlResponse>
-    {
-        public string ItemId { get; set; } = string.Empty;
-    }
-
     // http://localhost:8096/emby/Statistics2026/episode_list
     [Route( "/Statistics2026/episode_list", "GET", Summary = "Gets Codec Info for Episodes" )]
     [Authenticated( Roles = "admin" )]
