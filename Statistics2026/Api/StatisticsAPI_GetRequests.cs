@@ -467,6 +467,17 @@ namespace Statistics2026.Api
             });
         }
 
+        public object Get(GetDatabaseStatus request)
+        {
+            return GetRequest("GetDatabaseStatus", timer =>
+            {
+                if ( Plugin.Instance == null )
+                    return new GetDatabaseStatusReponse();
+
+                return new GetDatabaseStatusReponse(Plugin.Instance.Configuration);
+            });
+        }
+
         public object Get(GetMovieFavoriteYears request)
         {
             return GetRequest("GetMovieFavoriteYears", timer =>

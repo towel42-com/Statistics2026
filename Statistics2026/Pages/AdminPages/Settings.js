@@ -8,7 +8,6 @@
 
         function loadPage(view, params) {
             ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-
                 view.querySelector("#hasConnectUserID").checked = config.hasConnectUserID;
                 view.querySelector("#showUnknownDVProfiles").checked = config.showUnknownDVProfiles;
                 view.querySelector("#showAllResolutions").checked = config.showAllResolutions;

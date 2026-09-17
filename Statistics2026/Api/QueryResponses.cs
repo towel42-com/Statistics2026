@@ -1,11 +1,30 @@
 ﻿using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Services;
+using Statistics2026.Configuration;
+using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
-using Statistics2026.Data;
 
 namespace Statistics2026.Api
 {
+    public class GetDatabaseStatusReponse
+    {
+        public GetDatabaseStatusReponse() { }
+        public GetDatabaseStatusReponse(PluginConfiguration config)
+        {
+            BuildDate = config.BuildDate;
+            LastUpdated = config.LastUpdated;
+            Version = config.Version;
+            DBStateOK = Plugin.Instance?.IsDBStateSet(EDBState.eFullyInitialized) ?? false;
+            DBState = Plugin.Instance?.DBStateAsString() ?? EDBState.eEmpty.ToPrettyString();
+        }
+        public string BuildDate { get; set; } = String.Empty;
+        public string LastUpdated { get; set; } = String.Empty;
+        public string Version { get; set; } = String.Empty;
+        public string DBState { get; set; } = String.Empty;
+        public bool DBStateOK { get; set; } = false;
+    }
+
     public class GetTVSeriesProgressResponse
     {
         public string Name { get; set; } = String.Empty;

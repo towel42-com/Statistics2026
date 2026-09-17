@@ -26,72 +26,62 @@ define(function () {
     }
 
     function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc, Helpers) {
-        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-            view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
+        view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
 
-            var url = "Statistics2026/tv_series_progress/" + userName;
-            loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, Helpers);
-        });
+        var url = "Statistics2026/tv_series_progress/" + userName;
+        loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, Helpers);
     }
 
     function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc, Helpers) {
         showLoadingFunc();
 
         try {
-            ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                if (!CheckForValidConfig(config)) {
-                    hideLoadingFunc();
-                    return;
-                }
+            view.querySelector("#UserTitle").innerHTML = "User statistics for " + userName;
+            view.querySelector("#generalStats").innerHTML = "";
+            view.querySelector("#movieStats").innerHTML = "";
+            view.querySelector("#showStats").innerHTML = "";
 
-                view.querySelector("#UserTitle").innerHTML = "User statistics for " + userName;
-                view.querySelector("#generalStats").innerHTML = "";
-                view.querySelector("#movieStats").innerHTML = "";
-                view.querySelector("#showStats").innerHTML = "";
+            var generalStats = "";
+            generalStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=all");
+            generalStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=all");
+            view.querySelector("#generalStats").innerHTML = generalStats;
 
-                var generalStats = "";
-                generalStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=all");
-                generalStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=all");
-                view.querySelector("#generalStats").innerHTML = generalStats;
+            var movieStats = "";
+            movieStats += getSummaryInfo(view, "total_movie_count", userName);
+            movieStats += getSummaryInfo(view, "total_movies_watched", userName);
+            movieStats += getSummaryInfo(view, "movie_favorite_years", userName);
+            movieStats += getSummaryInfo(view, "movie_favorite_genres", userName);
+            movieStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=false", "total_movie_time_watched");
+            movieStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=false", "total_movie_watchable_time");
+            view.querySelector("#movieStats").innerHTML = movieStats;
 
-                var movieStats = "";
-                movieStats += getSummaryInfo(view, "total_movie_count", userName);
-                movieStats += getSummaryInfo(view, "total_movies_watched", userName);
-                movieStats += getSummaryInfo(view, "movie_favorite_years", userName);
-                movieStats += getSummaryInfo(view, "movie_favorite_genres", userName);
-                movieStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=false", "total_movie_time_watched");
-                movieStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=false", "total_movie_watchable_time");
-                view.querySelector("#movieStats").innerHTML = movieStats;
+            var movieMostWatchedStats = "";
+            movieMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=false", "last_seen_movies");
+            movieMostWatchedStats += getSummaryInfo(view, "most_watched_movies", userName);
+            view.querySelector("#movieMostWatchedStats").innerHTML = movieMostWatchedStats;
 
-                var movieMostWatchedStats = "";
-                movieMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=false", "last_seen_movies");
-                movieMostWatchedStats += getSummaryInfo(view, "most_watched_movies", userName);
-                view.querySelector("#movieMostWatchedStats").innerHTML = movieMostWatchedStats;
+            var showStats = "";
+            showStats += getSummaryInfo(view, "total_tv_count", userName);
+            showStats += getSummaryInfo(view, "total_tv_watched", userName);
+            showStats += getSummaryInfo(view, "total_series_finished", userName);
+            showStats += getSummaryInfo(view, "tv_favorite_genres", userName);
+            showStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=true", "total_episode_time_watched");
+            showStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=true", "total_episode_watchable_time");
+            view.querySelector("#showStats").innerHTML = showStats;
 
-                var showStats = "";
-                showStats += getSummaryInfo(view, "total_tv_count", userName);
-                showStats += getSummaryInfo(view, "total_tv_watched", userName);
-                showStats += getSummaryInfo(view, "total_series_finished", userName);
-                showStats += getSummaryInfo(view, "tv_favorite_genres", userName);
-                showStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=true", "total_episode_time_watched");
-                showStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=true", "total_episode_watchable_time");
-                view.querySelector("#showStats").innerHTML = showStats;
+            var seriesMostWatchedStats = "";
+            seriesMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=true", "last_seen_tv");
+            seriesMostWatchedStats += getSummaryInfo(view, "most_watched_shows", userName, "");
+            view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
 
-                var seriesMostWatchedStats = "";
-                seriesMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=true", "last_seen_tv");
-                seriesMostWatchedStats += getSummaryInfo(view, "most_watched_shows", userName, "");
-                view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
-
-                hideLoadingFunc();
-            });
+            hideLoadingFunc();
         } finally {
             hideLoadingFunc();
         }
 
     }
 
-    function injectSortableTableStyle(document)
-    {
+    function injectSortableTableStyle(document) {
         var style = document.createElement('style');
         style.innerHTML = sortableTableStyle();
         var ref = document.querySelector('script');
@@ -202,64 +192,67 @@ define(function () {
         return row_html;
     }
 
-    function CheckForValidConfig(config) {
-        if (config.LastUpdated === undefined ) {
-            showInfo("No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
-            return false;
-        }
-        if (config.dbStateOK == false) {
-            showInfo("The database has not been initialized, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
-            return false;
-        }
-        return true;
+    function CheckForValidConfig() {
+        var urlText = "/emby/Statistics2026/database_status";
+        console.info("databasestatus - '" + urlText + "'");
+        var url = ApiClient.getUrl(urlText);
+
+        ApiClient.getJSON(url).then(response => {
+            if (response.LastUpdated === undefined) {
+                showInfo("No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
+                return false;
+            }
+            if (response.DBStateOK == false) {
+                showInfo("The database has not been initialized, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
+                return false;
+            }
+            return true;
+        }).catch(error => {
+            var errorMessage = "'" + error + "' - '" + urlText + "'";
+            console.error("database_status failed:", errorMessage);
+        });
+        return false;
     }
 
-
     function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, Helpers) {
-        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-            if (!CheckForValidConfig(config)) {
-                hideLoadingFunc();
-                return;
-            }
-            var url = ApiClient.getUrl(apiEndpoint);
+        var url = ApiClient.getUrl(apiEndpoint);
 
-            var load_status = view.querySelector('#' + statusElementId);
-            load_status.innerHTML = "Loading Data...";
+        var load_status = view.querySelector('#' + statusElementId);
+        load_status.innerHTML = "Loading Data...";
 
-            showLoadingFunc();
-            try {
-                getStatistics2026Data(url).then(function (resultData) {
-                    load_status.innerHTML = "&nbsp;";
-                    console.log("resultData: " + JSON.stringify(resultData));
+        showLoadingFunc();
+        try {
+            getStatistics2026Data(url).then(function (resultData) {
+                load_status.innerHTML = "&nbsp;";
+                console.log("resultData: " + JSON.stringify(resultData));
 
-                    var table_body = view.querySelector('#' + resultsElementId);
-                    var row_html = "";
+                var table_body = view.querySelector('#' + resultsElementId);
+                var row_html = "";
 
-                    for (var index = 0; index < resultData.length; ++index) {
-                        var info = resultData[index];
+                for (var index = 0; index < resultData.length; ++index) {
+                    var info = resultData[index];
 
-                        var row_bg_col = "#BBBBBB00";
-                        if (index % 2 == 0) {
-                            row_bg_col = "#BBBBBB1C";
-                        }
-
-                        row_html += "<tr style='background:" + row_bg_col + ";'>";
-
-                        row_html += getRowDataFunc(info);
-
-                        row_html += "</tr>";
+                    var row_bg_col = "#BBBBBB00";
+                    if (index % 2 == 0) {
+                        row_bg_col = "#BBBBBB1C";
                     }
 
-                    table_body.innerHTML = row_html;
-                    hideLoadingFunc();
-                },
-                    function (response) {
-                        load_status.innerHTML = response.status + ":" + response.statusText;
-                    });
-            } finally {
+                    row_html += "<tr style='background:" + row_bg_col + ";'>";
+
+                    row_html += getRowDataFunc(info);
+
+                    row_html += "</tr>";
+                }
+
+                table_body.innerHTML = row_html;
                 hideLoadingFunc();
-            }
-        });
+            },
+                function (response) {
+                    load_status.innerHTML = response.status + ":" + response.statusText;
+                });
+        } finally {
+            hideLoadingFunc();
+        }
     }
 
     if (!String.prototype.endsWith2) {

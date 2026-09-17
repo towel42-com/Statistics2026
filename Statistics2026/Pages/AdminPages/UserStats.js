@@ -7,6 +7,12 @@
         'use strict';
 
         function loadStats(view, userName) {
+            if (!Helpers.CheckForValidConfig()) {
+                view.querySelector(`#lastRunInfo`).style.display = 'none';
+                Dashboard.hideLoadingMsg();
+                return;
+            }
+
             Helpers.LoadUserStats(view, userName, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
         }
 

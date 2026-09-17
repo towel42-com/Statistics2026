@@ -33,6 +33,10 @@
                 });
 
                 function loadTableData() {
+                    if (!Helpers.CheckForValidConfig()) {
+                        Dashboard.hideLoadingMsg();
+                        return;
+                    }
                     Helpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, AdminHelpers, Helpers);
                 }
             });

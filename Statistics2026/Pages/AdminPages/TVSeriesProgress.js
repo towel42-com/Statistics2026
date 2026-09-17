@@ -7,6 +7,11 @@
         `use strict`;
 
         function loadData(view, user) {
+            if (!Helpers.CheckForValidConfig()) {
+                Dashboard.hideLoadingMsg();
+                return;
+            }
+
             Helpers.LoadTVProgress(view, user, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
         }
 

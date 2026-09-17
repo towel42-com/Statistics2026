@@ -232,4 +232,8 @@ namespace Statistics2026.Api
         public bool episodes { get; set; } = false;
     }
 
+    [Route("/Statistics2026/database_status", "GET")]
+    public class GetDatabaseStatus : IReturn<GetDatabaseStatusReponse>
+    {
+    }
 }

@@ -33,6 +33,10 @@
                 });
 
                 function loadTableData() {
+                    if (!Helpers.CheckForValidConfig()) {
+                        Dashboard.hideLoadingMsg();
+                        return;
+                    }
                     Helpers.loadTableData(view, 'episode_results_status', 'episode_results', 'Statistics2026/episode_list', Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
                 }
             });

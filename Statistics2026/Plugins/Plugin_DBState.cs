@@ -7,11 +7,13 @@ using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using ServiceStack;
 using Statistics2026.Configuration;
+using Statistics2026.Api;
 using Statistics2026.ScheduledTasks;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Statistics2026
 {
@@ -106,6 +108,12 @@ namespace Statistics2026
             SetDBState(dbState, false);
         }
 
+        public string DBStateAsString()
+        {
+            if (DBState == null)
+                return EDBState.eEmpty.ToPrettyString();
+            return DBState.Value.ToPrettyString();
+        }
         private void _SetDBState(EDBState state)
         {
             if (Plugin.Instance == null)
