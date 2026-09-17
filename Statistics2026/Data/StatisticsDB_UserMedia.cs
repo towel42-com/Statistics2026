@@ -4,6 +4,7 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
+using RestSharp;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
@@ -57,27 +58,28 @@ namespace Statistics2026.Data
 
         private void ComputeUserDataDBState()
         {
-            if (Plugin.Instance == null || Plugin.Instance.DBState == null)
+            CheckIsValid(ECheckType.eInit);
+
+            if (!Plugin.Instance!.DBStateInitialized())
             {
                 throw new ArgumentNullException("Plugin.Instance is null or Plugin.Instance.DBState is null");
             }
 
             var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
 
-            UpdateDBState(~EDBState.eUserTablesCreated, true);
+            Plugin.Instance.RemoveDBState(EDBState.eUserTablesCreated);
             if (users == null)
             {
                 return;
             }
 
-            var aTableMissing = false;
-            var aTableNeedsInit = false;
-            foreach (var user in users)
-            {
-                var tableName = getUserTableName(user);
-                var tableExists = _dbHelper.TableExists(tableName);
-                var tableNeedsInit = true;
-                if (tableExists)
+            var tableNames = allUserMediaTables();
+            _dbHelper.ValidateTables(tableNames,
+                tableName =>
+                {
+                    return _userMediaTemplate!.ColumnNames();
+                },
+                tableName =>
                 {
                     var sqlTicks = $"SELECT COUNT(*) FROM {tableName} WHERE TotalTicksPlayed IS NOT NULL AND TotalTicksPlayed != 0";
                     var sqlPlayed = $"SELECT COUNT(*) FROM {tableName} WHERE PlayCount>0 AND IsPlayed";
@@ -92,79 +94,110 @@ namespace Statistics2026.Data
                     };
 
                     _dbHelper.ExecuteCommands(cmds, statement =>
-                    {
-                        var row = statement.Current;
-                        var value = row.GetInt64(0);
-                        if (ticksPlayed == null)
-                            ticksPlayed = value;
-                        else
-                            systemPlayed = value;
-                        return true;
-                    }
+                        {
+                            var row = statement.Current;
+                            var value = row.GetInt64(0);
+                            if (ticksPlayed == null)
+                                ticksPlayed = value;
+                            else
+                                systemPlayed = value;
+                            return true;
+                        }
                     );
 
                     if (ticksPlayed == null)
-                        tableNeedsInit = true;
-                    else
-                        tableNeedsInit = (ticksPlayed != systemPlayed);
+                        ticksPlayed = 0;
+
+                    _embyInterfaces!._logger.Debug($"Table: {tableName} - # w/TicksPlayed {ticksPlayed} - # w/PlayCount {systemPlayed}");
+                    if (ticksPlayed! != systemPlayed)
+                    {
+                        _embyInterfaces._logger.Debug("The following rows do not have TotalTicksPlayed data");
+
+                        var sql =
+                            $"SELECT * FROM {tableName} WHERE TotalTicksPlayed IS NOT NULL AND TotalTicksPlayed != 0" +
+                            $" EXCEPT " +
+                            $"SELECT * FROM {tableName} WHERE PlayCount>0 AND IsPlayed"
+                            ;
+
+                        _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+                        {
+                            var row = statement.Current;
+                            var col = 0;
+                            var userId = row.GetString(col++);
+                            var itemId = row.GetString(col++);
+                            var name = row.GetString(col++);
+                            var isPlayed = row.GetBoolean(col++);
+                            var playCount = row.GetInt64(col++);
+                            var lastPlayed = row.GetString(col++);
+                            var startTickPos = row.GetInt64(col++);
+                            var endTickPos = row.GetInt64(col++);
+                            var totalTicksPlayed = row.GetInt64(col++);
+                            var isEpisode = row.GetBoolean(col++);
+                            var numEpisodes = row.GetInt64(col++);
+                            var isTVSpecial = row.GetBoolean(col++);
+                            var seriesId = row.GetString(col++);
+
+                            _embyInterfaces._logger.Debug($"{name} - {isPlayed} - {playCount} - {totalTicksPlayed}");
+                            return true;
+                        });
+                    }
+
+                    return (ticksPlayed != systemPlayed);
+                },
+                (createTableNeeded, initDataNeeded) =>
+                {
+                    Plugin.Instance.SetDBState(EDBState.eUserTablesCreated, !createTableNeeded);
+                    Plugin.Instance.SetDBState(EDBState.eUserDataInitialized, !initDataNeeded);
                 }
-
-                aTableMissing = aTableMissing || !tableExists;
-                aTableNeedsInit = aTableNeedsInit || tableNeedsInit;
-                if (aTableMissing && aTableNeedsInit)
-                    break;
-            }
-
-            if (aTableMissing)
-                UpdateDBState(~EDBState.eUserTablesCreated, true);
-            else
-                UpdateDBState(EDBState.eUserTablesCreated);
-
-            if (aTableNeedsInit)
-                UpdateDBState(~EDBState.eUserDataInitialized, true);
-            else
-                UpdateDBState(EDBState.eUserDataInitialized);
+            );
         }
 
         public void InitUserWatchData()
         {
             CheckIsValid(ECheckType.eInit);
 
-            _dbHelper!.Progress?.Report(0);
-            var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
-            if (users == null)
-            {
-                _dbHelper!.Progress?.Report(100);
-                return;
-            }
-            _dbHelper!.Progress?.Report(100);
+            if (Plugin.Instance == null)
+                throw new NullReferenceException($"Plugin.Instance is null");
 
-            var sqlCmds = new List<SQLCmdDef>();
-            double curr = 0.0;
-            double count = users.Count;
-
-            using (var timer = new AutoTimer($"    Analyze User Watch Data - Getting Init Table Commands", _embyInterfaces?._logger))
+            if (!Plugin.Instance.IsDBStateSet(EDBState.eUserTablesCreated))
             {
-                curr = 0;
-                foreach (var user in users)
+
+                _dbHelper!.Progress?.Report(0);
+                var users = _embyInterfaces?._userManager.GetUserList(new UserQuery() { EnableRemoteAccess = true }).ToList();
+                if (users == null)
                 {
-                    _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
-                    using (var userTimer = new AutoTimer($"AnalyzeUserWatchData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger))
-                    {
-                        sqlCmds.AddRange(GetUserWatchInitTableCommands(user));
-                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
-                    }
+                    _dbHelper!.Progress?.Report(100);
+                    return;
                 }
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
-            }
-
-            using (var timer = new AutoTimer($"    Analyze User Watch Data - Executing Init Table Commands", _embyInterfaces?._logger))
-            {
-                _dbHelper!.Progress?.Report(80);
-                _dbHelper.ExecuteCommands(sqlCmds);
                 _dbHelper!.Progress?.Report(100);
+
+                var sqlCmds = new List<SQLCmdDef>();
+                double curr = 0.0;
+                double count = users.Count;
+
+                using (var timer = new AutoTimer($"    Analyze User Watch Data - Getting Init Table Commands", _embyInterfaces?._logger))
+                {
+                    curr = 0;
+                    foreach (var user in users)
+                    {
+                        _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
+                        using (var userTimer = new AutoTimer($"AnalyzeUserWatchData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger))
+                        {
+                            sqlCmds.AddRange(GetUserWatchInitTableCommands(user));
+                            _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                        }
+                    }
+                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                }
+
+                using (var timer = new AutoTimer($"    Analyze User Watch Data - Executing Init Table Commands", _embyInterfaces?._logger))
+                {
+                    _dbHelper!.Progress?.Report(80);
+                    _dbHelper.ExecuteCommands(sqlCmds);
+                    _dbHelper!.Progress?.Report(100);
+                }
+                Plugin.Instance.AddDBState(EDBState.eUserTablesCreated);
             }
-            UpdateDBState(EDBState.eUserTablesCreated);
         }
 
         public long? GetTotalTicksPlayed(string userId, string itemId)
@@ -250,7 +283,12 @@ namespace Statistics2026.Data
                 _dbHelper.ExecuteCommands(sqlCmds);
                 _dbHelper!.Progress?.Report(100);
             }
-            UpdateDBState(EDBState.eUserDataInitialized);
+            ComputeUserDataDBState();
+            if (!Plugin.Instance.IsDBStateSet(EDBState.eUserDataInitialized))
+            {
+                _embyInterfaces?._logger?.Error("After initializing user watch data, user watch data still doesn't conform.");
+            }
+            Plugin.Instance.AddDBState(EDBState.eUserDataInitialized);
             _embyInterfaces?._logger?.Debug($"AnalyzeUserWatchData - Finished User Watch Data Analysis");
         }
 
@@ -335,9 +373,6 @@ namespace Statistics2026.Data
         private void ValidateResetMapResults()
         {
             var config = Statistics2026.Plugin.Instance!.Configuration;
-            if (!config.resetPlayCount)
-                return;
-
             foreach (var curr in _baseCount)
             {
                 if (curr.Value.hit == false)
@@ -350,13 +385,6 @@ namespace Statistics2026.Data
         private void ResetPlayCount(User user, Video video, ref bool isPlayed, ref int playCount)
         {
             CheckIsValid(ECheckType.eUpdate);
-
-            if (Statistics2026.Plugin.Instance == null || Statistics2026.Plugin.Instance!.Configuration == null)
-                return;
-
-            var config = Statistics2026.Plugin.Instance.Configuration;
-            if (!config.resetPlayCount)
-                return;
 
             FixResetMap();
 
@@ -519,6 +547,9 @@ namespace Statistics2026.Data
 
             var sqlCmds = new List<SQLCmdDef>();
 
+            var config = Statistics2026.Plugin.Instance!.Configuration;
+            var resetPlayCount = config.resetPlayCount || !Plugin.Instance.IsDBStateSet(EDBState.eUserDataInitialized);
+
             var allVideosForUser = Statistics2026API.GetAllEpisodesAndMovies(user, _embyInterfaces!._libraryManager, false).forUser;
             //_tableList
             string sql =
@@ -566,7 +597,8 @@ namespace Statistics2026.Data
                 var isPlayed = video.Played;
                 var playCount = video.PlayCount;
 
-                ResetPlayCount(user, video, ref isPlayed, ref playCount);
+                if (resetPlayCount)
+                    ResetPlayCount(user, video, ref isPlayed, ref playCount);
                 var lastPlayedDate = video?.LastPlayedDate ?? null;
 
                 using (var mediaInfo = new MediaInfo(video!))
@@ -590,21 +622,21 @@ namespace Statistics2026.Data
                 }
             }
 
-            var config = Statistics2026.Plugin.Instance!.Configuration;
-            if (config.resetPlayCount || ( ( Plugin.Instance!.DBState & EDBState.eUserDataInitialized ) == 0 ) )
+            if (resetPlayCount)
             {
                 var sqlUpdateTicks =
                     $"UPDATE {userTableName} " +
                     $" SET " +
-                    $"  TotalTicksPlayed=PlayCount*Media.RunTimeTicks " +
+                    $"  TotalTicksPlayed=(IsPlayed*PlayCount)*Media.RunTimeTicks " +
                     $" FROM Media " +
                     $" WHERE Media.ItemId={userTableName}.ItemId"
                     ;
                 sqlCmds.Add(new SQLCmdDef(sqlUpdateTicks));
+
+                if (user.Name == "scott")
+                    ValidateResetMapResults();
             }
 
-            if (user.Name == "scott")
-                ValidateResetMapResults();
             return sqlCmds;
         }
 
@@ -880,6 +912,7 @@ namespace Statistics2026.Data
         {
             return TotalTime(user, episodesOnly, true);
         }
+
         public StatCard TotalWatchableTime(User? user, bool? episodesOnly)
         {
             return TotalTime(user, episodesOnly, false);

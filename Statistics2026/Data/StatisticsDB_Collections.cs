@@ -16,7 +16,7 @@ namespace Statistics2026.Data
     {
         public void AddAllCollections(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid(ECheckType.eUpdate);
 
             _embyInterfaces!._logger?.Debug($"AddAllCollections - Starting Collection Analysis");
             progress.Report(0);
@@ -134,7 +134,14 @@ namespace Statistics2026.Data
                 "  @ItemId" +
                 ", @Name" +
                 ", @SortName" +
-                ")";
+                ")" +
+                " ON CONFLICT(ItemId) " +
+                " DO UPDATE " +
+                " SET " +
+                    "  Name=@Name" +
+                    ", SortName=@SortName"
+                    ;
+
             sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
             {
                 ("@ItemId", collection.Id.ToString()),

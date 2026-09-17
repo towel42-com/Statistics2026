@@ -141,17 +141,23 @@ namespace Statistics2026
             if (Plugin.Instance == null)
                 return;
 
-            if (Plugin.Instance.DBState == null)
+            if ( Plugin.Instance.IsStatistics2026TaskRunning())
+            {
+                _embyInterfaces!._logger!.Warn("PlaybackMonitoringTask : Task is running");
+                return;
+            }
+
+            if (!Plugin.Instance.DBStateInitialized())
             {
                 StatisticsDB.GetInstance(_embyInterfaces);
-                if (Plugin.Instance.DBState == null)
+                if (!Plugin.Instance.DBStateInitialized())
                 {
                     _embyInterfaces!._logger!.Warn("PlaybackMonitoringTask : Databases have not been initialized");
                     return;
                 }
             }
 
-            if ((Plugin.Instance.DBState & EDBState.eOKToTrackUserData) != EDBState.eOKToTrackUserData)
+            if (!Plugin.Instance.IsDBStateSet(EDBState.eSystemTablesCreated | EDBState.eUserTablesCreated | EDBState.eUserDataInitialized))
             {
                 _embyInterfaces!._logger!.Warn("PlaybackMonitoringTask : Databases have not been initialized");
                 return;

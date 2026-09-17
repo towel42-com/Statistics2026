@@ -48,7 +48,7 @@ namespace Statistics2026.ScheduledTasks
 
         Task IScheduledTask.Execute(CancellationToken cancellationToken, IProgress<double> progress)
         {
-            if (_embyInterfaces != null && _embyInterfaces.IsStatistics2026TaskRunning(this.GetType()))
+            if (Plugin.Instance != null && Plugin.Instance.IsStatistics2026TaskRunning(this.GetType()))
             {
                 throw new Exception("Statistics 2026 task is running");
             }

@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Configuration;
+﻿using Emby.Web.GenericEdit.Validation;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
 using Statistics2026.Api;
 using System;
@@ -82,7 +83,7 @@ namespace Statistics2026.Data
             else if (checkType == ECheckType.eUpdate)
                 _dbHelper.CheckIsValid(ECheckLevel.eAllWithThrow);
 
-            if (_embyInterfaces != null && (checkType == ECheckType.eReport) && _embyInterfaces.IsStatistics2026TaskRunning())
+            if (Plugin.Instance != null && (checkType == ECheckType.eReport) && Plugin.Instance.IsStatistics2026TaskRunning())
             {
                 throw new Exception("Statistics 2026 task is running");
             }
@@ -183,8 +184,9 @@ namespace Statistics2026.Data
                         new TableColDef( "UserName", "TEXT", false ),
                         new TableColDef( "ConnectUserId", "TEXT", true ),
                         new TableColDef( "IsAdministrator", "BOOLEAN", true ),
-                        new TableColDef( "TotalTimeWatched", "INT", true ),
-                        new TableColDef( "TotalWatchableTime", "INT", true )
+                        new TableColDef( "TotalTimeWatched", "INT", true ){DeprecatedColumn=true },
+                        new TableColDef( "TotalWatchableTime", "INT", true ){DeprecatedColumn=true },
+                        new TableColDef( "MediaTableName", "TEXT", false)
                     }
                 ),
                 new TableDef("Collections",
@@ -202,10 +204,7 @@ namespace Statistics2026.Data
                         new TableColDef( "ItemId", "TEXT", false ),
                         new TableColDef( "CollectionName", "TEXT", false ) // for debugging purposes
                     }
-                )
-            };
-
-            _tableList.Add(
+                ),
                 new TableDef("CachedStats",
                     new List<TableColDef>()
                     {
@@ -220,10 +219,7 @@ namespace Statistics2026.Data
                         new TableColDef( "SmallestMovie", "TEXT", true ),
                         new TableColDef( "TotalMovieStudioCount", "INT", true ),
                     }
-                ));
-            _tableList[_tableList.Count - 1].DeprecatedTable = true;
-
-            _tableList.Add(
+                ){ DeprecatedTable = true },
                 new TableDef("CachedWatchedAnalysis",
                     new List<TableColDef>()
                     {
@@ -234,10 +230,7 @@ namespace Statistics2026.Data
                         new TableColDef( "NumWatched", "INT", true ),
                         new TableColDef( "PercentWatchedPerUser", "DOUBLE", true ),
                     }
-                ));
-            _tableList[_tableList.Count - 1].DeprecatedTable = true;
-
-            _tableList.Add(
+                ){ DeprecatedTable = true },
                 new TableDef("UserVideoList",
                     new List<TableColDef>()
                     {
@@ -248,9 +241,8 @@ namespace Statistics2026.Data
                         new TableColDef( "NumWatched", "INT", true ),
                         new TableColDef( "PercentWatchedPerUser", "DOUBLE", true ),
                     }
-                )
-            );
-            _tableList[_tableList.Count - 1].DeprecatedTable = true;
+                ){ DeprecatedTable = true },
+            };
 
             _userMediaTemplate = new TableDef("UserMedia_<USER_ID>",
                     new List<TableColDef>()
@@ -265,7 +257,7 @@ namespace Statistics2026.Data
                         new TableColDef( "EndTickPos", "INT", true ){DeprecatedColumn= true},
                         new TableColDef( "TotalTicksPlayed", "INT", true ){FormerColumnName="TotalTicks"},
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
-                        new TableColDef( "NumEpisodes", "BOOLEAN", true ), // for multi episode media
+                        new TableColDef( "NumEpisodes", "INT", true ), // for multi episode media
                         new TableColDef( "IsTVSpecial", "BOOLEAN", true ),
                         new TableColDef( "SeriesId", "TEXT", true ) // if episode add seriesid
                     }
@@ -280,77 +272,48 @@ namespace Statistics2026.Data
             }
         }
 
+        private List<string> tableNames()
+        {
+            var retVal = new List<string>();
+            foreach (var table in _tableList)
+            {
+                if (table.DeprecatedTable)
+                    continue;
+                retVal.Add(table.Name);
+            }
+            return retVal;
+        }
+
         private void ComputeDBState()
         {
-            if (Plugin.Instance == null)
-                throw new ArgumentNullException("Plugin.Instance is null");
+            CheckIsValid(ECheckType.eInit);
 
-            if (Plugin.Instance.DBState != null)
+            if (Plugin.Instance!.DBStateInitialized())
                 return;
 
-            var aTableMissing = false;
-            var aTableNeedsData = false;
-            foreach (var tableDef in _tableList)
-            {
-                if (!tableDef.DeprecatedTable)
+            Plugin.Instance.ResetDBState();
+
+            var tableNames = this.tableNames();
+
+            _dbHelper.ValidateTables(tableNames,
+                tableName =>
                 {
-                    var tableMissing = !_dbHelper.TableExists(tableDef.Name);
-                    var tableNeedsData = true;
-                    if (!tableMissing)
+                    if (_tableMap.TryGetValue(tableName, out var tableDef))
                     {
-                        var sql = $"SELECT COUNT(*) FROM {tableDef.Name} LIMIT 1";
-
-                        _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
-                        {
-                            var row = statement.Current;
-                            tableNeedsData = row.GetInt64(0) == 0;
-                            return false;
-                        }
-                        );
+                        return tableDef.ColumnNames();
                     }
-                    aTableMissing = aTableMissing || tableMissing;
-                    aTableNeedsData = aTableNeedsData || tableNeedsData;
-                    if (aTableMissing && aTableNeedsData)
-                        break;
+                    else
+                        return new List<string>();
+                },
+                null,
+                (createTableNeeded, initDataNeeded) =>
+                {
+                    Plugin.Instance.SetDBState(EDBState.eSystemTablesCreated, !createTableNeeded);
+                    Plugin.Instance.SetDBState(EDBState.eSystemDataInitialized, !initDataNeeded);
                 }
-            }
-
-            if (aTableMissing)
-                UpdateDBState(~EDBState.eSystemTablesCreated, true);
-            else
-                UpdateDBState(EDBState.eSystemTablesCreated);
-
-            if (aTableNeedsData)
-                UpdateDBState(~EDBState.eSystemDataInitialized, true);
-            else
-                UpdateDBState(EDBState.eSystemDataInitialized);
+            );
 
             ComputeUserDataDBState();
-        }
-
-        public void UpdateDBState(EDBState? state, bool andValue = false)
-        {
-            EDBState? value = EDBState.eEmpty;
-
-            if (Plugin.Instance != null && Plugin.Instance.DBState != null)
-                value = Plugin.Instance.DBState;
-
-            if (andValue)
-                value = value & state;
-            else
-                value = value | state;
-            SetDBState(value);
-        }
-
-        private void SetDBState(EDBState? state)
-        {
-            if (Plugin.Instance == null)
-                throw new ArgumentNullException("Plugin.Instance is null");
-
-            Plugin.Instance.DBState = state;
-            var config = Plugin.Instance.Configuration;
-            config.dbStateOK = (Plugin.Instance.DBState == EDBState.eFullyInitialized);
-            Plugin.Instance.UpdateConfiguration(config);
         }
 
         private void CreateTables(TableDef.EAction action)
@@ -361,27 +324,26 @@ namespace Statistics2026.Data
             if (Plugin.Instance == null)
                 throw new NullReferenceException($"Plugin.Instance is null");
 
-            if (Plugin.Instance.DBState == null)
+            if (!Plugin.Instance.IsDBStateSet(EDBState.eSystemTablesCreated))
             {
-                SetDBState(EDBState.eEmpty);
+                var sqlCmds = new List<SQLCmdDef>();
+                foreach (var tableDef in _tableList)
+                {
+                    sqlCmds.AddRange(tableDef.GetSQLCommands(action));
+                }
+
+                var config = Statistics2026.Plugin.Instance!.Configuration;
+                if (config.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null)
+                {
+                    sqlCmds.AddRange(DropAllUserMediaCmds());
+                    Plugin.Instance.RemoveDBState(EDBState.eUserTablesCreated | EDBState.eUserDataInitialized);
+                }
+
+                _dbHelper.ExecuteCommands(sqlCmds);
+
+                Plugin.Instance.AddDBState(EDBState.eSystemTablesCreated);
             }
 
-            var sqlCmds = new List<SQLCmdDef>();
-            foreach (var tableDef in _tableList)
-            {
-                sqlCmds.AddRange(tableDef.GetSQLCommands(action));
-            }
-
-            var config = Statistics2026.Plugin.Instance!.Configuration;
-            if (config.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null)
-            {
-                sqlCmds.AddRange(DropAllUserMediaCmds());
-                UpdateDBState(~EDBState.eUserTablesCreated & ~EDBState.eUserDataInitialized, true);
-            }
-
-            _dbHelper.ExecuteCommands(sqlCmds);
-
-            UpdateDBState(EDBState.eSystemTablesCreated);
             InitUserWatchData();
         }
 

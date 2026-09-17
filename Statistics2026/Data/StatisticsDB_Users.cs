@@ -83,7 +83,7 @@ namespace Statistics2026.Data
             return (watched, watchable);
         }
 
-        private List<SQLCmdDef> AddUser(User? user)
+        private List<SQLCmdDef> AddUser(User user)
         {
             CheckIsValid(ECheckType.eUpdate);
 
@@ -103,8 +103,6 @@ namespace Statistics2026.Data
                 return sqlCmds;
             }
 
-            var (timeWatched, totalTime) = AnalyzeOverallTime(user, null);
-
             var isAdmin = user.Policy.IsAdministrator;
             string sql =
                 "INSERT INTO Users " +
@@ -113,8 +111,7 @@ namespace Statistics2026.Data
                     ", UserName" +
                     ", ConnectUserId" +
                     ", IsAdministrator" +
-                    ", TotalTimeWatched" +
-                    ", TotalWatchableTime" +
+                    ", MediaTableName" +
                 ")" +
                 " VALUES " +
                 "(" +
@@ -122,8 +119,7 @@ namespace Statistics2026.Data
                 ", @UserName" +
                 ", @ConnectUserId" +
                 ", @IsAdministrator" +
-                ", @TotalTimeWatched" +
-                ", @TotalWatchableTime" +
+                ", @MediaTableName" +
                 ") " +
                 " ON CONFLICT(UserId) " +
                 " DO UPDATE " +
@@ -131,8 +127,7 @@ namespace Statistics2026.Data
                 "  UserName=@UserName" +
                 " ,ConnectUserId=@ConnectUserId" +
                 " ,IsAdministrator=@IsAdministrator" +
-                " ,TotalTimeWatched=@TotalTimeWatched" +
-                " ,TotalWatchableTime=@TotalWatchableTime"
+                " ,MediaTableName=@MediaTableName"
                 ;
             sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
             {
@@ -140,8 +135,7 @@ namespace Statistics2026.Data
                 ( "@UserName", user.Name),
                 ( "@ConnectUserId", user.ConnectUserId),
                 ( "@IsAdministrator", isAdmin),
-                ( "@TotalTimeWatched", timeWatched),
-                ( "@TotalWatchableTime", totalTime),
+                ( "@MediaTableName", getUserTableName( user ) )
             }));
             return sqlCmds;
         }
@@ -182,42 +176,55 @@ namespace Statistics2026.Data
         {
             CheckIsValid(ECheckType.eReport);
 
-            string sql =
-                "SELECT " +
-                "UserName, " +
-                "TotalTimeWatched " +
-                "FROM Users ";
-            List<string> conditions = new List<string>();
+            var tables = allUserMediaTables();
 
-            if (Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID)
-                conditions.Add("ConnectUserId <> '' AND ConnectUserId IS NOT NULL");
+            var playTimeMap = new SortedDictionary<long, (string userId, string userName, long ticksPlayed)>();
+            foreach (var table in tables)
+            {
+                string sql =
+                    $"SELECT " +
+                    $"  Users.UserId" +
+                    $", Users.UserName" +
+                    $", SUM({table}.TotalTicksPlayed)" +
+                    $" FROM {table}" +
+                    $" LEFT JOIN Users ON {table}.UserId=Users.UserId"
+                    ;
+                List<string> conditions = new List<string>();
 
-            if (Statistics2026.Plugin.Instance!.Configuration.excludeAdmin)
-                conditions.Add("NOT IsAdministrator");
+                if (Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID)
+                    conditions.Add("Users.ConnectUserId <> '' AND Users.ConnectUserId IS NOT NULL");
 
-            sql += DBHelper.JoinClauses(conditions);
+                if (Statistics2026.Plugin.Instance!.Configuration.excludeAdmin)
+                    conditions.Add("NOT IsAdministrator");
 
-            var numUsers = Plugin.Instance.Configuration.numMostActiveUsers;
-            sql +=
-                "ORDER BY TotalTimeWatched DESC " +
-                $"LIMIT {numUsers} "
-                ;
+                sql += DBHelper.JoinClauses(conditions);
 
+                _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+                {
+                    var row = statement.Current;
+
+                    var col = 0;
+                    var userId = row.GetString(col++);
+                    var userName = row.GetString(col++);
+                    var ticksPlayed = row.GetInt64(1);
+                    playTimeMap[ticksPlayed] = (userId, userName, ticksPlayed);
+                    return true;
+                });
+            }
+
+            var numUsers = Plugin.Instance!.Configuration.numMostActiveUsers;
             var help = Constants.HelpMostActiveUsers;
             help = help.Replace("<numUsers>", numUsers.ToString());
-
             var groupData = new TableBasedStatCard(Constants.MostActiveUsers, help, new List<string> { "Days", "Hours", "Minutes" });
-            var cmd = new SQLCmdDef(sql);
-            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+
+            foreach (var curr in playTimeMap.Values)
             {
-                var row = statement.Current;
-                var userName = row.GetString(0);
-                var runtime = new RunTime(row.GetInt64(1));
-
+                var userName = curr.userName;
+                var userId = curr.userId;
+                var ticks = curr.ticksPlayed;
+                var runtime = new RunTime(ticks);
                 groupData.addRow(userName, new List<int> { runtime.Days, runtime.Hours, runtime.Minutes });
-                return true;
-            });
-
+            }
             return groupData;
         }
     }
