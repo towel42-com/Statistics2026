@@ -41,12 +41,14 @@
         </PropertyGroup>
 
         <MakeDir Directories="$(MSBuildProjectDirectory)\.vs\$(ProjectName)\$(Configuration)" />
-        <WriteLinesToFile 
-            File="$(MSBuildProjectDirectory)/.vs/$(ProjectName)/$(Configuration)/embyroot.cache" 
-            Lines="$(EmbyServerRoot)" 
-            Overwrite="true" 
-            WriteOnlyWhenDifferent="true" />
+        <WriteLinesToFile File="$(MSBuildProjectDirectory)/.vs/$(ProjectName)/$(Configuration)/embyroot.cache" Lines="$(EmbyServerRoot)" Overwrite="true" WriteOnlyWhenDifferent="true" />
     </Target>
+    
+    <ItemGroup>
+      <Compile Remove="build\**" />
+      <EmbeddedResource Remove="build\**" />
+      <None Remove="build\**" />
+    </ItemGroup>
 
     <ItemGroup>
         <EmbeddedResource Include="Pages\AdminPages\AdminHelpers.js" />
