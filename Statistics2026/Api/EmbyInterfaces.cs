@@ -49,56 +49,6 @@ namespace Statistics2026.Api
                 Plugin.Instance.ServerId = _appHost.SystemId;
         }
 
-        public bool IsStatistics2026TaskRunning()
-        {
-            return IsStatistics2026TaskRunning(new List<System.Type>());
-        }
-
-        public bool IsStatistics2026TaskRunning(System.Type okIfRunning)
-        {
-            return IsStatistics2026TaskRunning(new List<System.Type>() { typeof(RunAllTasksTask), okIfRunning });
-        }
-
-        public bool IsStatistics2026TaskRunning(List<System.Type> okIfRunning)
-        {
-            if (_taskManager == null)
-                return false;
-
-            var knownTasks = Plugin.Instance?.GetKnownTasks(true);
-            if (knownTasks == null)
-                return false;
-
-            var allTasks = _taskManager.ScheduledTasks;
-            foreach (var task in allTasks)
-            {
-                if (task.State == MediaBrowser.Model.Tasks.TaskState.Idle)
-                    continue;
-
-                foreach (var currTask in knownTasks)
-                {
-                    bool okToBeRunning = false;
-                    foreach (var okTask in okIfRunning)
-                    {
-                        if (okTask == task.ScheduledTask.GetType())
-                        {
-                            okToBeRunning = true;
-                            break;
-                        }
-                    }
-
-                    if (okToBeRunning)
-                        continue;
-
-                    if (currTask.TaskType == task.ScheduledTask.GetType())
-                    {
-                        return true;
-                    }
-                }
-
-            }
-            return false;
-        }
-
         public readonly IFileSystem _fileSystem;
         public readonly ILibraryManager _libraryManager;
         public readonly ILogManager _logManager;

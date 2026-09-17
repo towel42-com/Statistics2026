@@ -1,50 +1,31 @@
 ﻿using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Drawing;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
+using MediaBrowser.Model.Tasks;
+using ServiceStack;
 using Statistics2026.Configuration;
 using Statistics2026.ScheduledTasks;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 
 namespace Statistics2026
 {
-    public class TaskDef
+    public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
-        public TaskDef() { }
-        public TaskDef(string description, Type? typeOf, long runTime, string tableName)
-        {
-            Description = description;
-            TaskType = typeOf;
-            RunTime = runTime;
-            TableName = tableName;
-        }
+        public readonly ITaskManager _taskManager;
+        public readonly ILogger _logger;
 
-        public string Description { get; private set; } = string.Empty;
-        public Type? TaskType { get; private set; } = null;
-        public long RunTime { get; set; } = 0;
-        public string TableName { get; private set; } = string.Empty;
-    }
-
-    public enum EDBState
-    {
-        eEmpty = 0x00,  // a tables created
-        eSystemTablesCreated = 0x01,
-        eUserTablesCreated = 0x02,
-        eSystemDataInitialized = 0x04,
-        eUserDataInitialized = 0x08,
-        eFullyInitialized = eSystemTablesCreated | eUserTablesCreated | eSystemDataInitialized | eUserDataInitialized,
-        eOKToTrackUserData = eSystemTablesCreated | eUserTablesCreated | eUserDataInitialized
-    }
-
-    public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
-    {
-        public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer)
+        public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, ITaskManager taskManager, ILogManager logManager)
             : base(applicationPaths, xmlSerializer)
         {
             Instance = this;
+            _taskManager = taskManager;
+            _logger = logManager.GetLogger("Statistics2026 - Plugin");
         }
 
         public IEnumerable<PluginPageInfo> GetPages()
@@ -174,24 +155,6 @@ namespace Statistics2026
 
         private static readonly object _padlock = new object();
 
-        public EDBState? DBState
-        {
-            get
-            {
-                lock (_padlock)
-                {
-                    return field;
-                }
-            }
-            set
-            {
-                lock (_padlock)
-                {
-                    field = value;
-                }
-            }
-        } = null;
-
         public string? ServerId
         {
             get
@@ -225,24 +188,6 @@ namespace Statistics2026
             {
                 return ImageFormat.Png;
             }
-        }
-
-        public List<TaskDef> GetKnownTasks(bool includeRunAll)
-        {
-            var tasks = new List<TaskDef>
-            {
-                new TaskDef($"Analyzing Users", typeof(AnalyzeUsersTask), 0, "Users"),
-                new TaskDef($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "UserWatchData"),
-                new TaskDef($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Media"),
-                new TaskDef($"Analyzing Collections", typeof(AnalyzeCollectionsTask), 0, "Collections"),
-                new TaskDef($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series"),
-            };
-            if (includeRunAll)
-            {
-                tasks.Add(new TaskDef($"RunAll", typeof(RunAllTasksTask), 0, ""));
-            }
-
-            return tasks;
         }
     }
 }
