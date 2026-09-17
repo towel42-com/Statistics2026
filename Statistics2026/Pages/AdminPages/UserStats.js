@@ -8,7 +8,6 @@
 
         function loadStats(view, userName) {
             if (!Helpers.CheckForValidConfig()) {
-                view.querySelector(`#lastRunInfo`).style.display = 'none';
                 Dashboard.hideLoadingMsg();
                 return;
             }
@@ -30,13 +29,13 @@
 
             });
 
-            view.querySelector("#selectUser").addEventListener(`change`, function () {
+            view.querySelector("#selectUser_userstats").addEventListener(`change`, function () {
                 const user = this.options[this.selectedIndex].innerHTML;
                 loadStats(view, user);
             });
 
             ApiClient.getUsers().then(function (users) {
-                var select = view.querySelector(`#selectUser`);
+                var select = view.querySelector(`#selectUser_userstats`);
 
                 loadStats(view, users[0].Name);
 

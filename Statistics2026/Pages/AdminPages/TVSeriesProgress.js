@@ -21,12 +21,12 @@
                 Helpers.injectStyleSheet(e);
                 Helpers.injectSortableTableStyle(document);
 
-                const selectElement = document.getElementById("selectUser");
+                const selectElement = document.getElementById("selectUser_tvprogress");
                 const user = selectElement.options[selectElement.selectedIndex].innerHTML;
                 loadData(view, user)
 
                 function process_click() {
-                    const selectElement = document.getElementById("selectUser");
+                    const selectElement = document.getElementById("selectUser_tvprogress");
                     const user = selectElement.options[selectElement.selectedIndex].innerHTML;
                     loadData(view, user)
                 }
@@ -40,7 +40,7 @@
 
             });
 
-            view.querySelector("#selectUser").addEventListener(`change`, function () {
+            view.querySelector("#selectUser_tvprogress").addEventListener(`change`, function () {
                 const user = this.options[this.selectedIndex].innerHTML;
                 loadData(view, user);
             });
@@ -50,7 +50,7 @@
             });
 
             ApiClient.getUsers().then(function (users) {
-                var select = view.querySelector(`#selectUser`);
+                var select = view.querySelector(`#selectUser_tvprogress`);
 
                 loadData(view, users[0].Name);
 
