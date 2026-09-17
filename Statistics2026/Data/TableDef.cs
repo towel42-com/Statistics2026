@@ -137,7 +137,7 @@ namespace Statistics2026.Data
 
             sql += ");";
 
-            var retVal = new List<SQLCmdDef>() { new( sql ) };
+            List<SQLCmdDef> retVal = [ new( sql ) ];
 
             Columns.ForEach( column =>
             {

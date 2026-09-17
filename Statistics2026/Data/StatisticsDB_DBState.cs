@@ -21,7 +21,7 @@ namespace Statistics2026.Data
             _dbHelper.ValidateTables( tableNames,
                 tableName =>
                 {
-                    if (_tableMap.TryGetValue(tableName, out var tableDef))
+                    if( _tableMap.TryGetValue( tableName, out var tableDef ) )
                     {
                         return tableDef.ColumnNames();
                     }
@@ -72,11 +72,11 @@ namespace Statistics2026.Data
                     long? ticksPlayed = null;
                     long systemPlayed = 0;
 
-                    var cmds = new List<SQLCmdDef>()
-                    {
+                    List<SQLCmdDef> cmds =
+                    [
                         new( sqlTicks ),
                         new( sqlPlayed )
-                    };
+                    ];
 
                     _dbHelper.ExecuteCommands( cmds, statement =>
                     {

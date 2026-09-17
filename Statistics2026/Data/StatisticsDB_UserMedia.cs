@@ -2,6 +2,7 @@
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
+using RestSharp;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
@@ -111,7 +112,7 @@ namespace Statistics2026.Data
                 $"FROM {tableName} " +
                 $"WHERE ItemId=@ItemId"
                 ;
-            var parameters = new List<(string, object?)>() { ("@ItemId", itemId) };
+            List<(string, object?)> parameters = [ ("@ItemId", itemId) ];
 
             long? totalTicksPlayed = null;
 
@@ -135,9 +136,11 @@ namespace Statistics2026.Data
                 " TotalTicksPlayed=@TotalTicksPlayed " +
                 "WHERE ItemId=@ItemId"
                 ;
-            var parameters = new List<(string, object?)>() {
-                ("@TotalTicksPlayed", totalTicksPlayed ),
-                ("@ItemId", itemId) };
+            List<(string, object?)> parameters = 
+                [
+                    ("@TotalTicksPlayed", totalTicksPlayed ),
+                    ("@ItemId", itemId) 
+                ];
 
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql, parameters ) );
         }
@@ -567,7 +570,7 @@ namespace Statistics2026.Data
                 "GROUP BY Media.SeriesId"
                 ;
 
-            var parameters = new List<(string, object?)>() { ("@UserId", user.Id.ToString()) };
+            List<(string, object?)> parameters = [ ("@UserId", user.Id.ToString()) ];
             var seriesInfo = new Dictionary<string, (string name, long watched, long total)>();
 
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
@@ -622,7 +625,7 @@ namespace Statistics2026.Data
                     $"LEFT OUTER JOIN {tableName} ON Series.ItemId = {tableName}.SeriesId " +
                     $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId ";
 
-                    var clauses = new List<string>() { "PlayCount > 0" };
+                    List<string> clauses = [ "PlayCount > 0" ];
                     if( excludeAdmin )
                     {
                         clauses.Add( "NOT Users.IsAdministrator" );
@@ -654,11 +657,11 @@ namespace Statistics2026.Data
                         $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId "
                         ;
 
-                    var clauses = new List<string>()
-                    {
-                        "PlayCount > 0",
-                        $"NOT {tableName}.IsEpisode"
-                    };
+                    List<string> clauses =
+                        [
+                            "PlayCount > 0",
+                            $"NOT {tableName}.IsEpisode"
+                        ];
 
                     if( excludeAdmin )
                     {
@@ -806,7 +809,7 @@ namespace Statistics2026.Data
                     $"LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId "
                     ;
             }
-            var clauses = new List<string>() { $"{tableName}.UserId=@UserId" };
+            List<string> clauses = [ $"{tableName}.UserId=@UserId" ];
             var title = string.Empty;
 
             if( episodesOnly == null )

@@ -91,7 +91,7 @@ namespace Statistics2026.Data
 
         public bool CheckIsValid( ECheckLevel checkLevel )
         {
-            var msgs = new List<string>() { $"DBHelper is not valid 0x{checkLevel:X}" };
+            List<string> msgs = [ $"DBHelper is not valid 0x{checkLevel:X}" ];
             var retVal = true;
             if( ( checkLevel & ECheckLevel.eInterfaces ) != 0 )
             {
@@ -201,7 +201,7 @@ namespace Statistics2026.Data
 
         public void ExecuteCommand( SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null )
         {
-            var cmds = new List<SQLCmdDef>() { cmd };
+            List<SQLCmdDef> cmds = [ cmd ];
             ExecuteCommands( cmds, onStatement );
         }
 
@@ -290,13 +290,13 @@ namespace Statistics2026.Data
 
             try
             {
-                var queries = new List<string>
-                {
-                    "PRAGMA journal_mode=WAL",
-                    "PRAGMA busy_timeout=5000",
-                    "PRAGMA synchronous=Normal",
-                    "PRAGMA temp_store=file"
-                };
+                List<string> queries =
+                    [
+                        "PRAGMA journal_mode=WAL",
+                        "PRAGMA busy_timeout=5000",
+                        "PRAGMA synchronous=Normal",
+                        "PRAGMA temp_store=file"
+                    ];
 
                 db.ExecuteAll( string.Join( ";", queries.ToArray() ) );
             }
@@ -335,11 +335,11 @@ namespace Statistics2026.Data
         public bool ColumnExists( string tableName, string columnName )
         {
             var sql = $"SELECT 1 FROM pragma_table_info(@TableName) WHERE name=@ColumnName";
-            var parameters = new List<(string name, object? value)>
-            {
-                ("@TableName", tableName),
-                ("@ColumnName", columnName)
-            };
+            List<(string name, object? value)> parameters =
+                [
+                    ("@TableName", tableName),
+                    ("@ColumnName", columnName)
+                ];
 
             var exists = false;
 
@@ -357,7 +357,7 @@ namespace Statistics2026.Data
         public bool TableExists( string tableName )
         {
             var sql = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@TableName";
-            var parameters = new List<(string name, object? value)> { ("@TableName", tableName) };
+            List<(string name, object? value)> parameters = [ ("@TableName", tableName) ];
 
             var exists = false;
 

@@ -355,7 +355,7 @@ namespace Statistics2026.Data
             var sqlEpisodes = sqlBase.Replace( "<isTVSpecial>", $"NOT {tableName}.IsTVSpecial" );
             var sqlSpecials = sqlBase.Replace( "<isTVSpecial>", $"{tableName}.IsTVSpecial" );
 
-            var paramList = new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) };
+            List<(string name, object? value)> paramList = [ ("@UserId", user.Id.ToString()) ];
 
             _dbHelper.ExecuteCommand( new SQLCmdDef( sqlEpisodes, paramList ), statement =>
             {

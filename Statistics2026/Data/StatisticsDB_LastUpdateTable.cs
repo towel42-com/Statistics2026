@@ -9,8 +9,8 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            var sqlCmds = new List<SQLCmdDef>
-            {
+            List<SQLCmdDef> sqlCmds =
+            [
                 new( "delete from LastUpdateTable" ),
                 new( "INSERT INTO LastUpdateTable (LastUpdated, BuildDate, Version) values (@LastUpdated, @BuildDate, @Version)",
                         [
@@ -18,7 +18,7 @@ namespace Statistics2026.Data
                             ("@BuildDate", _dbHelper.ToDateTimeParamValue(buildDate)),
                             ("@Version", version)
                         ] )
-            };
+            ];
 
             _dbHelper.ExecuteCommands( sqlCmds );
         }

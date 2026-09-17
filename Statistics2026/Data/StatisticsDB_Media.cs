@@ -494,9 +494,9 @@ namespace Statistics2026.Data
               ;
 
             var sqlCmd = new SQLCmdDef( sql,
-[
-    ( "@UserId", user.Id.ToString())
-] );
+                                        [
+                                            ( "@UserId", user.Id.ToString())
+                                        ] );
 
             var retVal = new List<(int year, long count)>();
             _dbHelper.ExecuteCommand( sqlCmd, statement =>
