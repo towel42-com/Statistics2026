@@ -33,7 +33,7 @@
         </PropertyGroup>
 
         <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Full'">
-            <EmbyServerRoot>D:\Emby\EmbyServer.full</EmbyServerRoot>
+            <EmbyServerRoot>D:\Emby\mediaplayer</EmbyServerRoot>
         </PropertyGroup>
 
         <PropertyGroup Condition="'$(ActiveDebugProfile)' == ''">
