@@ -883,17 +883,16 @@ namespace Statistics2026.Data
 
             if (played)
             {
+                sql = "SELECT SUM(TotalTicksPlayed) " +
+                    $"FROM {tableName} "
+                ;
+            }
+            else
+            {
                 sql = "SELECT SUM(RunTimeTicks) " +
                     $"FROM {tableName} " +
                     $"LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId "
                     ;
-            }
-            else
-            {
-                sql = "SELECT SUM(TotalTicksPlayed) " +
-                    $"FROM {tableName} "
-                ;
-            ;
             }
             var clauses = new List<string>() { $"{tableName}.UserId=@UserId" };
             var title = String.Empty;
@@ -912,6 +911,7 @@ namespace Statistics2026.Data
                 title = played ? Constants.UserTotalMovieTimeWatched : Constants.UserTotalMovieWatchableTime;
                 clauses.Add($"NOT {tableName}.IsEpisode");
             }
+
             if (played)
                 clauses.Add($"{tableName}.IsPlayed");
 
