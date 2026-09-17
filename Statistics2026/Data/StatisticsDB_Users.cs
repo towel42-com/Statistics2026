@@ -178,26 +178,29 @@ namespace Statistics2026.Data
 
             var tables = allUserMediaTables();
 
-            var playTimeMap = new SortedDictionary<long, (string userId, string userName, long ticksPlayed)>();
-            foreach (var table in tables)
+            string sqlBase =
+                $"SELECT " +
+                $"  Users.UserId" +
+                $", Users.UserName" +
+                $", SUM(<TABLE_NAME>.TotalTicksPlayed)" +
+                $" FROM <TABLE_NAME>" +
+                $" LEFT JOIN Users ON <TABLE_NAME>.UserId=Users.UserId"
+                ;
+            List<string> conditions = new List<string>();
+
+            if (Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID)
+                conditions.Add("Users.ConnectUserId <> '' AND Users.ConnectUserId IS NOT NULL");
+
+            if (Statistics2026.Plugin.Instance!.Configuration.excludeAdmin)
+                conditions.Add("NOT IsAdministrator");
+
+            sqlBase += DBHelper.JoinClauses(conditions);
+
+            var playTimeMap = new SortedDictionary<long, List<(string userId, string userName, long ticksPlayed)>>();
+            foreach (var tableName in tables)
             {
-                string sql =
-                    $"SELECT " +
-                    $"  Users.UserId" +
-                    $", Users.UserName" +
-                    $", SUM({table}.TotalTicksPlayed)" +
-                    $" FROM {table}" +
-                    $" LEFT JOIN Users ON {table}.UserId=Users.UserId"
-                    ;
-                List<string> conditions = new List<string>();
-
-                if (Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID)
-                    conditions.Add("Users.ConnectUserId <> '' AND Users.ConnectUserId IS NOT NULL");
-
-                if (Statistics2026.Plugin.Instance!.Configuration.excludeAdmin)
-                    conditions.Add("NOT IsAdministrator");
-
-                sql += DBHelper.JoinClauses(conditions);
+                var sql = sqlBase;
+                sql = sql.Replace("<TABLE_NAME>", tableName);
 
                 _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
                 {
@@ -206,8 +209,14 @@ namespace Statistics2026.Data
                     var col = 0;
                     var userId = row.GetString(col++);
                     var userName = row.GetString(col++);
-                    var ticksPlayed = row.GetInt64(1);
-                    playTimeMap[ticksPlayed] = (userId, userName, ticksPlayed);
+                    if (userId == null || userName == null)
+                        return true;
+                    var ticksPlayed = row.GetInt64(col++);
+                    if ( !playTimeMap.TryGetValue( ticksPlayed, out var currItem ) )
+                    {
+                        playTimeMap[ticksPlayed] = new List<(string userId, string userName, long ticksPlayed)>();
+                    }
+                    playTimeMap[ticksPlayed].Add((userId, userName, ticksPlayed));
                     return true;
                 });
             }
@@ -217,13 +226,20 @@ namespace Statistics2026.Data
             help = help.Replace("<numUsers>", numUsers.ToString());
             var groupData = new TableBasedStatCard(Constants.MostActiveUsers, help, new List<string> { "Days", "Hours", "Minutes" });
 
-            foreach (var curr in playTimeMap.Values)
+            int cnt = 0;
+            foreach (var currKVP in playTimeMap.Reverse())
             {
-                var userName = curr.userName;
-                var userId = curr.userId;
-                var ticks = curr.ticksPlayed;
-                var runtime = new RunTime(ticks);
-                groupData.addRow(userName, new List<int> { runtime.Days, runtime.Hours, runtime.Minutes });
+                foreach(var curr in currKVP.Value)
+                {
+                    var userName = curr.userName;
+                    var userId = curr.userId;
+                    var ticks = curr.ticksPlayed;
+                    var runtime = new RunTime(ticks);
+                    groupData.addRow(userName, new List<int> { runtime.Days, runtime.Hours, runtime.Minutes });
+                }
+                if (cnt >= numUsers)
+                    break;
+                cnt++;
             }
             return groupData;
         }
