@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Dto;
+﻿using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
@@ -221,7 +222,7 @@ namespace Statistics2026.Data
             {
                 Connection.RunInTransaction(connection =>
                 {
-                    for (ii = 0; ii < cmds.Count; ++ii )
+                    for (ii = 0; ii < cmds.Count; ++ii)
                     {
                         CancellationToken?.ThrowIfCancellationRequested();
 
@@ -343,6 +344,28 @@ namespace Statistics2026.Data
             return libManager.GetItemList(query).OfType<T>();
         }
 
+        public bool ColumnExists(string tableName, string columnName)
+        {
+            var sql = $"SELECT 1 FROM pragma_table_info(@TableName) WHERE name=@ColumnName";
+            var parameters = new List<(string name, object? value)>
+            {
+                ("@TableName", tableName),
+                ("@ColumnName", columnName)
+            };
+
+            var exists = false;
+
+            ExecuteCommand(new SQLCmdDef(sql, parameters), statement =>
+            {
+                var row = statement.Current;
+                var value = row.GetInt64(0);
+                exists = value != 0;
+                return true;
+            });
+
+            return exists;
+        }
+
         public bool TableExists(string tableName)
         {
             var sql = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@TableName";
@@ -376,7 +399,68 @@ namespace Statistics2026.Data
                 clauses[ii] = $"( {clauses[ii]} )";
             }
 
-            return "WHERE " + string.Join(" AND ", clauses) + " ";
+            return " WHERE " + string.Join(" AND ", clauses) + " ";
         }
-    };
+
+        public void ValidateTables(List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState)
+        {
+            if (tables.IsNullOrEmpty())
+            {
+                updateDBState(true, true);
+                return;
+            }
+
+            var aTableMissing = false;
+            var aColumnMissing = false;
+            var aTableNeedsData = false;
+            foreach (var tableName in tables)
+            {
+                var tableMissing = !TableExists(tableName);
+                var columnMissing = false;
+                var tableNeedsData = false;
+                if (!tableMissing)
+                {
+                    (columnMissing, tableNeedsData) = ValidateTable(tableName, getColumnsFunc(tableName), additionalNeedsDataFunc);
+                }
+                else
+                {
+                    tableNeedsData = columnMissing = true;
+                }
+
+                aTableMissing = aTableMissing || tableMissing;
+                aColumnMissing = aColumnMissing || columnMissing;
+                aTableNeedsData = aTableNeedsData || tableNeedsData;
+                if (aTableMissing && aTableNeedsData && aColumnMissing)
+                    break;
+            }
+            updateDBState(aTableMissing || aColumnMissing, aTableNeedsData);
+        }
+
+        public (bool columnMissing, bool dataMissing) ValidateTable(string tableName, List<string> columns, Func<string, bool>? additionalNeedsDataFunc)
+        {
+            var columnMissing = false;
+            foreach (var columnName in columns)
+            {
+                columnMissing = columnMissing || !ColumnExists(tableName, columnName);
+            }
+
+            var tableNeedsData = true;
+            if (!columnMissing)
+            {
+                var sql = $"SELECT COUNT(*) FROM {tableName} LIMIT 1";
+
+                tableNeedsData = false;
+                ExecuteCommand(new SQLCmdDef(sql), statement =>
+                {
+                    var row = statement.Current;
+                    tableNeedsData = row.GetInt64(0) == 0;
+                    return false;
+                }
+                );
+
+                tableNeedsData = tableNeedsData || ((additionalNeedsDataFunc != null) ? additionalNeedsDataFunc(tableName) : false);
+            }
+            return (columnMissing, tableNeedsData);
+        }
+    }
 }
