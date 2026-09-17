@@ -383,6 +383,7 @@ namespace Statistics2026.Data
 
             return exists;
         }
+        
         public static string FormatTicks(long ticks)
         {
             var runtime = new RunTime(ticks);

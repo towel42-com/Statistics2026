@@ -303,9 +303,11 @@ namespace Statistics2026.Data
             string title = Constants.TotalMovies;
             string help = Constants.HelpTotalMovies;
             long total = 0;
+            long totalTicks = 0;
             if (user == null)
             {
                 sql = "SELECT SUM(NOT IsEpisode) FROM Media";
+                totalTicks = GetSingleValueFromSQL($"SELECT SUM(RunTimeTicks) FROM MEDIA WHERE NOT IsEpisode").ToLong();
             }
             else
             {
@@ -323,20 +325,26 @@ namespace Statistics2026.Data
                 }
             }
 
-            return ValueGroupForSingleItem(title, help, sql, parameters, count =>
+            var retVal = ValueGroupForSingleItem(title, help, sql, parameters, count =>
             {
+                var retVal = count.ToString();
+
                 if (watched && total != 0)
                 {
-                    if (total != 0)
-                    {
-                        double value = (100.0 * count) / (1.0 * total);
-                        return $"{count} ({value.ToString("F1")})%";
-                    }
-                    else
-                        return $"0 (0%)";
+                    double value = (100.0 * count) / (1.0 * total);
+                    retVal += $" ({value.ToString("F1")})%";
                 }
-                return count.ToString();
+
+                return retVal;
             });
+
+            if (totalTicks != 0)
+            {
+                var rt = new RunTime(totalTicks);
+                retVal.AddLine(DBHelper.FormatTicks(totalTicks));
+            }
+
+            return retVal;
         }
 
         public StatCard TotalTVCount(User? user, bool watched)
@@ -346,6 +354,7 @@ namespace Statistics2026.Data
             string seriesColumn = String.Empty;
             string seriesFrom = String.Empty;
             string episodeColumn = String.Empty;
+            string runtimeColumn = String.Empty;
             string episodeFrom = String.Empty;
 
             string titleSeries = String.Empty;
@@ -397,6 +406,12 @@ namespace Statistics2026.Data
             var value = GetSingleValueFromSQL(sqlSeries, paramList);
             retVal.AddLine(value);
 
+            if (user == null)
+            {
+                value = GetSingleValueFromSQL("SELECT SUM(RunTimeTicks) FROM MEDIA WHERE IsEpisode");
+                value = DBHelper.FormatTicks(value.ToInt64());
+                retVal.AddLine(value);
+            }
             return retVal;
         }
 

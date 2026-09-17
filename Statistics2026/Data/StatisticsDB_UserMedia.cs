@@ -879,10 +879,22 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException("user");
 
             var tableName = getUserTableName(user);
-            string sql = "SELECT SUM(RunTimeTicks) " +
-                $"FROM {tableName} " +
-                $"LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId "
+            string sql = string.Empty;
+
+            if (played)
+            {
+                sql = "SELECT SUM(RunTimeTicks) " +
+                    $"FROM {tableName} " +
+                    $"LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId "
+                    ;
+            }
+            else
+            {
+                sql = "SELECT SUM(TotalTicksPlayed) " +
+                    $"FROM {tableName} "
+                ;
             ;
+            }
             var clauses = new List<string>() { $"{tableName}.UserId=@UserId" };
             var title = String.Empty;
 
