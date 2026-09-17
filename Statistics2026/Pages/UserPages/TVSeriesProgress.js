@@ -16,6 +16,11 @@
         Object.assign(View.prototype, BaseView.prototype);
 
         function loadData(view, userId) {
+            if (!Helpers.CheckForValidConfig()) {
+                Dashboard.hideLoadingMsg();
+                return;
+            }
+
             ApiClient.getUser(userId).then(function (user) {
                 Helpers.LoadTVProgress(view, user.Name, loading.show, loading.hide, Helpers);
             });
@@ -38,7 +43,7 @@
                         console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
 
                         // Pass these variables straight into your sort function
-                        Helpers.sortTable(index, columnType, 'TVSeriesProgressTable');
+                        Helpers.sortTable(index, columnType, 'TVSeriesProgressTable', loading.show, loading.hide);
                     });
                 });
             }

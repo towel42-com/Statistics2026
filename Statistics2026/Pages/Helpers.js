@@ -17,19 +17,24 @@ define(function () {
     };
 
     function getTVProgressRowData(info) {
-        var row_html = "";
-        row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Name + " (" + info.PremiereYear + ")</td>";
-        row_html += "<td class='center " + calculateProgressClass(info.Episodes.Percent) + "' style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Episodes.String + "</td>";
-        row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.ScoreStr + "/10</td>";
-        row_html += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.SeriesStatus + "</td>";
-        return row_html;
+        var retVal = "";
+        retVal += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Name + " (" + info.PremiereYear + ")</td>";
+        retVal += "<td class='center " + calculateProgressClass(info.Episodes.Percent) + "' style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Episodes.String + "</td>";
+        retVal += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.ScoreStr + "/10</td>";
+        retVal += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.SeriesStatus + "</td>";
+        return retVal;
     }
 
     function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc, Helpers) {
         view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
 
         var url = "Statistics2026/tv_series_progress/" + userName;
-        loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, Helpers);
+
+        const sortit = () => {
+            sortTable(1, "progress", 'TVSeriesProgressTable', showLoadingFunc, hideLoadingFunc, 'desc');
+        };
+
+        loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, Helpers, sortit);
     }
 
     function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc, Helpers) {
@@ -75,7 +80,7 @@ define(function () {
             view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
 
             hideLoadingFunc();
-        } finally {
+        } catch {
             hideLoadingFunc();
         }
 
@@ -124,7 +129,9 @@ define(function () {
     }
     const sortDirections = new Map();
 
-    function sortTable(columnIndex, dataType, tableId) {
+    function sortTable(columnIndex, dataType, tableId, showLoadingFunc, hideLoadingFunc, forcedDir) {
+        showLoadingFunc();
+
         const table = document.getElementById(tableId);
         const tbody = table.querySelector("tbody");
         // Convert HTMLCollection of rows into a real Array
@@ -139,10 +146,16 @@ define(function () {
         }
 
         let currentDirection = currentMap.get(columnIndex);
-        if (currentDirection === undefined) {
-            currentDirection = 'asc';
+        if (forcedDir === undefined) {
+
+            currentDirection = currentMap.get(columnIndex);
+            if (currentDirection === undefined) {
+                currentDirection = 'asc';
+            } else {
+                currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            }
         } else {
-            currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            currentDirection = 'desc';
         }
 
         sortDirections.get(tableId).set(columnIndex, currentDirection);
@@ -178,43 +191,41 @@ define(function () {
         // Re-append sorted rows to empty the body and place elements in new order
         tbody.innerHTML = "";
         rows.forEach(row => tbody.appendChild(row));
+        hideLoadingFunc();
     }
 
     function getMediaRowData(info) {
-        var row_html = "";
-
-        row_html += "<td style='align='left'>" + info.ListDisplayName + "</td>";
-        row_html += "<td style='align='right'>" + info.StartYear + "</td>";
-        row_html += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
-        row_html += "<td style='align='left'>" + info.Codec + "</td>";
-        row_html += "<td style='align='left'>" + info.DolbyVisionProfile + "</td>";
-        row_html += "<td style='align='left'>" + info.ServerLocation + "</td>";
-        return row_html;
+        var retVal = "";
+        retVal += "<td style='align='left'>" + info.ListDisplayName + "</td>";
+        retVal += "<td style='align='right'>" + info.StartYear + "</td>";
+        retVal += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
+        retVal += "<td style='align='left'>" + info.Codec + "</td>";
+        retVal += "<td style='align='left'>" + info.DolbyVisionProfile + "</td>";
+        retVal += "<td style='align='left'>" + info.ServerLocation + "</td>";
+        return retVal;
     }
 
-    function CheckForValidConfig() {
+    async function CheckForValidConfig() {
         var urlText = "/emby/Statistics2026/database_status";
-        console.info("databasestatus - '" + urlText + "'");
         var url = ApiClient.getUrl(urlText);
 
-        ApiClient.getJSON(url).then(response => {
-            if (response.LastUpdated === undefined) {
-                showInfo("No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
-                return false;
-            }
-            if (response.DBStateOK == false) {
-                showInfo("The database has not been initialized, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
-                return false;
-            }
-            return true;
-        }).catch(error => {
+        let response = await ApiClient.getJSON(url).catch(error => {
             var errorMessage = "'" + error + "' - '" + urlText + "'";
             console.error("database_status failed:", errorMessage);
         });
-        return false;
+
+        if (response.LastUpdated === undefined) {
+            showInfo("No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
+            return false;
+        }
+        if (response.DBStateOK == false) {
+            showInfo("The database has not been initialized, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
+            return false;
+        }
+        return true;
     }
 
-    function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, Helpers) {
+    function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, Helpers, onFinished) {
         var url = ApiClient.getUrl(apiEndpoint);
 
         var load_status = view.querySelector('#' + statusElementId);
@@ -223,34 +234,51 @@ define(function () {
         showLoadingFunc();
         try {
             getStatistics2026Data(url).then(function (resultData) {
-                load_status.innerHTML = "&nbsp;";
-                console.log("resultData: " + JSON.stringify(resultData));
+                // console.log("resultData: " + JSON.stringify(resultData));
 
-                var table_body = view.querySelector('#' + resultsElementId);
-                var row_html = "";
+                var tableBody = view.querySelector('#' + resultsElementId);
 
-                for (var index = 0; index < resultData.length; ++index) {
-                    var info = resultData[index];
+                let currentIndex = 0;
+                let chunkSize = Math.min(200, Math.trunc(resultData.length / 20));
+                function renderNextChunk() {
+                    const endIndex = Math.min(currentIndex + chunkSize, resultData.length);
+                    const fragment = document.createDocumentFragment();
 
-                    var row_bg_col = "#BBBBBB00";
-                    if (index % 2 == 0) {
-                        row_bg_col = "#BBBBBB1C";
+                    load_status.innerHTML = `Loading Data... ${currentIndex} of ${resultData.length}`;
+                    for (var index = currentIndex; index < endIndex; ++index) {
+                        var info = resultData[index];
+
+                        var row_bg_col = "#BBBBBB00";
+                        if (index % 2 == 0) {
+                            row_bg_col = "#BBBBBB1C";
+                        }
+
+                        const tr = document.createElement('tr');
+                        tr.style.backgroundColor = row_bg_col;
+                        tr.innerHTML = getRowDataFunc(info);
+                        fragment.appendChild(tr);
                     }
 
-                    row_html += "<tr style='background:" + row_bg_col + ";'>";
+                    tableBody.appendChild(fragment);
+                    currentIndex = endIndex;
 
-                    row_html += getRowDataFunc(info);
-
-                    row_html += "</tr>";
+                    if (currentIndex < resultData.length) {
+                        requestAnimationFrame(renderNextChunk);
+                    }
+                    else {
+                        if (onFinished !== undefined) {
+                            onFinished();
+                        }
+                        load_status.innerHTML = "&nbsp;";
+                        hideLoadingFunc();
+                    }
                 }
-
-                table_body.innerHTML = row_html;
-                hideLoadingFunc();
+                requestAnimationFrame(renderNextChunk);
             },
                 function (response) {
                     load_status.innerHTML = response.status + ":" + response.statusText;
                 });
-        } finally {
+        } catch {
             hideLoadingFunc();
         }
     }

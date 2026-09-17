@@ -6,7 +6,7 @@
     function (mainTabsManager, AdminHelpers, Helpers) {
         'use strict';
 
-        function loadStats(view, userName) {
+        function loadData(view, userName) {
             if (!Helpers.CheckForValidConfig()) {
                 Dashboard.hideLoadingMsg();
                 return;
@@ -31,13 +31,13 @@
 
             view.querySelector("#selectUser_userstats").addEventListener(`change`, function () {
                 const user = this.options[this.selectedIndex].innerHTML;
-                loadStats(view, user);
+                loadData(view, user);
             });
 
             ApiClient.getUsers().then(function (users) {
                 var select = view.querySelector(`#selectUser_userstats`);
 
-                loadStats(view, users[0].Name);
+                loadData(view, users[0].Name);
 
                 users.forEach((user) => {
                     var option = document.createElement(`option`);

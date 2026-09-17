@@ -16,6 +16,11 @@
         Object.assign(View.prototype, BaseView.prototype);
 
         function loadData(view, userId) {
+            if (!Helpers.CheckForValidConfig()) {
+                Dashboard.hideLoadingMsg();
+                return;
+            }
+
             ApiClient.getUser(userId).then(function (user) {
                 Helpers.LoadUserStats(view, user.Name, loading.show, loading.hide, Helpers);
             });

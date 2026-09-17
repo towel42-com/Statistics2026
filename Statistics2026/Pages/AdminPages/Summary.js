@@ -6,34 +6,35 @@
     function (mainTabsManager, AdminHelpers, Helpers) {
         'use strict';
 
-        function loadDebugInfo(view) {
+        async function loadDebugInfo(view, pluginConfig) {
             var url = ApiClient.getUrl("/emby/System/Configuration");
-            ApiClient.getJSON(url).then(response => {
-                if (response.EnableDebugLevelLogging) {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        var debugInfo = "Version <b>" + config.Version + "</b> - Build Date - <b>" + config.BuildDate + "</b>";
 
-                        var urlText = "/emby/Statistics2026/database_status";
-                        var url = ApiClient.getUrl(urlText);
-                        ApiClient.getJSON(url).then(response => {
-                            debugInfo += " - Database Status <b>" + response.DBState + " (";
-                            if (!response.DBStateOK)
-                                debugInfo += "not ";
-                            debugInfo += "OK)</b>";
-
-                            view.querySelector(`#debugInfo`).style.display = '';
-                            view.querySelector("#debugInfo").innerHTML = debugInfo;
-                        }).catch(error => {
-                            console.error("database_status failed:", errorMessage);
-                        });
-                    });
-
-                }
-                else
-                    view.querySelector(`#debugInfo`).style.display = 'none';
-            }).catch(error => {
-                console.error("API call failed:", error);
+            let sysConfig = await ApiClient.getJSON(url).catch(error => {
+                console.error("System Config API call failed:", error);
+                return;
             });
+
+            if (!sysConfig.EnableDebugLevelLogging) {
+                view.querySelector(`#debugInfo`).style.display = 'none';
+                return;
+            }
+
+            var urlText = "/emby/Statistics2026/database_status";
+            var url = ApiClient.getUrl(urlText);
+            let dbStatus = await ApiClient.getJSON(url).catch(error => {
+                console.error("database_status API call failed:", error);
+                return;
+            });
+
+            var debugInfo = "Version <b>" + pluginConfig.Version
+                + "</b> - Build Date - <b>" + pluginConfig.BuildDate + "</b>"
+                + " - Database Status <b>" + dbStatus.DBState + " (";
+            if (!dbStatus.DBStateOK)
+                debugInfo += "not ";
+            debugInfo += "OK)</b>";
+
+            view.querySelector(`#debugInfo`).style.display = '';
+            view.querySelector("#debugInfo").innerHTML = debugInfo;
         }
 
         function loadStats(view) {
@@ -44,7 +45,7 @@
 
                 view.querySelector("#lastRunInfo").innerHTML = lastRunInfo;
                 view.querySelector(`#debugInfo`).style.display = 'none';
-                loadDebugInfo(view);
+                loadDebugInfo(view, config);
 
                 if (!Helpers.CheckForValidConfig()) {
                     view.querySelector(`#lastRunInfo`).style.display = 'none';

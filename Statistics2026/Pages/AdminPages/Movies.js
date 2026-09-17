@@ -28,7 +28,7 @@
                         console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
 
                         // Pass these variables straight into your sort function
-                        Helpers.sortTable(index, columnType, 'movie_results_table');
+                        Helpers.sortTable(index, columnType, 'movie_results_table', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
                     });
                 });
 
@@ -37,7 +37,7 @@
                         Dashboard.hideLoadingMsg();
                         return;
                     }
-                    Helpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, AdminHelpers, Helpers);
+                    Helpers.loadTableData(view, 'movie_results_status',   'movie_results',   'Statistics2026/movie_list',   Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
                 }
             });
 

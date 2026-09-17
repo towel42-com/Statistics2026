@@ -28,7 +28,7 @@
                         console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
 
                         // Pass these variables straight into your sort function
-                        Helpers.sortTable(index, columnType, 'episode_results_table');
+                        Helpers.sortTable(index, columnType, 'episode_results_table', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
                     });
                 });
 

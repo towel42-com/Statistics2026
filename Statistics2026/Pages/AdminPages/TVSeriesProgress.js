@@ -24,12 +24,6 @@
                 const selectElement = document.getElementById("selectUser_tvprogress");
                 const user = selectElement.options[selectElement.selectedIndex].innerHTML;
                 loadData(view, user)
-
-                function process_click() {
-                    const selectElement = document.getElementById("selectUser_tvprogress");
-                    const user = selectElement.options[selectElement.selectedIndex].innerHTML;
-                    loadData(view, user)
-                }
             });
 
             view.addEventListener('viewhide', function (e) {
@@ -62,7 +56,7 @@
                         console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
 
                         // Pass these variables straight into your sort function
-                        Helpers.sortTable(index, columnType, 'TVSeriesProgressTable');
+                        Helpers.sortTable(index, columnType, 'TVSeriesProgressTable', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
                     });
                 });
 
