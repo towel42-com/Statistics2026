@@ -10,7 +10,7 @@ namespace Statistics2026.Data
         {
             var attribute = Assembly.GetExecutingAssembly()
                 .GetCustomAttributes<AssemblyMetadataAttribute>()
-                .FirstOrDefault(a => a.Key == "BuildDate");
+                .FirstOrDefault( a => a.Key == "BuildDate" );
 
             if (attribute != null && DateTime.TryParse(attribute.Value, out DateTime buildDate))
             {

@@ -1,6 +1,4 @@
 ﻿using MediaBrowser.Model.Plugins;
-using System;
-using System.Diagnostics.SymbolStore;
 
 namespace Statistics2026.Configuration
 {
@@ -10,9 +8,9 @@ namespace Statistics2026.Configuration
         {
         }
 
-        public string BuildDate { get; set; } = String.Empty;
-        public string LastUpdated { get; set; } = String.Empty;
-        public string Version { get; set; } = String.Empty;
+        public string BuildDate { get; set; } = string.Empty;
+        public string LastUpdated { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
 
         public bool hasConnectUserID { get; set; } = false;
         public int numMostActiveUsers { get; set; } = 5;

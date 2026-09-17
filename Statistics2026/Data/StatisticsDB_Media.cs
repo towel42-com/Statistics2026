@@ -1,17 +1,11 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Querying;
 using ServiceStack;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Net.NetworkInformation;
-using System.Threading;
 
 namespace Statistics2026.Data
 {
@@ -19,64 +13,64 @@ namespace Statistics2026.Data
     {
         public void AddAllMedia()
         {
-            CheckIsValid(ECheckType.eUpdate);
+            CheckIsValid( ECheckType.eUpdate );
 
-            _embyInterfaces!._logger?.Debug($"AddAllMedia - Starting Video Analysis");
+            _embyInterfaces!._logger?.Debug( $"AddAllMedia - Starting Video Analysis" );
 
-            _dbHelper!.Progress?.Report(0);
+            _dbHelper!.Progress?.Report( 0 );
             var videoList = _dbHelper.GetLibraryItems<Episode>().Cast<Video>().ToList();
-            _dbHelper!.Progress?.Report(50);
-            videoList.AddRange(_dbHelper.GetLibraryItems<Movie>().Cast<Video>().ToList());
-            _dbHelper!.Progress?.Report(100);
+            _dbHelper!.Progress?.Report( 50 );
+            videoList.AddRange( _dbHelper.GetLibraryItems<Movie>().Cast<Video>().ToList() );
+            _dbHelper!.Progress?.Report( 100 );
 
             double count = videoList.Count;
-            double curr = 0.0;
+            var curr = 0.0;
 
-            _dbHelper!.Progress?.Report(0);
+            _dbHelper!.Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
             var existing = new Dictionary<string, bool>();
 
-            foreach (var video in videoList)
+            foreach( var video in videoList )
             {
-                if (video == null)
+                if( video == null )
                     continue;
 
-                _dbHelper!.Progress?.Report(80.0 * (++curr) / count);
+                _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
 
-                if (existing.ContainsKey(video.Id.ToString()))
+                if( existing.ContainsKey( video.Id.ToString() ) )
                     continue;
-                existing.Add(video.Id.ToString(), true);
+                existing.Add( video.Id.ToString(), true );
 
-
-                using (var mediaInfo = new MediaInfo(video))
+                using( var mediaInfo = new MediaInfo( video ) )
                 {
-                    if (!mediaInfo.aOK)
+                    if( !mediaInfo.aOK )
                         continue;
 
-                    sqlCmds.AddRange(AddMediaInfo(mediaInfo));
-                    _embyInterfaces!._logger?.Debug($"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}");
+                    sqlCmds.AddRange( AddMediaInfo( mediaInfo ) );
+                    _embyInterfaces!._logger?.Debug( $"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
                 }
 
                 _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
             }
-            _dbHelper!.Progress?.Report(80);
-            _dbHelper.ExecuteCommands(sqlCmds);
-            _dbHelper!.Progress?.Report(100);
-            _embyInterfaces!._logger?.Debug($"AddAllMedia - Finished Video Analysis");
+
+            _dbHelper!.Progress?.Report( 80 );
+            _dbHelper.ExecuteCommands( sqlCmds );
+            _dbHelper!.Progress?.Report( 100 );
+            _embyInterfaces!._logger?.Debug( $"AddAllMedia - Finished Video Analysis" );
         }
 
-        public List<SQLCmdDef> AddMediaInfo(MediaInfo mediaInfo)
+        public List<SQLCmdDef> AddMediaInfo( MediaInfo mediaInfo )
         {
-            CheckIsValid(ECheckType.eUpdate);
+            CheckIsValid( ECheckType.eUpdate );
 
             var sqlCmds = new List<SQLCmdDef>();
-            if (mediaInfo == null || !mediaInfo.aOK)
+            if( mediaInfo == null || !mediaInfo.aOK )
             {
-                _embyInterfaces!._logger?.Error($"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId");
+                _embyInterfaces!._logger?.Error( $"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId" );
                 return sqlCmds;
             }
 
-            string sql =
+            var sql =
                 "INSERT INTO Media " +
                 "(" +
                     "  ItemId" +
@@ -162,8 +156,8 @@ namespace Statistics2026.Data
                     ", DateAdded=@DateAdded"
                     ;
 
-            sqlCmds.Add(new SQLCmdDef(sql, new List<(string name, object? value)>()
-            {
+            sqlCmds.Add( new SQLCmdDef( sql,
+            [
                 ("@ItemId", mediaInfo.ItemId),
                 ("@PrimaryName", mediaInfo.PrimaryName),
                 ("@SortName", mediaInfo.SortName),
@@ -183,33 +177,33 @@ namespace Statistics2026.Data
                 ("@Genres", string.Join(",", mediaInfo.Genres)),
                 ("@ServerLocation", mediaInfo.ServerLocation),
                 ("@FileSize", mediaInfo.FileSize),
-                ("@ImageUrl", (mediaInfo.ImageUrl == null) ? "" : mediaInfo.ImageUrl),
+                ("@ImageUrl",  mediaInfo.ImageUrl ??  "" ),
                 ("@RunTimeTicks", mediaInfo.RunTimeTicks),
                 ("@Rating", mediaInfo.Rating),
                 ("@TotalBitrate", mediaInfo.TotalBitrate),
                 ("@PremiereDate", _dbHelper.ToDateTimeParamValue( mediaInfo.PremiereDate ) ),
                 ("@DateAdded", _dbHelper.ToDateTimeParamValue( mediaInfo.DateAdded ) ),
-            }));
+            ] ) );
 
             return sqlCmds;
         }
 
         public StatCard MediaResolutions()
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            var retVal = new TableBasedStatCard(Constants.MediaResolutions, Constants.HelpMediaResolutions, new List<string> { "Movies", "Episodes" });
+            var retVal = new TableBasedStatCard( Constants.MediaResolutions, Constants.HelpMediaResolutions, [ "Movies", "Episodes" ] );
 
-            if (Plugin.Instance!.Configuration.showAllResolutions)
+            if( Plugin.Instance!.Configuration.showAllResolutions )
             {
-                retVal.addRow(Constants.HD, new List<int> { 0, 0 });
-                retVal.addRow(Constants._4k, new List<int> { 0, 0 });
-                retVal.addRow(Constants._8k, new List<int> { 0, 0 });
-                retVal.addRow(Constants._720p, new List<int> { 0, 0 });
-                retVal.addRow(Constants.SD, new List<int> { 0, 0 });
+                retVal.addRow( Constants.HD, [ 0, 0 ] );
+                retVal.addRow( Constants._4k, [ 0, 0 ] );
+                retVal.addRow( Constants._8k, [ 0, 0 ] );
+                retVal.addRow( Constants._720p, [ 0, 0 ] );
+                retVal.addRow( Constants.SD, [ 0, 0 ] );
             }
 
-            string sql =
+            var sql =
                 "SELECT " +
                 "ResolutionBase as Resolution, " +
                 "sum(IsEpisode) AS Episodes, " +
@@ -218,25 +212,25 @@ namespace Statistics2026.Data
                 "GROUP BY Resolution " +
                 "ORDER BY Resolution ASC"
                 ;
-            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                var resolution = row.GetString(0);
-                var episodeCount = row.GetInt(1);
-                var movieCount = row.GetInt(2);
-                retVal.addRow(resolution, new List<int> { movieCount, episodeCount });
+                var resolution = row.GetString( 0 );
+                var episodeCount = row.GetInt( 1 );
+                var movieCount = row.GetInt( 2 );
+                retVal.addRow( resolution, [ movieCount, episodeCount ] );
                 return true;
-            });
+            } );
 
             return retVal;
         }
 
         public StatCard MediaCodecs()
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            var retVal = new TableBasedStatCard(Constants.MediaCodecs, Constants.HelpMediaCodecs, new List<string> { "Movies", "Episodes" });
-            string sql =
+            var retVal = new TableBasedStatCard( Constants.MediaCodecs, Constants.HelpMediaCodecs, [ "Movies", "Episodes" ] );
+            var sql =
                 "SELECT " +
                 "Codec as Codec, " +
                 "sum(IsEpisode) AS Episodes, " +
@@ -246,124 +240,129 @@ namespace Statistics2026.Data
                 "ORDER BY Codec ASC"
                 ;
 
-            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                var codec = row.GetString(0);
-                var episodeCount = row.GetInt(1);
-                var movieCount = row.GetInt(2);
-                retVal.addRow(codec, new List<int> { movieCount, episodeCount });
+                var codec = row.GetString( 0 );
+                var episodeCount = row.GetInt( 1 );
+                var movieCount = row.GetInt( 2 );
+                retVal.addRow( codec, [ movieCount, episodeCount ] );
                 return true;
-            });
+            } );
 
             return retVal;
         }
 
         public StatCard DVProfileInfo()
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            string sql =
+            var sql =
                 "SELECT " +
                 "DolbyVisionProfile as DVProfile, " +
                 "sum(IsEpisode) AS Episodes, " +
                 "sum(NOT IsEpisode) AS Movies " +
                 "FROM Media ";
 
-            if (!Plugin.Instance!.Configuration.showUnknownDVProfiles)
-                sql += $"WHERE DolbyVisionProfile NOT IN ({string.Join(",", Constants.UnknownDolbyProfiles.Select(p => $"'{p}'"))}) ";
+            if( !Plugin.Instance!.Configuration.showUnknownDVProfiles )
+                sql += $"WHERE DolbyVisionProfile NOT IN ({string.Join( ",", Constants.UnknownDolbyProfiles.Select( p => $"'{p}'" ) )}) ";
 
             sql += "GROUP BY DolbyVisionProfile " +
                    "ORDER BY DolbyVisionProfile ASC"
                    ;
 
-            var retVal = new TableBasedStatCard(Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile, new List<string> { "Movies", "Episodes" });
-            if (Plugin.Instance!.Configuration.showUnknownDVProfiles)
-                retVal.addRow("Unknown Dolby Profile", new List<int> { 0, 0 });
+            var retVal = new TableBasedStatCard( Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile, [ "Movies", "Episodes" ] );
+            if( Plugin.Instance!.Configuration.showUnknownDVProfiles )
+                retVal.addRow( "Unknown Dolby Profile", [ 0, 0 ] );
 
-            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                var dvProfile = row.GetString(0);
-                var episodeCount = row.GetInt(1);
-                var movieCount = row.GetInt(2);
-                retVal.addRow(dvProfile, new List<int> { movieCount, episodeCount });
+                var dvProfile = row.GetString( 0 );
+                var episodeCount = row.GetInt( 1 );
+                var movieCount = row.GetInt( 2 );
+                retVal.addRow( dvProfile, [ movieCount, episodeCount ] );
                 return true;
-            });
+            } );
 
             return retVal;
         }
 
-        public StatCard TotalMovieCount(User? user, bool watched)
+        public StatCard TotalMovieCount( User? user, bool watched )
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            string sql = "";
+            var sql = "";
             var parameters = new List<(string, object?)>();
-            string title = Constants.TotalMovies;
-            string help = Constants.HelpTotalMovies;
+            var title = Constants.TotalMovies;
+            var help = Constants.HelpTotalMovies;
             long total = 0;
             long totalTicks = 0;
-            if (user == null)
+            if( user == null )
             {
                 sql = "SELECT SUM(NOT IsEpisode) FROM Media";
-                totalTicks = GetSingleValueFromSQL($"SELECT SUM(RunTimeTicks) FROM MEDIA WHERE NOT IsEpisode").ToLong();
+                totalTicks = GetSingleValueFromSQL( $"SELECT SUM(RunTimeTicks) FROM MEDIA WHERE NOT IsEpisode" ).ToLong();
             }
             else
             {
                 title = watched ? Constants.TotalUserMoviesWatched : Constants.TotalUserMovies;
                 help = watched ? Constants.HelpTotalUserMoviesWatched : Constants.HelpTotalUserMovies;
 
-                sql = $"SELECT SUM(NOT IsEpisode) FROM {getUserTableName(user)} WHERE UserId=@UserId";
-                if (watched)
+                sql = $"SELECT SUM(NOT IsEpisode) FROM {getUserTableName( user )} WHERE UserId=@UserId";
+                if( watched )
                     sql += " AND IsPlayed";
-                parameters.Add(("@UserId", user.Id.ToString()));
+                parameters.Add( ("@UserId", user.Id.ToString()) );
 
-                if (watched)
+                if( watched )
                 {
-                    total = GetSingleValueFromSQL($"SELECT SUM(NOT IsEpisode) FROM {getUserTableName(user)} WHERE UserId=@UserId", parameters).ToLong();
+                    total = GetSingleValueFromSQL( $"SELECT SUM(NOT IsEpisode) FROM {getUserTableName( user )} WHERE UserId=@UserId", parameters ).ToLong();
                 }
             }
 
-            var retVal = ValueGroupForSingleItem(title, help, sql, parameters, count =>
+            var retVal = ValueGroupForSingleItem( title, help, sql, parameters, count =>
             {
                 var retVal = count.ToString();
 
-                if (watched && total != 0)
+                if( watched && total != 0 )
                 {
-                    double value = (100.0 * count) / (1.0 * total);
-                    retVal += $" ({value.ToString("F1")})%";
+                    var value = 100.0 * count / ( 1.0 * total );
+                    retVal += $" ({value:F1})%";
                 }
 
                 return retVal;
-            });
+            } );
 
-            if (totalTicks != 0)
+            if( totalTicks != 0 )
             {
-                var rt = new RunTime(totalTicks);
-                retVal.AddLine(DBHelper.FormatTicks(totalTicks));
+                var rt = new RunTime( totalTicks );
+                retVal.AddLine( DBHelper.FormatTicks( totalTicks ) );
             }
 
             return retVal;
         }
 
-        public StatCard TotalTVCount(User? user, bool watched)
+        public StatCard TotalTVCount( User? user, bool watched )
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            string seriesColumn = String.Empty;
-            string seriesFrom = String.Empty;
-            string episodeColumn = String.Empty;
-            string runtimeColumn = String.Empty;
-            string episodeFrom = String.Empty;
+            var runtimeColumn = string.Empty;
 
-            string titleSeries = String.Empty;
-            string titleEpisodes = String.Empty;
-            string helpEpisodes = String.Empty;
             List<(string name, object? value)>? paramList = null;
 
-            var tableName = getUserTableName(user);
-            if (user == null)
+            var tableName = getUserTableName( user );
+
+            string? seriesColumn;
+
+            string? seriesFrom;
+
+            string? episodeColumn;
+            string? episodeFrom;
+            string? titleSeries;
+
+            string? titleEpisodes;
+
+            string? helpEpisodes;
+            if( user == null )
             {
                 seriesColumn = "COUNT(DISTINCT(PrimaryName))";
                 episodeColumn = "SUM(NumEpisodes)";
@@ -375,7 +374,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                paramList = new List<(string name, object? value)>() { ("@UserId", user.Id.ToString()) };
+                paramList = [ ("@UserId", user.Id.ToString()) ];
 
                 seriesColumn = "COUNT(DISTINCT(Media.PrimaryName))";
                 episodeColumn = $"SUM({tableName}.NumEpisodes)";
@@ -386,7 +385,7 @@ namespace Statistics2026.Data
 
                 var from = $"{tableName} LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId WHERE Media.IsEpisode AND NOT Media.IsTVSpecial AND ( {tableName}.UserId=@UserId )";
 
-                if (watched)
+                if( watched )
                 {
                     from += $" AND ( {tableName}.IsPlayed )";
 
@@ -399,84 +398,86 @@ namespace Statistics2026.Data
             }
 
             var sqlEpisodes = $"SELECT {episodeColumn} FROM {episodeFrom}";
-            var retVal = ValueGroupForSingleItem(titleEpisodes, helpEpisodes, sqlEpisodes, paramList);
+            var retVal = ValueGroupForSingleItem( titleEpisodes, helpEpisodes, sqlEpisodes, paramList );
 
-            retVal.AddLine(titleSeries);
+            retVal.AddLine( titleSeries );
             var sqlSeries = $"SELECT {seriesColumn} FROM {seriesFrom}";
-            var value = GetSingleValueFromSQL(sqlSeries, paramList);
-            retVal.AddLine(value);
+            var value = GetSingleValueFromSQL( sqlSeries, paramList );
+            retVal.AddLine( value );
 
-            if (user == null)
+            if( user == null )
             {
-                value = GetSingleValueFromSQL("SELECT SUM(RunTimeTicks) FROM MEDIA WHERE IsEpisode");
-                value = DBHelper.FormatTicks(value.ToInt64());
-                retVal.AddLine(value);
+                value = GetSingleValueFromSQL( "SELECT SUM(RunTimeTicks) FROM MEDIA WHERE IsEpisode" );
+                value = DBHelper.FormatTicks( value.ToInt64() );
+                retVal.AddLine( value );
             }
+
             return retVal;
         }
 
-        public long TotalStudioCountValue(User? user, bool movies)
+        public long TotalStudioCountValue( User? user, bool movies )
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            string sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
-            if (movies)
+            var sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
+            if( movies )
                 sql += "NOT ";
             sql += "IsEpisode AND StudioNames IS NOT NULL AND StudioNames<>''";
 
             // Create an unordered set of strings
-            HashSet<string> studios = new HashSet<string>();
+            HashSet<string> studios = [];
 
-            var cmd = new SQLCmdDef(sql);
-            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            var cmd = new SQLCmdDef( sql );
+            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                var currStudios = row.GetString(0)?.Split(',') ?? Array.Empty<string>(); ;
-                studios.UnionWith(currStudios);
+                var currStudios = row.GetString( 0 )?.Split( ',' ) ?? Array.Empty<string>();
+                ;
+                studios.UnionWith( currStudios );
                 return true;
-            });
+            } );
 
             return studios.Count();
         }
 
-        public StatCard TotalStudioCount(User? user, bool movies)
+        public StatCard TotalStudioCount( User? user, bool movies )
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            var retVal = new TextBasedStatCard(movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, EStatCardSize.eSmall);
-            var value = TotalStudioCountValue(user, movies);
-            retVal.AddLine(value.ToString());
+            var retVal = new TextBasedStatCard( movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, EStatCardSize.eSmall );
+            var value = TotalStudioCountValue( user, movies );
+            retVal.AddLine( value.ToString() );
             return retVal;
         }
 
-        public StatCard TotalMovieStudioCount(User? user)
+        public StatCard TotalMovieStudioCount( User? user )
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            return TotalStudioCount(user, true);
+            return TotalStudioCount( user, true );
         }
 
-        public StatCard TotalTVStudioCount(User? user)
+        public StatCard TotalTVStudioCount( User? user )
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            return TotalStudioCount(user, false);
+            return TotalStudioCount( user, false );
         }
 
-        public List<(int year, long count)> FavoriteYearValues(User? user, bool movies)
+        public List<(int year, long count)> FavoriteYearValues( User? user, bool movies )
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            if (user == null)
-                throw new ArgumentNullException("user");
+            if( user == null )
+                throw new ArgumentNullException( "user" );
 
-            var tableName = getUserTableName(user);
-            string sql =
+            var tableName = getUserTableName( user );
+            var sql =
                 "SELECT COUNT(*) as NumVideos, StartYear From Media "
                 + $"INNER JOIN {tableName} On Media.ItemId={tableName}.ItemId "
                 + "WHERE "
                 ;
-            if (movies)
+            if( movies )
             {
                 sql += "NOT Media.IsEpisode ";
             }
@@ -484,6 +485,7 @@ namespace Statistics2026.Data
             {
                 sql += "Media.IsEpisode ";
             }
+
             sql +=
                 "AND UserId=@UserId AND IsPlayed "
               + "GROUP BY StartYear "
@@ -491,62 +493,54 @@ namespace Statistics2026.Data
               + "LIMIT 5 "
               ;
 
-            var sqlCmd = new SQLCmdDef(sql, new List<(string, object?)>()
-{
+            var sqlCmd = new SQLCmdDef( sql,
+[
     ( "@UserId", user.Id.ToString())
-});
+] );
 
             var retVal = new List<(int year, long count)>();
-            _dbHelper.ExecuteCommand(sqlCmd, statement =>
+            _dbHelper.ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
-                var count = row.GetInt64(0);
-                var year = row.GetInt(1);
-                retVal.Add((year, count));
+                var count = row.GetInt64( 0 );
+                var year = row.GetInt( 1 );
+                retVal.Add( (year, count) );
                 return true;
-            });
+            } );
 
             return retVal;
         }
 
-        public StatCard FavoriteYears(User? user, bool movies)
+        public StatCard FavoriteYears( User? user, bool movies )
         {
-            string videoType = "";
-            if (movies)
-            {
-                videoType = "Movies";
-            }
-            else
-            {
-                videoType = "Episodes";
-            }
-            var retVal = new TableBasedStatCard(Constants.FavoriteMovieYears, "Genre", new List<string>() { $"# of {videoType} Watched" });
-            retVal.SetDataColumnAlignment(0, StatCard.EAlignment.eCenter);
-            var values = FavoriteYearValues(user, movies);
+            var videoType = movies ? "Movies" : "Episodes";
+            var retVal = new TableBasedStatCard( Constants.FavoriteMovieYears, "Genre", [ $"# of {videoType} Watched" ] );
+            retVal.SetDataColumnAlignment( 0, StatCard.EAlignment.eCenter );
+            var values = FavoriteYearValues( user, movies );
 
-            foreach (var value in values)
+            foreach( var (year, count) in values )
             {
-                retVal.addRow(value.year.ToString(), new List<long>() { value.count });
+                retVal.addRow( year.ToString(), [ count ] );
             }
 
             return retVal;
         }
 
-        public List<(string genre, long count)> FavoriteGenreValues(User? user, bool movies)
+        public List<(string genre, long count)> FavoriteGenreValues( User? user, bool movies )
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            if (user == null)
-                throw new ArgumentNullException("user");
+            if( user == null )
+                throw new ArgumentNullException( "user" );
 
-            var tableName = getUserTableName(user);
-            string sql =
+            var tableName = getUserTableName( user );
+            var sql =
                 "SELECT Genres From Media "
                 + $"INNER JOIN {tableName} On Media.ItemId={tableName}.ItemId "
                 + "WHERE "
 
                 ;
-            if (movies)
+            if( movies )
             {
                 sql += "NOT Media.IsEpisode ";
             }
@@ -554,49 +548,53 @@ namespace Statistics2026.Data
             {
                 sql += "Media.IsEpisode ";
             }
+
             sql +=
                 "AND UserId=@UserId AND IsPlayed "
               ;
 
-            var sqlCmd = new SQLCmdDef(sql, new List<(string, object?)>()
-                                        {
+            var sqlCmd = new SQLCmdDef( sql,
+                                        [
                                             ( "@UserId", user.Id.ToString())
-                                        });
+                                        ] );
 
-            Dictionary<string, int> genreMap = new Dictionary<string, int>();
-            _dbHelper.ExecuteCommand(sqlCmd, statement =>
+            Dictionary<string, int> genreMap = [];
+            _dbHelper.ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
-                var genres = row.GetString(0)?.Split(',') ?? Array.Empty<string>();
-                foreach (var genre in genres)
+                var genres = row.GetString( 0 )?.Split( ',' ) ?? Array.Empty<string>();
+                foreach( var genre in genres )
                 {
-                    if (!genreMap.ContainsKey(genre))
-                        genreMap[genre] = 0;
-                    genreMap[genre]++;
+                    if( !genreMap.ContainsKey( genre ) )
+                        genreMap[ genre ] = 0;
+                    genreMap[ genre ]++;
                 }
-                return true;
-            });
 
-            var sortedGenre = genreMap.OrderByDescending(kvp => kvp.Value).ToList();
+                return true;
+            } );
+
+            var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value ).ToList();
 
             var retVal = new List<(string genre, long count)>();
-            for (int ii = 0; ii < sortedGenre.Count() && ii < 5; ++ii)
+            for( var ii = 0; ii < sortedGenre.Count() && ii < 5; ++ii )
             {
-                retVal.Add((sortedGenre[ii].Key, sortedGenre[ii].Value));
+                retVal.Add( (sortedGenre[ ii ].Key, sortedGenre[ ii ].Value) );
             }
+
             return retVal;
         }
 
-        public StatCard FavoriteGenre(User? user, bool movies)
+        public StatCard FavoriteGenre( User? user, bool movies )
         {
-            CheckIsValid(ECheckType.eReport);
+            CheckIsValid( ECheckType.eReport );
 
-            if (user == null)
-                throw new ArgumentNullException("user");
+            if( user == null )
+                throw new ArgumentNullException( "user" );
 
-            string videoType = "";
-            string title = String.Empty;
-            if (movies)
+            string? videoType;
+
+            string? title;
+            if( movies )
             {
                 videoType = "Movies";
                 title = Constants.FavoriteMovieGenres;
@@ -606,24 +604,25 @@ namespace Statistics2026.Data
                 videoType = "Episodes";
                 title = Constants.FavoriteTVGenres;
             }
-            var retVal = new TableBasedStatCard(title, "Genre", new List<string>() { $"# of {videoType} Watched" });
-            retVal.SetDataColumnAlignment(0, StatCard.EAlignment.eCenter);
 
-            var values = FavoriteGenreValues(user, movies);
-            foreach (var value in values)
+            var retVal = new TableBasedStatCard( title, "Genre", [ $"# of {videoType} Watched" ] );
+            retVal.SetDataColumnAlignment( 0, StatCard.EAlignment.eCenter );
+
+            var values = FavoriteGenreValues( user, movies );
+            foreach( var (genre, count) in values )
             {
-                retVal.addRow(value.genre, new List<long>() { value.count });
+                retVal.addRow( genre, [ count ] );
             }
+
             return retVal;
         }
 
-
-        private List<MediaItemResponse> getMediaListResponse(bool episodes)
+        private List<MediaItemResponse> getMediaListResponse( bool episodes )
         {
             var retVal = new List<MediaItemResponse>();
 
             var sql = "SELECT ";
-            if (episodes)
+            if( episodes )
                 sql += "  PrimaryName || ' - S' || printf( '%02d', Season ) || 'E' || printf('%02d', Episode) || ' - ' || SecondaryName AS ListDisplayName";
             else
                 sql += "  PrimaryName AS ListDisplayName";
@@ -638,51 +637,51 @@ namespace Statistics2026.Data
                 ", ImageUrl" +
                 " FROM " +
                 "   Media ";
-            if (episodes)
+            if( episodes )
                 sql += " WHERE IsEpisode ";
             else
                 sql += " WHERE NOT IsEpisode ";
 
             sql += " ORDER BY PrimaryName ASC, Season ASC, Episode ASC ";
-            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 var col = 0;
                 var curr = new MediaItemResponse()
                 {
-                    ListDisplayName = row.GetString(col++),
-                    StartYear = row.GetString(col++),
-                    ResolutionDetail = row.GetString(col++),
-                    Codec = row.GetString(col++),
-                    DolbyVisionProfile = row.GetString(col++),
-                    ServerLocation = row.GetString(col++)
+                    ListDisplayName = row.GetString( col++ ),
+                    StartYear = row.GetString( col++ ),
+                    ResolutionDetail = row.GetString( col++ ),
+                    Codec = row.GetString( col++ ),
+                    DolbyVisionProfile = row.GetString( col++ ),
+                    ServerLocation = row.GetString( col++ )
                 };
-                var itemId = row.GetString(col++);
-                var itemUrl = row.GetString(col++);
-                curr.ItemUrl = ItemImageUrl.ItemUrl(itemId, itemUrl, curr.ListDisplayName);
-                if (curr.ItemUrl != null && curr.ItemUrl != "")
+                var itemId = row.GetString( col++ );
+                var itemUrl = row.GetString( col++ );
+                curr.ItemUrl = ItemImageUrl.ItemUrl( itemId, itemUrl, curr.ListDisplayName );
+                if( curr.ItemUrl != null && curr.ItemUrl != "" )
                 {
                     curr.ListDisplayName = curr.ItemUrl;
                 }
 
-                if (curr.Codec != "hevc" && curr.Codec != "av1")
-                    curr.DolbyVisionProfile = String.Empty;
+                if( curr.Codec != "hevc" && curr.Codec != "av1" )
+                    curr.DolbyVisionProfile = string.Empty;
 
-                retVal.Add(curr);
+                retVal.Add( curr );
                 return true;
-            });
+            } );
 
             return retVal;
         }
 
         public List<MediaItemResponse> GetEpisodeList()
         {
-            return getMediaListResponse(true);
+            return getMediaListResponse( true );
         }
 
         public List<MediaItemResponse> GetMovieList()
         {
-            return getMediaListResponse(false);
+            return getMediaListResponse( false );
         }
     }
 }

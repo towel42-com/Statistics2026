@@ -1,20 +1,16 @@
-﻿using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Dto;
+﻿using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
-using RestSharp;
 using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Statistics2026.Data
 {
@@ -38,7 +34,7 @@ namespace Statistics2026.Data
 
     public sealed class DBHelper
     {
-        private static string[] _datetimeFormats = new string[] {
+        private static readonly string[] _datetimeFormats = new string[] {
             "THHmmssK",
             "THHmmK",
             "HH:mm:ss.FFFFFFFK",
@@ -72,10 +68,10 @@ namespace Statistics2026.Data
             "yy-MM-dd",
             "o"
         };
-        private static string _datetimeFormatUtc = _datetimeFormats[5];
-        private static string _datetimeFormatLocal = _datetimeFormats[19];
+        private static readonly string _datetimeFormatUtc = _datetimeFormats[ 5 ];
+        private static readonly string _datetimeFormatLocal = _datetimeFormats[ 19 ];
 
-        private EmbyInterfaces? _embyInterfaces;
+        private readonly EmbyInterfaces? _embyInterfaces;
 
         private IDatabaseConnection? Connection { get; set; } = null;
         public CancellationToken? CancellationToken { get; set; } = null;
@@ -86,210 +82,202 @@ namespace Statistics2026.Data
             _embyInterfaces = null;
         }
 
-        public DBHelper(EmbyInterfaces embyInterfaces)
+        public DBHelper( EmbyInterfaces embyInterfaces )
         {
-            if (embyInterfaces == null)
-                throw new ArgumentNullException("embyInterfaces is null.");
-
-            _embyInterfaces = embyInterfaces;
-            string db_file_name = Path.Combine(_embyInterfaces._configManager.ApplicationPaths.DataPath, "Statistics2026.db");
-            CreateConnection(db_file_name);
+            _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
+            var db_file_name = Path.Combine( _embyInterfaces._configManager.ApplicationPaths.DataPath, "Statistics2026.db" );
+            CreateConnection( db_file_name );
         }
 
-        public bool CheckIsValid(ECheckLevel checkLevel)
+        public bool CheckIsValid( ECheckLevel checkLevel )
         {
             var msgs = new List<string>() { $"DBHelper is not valid 0x{checkLevel:X}" };
             var retVal = true;
-            if ((checkLevel & ECheckLevel.eInterfaces) != 0)
+            if( ( checkLevel & ECheckLevel.eInterfaces ) != 0 )
             {
-                if (_embyInterfaces == null || _embyInterfaces._logger == null)
+                if( _embyInterfaces == null || _embyInterfaces._logger == null )
                 {
                     retVal = false;
-                    msgs.Add("_embyInterfaces is null");
+                    msgs.Add( "_embyInterfaces is null" );
                 }
             }
 
-            if ((checkLevel & ECheckLevel.eConnection) != 0)
+            if( ( checkLevel & ECheckLevel.eConnection ) != 0 )
             {
-                if (Connection == null)
+                if( Connection == null )
                 {
                     retVal = false;
-                    msgs.Add("Connection is null");
+                    msgs.Add( "Connection is null" );
                 }
             }
 
-            if ((checkLevel & ECheckLevel.eProgress) != 0)
+            if( ( checkLevel & ECheckLevel.eProgress ) != 0 )
             {
-                if (CancellationToken == null)
+                if( CancellationToken == null )
                 {
                     retVal = false;
-                    msgs.Add("CancellationToken is null");
+                    msgs.Add( "CancellationToken is null" );
                 }
 
-                if (Progress == null)
+                if( Progress == null )
                 {
                     retVal = false;
-                    msgs.Add("Progress is null");
+                    msgs.Add( "Progress is null" );
                 }
             }
 
-            if (retVal == false && ((checkLevel & ECheckLevel.eThrowOnFailure) != 0))
+            if( retVal == false && ( ( checkLevel & ECheckLevel.eThrowOnFailure ) != 0 ) )
             {
-                var msg = String.Join("\n", msgs);
+                var msg = string.Join( "\n", msgs );
 
-                throw new ArgumentNullException(msg);
+                throw new ArgumentNullException( msg );
             }
+
             return retVal;
         }
 
         ~DBHelper()
         {
-            _embyInterfaces?._logger?.Debug("Statistics2026 : Cleaning up");
-            if (Connection != null)
+            _embyInterfaces?._logger?.Debug( "Statistics2026 : Cleaning up" );
+            if( Connection != null )
             {
                 Connection.Close();
-                _embyInterfaces?._logger?.Debug("Statistics2026 : DB Connection Closed");
+                _embyInterfaces?._logger?.Debug( "Statistics2026 : DB Connection Closed" );
             }
         }
 
-        public bool TryBind<T>(IStatement statement, string name, T? value)
+        public bool TryBind<T>( IStatement statement, string name, T? value )
         {
-            IBindParameter bindParam;
-            if (!statement.BindParameters.TryGetValue(name, out bindParam))
+            if( !statement.BindParameters.TryGetValue( name, out var bindParam ) )
             {
-                _embyInterfaces!._logger?.Error($"Error Binding {name} to {value}");
+                _embyInterfaces!._logger?.Error( $"Error Binding {name} to {value}" );
                 return false;
             }
 
-            if (value == null)
+            if( value == null )
             {
                 bindParam.BindNull();
                 return true;
             }
 
-
-            switch (value)
+            switch( value )
             {
                 case string s:
-                    bindParam.Bind(s);
+                    bindParam.Bind( s );
                     break;
                 case int i:
-                    bindParam.Bind(i);
+                    bindParam.Bind( i );
                     break;
                 case long l:
-                    bindParam.Bind(l);
+                    bindParam.Bind( l );
                     break;
                 case double d:
-                    bindParam.Bind(d);
+                    bindParam.Bind( d );
                     break;
                 case float f:
-                    bindParam.Bind((double)f);
+                    bindParam.Bind( (double)f );
                     break;
                 case short sh:
-                    bindParam.Bind((int)sh);
+                    bindParam.Bind( sh );
                     break;
                 case byte[] ba:
-                    bindParam.Bind(ba);
+                    bindParam.Bind( ba );
                     break;
                 case DateTime dt:
-                    bindParam.Bind(dt.ToString("o", CultureInfo.InvariantCulture));
+                    bindParam.Bind( dt.ToString( "o", CultureInfo.InvariantCulture ) );
                     break;
                 case bool b:
                     // store bool as integer 0/1
-                    bindParam.Bind(b ? 1 : 0);
+                    bindParam.Bind( b ? 1 : 0 );
                     break;
                 default:
                     // Fallback: convert to string (covers enums, GUID, etc.)
-                    bindParam.Bind(value.ToString() ?? string.Empty);
+                    bindParam.Bind( value.ToString() ?? string.Empty );
                     break;
             }
 
             return true;
         }
 
-        public void ExecuteCommand(SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null)
+        public void ExecuteCommand( SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null )
         {
             var cmds = new List<SQLCmdDef>() { cmd };
-            ExecuteCommands(cmds, onStatement);
+            ExecuteCommands( cmds, onStatement );
         }
 
-        public void ExecuteCommands(List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null)
+        public void ExecuteCommands( List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null )
         {
-            CheckIsValid(ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure);
+            _ = CheckIsValid( ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
 
             var ii = 0;
             try
             {
-                Connection.RunInTransaction(connection =>
+                Connection.RunInTransaction( connection =>
                 {
-                    for (ii = 0; ii < cmds.Count; ++ii)
+                    for( ii = 0; ii < cmds.Count; ++ii )
                     {
                         CancellationToken?.ThrowIfCancellationRequested();
 
-                        var cmd = cmds[ii];
-                        cmd.Execute(connection, this, onStatement);
-                        var value = 80 + (20.0 * ii) / (cmds.Count);
-                        Progress?.Report(value);
+                        var cmd = cmds[ ii ];
+                        cmd.Execute( connection, this, onStatement );
+                        var value = 80 + ( 20.0 * ii / cmds.Count );
+                        Progress?.Report( value );
                     }
-                });
+                } );
             }
-            catch (Exception)
+            catch( Exception )
             {
                 throw;
             }
         }
 
-        public void ExecuteCommands(List<string> cmds)
+        public void ExecuteCommands( List<string> cmds )
         {
-            List<SQLCmdDef> cmdDefs = new List<SQLCmdDef>();
-            foreach (var cmd in cmds)
+            List<SQLCmdDef> cmdDefs = [];
+            foreach( var cmd in cmds )
             {
                 CancellationToken?.ThrowIfCancellationRequested();
-                cmdDefs.Add(new SQLCmdDef(cmd));
+                cmdDefs.Add( new SQLCmdDef( cmd ) );
             }
-            ExecuteCommands(cmdDefs);
+
+            ExecuteCommands( cmdDefs );
         }
 
-        public void ExecuteCommand(string cmd)
+        public void ExecuteCommand( string cmd )
         {
-            ExecuteCommand(new SQLCmdDef(cmd));
+            ExecuteCommand( new SQLCmdDef( cmd ) );
         }
 
-        private string GetDateTimeKindFormat(DateTimeKind kind)
+        private string GetDateTimeKindFormat( DateTimeKind kind )
         {
-            return (kind == DateTimeKind.Utc) ? _datetimeFormatUtc : _datetimeFormatLocal;
+            return ( kind == DateTimeKind.Utc ) ? _datetimeFormatUtc : _datetimeFormatLocal;
         }
 
-        public static DateTime ReadDateTime(string dateText)
+        public static DateTime ReadDateTime( string dateText )
         {
             return DateTime.ParseExact(
                 dateText,
                 _datetimeFormats,
                 DateTimeFormatInfo.InvariantInfo,
-                DateTimeStyles.None).ToUniversalTime();
+                DateTimeStyles.None ).ToUniversalTime();
         }
 
-        public string? ToDateTimeParamValue(DateTime? dateValue)
+        public string? ToDateTimeParamValue( DateTime? dateValue )
         {
-            if (dateValue == null)
+            if( dateValue == null )
                 return null;
 
             var kind = DateTimeKind.Utc;
-            if (dateValue.Value.Kind == DateTimeKind.Unspecified) // if Unspecified force UTC
-            {
-                return DateTime.SpecifyKind(dateValue.Value, kind).ToString(GetDateTimeKindFormat(kind), CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                return dateValue.Value.ToString(GetDateTimeKindFormat(dateValue.Value.Kind), CultureInfo.InvariantCulture);
-            }
+            return dateValue.Value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind( dateValue.Value, kind ).ToString( GetDateTimeKindFormat( kind ), CultureInfo.InvariantCulture )
+                : dateValue.Value.ToString( GetDateTimeKindFormat( dateValue.Value.Kind ), CultureInfo.InvariantCulture );
         }
 
-        private void CreateConnection(string db_file)
+        private void CreateConnection( string db_file )
         {
-            CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
+            _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
 
-            _embyInterfaces!._logger?.Debug("CreateConnection : " + db_file);
+            _embyInterfaces!._logger?.Debug( "CreateConnection : " + db_file );
             ConnectionFlags connectionFlags;
 
             //_embyInterfaces!._logger?.Debug("Opening write _connection");
@@ -298,7 +286,7 @@ namespace Statistics2026.Data
             connectionFlags |= ConnectionFlags.PrivateCache;
             connectionFlags |= ConnectionFlags.NoMutex;
 
-            SQLiteDatabaseConnection db = SQLite3.Open(db_file, connectionFlags, null, true);
+            var db = SQLite3.Open( db_file, connectionFlags, null, true );
 
             try
             {
@@ -310,7 +298,7 @@ namespace Statistics2026.Data
                     "PRAGMA temp_store=file"
                 };
 
-                db.ExecuteAll(string.Join(";", queries.ToArray()));
+                db.ExecuteAll( string.Join( ";", queries.ToArray() ) );
             }
             catch
             {
@@ -318,33 +306,33 @@ namespace Statistics2026.Data
             }
 
             Connection = db;
-            _embyInterfaces!._logger?.Debug("ConnectionCreated : " + Connection.GetHashCode());
+            _embyInterfaces!._logger?.Debug( "ConnectionCreated : " + Connection.GetHashCode() );
         }
 
         public IEnumerable<T> GetLibraryItems<T>()
         {
-            CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
-            return GetUserItems<T>(null, _embyInterfaces!._libraryManager);
+            _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
+            return GetUserItems<T>( null, _embyInterfaces!._libraryManager );
         }
 
-        static public IEnumerable<T> GetUserItems<T>(User? user, ILibraryManager libManager)
+        public static IEnumerable<T> GetUserItems<T>( User? user, ILibraryManager libManager )
         {
-            var query = new InternalItemsQuery(user)
+            var query = new InternalItemsQuery( user )
             {
-                IncludeItemTypes = new[] { typeof(T).Name },
+                IncludeItemTypes = new[] { typeof( T ).Name },
                 Recursive = true,
                 IsVirtualItem = false,
-                DtoOptions = new DtoOptions(true)
+                DtoOptions = new DtoOptions( true )
                 {
                     ImageTypes = new[] { ImageType.Thumb, ImageType.Thumbnail },
                     EnableImages = true
                 }
             };
 
-            return libManager.GetItemList(query).OfType<T>();
+            return libManager.GetItemList( query ).OfType<T>();
         }
 
-        public bool ColumnExists(string tableName, string columnName)
+        public bool ColumnExists( string tableName, string columnName )
         {
             var sql = $"SELECT 1 FROM pragma_table_info(@TableName) WHERE name=@ColumnName";
             var parameters = new List<(string name, object? value)>
@@ -355,73 +343,73 @@ namespace Statistics2026.Data
 
             var exists = false;
 
-            ExecuteCommand(new SQLCmdDef(sql, parameters), statement =>
+            ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
             {
                 var row = statement.Current;
-                var value = row.GetInt64(0);
+                var value = row.GetInt64( 0 );
                 exists = value != 0;
                 return true;
-            });
+            } );
 
             return exists;
         }
 
-        public bool TableExists(string tableName)
+        public bool TableExists( string tableName )
         {
             var sql = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@TableName";
             var parameters = new List<(string name, object? value)> { ("@TableName", tableName) };
 
             var exists = false;
 
-            ExecuteCommand(new SQLCmdDef(sql, parameters), statement =>
+            ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
             {
                 var row = statement.Current;
-                var value = row.GetInt64(0);
+                var value = row.GetInt64( 0 );
                 exists = value != 0;
                 return true;
-            });
+            } );
 
             return exists;
         }
-        
-        public static string FormatTicks(long ticks)
+
+        public static string FormatTicks( long ticks )
         {
-            var runtime = new RunTime(ticks);
+            var runtime = new RunTime( ticks );
             return runtime.ToLongString();
         }
 
-        public static string JoinClauses(List<string> clauses)
+        public static string JoinClauses( List<string> clauses )
         {
-            if (clauses.IsNullOrEmpty())
-                return String.Empty;
+            if( clauses.IsNullOrEmpty() )
+                return string.Empty;
 
-            for (int ii = 0; ii < clauses.Count; ++ii)
+            for( var ii = 0; ii < clauses.Count; ++ii )
             {
-                clauses[ii] = $"( {clauses[ii]} )";
+                clauses[ ii ] = $"( {clauses[ ii ]} )";
             }
 
-            return " WHERE " + string.Join(" AND ", clauses) + " ";
+            return " WHERE " + string.Join( " AND ", clauses ) + " ";
         }
 
-        public void ValidateTables(List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState)
+        public void ValidateTables( List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState )
         {
-            if (tables.IsNullOrEmpty())
+            if( tables.IsNullOrEmpty() )
             {
-                updateDBState(true, true);
+                updateDBState( true, true );
                 return;
             }
 
             var aTableMissing = false;
             var aColumnMissing = false;
             var aTableNeedsData = false;
-            foreach (var tableName in tables)
+            foreach( var tableName in tables )
             {
-                var tableMissing = !TableExists(tableName);
+                var tableMissing = !TableExists( tableName );
                 var columnMissing = false;
                 var tableNeedsData = false;
-                if (!tableMissing)
+                if( !tableMissing )
                 {
-                    (columnMissing, tableNeedsData) = ValidateTable(tableName, getColumnsFunc(tableName), additionalNeedsDataFunc);
+                    (columnMissing, tableNeedsData) = ValidateTable( tableName, getColumnsFunc( tableName ), additionalNeedsDataFunc );
                 }
                 else
                 {
@@ -431,36 +419,38 @@ namespace Statistics2026.Data
                 aTableMissing = aTableMissing || tableMissing;
                 aColumnMissing = aColumnMissing || columnMissing;
                 aTableNeedsData = aTableNeedsData || tableNeedsData;
-                if (aTableMissing && aTableNeedsData && aColumnMissing)
+                if( aTableMissing && aTableNeedsData && aColumnMissing )
                     break;
             }
-            updateDBState(aTableMissing || aColumnMissing, aTableNeedsData);
+
+            updateDBState( aTableMissing || aColumnMissing, aTableNeedsData );
         }
 
-        public (bool columnMissing, bool dataMissing) ValidateTable(string tableName, List<string> columns, Func<string, bool>? additionalNeedsDataFunc)
+        public (bool columnMissing, bool dataMissing) ValidateTable( string tableName, List<string> columns, Func<string, bool>? additionalNeedsDataFunc )
         {
             var columnMissing = false;
-            foreach (var columnName in columns)
+            foreach( var columnName in columns )
             {
-                columnMissing = columnMissing || !ColumnExists(tableName, columnName);
+                columnMissing = columnMissing || !ColumnExists( tableName, columnName );
             }
 
             var tableNeedsData = true;
-            if (!columnMissing)
+            if( !columnMissing )
             {
                 var sql = $"SELECT COUNT(*) FROM {tableName} LIMIT 1";
 
                 tableNeedsData = false;
-                ExecuteCommand(new SQLCmdDef(sql), statement =>
+                ExecuteCommand( new SQLCmdDef( sql ), statement =>
                 {
                     var row = statement.Current;
-                    tableNeedsData = row.GetInt64(0) == 0;
+                    tableNeedsData = row.GetInt64( 0 ) == 0;
                     return false;
                 }
                 );
 
-                tableNeedsData = tableNeedsData || ((additionalNeedsDataFunc != null) ? additionalNeedsDataFunc(tableName) : false);
+                tableNeedsData = tableNeedsData || ( ( additionalNeedsDataFunc != null ) && additionalNeedsDataFunc( tableName ) );
             }
+
             return (columnMissing, tableNeedsData);
         }
     }

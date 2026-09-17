@@ -1,19 +1,9 @@
-﻿using MediaBrowser.Common.Configuration;
-using MediaBrowser.Common.Plugins;
-using MediaBrowser.Model.Drawing;
-using MediaBrowser.Model.Logging;
+﻿using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
-using MediaBrowser.Model.Serialization;
-using MediaBrowser.Model.Tasks;
 using ServiceStack;
 using Statistics2026.Configuration;
-using Statistics2026.Api;
-using Statistics2026.ScheduledTasks;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Runtime.InteropServices;
 
 namespace Statistics2026
 {
@@ -29,25 +19,27 @@ namespace Statistics2026
 
     public static class EDBStateToString
     {
-        public static string ToPrettyString(this EDBState status)
+        public static string ToPrettyString( this EDBState status )
         {
             var items = new List<string>();
-            if (status == EDBState.eFullyInitialized)
-                items.Add(status.ToString());
+            if( status == EDBState.eFullyInitialized )
+            {
+                items.Add( status.ToString() );
+            }
             else
             {
 
-                foreach (var curr in new[] { EDBState.eSystemTablesCreated, EDBState.eUserTablesCreated, EDBState.eSystemDataInitialized, EDBState.eUserDataInitialized })
+                foreach( var curr in new[] { EDBState.eSystemTablesCreated, EDBState.eUserTablesCreated, EDBState.eSystemDataInitialized, EDBState.eUserDataInitialized } )
                 {
-                    if ((curr & status) != 0)
-                        items.Add(curr.ToString());
+                    if( ( curr & status ) != 0 )
+                        items.Add( curr.ToString() );
                 }
             }
 
-            if (items.IsNullOrEmpty())
-                items.Add("Empty");
+            if( items.IsNullOrEmpty() )
+                items.Add( "Empty" );
 
-            return string.Join("|", items);
+            return string.Join( "|", items );
         }
     }
 
@@ -55,9 +47,9 @@ namespace Statistics2026
     {
         public EDBState CurrDBState()
         {
-            EDBState value = EDBState.eEmpty;
+            var value = EDBState.eEmpty;
 
-            if (Plugin.Instance != null && Plugin.Instance.DBState != null)
+            if( Plugin.Instance != null && Plugin.Instance.DBState != null )
                 value = Plugin.Instance?.DBState ?? EDBState.eEmpty;
 
             return value;
@@ -65,65 +57,63 @@ namespace Statistics2026
 
         public void ResetDBState()
         {
-            _SetDBState(EDBState.eEmpty);
+            _SetDBState( EDBState.eEmpty );
         }
 
-        public void SetDBState(EDBState dbState, bool enabled)
+        public void SetDBState( EDBState dbState, bool enabled )
         {
             var value = CurrDBState();
 
-            if (Plugin.Instance != null && Plugin.Instance.DBState != null)
+            if( Plugin.Instance != null && Plugin.Instance.DBState != null )
                 value = Plugin.Instance?.DBState ?? EDBState.eEmpty;
 
-            if (enabled)
-                value = value | dbState;
+            if( enabled )
+                value |= dbState;
             else
-                value = value & ~dbState;
+                value &= ~dbState;
 
-            _SetDBState(value);
+            _SetDBState( value );
         }
 
-        public bool IsDBStateSet(EDBState dbState)
+        public bool IsDBStateSet( EDBState dbState )
         {
             var value = CurrDBState();
 
-            return ((value & dbState) == dbState);
+            return ( value & dbState ) == dbState;
         }
 
-        public void ToggleDBState(EDBState dbState)
+        public void ToggleDBState( EDBState dbState )
         {
-            if (IsDBStateSet(dbState))
-                RemoveDBState(dbState);
+            if( IsDBStateSet( dbState ) )
+                RemoveDBState( dbState );
             else
-                AddDBState(dbState);
+                AddDBState( dbState );
         }
 
-        public void AddDBState(EDBState dbState)
+        public void AddDBState( EDBState dbState )
         {
-            SetDBState(dbState, true);
+            SetDBState( dbState, true );
         }
 
-        public void RemoveDBState(EDBState dbState)
+        public void RemoveDBState( EDBState dbState )
         {
-            SetDBState(dbState, false);
+            SetDBState( dbState, false );
         }
 
         public string DBStateAsString()
         {
-            if (DBState == null)
-                return EDBState.eEmpty.ToPrettyString();
-            return DBState.Value.ToPrettyString();
+            return DBState == null ? EDBState.eEmpty.ToPrettyString() : DBState.Value.ToPrettyString();
         }
-        private void _SetDBState(EDBState state)
+        private void _SetDBState( EDBState state )
         {
-            if (Plugin.Instance == null)
-                throw new ArgumentNullException("Plugin.Instance is null");
+            if( Plugin.Instance == null )
+                throw new ArgumentNullException( "Plugin.Instance is null" );
 
-            _logger.Debug($"Setting DBState to {state.ToPrettyString()}");
+            _logger.Debug( $"Setting DBState to {state.ToPrettyString()}" );
             Plugin.Instance.DBState = state;
             var config = Plugin.Instance.Configuration;
-            config.dbStateOK = (Plugin.Instance.DBState == EDBState.eFullyInitialized);
-            Plugin.Instance.UpdateConfiguration(config);
+            config.dbStateOK = Plugin.Instance.DBState == EDBState.eFullyInitialized;
+            Plugin.Instance.UpdateConfiguration( config );
         }
 
         public bool DBStateInitialized()
@@ -135,14 +125,14 @@ namespace Statistics2026
         {
             get
             {
-                lock (_padlock)
+                lock( _padlock )
                 {
                     return field;
                 }
             }
             set
             {
-                lock (_padlock)
+                lock( _padlock )
                 {
                     field = value;
                 }

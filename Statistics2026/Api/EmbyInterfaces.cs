@@ -8,9 +8,6 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using Statistics2026.Api;
-using Statistics2026.ScheduledTasks;
-using System.Collections.Generic;
 
 namespace Statistics2026.Api
 {
@@ -45,8 +42,7 @@ namespace Statistics2026.Api
             _providerManager = providerManager;
             _configManager = configManager;
             _taskManager = taskManager;
-            if (Plugin.Instance != null)
-                Plugin.Instance.ServerId = _appHost.SystemId;
+            Plugin.Instance?.ServerId = _appHost.SystemId;
         }
 
         public readonly IFileSystem _fileSystem;
@@ -61,7 +57,7 @@ namespace Statistics2026.Api
             set
             {
                 field = value;
-                if (Plugin.Instance != null && value != null)
+                if( Plugin.Instance != null && value != null )
                     Plugin.Instance.ServerId = value.SystemId;
             }
             get;

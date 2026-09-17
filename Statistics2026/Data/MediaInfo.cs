@@ -2,7 +2,6 @@
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Providers;
 using System;
 using System.Linq;
@@ -12,32 +11,31 @@ namespace Statistics2026.Data
     public class MediaInfo : IDisposable
     {
         public MediaInfo() { }
-        public MediaInfo(Video video)
+        public MediaInfo( Video video )
         {
             aOK = false;
-            var (primaryName, secondaryName, descName) = GetDescName(video);
+            var (primaryName, secondaryName, descName) = GetDescName( video );
 
-            var mediaStream = video.GetMediaStreams().FirstOrDefault(s => s != null && s.Type == MediaStreamType.Video);
-            if (!mediaStream?.Width.HasValue ?? true)
+            var mediaStream = video.GetMediaStreams().FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
+            if( !mediaStream?.Width.HasValue ?? true )
             {
                 return;
             }
 
-            var resolutionBase = GetMediaResolution(mediaStream, false);
-            var resolutionDetail = GetMediaResolution(mediaStream, true);
+            var resolutionBase = GetMediaResolution( mediaStream, false );
+            var resolutionDetail = GetMediaResolution( mediaStream, true );
             var codec = mediaStream?.Codec ?? "Unknown";
-            var dvProfile = GetDolbyVisionProfile(mediaStream);
+            var dvProfile = GetDolbyVisionProfile( mediaStream );
 
             ItemId = video.Id.ToString();
             IsEpisode = video is Episode;
-            IsTVSpecial = isTVSpecial(video);
-            NumEpisodes = numEpisodes(video);
-            SeriesId = seriesId(video);
+            IsTVSpecial = isTVSpecial( video );
+            NumEpisodes = numEpisodes( video );
+            SeriesId = seriesId( video );
             DescriptiveName = descName;
             PrimaryName = primaryName;
             SortName = video.SortName;
             SecondaryName = secondaryName;
-
 
             StartYear = video.ProductionYear?.ToString() ?? "Unknown";
             Season = video.ParentIndexNumber ?? -1;
@@ -46,240 +44,237 @@ namespace Statistics2026.Data
             ResolutionBase = resolutionBase;
             Codec = codec;
             DolbyVisionProfile = dvProfile;
-            StudioNames = studioNames(video);
-            Genres = genres(video);
-            Rating = communityRating(video);
+            StudioNames = studioNames( video );
+            Genres = genres( video );
+            Rating = communityRating( video );
 
             ServerLocation = video.Path ?? "Unknown";
             FileSize = video.Size;
             RunTimeTicks = video.RunTimeTicks ?? 0;
-            if (video is Episode episode)
+            if( video is Episode episode )
             {
                 ListDisplayName = $"{PrimaryName} - S{Season:D2}E{Episode:D2} - {SecondaryName}";
-                ImageUrl = ItemImageUrl._ItemImageUrl(episode);
-                if (episode.Series != null)
+                ImageUrl = ItemImageUrl._ItemImageUrl( episode );
+                if( episode.Series != null )
                 {
                     SortName = episode.Series.SortName + " - " + episode.SortName;
-                    SeriesImageUrl = ItemImageUrl._ItemImageUrl(episode.Series);
+                    SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series );
                 }
             }
             else
             {
-                ImageUrl = ItemImageUrl._ItemImageUrl(video);
+                ImageUrl = ItemImageUrl._ItemImageUrl( video );
                 ListDisplayName = PrimaryName;
             }
 
             TotalBitrate = video.TotalBitrate;
-            if (video.PremiereDate.HasValue)
+            if( video.PremiereDate.HasValue )
                 PremiereDate = video.PremiereDate.Value.DateTime;
             DateAdded = video.DateCreated.DateTime;
 
-            aOK = !ItemId.IsNullOrEmpty() && (RunTimeTicks != 0);
+            aOK = !ItemId.IsNullOrEmpty() && ( RunTimeTicks != 0 );
         }
 
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            Dispose( true );
+            GC.SuppressFinalize( this );
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose( bool disposing )
         {
-            if (_disposed)
+            if( _disposed )
                 return;
             _disposed = true;
         }
 
         ~MediaInfo()
         {
-            Dispose(false);
+            Dispose( false );
         }
 
-        public static string[] studioNames(Video video)
+        public static string[] studioNames( Video video )
         {
             var retVal = video.Studios;
-            var episode = video as Episode;
-            if (episode == null)
+            if( video is not Episode episode )
                 return retVal;
 
             var series = episode.Series;
-            if (series != null)
+            if( series != null )
             {
                 retVal = series.Studios;
             }
+
             return retVal;
         }
 
-        public static string[] genres(Video video)
+        public static string[] genres( Video video )
         {
             var retVal = video.Genres;
-            var episode = video as Episode;
-            if (episode == null)
+            if( video is not Episode episode )
                 return retVal;
 
             var series = episode.Series;
-            if (series != null)
+            if( series != null )
             {
                 retVal = series.Genres;
             }
+
             return retVal;
         }
 
-        public static double communityRating(Video video)
+        public static double communityRating( Video video )
         {
-            double retVal = video.CommunityRating ?? 0.0;
-            var episode = video as Episode;
-            if (episode == null)
+            var retVal = video.CommunityRating ?? 0.0;
+            if( video is not Episode episode )
                 return retVal;
 
             var series = episode.Series;
-            if (series != null)
+            if( series != null )
             {
                 retVal = series.CommunityRating ?? 0.0;
             }
+
             return retVal;
         }
 
-        public static string seriesId(Video video)
+        public static string seriesId( Video video )
         {
             var isEpisode = video is Episode;
-            if (!isEpisode)
-                return String.Empty;
+            if( !isEpisode )
+                return string.Empty;
 
-            var episode = video as Episode;
-            if (episode == null)
-                return String.Empty;
+            if( video is not Episode episode )
+                return string.Empty;
 
             var series = episode.Series;
-            if (series != null)
-            {
-                return series.Id.ToString();
-            }
-            return String.Empty;
+            return series != null ? series.Id.ToString() : string.Empty;
         }
 
-        public static bool isTVSpecial(RemoteSearchResult result)
+        public static bool isTVSpecial( RemoteSearchResult result )
         {
-            return (result.SortParentIndexNumber ?? result.ParentIndexNumber) == 0;
+            return ( result.SortParentIndexNumber ?? result.ParentIndexNumber ) == 0;
         }
 
-        public static bool isTVSpecial(Video? video)
+        public static bool isTVSpecial( Video? video )
         {
-            if (video == null)
+            if( video == null )
                 return false;
 
             var isEpisode = video is Episode;
-            if (!isEpisode)
+            if( !isEpisode )
                 return false;
 
-            var episode = video as Episode;
-            if (episode == null)
+            if( video is not Episode episode )
                 return false;
 
-            return (episode.SortParentIndexNumber != null && episode.SortParentIndexNumber == 0) ||
-              (episode.ParentIndexNumber != null && episode.ParentIndexNumber == 0); // season 0 is the specials season
+            return ( episode.SortParentIndexNumber != null && episode.SortParentIndexNumber == 0 ) ||
+              ( episode.ParentIndexNumber != null && episode.ParentIndexNumber == 0 ); // season 0 is the specials season
         }
 
-        public static int numEpisodes(Video video)
+        public static int numEpisodes( Video video )
         {
             var isEpisode = video is Episode;
-            if (!isEpisode)
+            if( !isEpisode )
                 return 0;
 
-            var episode = video as Episode;
-            if (episode == null)
+            if( video is not Episode episode )
                 return 0;
 
-            int retVal = 1;
-            if (episode.IndexNumber != null && episode.IndexNumberEnd != null)
+            var retVal = 1;
+            if( episode.IndexNumber != null && episode.IndexNumberEnd != null )
             {
                 var start = episode.IndexNumber ?? -1;
                 var end = episode.IndexNumberEnd ?? start;
                 retVal = end - start + 1;
             }
+
             return retVal;
         }
 
-        public static (string primaryName, string secondaryName, string descName) GetDescName(Video video)
+        public static (string primaryName, string secondaryName, string descName) GetDescName( Video video )
         {
             var primaryName = video.Name;
             var secondaryName = video.Name;
             var descName = video.Name;
-            if (video is Episode episode)
+            if( video is Episode episode )
             {
                 primaryName = episode.SeriesName;
                 descName = primaryName + " - " + secondaryName;
             }
             else
+            {
                 secondaryName = "";
+            }
+
             return (primaryName, secondaryName, descName);
         }
 
-        string GetMediaResolution(MediaStream? typeInfo, bool includeDetails)
+        private string GetMediaResolution( MediaStream? typeInfo, bool includeDetails )
         {
-            if (typeInfo == null || typeInfo.Width == null)
+            if( typeInfo == null || typeInfo.Width == null )
                 return Constants.NoResolution;
 
-            int width = typeInfo.Width.Value;
+            var width = typeInfo.Width.Value;
 
-            var details = String.Empty;
-            if (includeDetails)
+            var details = string.Empty;
+            if( includeDetails )
             {
                 details = $" ({typeInfo.Width}x{typeInfo.Height})";
             }
 
-            if (width >= 1281 && width <= 1920) return Constants.HD + details;
-            if (width >= 3841 && width <= 7680) return Constants._8k + details;
-            if (width >= 1921 && width <= 3840) return Constants._4k + details;
-            if (width >= 1200 && width <= 1280) return Constants._720p + details;
+            if( width >= 1281 && width <= 1920 )
+                return Constants.HD + details;
+            if( width >= 3841 && width <= 7680 )
+                return Constants._8k + details;
+            if( width >= 1921 && width <= 3840 )
+                return Constants._4k + details;
+            if( width >= 1200 && width <= 1280 )
+                return Constants._720p + details;
             //if (width < 1200)
             return Constants.SD + details;
         }
 
-
-        private string GetDolbyVisionProfile(MediaStream? mediaStream)
+        private string GetDolbyVisionProfile( MediaStream? mediaStream )
         {
-            if (mediaStream == null)
+            if( mediaStream == null )
                 return Constants.MissingVideoStream;
 
-            if (mediaStream.Profile == null)
+            if( mediaStream.Profile == null )
                 return Constants.UnknownDolbyProfile;
 
             var codec = mediaStream.Codec.ToUpper();
-            if (codec != Constants.HEVC && codec != Constants.AV1)
+            if( codec != Constants.HEVC && codec != Constants.AV1 )
                 return Constants.NonDolbyVisionCompatibleCodec;
 
             var dvProfile = mediaStream.ExtendedVideoSubTypeDescription;
-            if (dvProfile.ToLower() == "none")
-                return Constants.NoDolbyProfile;
-
-            return dvProfile;
+            return dvProfile.ToLower() == "none" ? Constants.NoDolbyProfile : dvProfile;
         }
 
-        public string ItemId { get; set; } = String.Empty;
-        public string DescriptiveName { get; set; } = String.Empty;
-        public string PrimaryName { get; set; } = String.Empty;// movie title or series name
-        public string ListDisplayName { get; set; } = String.Empty;// name suitible for displaying
+        public string ItemId { get; set; } = string.Empty;
+        public string DescriptiveName { get; set; } = string.Empty;
+        public string PrimaryName { get; set; } = string.Empty;// movie title or series name
+        public string ListDisplayName { get; set; } = string.Empty;// name suitible for displaying
 
-        public string SortName { get; set; } = String.Empty;
-        public string SecondaryName { get; set; } = String.Empty; // episode name
-        public string StartYear { get; set; } = String.Empty; // release year for movies, year of the of the first season of the TV show
+        public string SortName { get; set; } = string.Empty;
+        public string SecondaryName { get; set; } = string.Empty; // episode name
+        public string StartYear { get; set; } = string.Empty; // release year for movies, year of the of the first season of the TV show
 
         public bool IsEpisode { get; set; } = false;
         public bool IsTVSpecial { get; set; } = false;
-        public string SeriesId { get; set; } = String.Empty;
+        public string SeriesId { get; set; } = string.Empty;
         public string? SeriesImageUrl { get; set; } = null;
         public int Season { get; set; } = 0;
         public int Episode { get; set; } = 0;
         public int NumEpisodes { get; set; } = 1;
 
-        public string ResolutionBase { get; set; } = String.Empty;// just SD/HD/4k/8k etc
-        public string ResolutionDetail { get; set; } = String.Empty;// includes details of resolution
-        public string Codec { get; set; } = String.Empty;
-        public string DolbyVisionProfile { get; set; } = String.Empty;
+        public string ResolutionBase { get; set; } = string.Empty;// just SD/HD/4k/8k etc
+        public string ResolutionDetail { get; set; } = string.Empty;// includes details of resolution
+        public string Codec { get; set; } = string.Empty;
+        public string DolbyVisionProfile { get; set; } = string.Empty;
         public string[] StudioNames { get; set; } = { };
         public string[] Genres { get; set; } = { };
-        public string ServerLocation { get; set; } = String.Empty;
+        public string ServerLocation { get; set; } = string.Empty;
         public long FileSize { get; set; } = 0;
         public string? ImageUrl { get; set; } = null;
         public long RunTimeTicks { get; set; } = 0;

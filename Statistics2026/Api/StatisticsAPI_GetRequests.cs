@@ -1,84 +1,71 @@
-﻿using Emby.Media.Common.Extensions;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
+﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Services;
-using ServiceStack;
 using Statistics2026.Data;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 
 namespace Statistics2026.Api
 {
     public partial class Statistics2026API : IService, IRequiresRequest
     {
-        private object GetRequest(string requestName, Func<AutoTimer, object> requestFunc)
+        private object GetRequest( string requestName, Func<AutoTimer, object> requestFunc )
         {
-            using (var timer = new AutoTimer($"Request: {requestName}", _embyInterfaces._logger))
+            using( var timer = new AutoTimer( $"Request: {requestName}", _embyInterfaces._logger ) )
             {
                 try
                 {
-                    return requestFunc(timer);
+                    return requestFunc( timer );
                 }
-                catch (Exception)
+                catch( Exception )
                 {
                     throw;
                 }
             }
         }
 
-        public object Get(GetTVSeriesProgress request)
+        public object Get( GetTVSeriesProgress request )
         {
-            return GetRequest("GetTVSeriesProgress", timer =>
+            return GetRequest( "GetTVSeriesProgress", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
-                var retVal = db.GetTVSeriesProgress(user);
+                var retVal = db.GetTVSeriesProgress( user );
                 return retVal;
-            });
+            } );
         }
 
-        public object Get(GetEpisodeList request)
+        public object Get( GetEpisodeList request )
         {
-            var retVal = GetRequest("GetEpisodeList", timer =>
+            var retVal = GetRequest( "GetEpisodeList", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var episodes = db.GetEpisodeList();
 
-                if (episodes == null)
-                    return new object();
-
-                return episodes;
-            });
+                return episodes ?? new object();
+            } );
             return retVal;
         }
 
-        public object Get(GetMovieList request)
+        public object Get( GetMovieList request )
         {
-            return GetRequest("GetMovieList", timer =>
+            return GetRequest( "GetMovieList", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var movies = db.GetMovieList();
 
-                if (movies == null)
-                    return new object();
-
-                return movies;
-            });
+                return movies ?? new object();
+            } );
         }
 
-        public object Get(GetCodecSummary request)
+        public object Get( GetCodecSummary request )
         {
-            return GetRequest("GetCodecSummary", timer =>
+            return GetRequest( "GetCodecSummary", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var rootDivName = request.rootDivName ?? "";
 
@@ -88,14 +75,14 @@ namespace Statistics2026.Api
                 var vgReponse = groupData.createStat();
 
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetResolutionSummary request)
+        public object Get( GetResolutionSummary request )
         {
-            return GetRequest("GetResolutionSummary", timer =>
+            return GetRequest( "GetResolutionSummary", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var rootDivName = request.rootDivName ?? "";
 
                 var groupData = db.MediaResolutions();
@@ -104,14 +91,14 @@ namespace Statistics2026.Api
                 var vgReponse = groupData.createStat();
 
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetDVProfileSummary request)
+        public object Get( GetDVProfileSummary request )
         {
-            return GetRequest("GetDVProfileSummary", timer =>
+            return GetRequest( "GetDVProfileSummary", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var rootDivName = request.rootDivName ?? "";
 
@@ -121,292 +108,282 @@ namespace Statistics2026.Api
                 var vgReponse = groupData.createStat();
 
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetUserCount request)
+        public object Get( GetUserCount request )
         {
-            return GetRequest("GetUserCount", timer =>
+            return GetRequest( "GetUserCount", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.UserCount();
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetMostActiveUsers request)
+        public object Get( GetMostActiveUsers request )
         {
-            return GetRequest("GetMostActiveUsers", timer =>
+            return GetRequest( "GetMostActiveUsers", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.MostActiveUsers();
                 groupData.SortByKey = false;
                 var vgReponse = groupData.createStat();
 
                 return vgReponse;
-            });
+            } );
         }
 
-        public object TotalMovieCount(User? user)
+        public object TotalMovieCount( User? user )
         {
-            var db = StatisticsDB.GetInstance(_embyInterfaces);
-            var groupData = db.TotalMovieCount(user, false);
+            var db = StatisticsDB.GetInstance( _embyInterfaces );
+            var groupData = db.TotalMovieCount( user, false );
             var vgReponse = groupData.createStat();
             return vgReponse;
         }
 
-        public object Get(GetTotalMovieCount request)
+        public object Get( GetTotalMovieCount request )
         {
-            return GetRequest("GetTotalMovieCount", timer =>
+            return GetRequest( "GetTotalMovieCount", timer =>
             {
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
-                    return new object();
-
-                return TotalMovieCount(user);
-            });
+                var user = GetUser( userName );
+                return user == null ? new object() : TotalMovieCount( user );
+            } );
         }
 
-        public object Get(GetTotalMovieCountNoUser request)
+        public object Get( GetTotalMovieCountNoUser request )
         {
-            return GetRequest("GetTotalMovieCountNoUser", timer =>
+            return GetRequest( "GetTotalMovieCountNoUser", timer =>
             {
-                return TotalMovieCount(null);
-            });
+                return TotalMovieCount( null );
+            } );
         }
 
-        public object Get(GetTotalMoviesWatched request)
+        public object Get( GetTotalMoviesWatched request )
         {
-            return GetRequest("GetTotalMoviesWatched", timer =>
+            return GetRequest( "GetTotalMoviesWatched", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
-                var groupData = db.TotalMovieCount(user, true);
+                var groupData = db.TotalMovieCount( user, true );
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetTotalCollectionCount request)
+        public object Get( GetTotalCollectionCount request )
         {
-            return GetRequest("GetTotalCollectionCount", timer =>
+            return GetRequest( "GetTotalCollectionCount", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var groupData = db.TotalCollectionCount();
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetTotalMovieStudioCount request)
+        public object Get( GetTotalMovieStudioCount request )
         {
-            return GetRequest("GetTotalMovieStudioCount", timer =>
+            return GetRequest( "GetTotalMovieStudioCount", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
 
-                var groupData = db.TotalMovieStudioCount(null);
+                var groupData = db.TotalMovieStudioCount( null );
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetItemImageUrl request)
+        public object Get( GetItemImageUrl request )
         {
-            return GetRequest("GetItemImageUrl", timer =>
+            return GetRequest( "GetItemImageUrl", timer =>
             {
                 var retVal = new GetItemImageUrlResponse { Name = "", PrimaryImageUrl = "" };
-                var item = _embyInterfaces._libraryManager.GetItemById(request.ItemId);
-                if (item == null)
+                var item = _embyInterfaces._libraryManager.GetItemById( request.ItemId );
+                if( item == null )
                     return new object();
 
-                var url = ItemImageUrl._ItemImageUrl(item);
-                if (url == null)
-                    retVal.PrimaryImageUrl = String.Empty;
-                else
-                    retVal.PrimaryImageUrl = url;
-                if (retVal.PrimaryImageUrl == null || retVal.PrimaryImageUrl == "")
+                var url = ItemImageUrl._ItemImageUrl( item );
+                retVal.PrimaryImageUrl = url ?? string.Empty;
+                if( retVal.PrimaryImageUrl == null || retVal.PrimaryImageUrl == "" )
                     return retVal;
                 retVal.Name = item.Name;
                 return retVal;
-            });
+            } );
         }
 
-        public object TotalTVCount(User? user, bool watched)
+        public object TotalTVCount( User? user, bool watched )
         {
-            var db = StatisticsDB.GetInstance(_embyInterfaces);
-            var groupData = db.TotalTVCount(user, watched);
+            var db = StatisticsDB.GetInstance( _embyInterfaces );
+            var groupData = db.TotalTVCount( user, watched );
             var vgReponse = groupData.createStat();
             return vgReponse;
         }
 
-        public object Get(GetTotalTVCount request)
+        public object Get( GetTotalTVCount request )
         {
-            return GetRequest("GetTotalTVCount", timer =>
+            return GetRequest( "GetTotalTVCount", timer =>
             {
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                return user == null ? new object() : TotalTVCount( user, false );
+            } );
+        }
+
+        public object Get( GetTotalTVCountNoUser request )
+        {
+            return GetRequest( "GetTotalTVCountNoUser", timer =>
+            {
+                return TotalTVCount( null, false );
+            } );
+        }
+
+        public object Get( GetTotalTVWatched request )
+        {
+            return GetRequest( "GetTotalTVWatched", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+                var userName = request.user;
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
-                return TotalTVCount(user, false);
-            });
+                var groupData = db.TotalTVCount( user, true );
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
         }
 
-        public object Get(GetTotalTVCountNoUser request)
+        public object Get( GetTotalSeriesFinished request )
         {
-            return GetRequest("GetTotalTVCountNoUser", timer =>
+            return GetRequest( "GetTotalSeriesFinished", timer =>
             {
-                return TotalTVCount(null, false);
-            });
-        }
-
-        public object Get(GetTotalTVWatched request)
-        {
-            return GetRequest("GetTotalTVWatched", timer =>
-            {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
-                var groupData = db.TotalTVCount(user, true);
+                var groupData = db.TotalFinishedSeries( user );
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetTotalSeriesFinished request)
+        public object Get( GetTotalTVStudioCount request )
         {
-            return GetRequest("GetTotalSeriesFinished", timer =>
+            return GetRequest( "GetTotalTVStudioCount", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                var groupData = db.TotalTVStudioCount( null );
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        public object Get( GetLeastWatchedMovies request )
+        {
+            return GetRequest( "GetLeastWatchedMovies", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                var groupData = db.WatchedMedia( null, true, EMediaType.eMovie );
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        public object Get( GetMostWatchedMovies request )
+        {
+            return GetRequest( "GetMostWatchedMovies", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
-                var groupData = db.TotalFinishedSeries(user);
-                var vgReponse = groupData.createStat();
-                return vgReponse;
-            });
-        }
-
-        public object Get(GetTotalTVStudioCount request)
-        {
-            return GetRequest("GetTotalTVStudioCount", timer =>
-            {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
-
-                var groupData = db.TotalTVStudioCount(null);
-                var vgReponse = groupData.createStat();
-                return vgReponse;
-            });
-        }
-
-        public object Get(GetLeastWatchedMovies request)
-        {
-            return GetRequest("GetLeastWatchedMovies", timer =>
-            {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
-
-                var groupData = db.WatchedMedia(null, true, EMediaType.eMovie);
+                var groupData = db.WatchedMedia( user, false, EMediaType.eMovie );
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetMostWatchedMovies request)
+        public object Get( GetMostWatchedMoviesNoUser request )
         {
-            return GetRequest("GetMostWatchedMovies", timer =>
+            return GetRequest( "GetMostWatchedMoviesNoUser", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
 
+                var groupData = db.WatchedMedia( null, false, EMediaType.eMovie );
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        public object Get( GetLeastWatchedShows request )
+        {
+            return GetRequest( "GetLeastWatchedShows", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                var groupData = db.WatchedMedia( null, true, EMediaType.eSeries );
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        public object Get( GetMostWatchedShows request )
+        {
+            return GetRequest( "GetMostWatchedShows", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
-
-                var groupData = db.WatchedMedia(user, false, EMediaType.eMovie);
-
-                var vgReponse = groupData.createStat();
-                return vgReponse;
-            });
-        }
-
-        public object Get(GetMostWatchedMoviesNoUser request)
-        {
-            return GetRequest("GetMostWatchedMoviesNoUser", timer =>
-            {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
-
-                var groupData = db.WatchedMedia(null, false, EMediaType.eMovie);
+                var groupData = db.WatchedMedia( user, false, EMediaType.eSeries );
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetLeastWatchedShows request)
+        public object Get( GetMostWatchedShowsNoUser request )
         {
-            return GetRequest("GetLeastWatchedShows", timer =>
+            return GetRequest( "GetMostWatchedShows", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
 
-                var groupData = db.WatchedMedia(null, true, EMediaType.eSeries);
+                var groupData = db.WatchedMedia( null, false, EMediaType.eSeries );
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
-
-        public object Get(GetMostWatchedShows request)
+        public object Get( GetTotalTimeWatched request )
         {
-            return GetRequest("GetMostWatchedShows", timer =>
+            return GetRequest( "GetTotalTimeWatched", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
-                    return new object();
-
-                var groupData = db.WatchedMedia(user, false, EMediaType.eSeries);
-
-                var vgReponse = groupData.createStat();
-                return vgReponse;
-            });
-        }
-
-        public object Get(GetMostWatchedShowsNoUser request)
-        {
-            return GetRequest("GetMostWatchedShows", timer =>
-            {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
-
-                var groupData = db.WatchedMedia(null, false, EMediaType.eSeries);
-
-                var vgReponse = groupData.createStat();
-                return vgReponse;
-            });
-        }
-        public object Get(GetTotalTimeWatched request)
-        {
-            return GetRequest("GetTotalTimeWatched", timer =>
-            {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
-                var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
                 bool? showEpisodes = null;
@@ -417,21 +394,21 @@ namespace Statistics2026.Api
                 else
                     showEpisodes = false;
 
-                var groupData = db.TotalTimeWatched(user, showEpisodes);
+                var groupData = db.TotalTimeWatched( user, showEpisodes );
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetTotalWatchableTime request)
+        public object Get( GetTotalWatchableTime request )
         {
-            return GetRequest("GetTotalWatchableTime", timer =>
+            return GetRequest( "GetTotalWatchableTime", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
                 bool? showEpisodes = null;
@@ -442,128 +419,128 @@ namespace Statistics2026.Api
                 else
                     showEpisodes = false;
 
-                var groupData = db.TotalWatchableTime(user, showEpisodes);
+                var groupData = db.TotalWatchableTime( user, showEpisodes );
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetLastSeen request)
+        public object Get( GetLastSeen request )
         {
-            return GetRequest("GetLastSeen", timer =>
+            return GetRequest( "GetLastSeen", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
                 var episodes = request.episodes;
 
-                var groupData = db.LastSeen(user, !episodes);
+                var groupData = db.LastSeen( user, !episodes );
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetDatabaseStatus request)
+        public object Get( GetDatabaseStatus request )
         {
-            return GetRequest("GetDatabaseStatus", timer =>
+            return GetRequest( "GetDatabaseStatus", timer =>
             {
-                if ( Plugin.Instance == null )
+                if (Plugin.Instance == null)
                     return new GetDatabaseStatusReponse();
 
                 return new GetDatabaseStatusReponse(Plugin.Instance.Configuration);
-            });
+            } );
         }
 
-        public object Get(GetMovieFavoriteYears request)
+        public object Get( GetMovieFavoriteYears request )
         {
-            return GetRequest("GetMovieFavoriteYears", timer =>
+            return GetRequest( "GetMovieFavoriteYears", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
-                var groupData = db.FavoriteYears(user, true);
+                var groupData = db.FavoriteYears( user, true );
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetMovieFavoriteGenres request)
+        public object Get( GetMovieFavoriteGenres request )
         {
-            return GetRequest("GetMovieFavoriteGenres", timer =>
+            return GetRequest( "GetMovieFavoriteGenres", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
-                var groupData = db.FavoriteGenre(user, true);
+                var groupData = db.FavoriteGenre( user, true );
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetTVFavoriteGenres request)
+        public object Get( GetTVFavoriteGenres request )
         {
-            return GetRequest("GetTVFavoriteGenres", timer =>
+            return GetRequest( "GetTVFavoriteGenres", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser(userName);
-                if (user == null)
+                var user = GetUser( userName );
+                if( user == null )
                     return new object();
 
-                var groupData = db.FavoriteGenre(user, false);
+                var groupData = db.FavoriteGenre( user, false );
                 var vgReponse = groupData.createStat();
                 return vgReponse;
-            });
+            } );
         }
 
-        public object Get(GetMovie request)
+        public object Get( GetMovie request )
         {
-            return GetRequest("GetMovie", timer =>
+            return GetRequest( "GetMovie", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
-                var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Movie);
+                var groupData = db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Movie );
                 return groupData.createStat();
-            });
+            } );
         }
 
-        public object Get(GetSeries request)
+        public object Get( GetSeries request )
         {
-            return GetRequest("GetSeries", timer =>
+            return GetRequest( "GetSeries", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
-                var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Series);
+                var groupData = db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Series );
                 return groupData.createStat();
-            });
+            } );
         }
 
-        public object Get(GetEpisode request)
+        public object Get( GetEpisode request )
         {
-            return GetRequest("GetEpisode", timer =>
+            return GetRequest( "GetEpisode", timer =>
             {
-                var db = StatisticsDB.GetInstance(_embyInterfaces);
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
-                var groupData = db.StatisticFor(null, whichStatistic, StatGen.EVideoType.Episode);
+                var groupData = db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Episode );
 
                 return groupData.createStat();
-            });
+            } );
         }
     }
 }

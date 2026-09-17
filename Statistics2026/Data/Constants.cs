@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 
-namespace Statistics2026
+namespace Statistics2026.Data
 {
     internal static class Constants
     {
@@ -128,14 +127,12 @@ namespace Statistics2026
             NoDolbyProfile
         };
 
-        public static bool IsUnknownDolbyProfile(string profile)
+        public static bool IsUnknownDolbyProfile( string profile )
         {
-            if (string.IsNullOrEmpty(profile))
-                return true;
-            return Array.Exists(UnknownDolbyProfiles, f => f.Equals(profile, StringComparison.OrdinalIgnoreCase));
+            return string.IsNullOrEmpty( profile ) || Array.Exists( UnknownDolbyProfiles, f => f.Equals( profile, StringComparison.OrdinalIgnoreCase ) );
         }
 
-        public static bool IsDolbyVision50(string profile)
+        public static bool IsDolbyVision50( string profile )
         {
             return profile == "Profile 5.0";
         }

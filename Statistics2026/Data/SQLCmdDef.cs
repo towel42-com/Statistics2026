@@ -2,13 +2,12 @@
 using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace Statistics2026.Data
 {
     public class SQLCmdDef
     {
-        public string Statement = String.Empty;
+        public string Statement = string.Empty;
         public List<(string name, object? value)>? Parameters = null;
         public bool FailureAllowed { get; set; } = false;
 
@@ -17,76 +16,74 @@ namespace Statistics2026.Data
             return !Parameters.IsNullOrEmpty();
         }
 
-        public SQLCmdDef(string sql, bool failureAllowed = false)
+        public SQLCmdDef( string sql, bool failureAllowed = false )
         {
             Statement = sql;
             FailureAllowed = failureAllowed;
         }
 
-        public SQLCmdDef(SQLCmdDef rhs)
+        public SQLCmdDef( SQLCmdDef rhs )
         {
             Statement = rhs.Statement;
             Parameters = rhs.Parameters;
             FailureAllowed = rhs.FailureAllowed;
         }
 
-        public SQLCmdDef(string sql, List<(string name, object? value)>? _parameters, bool failureAllowed = false)
+        public SQLCmdDef( string sql, List<(string name, object? value)>? _parameters, bool failureAllowed = false )
         {
             Statement = sql;
             Parameters = _parameters;
             FailureAllowed = failureAllowed;
         }
 
-        public void Replace(string from, string to)
+        public void Replace( string from, string to )
         {
-            Statement = Statement.Replace(from, to);
+            Statement = Statement.Replace( from, to );
         }
 
-        private void _Execute(IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement)
+        private void _Execute( IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement )
         {
-            using (var statement = connection.PrepareStatement(Statement))
+            using( var statement = connection.PrepareStatement( Statement ) )
             {
-                if (HasParameters())
+                if( HasParameters() )
                 {
-                    foreach (var param in Parameters!)
+                    foreach( var (name, value) in Parameters! )
                     {
-                        dbHelper.TryBind(statement, param.name, param.value);
+                        _ = dbHelper.TryBind( statement, name, value );
                     }
                 }
 
-                if (onStatement == null)
+                if( onStatement == null )
                 {
-                    statement.MoveNext();
+                    _ = statement.MoveNext();
                 }
                 else
                 {
-                    while (statement.MoveNext())
+                    while( statement.MoveNext() )
                     {
-                        if (!onStatement(statement))
+                        if( !onStatement( statement ) )
                             break;
                         dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
             }
-
         }
-        public void Execute(IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement)
+        public void Execute( IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement )
         {
-            if (FailureAllowed)
+            if( FailureAllowed )
             {
                 try
                 {
-                    _Execute(connection, dbHelper, onStatement);
+                    _Execute( connection, dbHelper, onStatement );
                 }
                 catch
-                { 
+                {
                 }
             }
             else
             {
-                _Execute(connection, dbHelper, onStatement);
+                _Execute( connection, dbHelper, onStatement );
             }
-
         }
     }
 }

@@ -5,12 +5,11 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using ServiceStack;
 using Statistics2026.Configuration;
-using Statistics2026.ScheduledTasks;
+using Statistics2026.Features;
+
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.IO;
 
 namespace Statistics2026
@@ -20,96 +19,80 @@ namespace Statistics2026
         public readonly ITaskManager _taskManager;
         public readonly ILogger _logger;
 
-        public Plugin(IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, ITaskManager taskManager, ILogManager logManager)
-            : base(applicationPaths, xmlSerializer)
+        public Plugin( IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, ITaskManager taskManager, ILogManager logManager )
+            : base( applicationPaths, xmlSerializer )
         {
             Instance = this;
             _taskManager = taskManager;
-            _logger = logManager.GetLogger("Statistics2026 - Plugin");
+            _logger = logManager.GetLogger( "Statistics2026 - Plugin" );
         }
 
         public IEnumerable<PluginPageInfo> GetPages()
         {
             return new PluginPageInfo[]
             {
-                new PluginPageInfo
-                {
+                new() {
                     Name = "style.css",
                     EmbeddedResourcePath = GetType().Namespace + ".style.css"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "Helpers.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.Helpers.js"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "Summary",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Summary.html",
                     EnableInMainMenu = true
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "Summary.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Summary.js"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "UserStats",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.UserStats.html"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "UserStats.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.UserStats.js"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "TVSeriesProgress",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TVSeriesProgress.html",
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "TVSeriesProgress.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TVSeriesProgress.js"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "Episodes",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Episodes.html",
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "Episodes.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Episodes.js"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "Movies",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.html",
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "Movies.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.js"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "Settings",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Settings.html",
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "Settings.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Settings.js"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "AdminHelpers.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.AdminHelpers.js"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "UserStats_UserPage",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.UserStats.html",
                     EnableInUserMenu = true,
@@ -117,13 +100,11 @@ namespace Statistics2026
                     DisplayName = "User Statistics",
                     FeatureId = Feature.StaticId
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "UserStats_UserPage.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.UserStats.js"
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "TVSeriesProgress_UserPage",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.TVSeriesProgress.html",
                     //EnableInUserMenu = true,
@@ -131,14 +112,12 @@ namespace Statistics2026
                     DisplayName = "TV Progress",
                     FeatureId = Feature.StaticId
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "TVSeriesProgress_UserPage.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.TVSeriesProgress.js",
                     FeatureId = Feature.StaticId
                 },
-                new PluginPageInfo
-                {
+                new() {
                     Name = "UserPageHelpers.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.Helpers.js"
                 },
@@ -146,48 +125,36 @@ namespace Statistics2026
             };
         }
 
-        public override Guid Id => new Guid("23ADB024-F759-438F-B9A7-D5912A75596C");
+        public override Guid Id => new( "23ADB024-F759-438F-B9A7-D5912A75596C" );
 
         public static Plugin? Instance { get; private set; } = null;
         public static string StaticName = "Statistics 2026";
 
         private string? _serverId { get; set; } = null;
 
-        private static readonly object _padlock = new object();
+        private static readonly object _padlock = new();
 
         public string? ServerId
         {
-            get
-            {
-                return _serverId;
-            }
+            get => _serverId;
             set
             {
-                if (_serverId != null)
+                if( _serverId != null )
                     return;
                 _serverId = value;
             }
         } // set when a embyInterfaces is constructed
 
-        public override string Name
-        {
-            get { return StaticName; }
-        }
+        public override string Name => StaticName;
 
         public override string Description => "Get the statistics for your media collection";
 
         public Stream GetThumbImage()
         {
             var type = GetType();
-            return type.Assembly.GetManifestResourceStream(type.Namespace + ".plugin.png");
+            return type.Assembly.GetManifestResourceStream( type.Namespace + ".plugin.png" );
         }
 
-        public ImageFormat ThumbImageFormat
-        {
-            get
-            {
-                return ImageFormat.Png;
-            }
-        }
+        public ImageFormat ThumbImageFormat => ImageFormat.Png;
     }
 }

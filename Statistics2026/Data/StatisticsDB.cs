@@ -1,11 +1,8 @@
-﻿using Emby.Web.GenericEdit.Validation;
-using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Entities;
+﻿using MediaBrowser.Controller.Entities;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Threading;
 
 namespace Statistics2026.Data
@@ -19,26 +16,26 @@ namespace Statistics2026.Data
 
     public sealed partial class StatisticsDB
     {
-        private static readonly object _padlock = new object();
-        private Dictionary<string, TableDef> _tableMap = new Dictionary<string, TableDef>();
-        private List<TableDef> _tableList = new List<TableDef>();
+        private static readonly object _padlock = new();
+        private readonly Dictionary<string, TableDef> _tableMap = [];
+        private List<TableDef> _tableList = [];
         private TableDef? _userMediaTemplate = null;
-        private EmbyInterfaces? _embyInterfaces = null;
+        private readonly EmbyInterfaces? _embyInterfaces = null;
         public bool AllTablesExisted { get; private set; } = false;
         public bool DataExists { get; private set; } = false;
         public bool UserDataExists { get; private set; } = false;
 
-        DBHelper _dbHelper = new DBHelper();
+        private readonly DBHelper _dbHelper = new();
 
-        public static StatisticsDB GetInstance(EmbyInterfaces? embyInterfaces)
+        public static StatisticsDB GetInstance( EmbyInterfaces? embyInterfaces )
         {
-            if (embyInterfaces == null)
-                throw new ArgumentNullException("EmbyInterfaces is null.");
+            if( embyInterfaces == null )
+                throw new ArgumentNullException( "EmbyInterfaces is null." );
 
-            lock (_padlock)
+            lock( _padlock )
             {
-                var retVal = new StatisticsDB(embyInterfaces);
-                embyInterfaces._logger.Debug("Statistics2026 : New Instance Created : " + retVal.GetHashCode());
+                var retVal = new StatisticsDB( embyInterfaces );
+                embyInterfaces._logger.Debug( "Statistics2026 : New Instance Created : " + retVal.GetHashCode() );
                 return retVal;
             }
         }
@@ -48,19 +45,19 @@ namespace Statistics2026.Data
             ConstructTableList();
         }
 
-        private StatisticsDB(EmbyInterfaces embyInterfaces)
+        private StatisticsDB( EmbyInterfaces embyInterfaces )
         {
-            if (embyInterfaces == null)
-                throw new ArgumentNullException("embyInterfaces is null.");
+            if( embyInterfaces == null )
+                throw new ArgumentNullException( "embyInterfaces is null." );
 
             ConstructTableList();
 
-            embyInterfaces._logger?.Debug("Statistics2026 : Creating Database");
+            embyInterfaces._logger?.Debug( "Statistics2026 : Creating Database" );
 
             _embyInterfaces = embyInterfaces;
-            _dbHelper = new DBHelper(_embyInterfaces);
+            _dbHelper = new DBHelper( _embyInterfaces );
 
-            embyInterfaces._logger?.Debug("Statistics2026 : Finished Creating Database");
+            embyInterfaces._logger?.Debug( "Statistics2026 : Finished Creating Database" );
             ComputeDBState();
         }
 
@@ -68,68 +65,65 @@ namespace Statistics2026.Data
         {
         }
 
-        private void CheckIsValid(ECheckType checkType)
+        private void CheckIsValid( ECheckType checkType )
         {
-            if (Statistics2026.Plugin.Instance == null)
-                throw new ArgumentNullException("Statistics2026.Plugin.Instance");
+            if( Statistics2026.Plugin.Instance == null )
+                throw new ArgumentNullException( "Statistics2026.Plugin.Instance" );
 
-            if (Statistics2026.Plugin.Instance.Configuration == null)
-                throw new ArgumentNullException("Statistics2026.Plugin.Instance.Configuration");
+            if( Statistics2026.Plugin.Instance.Configuration == null )
+                throw new ArgumentNullException( "Statistics2026.Plugin.Instance.Configuration" );
 
-            if (checkType == ECheckType.eInit)
-                _dbHelper.CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure);
-            else if (checkType == ECheckType.eReport)
-                _dbHelper.CheckIsValid(ECheckLevel.eInterfaces | ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure);
-            else if (checkType == ECheckType.eUpdate)
-                _dbHelper.CheckIsValid(ECheckLevel.eAllWithThrow);
+            if( checkType == ECheckType.eInit )
+                _ = _dbHelper.CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
+            else if( checkType == ECheckType.eReport )
+                _ = _dbHelper.CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
+            else if( checkType == ECheckType.eUpdate )
+                _ = _dbHelper.CheckIsValid( ECheckLevel.eAllWithThrow );
 
-            if (Plugin.Instance != null && (checkType == ECheckType.eReport) && Plugin.Instance.IsStatistics2026TaskRunning())
+            if( Plugin.Instance != null && ( checkType == ECheckType.eReport ) && Plugin.Instance.IsStatistics2026TaskRunning() )
             {
-                throw new Exception("Statistics 2026 task is running");
+                throw new Exception( "Statistics 2026 task is running" );
             }
         }
 
-        public void Initialize(CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false)
+        public void Initialize( CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false )
         {
-            SetCancellationToken(cancellationToken, progress);
-            CreateTables(reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate);
+            SetCancellationToken( cancellationToken, progress );
+            CreateTables( reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate );
         }
 
         public void ResetCancellationToken()
         {
-            if (_dbHelper != null)
+            if( _dbHelper != null )
             {
                 _dbHelper.CancellationToken = null;
                 _dbHelper.Progress = null;
             }
         }
 
-        private void SetCancellationToken(CancellationToken? cancellationToken, IProgress<double>? progress)
+        private void SetCancellationToken( CancellationToken? cancellationToken, IProgress<double>? progress )
         {
-            if (_dbHelper != null)
+            if( _dbHelper != null )
             {
                 _dbHelper.CancellationToken = cancellationToken;
                 _dbHelper.Progress = progress;
             }
         }
 
-
         private void ConstructTableList()
         {
-            _tableList = new List<TableDef>()
-            {
+            _tableList =
+            [
                 new TableDef("LastUpdateTable",
-                    new List<TableColDef>()
-                    {
+                    [
                         new TableColDef( "LastUpdated", "DATETIME", true ),
                         new TableColDef( "Version", "TEXT", true ),
                         new TableColDef( "BuildDate", "DATETIME", true )
-                    }
+                    ]
                 ),
 
                 new TableDef("Media",
-                    new List<TableColDef>()
-                    {
+                    [
                         new TableColDef( "ItemId", "TEXT", false, true ),
                         new TableColDef( "PrimaryName", "TEXT", false ),
                         new TableColDef( "SortName", "TEXT", true ),
@@ -155,12 +149,11 @@ namespace Statistics2026.Data
                         new TableColDef( "TotalBitrate", "INT", true ),
                         new TableColDef( "PremiereDate", "DATETIME", true ),
                         new TableColDef( "DateAdded", "DATETIME", true )
-                    }
+                    ]
                 ),
 
                 new TableDef("Series",
-                    new List<TableColDef>()
-                    {
+                    [
                         new TableColDef( "ItemId", "TEXT", false, true ),
                         new TableColDef( "Name", "TEXT", false ),
                         new TableColDef( "SortName", "TEXT", true ),
@@ -174,12 +167,11 @@ namespace Statistics2026.Data
                         new TableColDef( "Rating", "REAL", true ),
                         new TableColDef( "Status", "TEXT" , true ),
                         new TableColDef( "AverageBitrate", "INT", true ),
-                    }
+                    ]
                 ),
 
                 new TableDef("Users",
-                    new List<TableColDef>()
-                    {
+                    [
                         new TableColDef( "UserId", "TEXT", false, true ),
                         new TableColDef( "UserName", "TEXT", false ),
                         new TableColDef( "ConnectUserId", "TEXT", true ),
@@ -187,27 +179,24 @@ namespace Statistics2026.Data
                         new TableColDef( "TotalTimeWatched", "INT", true ){DeprecatedColumn=true },
                         new TableColDef( "TotalWatchableTime", "INT", true ){DeprecatedColumn=true },
                         new TableColDef( "MediaTableName", "TEXT", false)
-                    }
+                    ]
                 ),
                 new TableDef("Collections",
-                    new List<TableColDef>()
-                    {
+                    [
                             new TableColDef( "ItemId", "TEXT", false, true),
                             new TableColDef( "Name", "TEXT", false ),
                             new TableColDef( "SortName", "TEXT", false )
-                    }
+                    ]
                 ),
                 new TableDef("CollectionMembership",
-                    new List<TableColDef>()
-                    {
+                    [
                         new TableColDef( "CollectionId", "TEXT", false ),
                         new TableColDef( "ItemId", "TEXT", false ),
                         new TableColDef( "CollectionName", "TEXT", false ) // for debugging purposes
-                    }
+                    ]
                 ),
                 new TableDef("CachedStats",
-                    new List<TableColDef>()
-                    {
+                    [
                         new TableColDef( "LongestSeries", "TEXT", true ),
                         new TableColDef( "ShortestSeries", "TEXT", true ),
                         new TableColDef( "LargestSeries", "TEXT", true ),
@@ -218,35 +207,32 @@ namespace Statistics2026.Data
                         new TableColDef( "LargestMovie", "TEXT", true ),
                         new TableColDef( "SmallestMovie", "TEXT", true ),
                         new TableColDef( "TotalMovieStudioCount", "INT", true ),
-                    }
+                    ]
                 ){ DeprecatedTable = true },
                 new TableDef("CachedWatchedAnalysis",
-                    new List<TableColDef>()
-                    {
+                    [
                         new TableColDef( "ItemId", "TEXT", true ),
                         new TableColDef( "Name", "TEXT", true ),
                         new TableColDef( "ImageUrl", "TEXT", true ),
                         new TableColDef( "NumEpisodes", "INT", true ),
                         new TableColDef( "NumWatched", "INT", true ),
                         new TableColDef( "PercentWatchedPerUser", "DOUBLE", true ),
-                    }
+                    ]
                 ){ DeprecatedTable = true },
                 new TableDef("UserVideoList",
-                    new List<TableColDef>()
-                    {
+                    [
                         new TableColDef( "ItemId", "TEXT", true ),
                         new TableColDef( "Name", "TEXT", true ),
                         new TableColDef( "ImageUrl", "TEXT", true ),
                         new TableColDef( "NumEpisodes", "INT", true ),
                         new TableColDef( "NumWatched", "INT", true ),
                         new TableColDef( "PercentWatchedPerUser", "DOUBLE", true ),
-                    }
+                    ]
                 ){ DeprecatedTable = true },
-            };
+            ];
 
-            _userMediaTemplate = new TableDef("UserMedia_<USER_ID>",
-                    new List<TableColDef>()
-                    {
+            _userMediaTemplate = new TableDef( "UserMedia_<USER_ID>",
+                    [
                         new TableColDef( "UserId", "TEXT", false ), // user
                         new TableColDef( "ItemId", "TEXT", false, true ), // video item
                         new TableColDef( "Name", "TEXT", true ), // Name of the show to reduce joins
@@ -260,122 +246,124 @@ namespace Statistics2026.Data
                         new TableColDef( "NumEpisodes", "INT", true ), // for multi episode media
                         new TableColDef( "IsTVSpecial", "BOOLEAN", true ),
                         new TableColDef( "SeriesId", "TEXT", true ) // if episode add seriesid
-                    }
+                    ]
                 );
 
-            foreach (var tableDef in _tableList)
+            foreach( var tableDef in _tableList )
             {
-                if (tableDef.DeprecatedTable)
+                if( tableDef.DeprecatedTable )
                     continue;
 
-                _tableMap[tableDef.Name] = tableDef;
+                _tableMap[ tableDef.Name ] = tableDef;
             }
         }
 
         private List<string> tableNames()
         {
             var retVal = new List<string>();
-            foreach (var table in _tableList)
+            foreach( var table in _tableList )
             {
-                if (table.DeprecatedTable)
+                if( table.DeprecatedTable )
                     continue;
-                retVal.Add(table.Name);
+                retVal.Add( table.Name );
             }
+
             return retVal;
         }
 
-        private void CreateTables(TableDef.EAction action)
+        private void CreateTables( TableDef.EAction action )
         {
-            if (action != TableDef.EAction.eRecreate && action != TableDef.EAction.eCreate)
-                throw new InvalidEnumArgumentException($"Action must be {TableDef.EAction.eRecreate} or {TableDef.EAction.eCreate}");
+            if( action != TableDef.EAction.eRecreate && action != TableDef.EAction.eCreate )
+                throw new InvalidEnumArgumentException( $"Action must be {TableDef.EAction.eRecreate} or {TableDef.EAction.eCreate}" );
 
-            if (Plugin.Instance == null)
-                throw new NullReferenceException($"Plugin.Instance is null");
+            if( Plugin.Instance == null )
+                throw new NullReferenceException( $"Plugin.Instance is null" );
 
-            if (!Plugin.Instance.IsDBStateSet(EDBState.eSystemTablesCreated))
+            if( !Plugin.Instance.IsDBStateSet( EDBState.eSystemTablesCreated ) )
             {
                 var sqlCmds = new List<SQLCmdDef>();
-                foreach (var tableDef in _tableList)
+                foreach( var tableDef in _tableList )
                 {
-                    sqlCmds.AddRange(tableDef.GetSQLCommands(action));
+                    sqlCmds.AddRange( tableDef.GetSQLCommands( action ) );
                 }
 
                 var config = Statistics2026.Plugin.Instance!.Configuration;
-                if (config.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null)
+                if( config.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null )
                 {
-                    sqlCmds.AddRange(DropAllUserMediaCmds());
-                    Plugin.Instance.RemoveDBState(EDBState.eUserTablesCreated | EDBState.eUserDataInitialized);
+                    sqlCmds.AddRange( DropAllUserMediaCmds() );
+                    Plugin.Instance.RemoveDBState( EDBState.eUserTablesCreated | EDBState.eUserDataInitialized );
                 }
 
-                _dbHelper.ExecuteCommands(sqlCmds);
+                _dbHelper.ExecuteCommands( sqlCmds );
 
-                Plugin.Instance.AddDBState(EDBState.eSystemTablesCreated);
+                Plugin.Instance.AddDBState( EDBState.eSystemTablesCreated );
             }
 
             InitUserWatchData();
         }
 
-        public void ClearTable(string tableName)
+        public void ClearTable( string tableName )
         {
-            List<SQLCmdDef> sqlCmds = new List<SQLCmdDef>();
-            if (_tableMap.TryGetValue(tableName, out var tableDef))
+            List<SQLCmdDef> sqlCmds = [];
+            if( _tableMap.TryGetValue( tableName, out var tableDef ) )
             {
-                sqlCmds.AddRange(tableDef.GetSQLCommands(TableDef.EAction.eClear));
+                sqlCmds.AddRange( tableDef.GetSQLCommands( TableDef.EAction.eClear ) );
             }
             else
             {
-                sqlCmds.Add(new SQLCmdDef(TableDef.clearTable(tableName)));
+                sqlCmds.Add( new SQLCmdDef( TableDef.clearTable( tableName ) ) );
             }
-            _dbHelper.ExecuteCommands(sqlCmds);
+
+            _dbHelper.ExecuteCommands( sqlCmds );
         }
 
-        public string getUserTableName(User? user)
+        public string getUserTableName( User? user )
         {
-            if (user == null)
-                return string.Empty;
-            return getUserTableName(user.Id.ToString());
+            return user == null ? string.Empty : getUserTableName( user.Id.ToString() );
         }
 
-        public string getUserTableName(string userId)
+        public string getUserTableName( string userId )
         {
-            userId = userId.ToString().Replace("-", "");
+            userId = userId.ToString().Replace( "-", "" );
 
             return $"UserMedia_{userId}";
         }
 
-        public List<SQLCmdDef> DropTableCmds(string tableName)
+        public List<SQLCmdDef> DropTableCmds( string tableName )
         {
-            if (_tableMap.TryGetValue(tableName, out var tableDef))
+            if( _tableMap.TryGetValue( tableName, out var tableDef ) )
             {
-                var sqlCmds = tableDef.GetSQLCommands(TableDef.EAction.eDrop);
+                var sqlCmds = tableDef.GetSQLCommands( TableDef.EAction.eDrop );
                 return sqlCmds;
             }
-            return new List<SQLCmdDef>() { new SQLCmdDef(TableDef.dropTable(tableName)) };
+
+            return [ new SQLCmdDef( TableDef.dropTable( tableName ) ) ];
         }
 
-        public void DropTable(string tableName)
+        public void DropTable( string tableName )
         {
-            var cmds = DropTableCmds(tableName);
-            _dbHelper.ExecuteCommands(cmds);
+            var cmds = DropTableCmds( tableName );
+            _dbHelper.ExecuteCommands( cmds );
         }
 
-        public List<string> allTables((string regex, bool like)? regex = null)
+        public List<string> allTables( (string regex, bool like)? regex = null )
         {
             var retVal = new List<string>();
             var clauses = new List<string>() { "type='table'", "name NOT LIKE 'sqlite_%'" };
-            if (regex != null)
+            if( regex != null )
             {
-                var clause = "name " + (regex.Value.like ? "LIKE" : "NOT LIKE") + " '" + regex.Value.regex + "'";
-                clauses.Add(clause);
+                var clause = "name " + ( regex.Value.like ? "LIKE" : "NOT LIKE" ) + " '" + regex.Value.regex + "'";
+                clauses.Add( clause );
             }
-            var sql = "SELECT name FROM sqlite_master " + DBHelper.JoinClauses(clauses);
 
-            _dbHelper.ExecuteCommand(new SQLCmdDef(sql), statement =>
+            var sql = "SELECT name FROM sqlite_master " + DBHelper.JoinClauses( clauses );
+
+            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                retVal.Add(row.GetString(0));
+                retVal.Add( row.GetString( 0 ) );
                 return true;
-            });
+            } );
             return retVal;
         }
     }

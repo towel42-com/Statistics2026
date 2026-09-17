@@ -2,23 +2,22 @@
 using System;
 using System.Diagnostics;
 
-
 namespace Statistics2026.Data
 {
     public class AutoTimer : IDisposable
     {
         public string? Text = null;
-        private Stopwatch _stopWatch = Stopwatch.StartNew();
-        private ILogger? _logger = null;
-        private bool _debug = true;
+        private readonly Stopwatch _stopWatch = Stopwatch.StartNew();
+        private readonly ILogger? _logger = null;
+        private readonly bool _debug = true;
 
-        public AutoTimer(string text, ILogger? logger, bool debug = true)
+        public AutoTimer( string text, ILogger? logger, bool debug = true )
         {
             Text = text;
             _debug = debug;
             _logger = logger;
-        
-            SendMessage($"Starting {Text}");
+
+            SendMessage( $"Starting {Text}" );
         }
 
         public long ElapsedMilliseconds()
@@ -30,30 +29,30 @@ namespace Statistics2026.Data
 
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            Dispose( true );
+            GC.SuppressFinalize( this );
         }
 
-        private void SendMessage(string message)
+        private void SendMessage( string message )
         {
-            if (_debug)
-                _logger?.Debug(message);
+            if( _debug )
+                _logger?.Debug( message );
             else
-                _logger?.Info(message);
+                _logger?.Info( message );
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose( bool disposing )
         {
-            if (_disposed)
+            if( _disposed )
                 return;
 
-            SendMessage($"Finished {Text} - {_stopWatch?.ElapsedMilliseconds ?? 0}ms");
+            SendMessage( $"Finished {Text} - {_stopWatch?.ElapsedMilliseconds ?? 0}ms" );
 
             _disposed = true;
         }
         ~AutoTimer()
         {
-            Dispose(false);
+            Dispose( false );
         }
     }
 }
