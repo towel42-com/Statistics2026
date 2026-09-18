@@ -167,11 +167,6 @@ namespace Statistics2026.Data
             Size = size;
         }
 
-        public override string ToString()
-        {
-            return ToString( 0 );
-        }
-
         public abstract bool IsEmpty();
         public abstract string GetDataString( int depth = 0 );
 
@@ -202,9 +197,14 @@ namespace Statistics2026.Data
             retVal += StatCardResponse._addToHtml( --depth, "</table>" );
         }
 
+        public override string ToString()
+        {
+            return ToString( 0 );
+        }
+
         public string ToString( int depth = 0 )
         {
-            var retVal = StatCardResponse._addToHtml( depth, SubTitle );
+            var retVal = string.Empty;
             if( IsEmpty() )
                 return retVal;
 
@@ -246,6 +246,11 @@ namespace Statistics2026.Data
             {
                 retVal.addToHtml( depth, $"<div class=\"{titleClass}\">{Title}</div>" );
             }
+            if( !SubTitle.IsNullOrEmpty() )
+            {
+                retVal.addToHtml( depth, $"<div class=\"{titleClass}\">{SubTitle}</div>" );
+            }
+
         }
 
         private int addData( int depth, ref StatCardResponse retVal )
@@ -329,9 +334,6 @@ namespace Statistics2026.Data
         private string CheckMaxLength( string value )
         {
             return value;
-            //if (IgnoreLength)
-            //    return value;
-            //return value.Length > 30 ? value.Substring(0, 27) + "..." : value;
         }
 
         public void AddKey( string key )
