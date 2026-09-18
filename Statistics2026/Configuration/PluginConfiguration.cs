@@ -22,6 +22,7 @@ namespace Statistics2026.Configuration
         public bool showAllResolutions { get; set; } = false;
 
         public bool resetPlayCount { get; set; } = false;
+        public bool resetDBState { get; set; } = false;
 
         public bool dbStateOK { get; set; } = false;
     }

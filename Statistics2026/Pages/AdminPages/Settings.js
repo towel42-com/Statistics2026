@@ -15,6 +15,7 @@
                 view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
                 view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
                 view.querySelector("#resetPlayCount").checked = config.resetPlayCount;
+                view.querySelector("#resetDBState").checked = config.resetDBState;
             });
         }
 
@@ -57,6 +58,15 @@
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                         config.resetPlayCount = view.querySelector("#resetPlayCount").checked;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
+            view.querySelector("#resetDBState").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.resetDBState = view.querySelector("#resetDBState").checked;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
@@ -116,6 +126,11 @@
             view.querySelector("#resetPlayCountHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("When computing the user watch data, reset the playcount to the default value (typically 1), and show Administrators as watched for every video. This settings resets to false after the Reset has occured.", "Reset Play Count");
+                });
+
+            view.querySelector("#resetDBStateHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured", "Reset Database State");
                 });
 
 
