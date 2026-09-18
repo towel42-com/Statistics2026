@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Common;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Session;
@@ -8,6 +9,7 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
+using System;
 
 namespace Statistics2026.Api
 {
@@ -43,6 +45,22 @@ namespace Statistics2026.Api
             _configManager = configManager;
             _taskManager = taskManager;
             Plugin.Instance?.ServerId = _appHost.SystemId;
+        }
+
+        public User? GetUserByName( string userName )
+        {
+            if( _userManager == null )
+                throw new ArgumentNullException( "_userManager is null." );
+
+            return _userManager!.GetUserByName( userName );
+        }
+
+        public User? GetUserById( Guid id )
+        {
+            if( _userManager == null )
+                throw new ArgumentNullException( "_userManager is null." );
+
+            return _userManager!.GetUserById( id );
         }
 
         public readonly IFileSystem _fileSystem;

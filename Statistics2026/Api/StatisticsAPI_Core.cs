@@ -13,6 +13,7 @@ using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -87,17 +88,20 @@ namespace Statistics2026.Api
             return mediaInfos;
         }
 
-        private User? GetUser( string userName )
+        private User? GetUserByName( string userName )
         {
-            if( string.IsNullOrEmpty( userName ) )
-                return null;
+            if( _embyInterfaces == null )
+                throw new ArgumentNullException( "_embyInterfaces is null." );
 
-            var users = _embyInterfaces._userManager!.GetUserList( new UserQuery() { Name = userName } ).ToList();
-            if( users.Count() == 0 )
-                return null;
+            return _embyInterfaces.GetUserByName( userName );
+        }
 
-            var user = users[ 0 ];
+        private User? GetUserById( Guid id )
+        {
+            if( _embyInterfaces == null )
+                throw new ArgumentNullException( "_embyInterfaces is null." );
 
+            var user = _embyInterfaces.GetUserById( id );
             return user;
         }
     }

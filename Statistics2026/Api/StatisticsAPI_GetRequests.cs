@@ -29,7 +29,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -150,7 +150,7 @@ namespace Statistics2026.Api
             return GetRequest( "GetTotalMovieCount", timer =>
             {
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 return user == null ? new object() : TotalMovieCount( user );
             } );
         }
@@ -169,7 +169,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -215,7 +215,7 @@ namespace Statistics2026.Api
             return GetRequest( "GetTotalTVCount", timer =>
             {
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 return user == null ? new object() : TotalTVCount( user, false );
             } );
         }
@@ -234,7 +234,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -250,7 +250,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -292,7 +292,7 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -335,7 +335,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -364,7 +364,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -389,7 +389,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -414,7 +414,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -443,7 +443,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -459,7 +459,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 
@@ -475,7 +475,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var userName = request.user;
-                var user = GetUser( userName );
+                var user = GetUserByName( userName );
                 if( user == null )
                     return new object();
 

@@ -12,7 +12,7 @@ namespace Statistics2026.Api
             LastUpdated = config.LastUpdated;
             Version = config.Version;
             DBStateOK = Plugin.Instance?.IsDBStateSet( EDBState.eFullyInitialized ) ?? false;
-            DBState = Plugin.Instance?.DBStateAsString() ?? EDBState.eEmpty.ToPrettyString();
+            DBState = Plugin.Instance?.DBStateString() ?? EDBState.eEmpty.ToPrettyString();
         }
         public string BuildDate { get; set; } = string.Empty;
         public string LastUpdated { get; set; } = string.Empty;
