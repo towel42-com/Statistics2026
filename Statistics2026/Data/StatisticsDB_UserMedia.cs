@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Entities;
+﻿using Emby.Naming.Common;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
@@ -136,10 +137,10 @@ namespace Statistics2026.Data
                 " TotalTicksPlayed=@TotalTicksPlayed " +
                 "WHERE ItemId=@ItemId"
                 ;
-            List<(string, object?)> parameters = 
+            List<(string, object?)> parameters =
                 [
                     ("@TotalTicksPlayed", totalTicksPlayed ),
-                    ("@ItemId", itemId) 
+                    ("@ItemId", itemId)
                 ];
 
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql, parameters ) );
@@ -590,8 +591,34 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public Dictionary<long, List<WatchedMediaValue>> WatchedMediaValues( User? user, bool leastWatched, EMediaType mediaType )
+        public List<List<WatchedMediaValue>> WatchedMediaValues( User? user, bool leastWatched, EMediaType mediaType )
         {
+            List<string> getClauses( string tableName, bool episodes, User? user )
+            {
+                List<string> clauses =
+                    [
+                        "PlayCount > 0",
+                        $"{tableName}.TotalTicksPlayed > 0"
+                    ];
+
+                if( episodes )
+                    clauses.Add( $"{tableName}.IsEpisode" );
+                else
+                    clauses.Add( $"NOT {tableName}.IsEpisode" );
+
+                var excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
+                if( ( user == null ) && excludeAdmin )
+                {
+                    clauses.Add( "NOT Users.IsAdministrator" );
+                }
+
+                if( user != null )
+                {
+                    clauses.Add( $"{tableName}.UserId = '{user.Id}'" );
+                }
+
+                return clauses;
+            }
             CheckIsValid( ECheckType.eReport );
 
             var excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
@@ -606,8 +633,6 @@ namespace Statistics2026.Data
             {
                 tableNames = allUserMediaTables();
             }
-
-            //using UserInfo = (string Name, int Age);
 
             var playMap = new Dictionary<string, WatchedMediaValueItemData>();
             foreach( var tableName in tableNames )
@@ -625,17 +650,7 @@ namespace Statistics2026.Data
                     $"LEFT OUTER JOIN {tableName} ON Series.ItemId = {tableName}.SeriesId " +
                     $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId ";
 
-                    List<string> clauses = [ "PlayCount > 0" ];
-                    if( excludeAdmin )
-                    {
-                        clauses.Add( "NOT Users.IsAdministrator" );
-                    }
-
-                    if( user != null )
-                    {
-                        clauses.Add( $"{tableName}.UserId = '{user.Id}'" );
-                    }
-
+                    var clauses = getClauses( tableName, true, user );
                     sql += DBHelper.JoinClauses( clauses );
 
                     sql += $"GROUP BY SeriesId " +
@@ -657,22 +672,7 @@ namespace Statistics2026.Data
                         $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId "
                         ;
 
-                    List<string> clauses =
-                        [
-                            "PlayCount > 0",
-                            $"NOT {tableName}.IsEpisode"
-                        ];
-
-                    if( excludeAdmin )
-                    {
-                        clauses.Add( "NOT Users.IsAdministrator" );
-                    }
-
-                    if( user != null )
-                    {
-                        clauses.Add( $"{tableName}.UserId = '{user.Id}'" );
-                    }
-
+                    var clauses = getClauses( tableName, false, user );
                     sql += DBHelper.JoinClauses( clauses );
 
                     sql += $"GROUP BY {tableName}.ItemId " +
@@ -706,35 +706,65 @@ namespace Statistics2026.Data
                 } );
             }
 
-            List<WatchedMediaValueItemData> asList = [ .. playMap.Values ];
-
-            asList.Sort( ( a, b ) =>
-            {
-                return leastWatched ? a.playCountPerUser.CompareTo( b.playCountPerUser ) : b.playCountPerUser.CompareTo( a.playCountPerUser );
-            } );
-
-            var retVal = new Dictionary<long, List<WatchedMediaValue>>();
+            var sortedMapping = new SortedDictionary<long, List<WatchedMediaValue>>();
 
             var numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.numWatchedToReport;
 
-            for( var ii = 0; ( retVal.Count < numResultsToGet ) && ( ii < asList.Count ); ++ii )
+            foreach( var curr in playMap.Values )
             {
-                var (id, name, playCount, denominator, playCountPerUser) = asList[ ii ];
-                if( !retVal.TryGetValue( playCount, out var value ) )
-                {
-                    retVal[ playCount ] = [];
-                }
+                var (id, name, playCount, denominator, playCountPerUser) = curr;
+                var key = (long)playCountPerUser;
 
-                retVal[ playCount ].Add( new WatchedMediaValue()
+                var item = new WatchedMediaValue()
                 {
                     ItemId = id,
                     Name = name,
-                    ImageUrl = ItemImageUrl._ItemImageUrl( id, _embyInterfaces!._libraryManager ),
                     PlayCount = playCount,
                     Denominator = denominator,
                     PlayCountPerUser = playCountPerUser,
                     MediaType = mediaType
-                } );
+                };
+
+                if( sortedMapping.TryGetValue( key, out var value ) )
+                {
+                    value.Add( item );
+                    sortedMapping[ key ] = value;
+                }
+                else
+                    sortedMapping[ key ] = [ item ];
+            }
+
+            var retVal = new List<List<WatchedMediaValue>>();
+
+            if( leastWatched )
+            {
+                foreach( var curr in sortedMapping.Values )
+                {
+                    if( retVal.Count >= numResultsToGet )
+                        break;
+                    for( int ii = 0; ii < curr.Count; ++ii )
+                    {
+                        var item = curr[ ii ];
+                        item.ImageUrl = ItemImageUrl._ItemImageUrl( item.ItemId, _embyInterfaces!._libraryManager );
+                        curr[ ii ] = item;
+                    }
+                    retVal.Add( curr );
+                }
+            }
+            else
+            {
+                foreach( var curr in sortedMapping.Reverse() )
+                {
+                    if( retVal.Count >= numResultsToGet )
+                        break;
+                    for( int ii = 0; ii < curr.Value.Count; ++ii )
+                    {
+                        var item = curr.Value[ ii ];
+                        item.ImageUrl = ItemImageUrl._ItemImageUrl( item.ItemId, _embyInterfaces!._libraryManager );
+                        curr.Value[ ii ] = item;
+                    }
+                    retVal.Add( curr.Value );
+                }
             }
 
             return retVal;
@@ -759,12 +789,13 @@ namespace Statistics2026.Data
 
             var retVal = new TextBasedStatCard( title, help, EStatCardSize.eMedium )
             {
-                SubTitle = "(Weighted Watched across Users)",
+                SubTitle = ( user == null ) ? "(Weighted Watched across Users)" : "",
                 ListType = TextBasedStatCard.EListType.eNumberedGroupByKey
             };
-            foreach( var currList in watchedMedia.OrderBy( x => x.Key ) )
+
+            foreach( var currList in watchedMedia )
             {
-                foreach( var curr in currList.Value )
+                foreach( var curr in currList )
                 {
                     retVal.AddLine( $"{curr.Title()}", curr.ItemId, curr.ImageUrl );
                     retVal.AddKey( curr.PlayCount.ToString() );
@@ -774,9 +805,9 @@ namespace Statistics2026.Data
             if( watchedMedia.Count == 0 )
             {
                 string? name;
-                if (mediaType == EMediaType.eSeries)
+                if( mediaType == EMediaType.eSeries )
                     name = "TV Shows";
-                else if (mediaType == EMediaType.eEpisode)
+                else if( mediaType == EMediaType.eEpisode )
                     name = "TV Episodes";
                 else // mediaType == EMediaType.eMovies
                     name = "Movies";
@@ -796,7 +827,7 @@ namespace Statistics2026.Data
             var tableName = getUserTableName( user );
             var sql = string.Empty;
 
-            if (played)
+            if( played )
             {
                 sql = "SELECT SUM(TotalTicksPlayed) " +
                     $"FROM {tableName} "
@@ -926,6 +957,12 @@ namespace Statistics2026.Data
             foreach( var (name, lastPlayed) in values )
             {
                 retVal.AddLine( $"{name} - {lastPlayed:d}" );
+            }
+
+            if( values.Count == 0 )
+            {
+                string name = movies ? "Movies" : "TV Shows";
+                retVal.AddLine( $"Watch some {name} already!" );
             }
 
             return retVal;

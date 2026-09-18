@@ -295,7 +295,19 @@ namespace Statistics2026.Data
             eNumberedGroupByKey
         }
 
-        public EListType ListType { get; set; } = EListType.eUnordered;
+        public EListType ListType
+        {
+            get
+            {
+                if( ( ValueLines.Count == 1 ) || ( KeyValueLines.Count == 0 ) )
+                {
+                    return EListType.eUnordered;
+                }
+                return field;
+            }
+
+            set;
+        } = EListType.eUnordered;
         public bool IgnoreLength { get; set; } = false;
         private List<TextValueLine> ValueLines { get; set; }
         private List<string> KeyValueLines { get; set; }
