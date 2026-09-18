@@ -58,7 +58,10 @@ namespace Statistics2026.Data
             _dbHelper = new DBHelper( _embyInterfaces );
 
             embyInterfaces._logger?.Debug( "Statistics2026 : Finished Creating Database" );
-            ComputeDBState();
+            lock( _padlock )
+            {
+                ComputeDBState();
+            }
         }
 
         ~StatisticsDB()
@@ -109,6 +112,8 @@ namespace Statistics2026.Data
                 _dbHelper.Progress = progress;
             }
         }
+
+        public const string sUserMediaTablePrefix = "UserMedia_";
 
         private void ConstructTableList()
         {
@@ -231,7 +236,7 @@ namespace Statistics2026.Data
                 ){ DeprecatedTable = true },
             ];
 
-            _userMediaTemplate = new TableDef( "UserMedia_<USER_ID>",
+            _userMediaTemplate = new TableDef( $"{sUserMediaTablePrefix}< USER_ID>",
                     [
                         new TableColDef( "UserId", "TEXT", false ), // user
                         new TableColDef( "ItemId", "TEXT", false, true ), // video item
@@ -299,7 +304,7 @@ namespace Statistics2026.Data
                 Plugin.Instance.AddDBState( EDBState.eSystemTablesCreated );
             }
 
-            InitUserWatchData();
+            InitWatchedMediaTables();
         }
 
         public void ClearTable( string tableName )
@@ -315,18 +320,6 @@ namespace Statistics2026.Data
             }
 
             _dbHelper.ExecuteCommands( sqlCmds );
-        }
-
-        public string getUserTableName( User? user )
-        {
-            return user == null ? string.Empty : getUserTableName( user.Id.ToString() );
-        }
-
-        public string getUserTableName( string userId )
-        {
-            userId = userId.ToString().Replace( "-", "" );
-
-            return $"UserMedia_{userId}";
         }
 
         public List<SQLCmdDef> DropTableCmds( string tableName )
