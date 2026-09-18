@@ -6,19 +6,12 @@
     function (mainTabsManager, AdminHelpers, Helpers) {
         'use strict';
 
-        function loadData(view, userName) {
-            if (!Helpers.CheckForValidConfig()) {
-                Dashboard.hideLoadingMsg();
-                return;
-            }
-
-            Helpers.LoadUserStats(view, userName, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
-        }
-
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet(e);
+
+                Helpers.loadUsers(view, `#selectUser_userstats`, loadData);
             });
 
             view.addEventListener('viewhide', function (e) {
@@ -30,22 +23,20 @@
             });
 
             view.querySelector("#selectUser_userstats").addEventListener(`change`, function () {
-                const user = this.options[this.selectedIndex].innerHTML;
-                loadData(view, user);
+                const userId = this.options[this.selectedIndex].value;
+                loadData(view, userId);
             });
 
-            ApiClient.getUsers().then(function (users) {
-                var select = view.querySelector(`#selectUser_userstats`);
+            function loadData(view, userId) {
+                if (!Helpers.CheckForValidConfig()) {
+                    Dashboard.hideLoadingMsg();
+                    return;
+                }
 
-                loadData(view, users[0].Name);
-
-                users.forEach((user) => {
-                    var option = document.createElement(`option`);
-                    option.value = user.Id;
-                    option.innerHTML = user.Name;
-                    select.appendChild(option);
+                ApiClient.getUser(userId).then(function (user) {
+                    Helpers.LoadUserStats(view, user.Name, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
                 });
-            });
+            }
         }
     }
 );

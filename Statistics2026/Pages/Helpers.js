@@ -397,6 +397,23 @@ define(function () {
             .catch((err) => console.error("Error fetching sessions:", err));
     }
 
+    function loadUsers(view, comboBoxId, loadDataFunc) {
+        ApiClient.getUsers().then(function (users) {
+
+            console.log(`users: {users}`);
+            var select = view.querySelector(comboBoxId);
+            users.forEach((user) => {
+                var option = document.createElement(`option`);
+                option.value = user.Id;
+                option.innerHTML = user.Name;
+                select.appendChild(option);
+            });
+            if (users.length > 0) {
+                loadDataFunc(view, users[0].Id);
+            }
+        });
+    }
+
     return {
         pluginId,
         LoadTVProgress,
@@ -410,7 +427,8 @@ define(function () {
         injectStyleSheet,
         getStatistics2026Data,
         getSummaryInfo,
-        showInfo
+        showInfo,
+        loadUsers
     };
 
 })

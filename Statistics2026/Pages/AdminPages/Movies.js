@@ -19,26 +19,6 @@
                 Helpers.injectSortableTableStyle(document);
 
                 loadTableData();
-
-                document.querySelectorAll('#movie_results_table thead th').forEach((header, index) => {
-                    header.addEventListener('click', () => {
-                        // const columnName = header.getAttribute('data-column');
-                        const columnType = header.getAttribute('data-type');
-
-                        console.log(`Sorting index: ${index}, Column Type: ${columnType}`);
-
-                        // Pass these variables straight into your sort function
-                        Helpers.sortTable(index, columnType, 'movie_results_table', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
-                    });
-                });
-
-                function loadTableData() {
-                    if (!Helpers.CheckForValidConfig()) {
-                        Dashboard.hideLoadingMsg();
-                        return;
-                    }
-                    Helpers.loadTableData(view, 'movie_results_status',   'movie_results',   'Statistics2026/movie_list',   Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
-                }
             });
 
             view.addEventListener('viewhide', function (e) {
@@ -48,6 +28,15 @@
             view.addEventListener('viewdestroy', function (e) {
 
             });
+
+            function loadTableData() {
+                if (!Helpers.CheckForValidConfig()) {
+                    Dashboard.hideLoadingMsg();
+                    return;
+                }
+                Helpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+            }
+
         };
     }
 );
