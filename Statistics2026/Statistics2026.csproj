@@ -29,7 +29,7 @@
         </PropertyGroup>
        
         <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Small'">
-            <EmbyServerRoot>D:\Emby\EmbyServer</EmbyServerRoot>
+            <EmbyServerRoot>D:\Emby\minimal</EmbyServerRoot>
         </PropertyGroup>
 
         <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Full'">
