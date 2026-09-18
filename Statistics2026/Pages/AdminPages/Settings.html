@@ -6,27 +6,18 @@
             <h2 style="margin-top: 0px;margin-bottom: 0px;">Codec Information Settings</h2>
 
             <p>
-                <h3 style="margin-top: 10px;">User Settings</h3>
-                <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="excludeAdmin" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Exclude Administrator users from reports?</span>
-                    <i class="md-icon" id="excludeAdminHelp">info</i>
-                </label>
-                <br />
-                <br />
-                <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="hasConnectUserID" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Only Show Users with Connect User ID?</span>
-                    <i class="md-icon" id="hasConnectUserIDHelp">info</i>
-                </label>
-                Number of Most Active Users to Show:
-                <i class="md-icon" id="numMostActiveHelp">info</i>
-                <input type="number" id="numMostActive" min="1" max="1000" placeholder="# of Most Active" title="Number of Most Active" />
+                <h3 style="margin-top: 10px;">System Settings</h3>
 
-                <br />
-                Number of Most/Least Watched Videos to List:
-                <i class="md-icon" id="numWatchedToReportHelp">info</i>
-                <input type="number" id="numWatchedToReport" min="1" max="1000" placeholder="# of Watched Videos" title="Number of Watched Videos" />
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="resetPlayCount" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Reset play count?</span>
+                    <i class="md-icon" id="resetPlayCountHelp">info</i>
+                </label>
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="resetDBState" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Reset database state?</span>
+                    <i class="md-icon" id="resetDBStateHelp">info</i>
+                </label>
             </p>
 
             <p>
@@ -45,15 +36,51 @@
             </p>
 
             <p>
-                <h3 style="margin-top: 10px;">Dolby Vision Profile Settings</h3>
+                <h3 style="margin-top: 10px;">User Report Settings</h3>
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="excludeAdmin" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Exclude Administrator users from reports?</span>
+                    <i class="md-icon" id="excludeAdminHelp">info</i>
+                </label>
+                <br />
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="hasConnectUserID" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Only Show Users with Connect User ID?</span>
+                    <i class="md-icon" id="hasConnectUserIDHelp">info</i>
+                </label>
+                <br />
+                Number of Most Active Users to Show:
+                <i class="md-icon" id="numMostActiveHelp">info</i>
+                <input type="number" id="numMostActive" min="1" max="1000" placeholder="# of Most Active" title="Number of Most Active" />
+            </p>
+
+
+            <p>
+                <h3 style="margin-top: 10px;">Media Report Settings</h3>
+                <span>
+                    Number of Watched Videos to List:
+                    <i class="md-icon" id="numWatchedToReportHelp">info</i>
+                    <input type="number" id="numWatchedToReport" min="1" max="1000" placeholder="# of Watched Videos" title="Number of Watched Videos" />
+                </span>
+                <br />
+                <span>
+                    Number of "Tied" Media to List:
+                    <i class="md-icon" id="numTiedToReportHelp">info</i>
+                    <input type="number" id="numTiedToReport" min="1" max="1000" placeholder="# of Tied Videos" title="Number of Tied Media To List" />
+                </span>
+            </p>
+
+            <p>
+                <h3 style="margin-top: 10px;">Dolby Vision Profile Report Settings</h3>
                 <label class="emby-checkbox-label">
                     <input style="margin-top: 10px;" id="showUnknownDVProfiles" is="emby-checkbox" class="emby-checkbox" type="checkbox">
                     <span class="checkboxLabel">Show non-HEVC/Unknown Dolby Vision profiles?</span>
                     <i class="md-icon" id="showUnknownDVProfilesHelp">info</i>
                 </label>
             </p>
+
             <p>
-                <h3 style="margin-top: 10px;">Resolution Settings</h3>
+                <h3 style="margin-top: 10px;">Resolution Report Settings</h3>
                 <label class="emby-checkbox-label">
                     <input style="margin-top: 10px;" id="showAllResolutions" is="emby-checkbox" class="emby-checkbox" type="checkbox">
                     <span class="checkboxLabel">Show all Resolutions?</span>

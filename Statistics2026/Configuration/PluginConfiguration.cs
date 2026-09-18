@@ -17,6 +17,7 @@ namespace Statistics2026.Configuration
         public bool excludeAdmin { get; set; } = true;
 
         public int numWatchedToReport { get; set; } = 5;
+        public int numTiedToReport { get; set; } = 5;
 
         public bool showUnknownDVProfiles { get; set; } = false;
         public bool showAllResolutions { get; set; } = false;

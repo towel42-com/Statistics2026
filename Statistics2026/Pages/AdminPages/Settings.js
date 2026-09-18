@@ -13,6 +13,7 @@
                 view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
                 view.querySelector("#numMostActive").value = config.numMostActiveUsers;
                 view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
+                view.querySelector("#numTiedToReport").value = config.numTiedToReport;
                 view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
                 view.querySelector("#resetPlayCount").checked = config.resetPlayCount;
                 view.querySelector("#resetDBState").checked = config.resetDBState;
@@ -89,6 +90,15 @@
                     });
                 }
             );
+            
+            view.querySelector("#numTiedToReport").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.numTiedToReport = parseInt(view.querySelector("#numTiedToReport").value) || 5;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
 
             view.querySelector("#showUnknownDVProfiles").addEventListener("click",
                 function () {
@@ -116,6 +126,11 @@
             view.querySelector("#numWatchedToReportHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("The default is 5, but you can limit how many Watched Videos to report on", "Number of Watched Videos");
+                });
+
+            view.querySelector("#numTiedToReportHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("The default is 5, but when reporting a list of media, and the value is tied how many do you want to show?", "Number of Tied Videos");
                 });
 
             view.querySelector("#excludeAdminHelp").addEventListener("click",

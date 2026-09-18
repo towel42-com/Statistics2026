@@ -738,11 +738,12 @@ namespace Statistics2026.Data
             var sortedMapping = new SortedDictionary<long, List<WatchedMediaValue>>();
 
             var numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.numWatchedToReport;
+            var maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.numTiedToReport;
 
             foreach( var curr in playMap.Values )
             {
                 var (id, name, playCount, denominator, playCountPerUser) = curr;
-                var key = (long)playCountPerUser;
+                var key = (long)( 100 * playCountPerUser );
 
                 var item = new WatchedMediaValue()
                 {
@@ -765,19 +766,29 @@ namespace Statistics2026.Data
 
             var retVal = new List<List<WatchedMediaValue>>();
 
+            List<WatchedMediaValue> cleanCurrList( List<WatchedMediaValue> inList )
+            {
+                var numToKeep = Math.Min( inList.Count, maxPerGroup );
+                var subList = inList.Take( numToKeep ).ToList();
+
+                for( int ii = 0; ii < numToKeep; ++ii )
+                {
+                    var item = subList[ ii ];
+                    item.ImageUrl = ItemImageUrl._ItemImageUrl( item.ItemId, _embyInterfaces!._libraryManager );
+                    subList[ ii ] = item;
+                }
+
+                return subList;
+            }
+
             if( leastWatched )
             {
                 foreach( var curr in sortedMapping.Values )
                 {
                     if( retVal.Count >= numResultsToGet )
                         break;
-                    for( int ii = 0; ii < curr.Count; ++ii )
-                    {
-                        var item = curr[ ii ];
-                        item.ImageUrl = ItemImageUrl._ItemImageUrl( item.ItemId, _embyInterfaces!._libraryManager );
-                        curr[ ii ] = item;
-                    }
-                    retVal.Add( curr );
+
+                    retVal.Add( cleanCurrList( curr ) );
                 }
             }
             else
@@ -786,13 +797,8 @@ namespace Statistics2026.Data
                 {
                     if( retVal.Count >= numResultsToGet )
                         break;
-                    for( int ii = 0; ii < curr.Value.Count; ++ii )
-                    {
-                        var item = curr.Value[ ii ];
-                        item.ImageUrl = ItemImageUrl._ItemImageUrl( item.ItemId, _embyInterfaces!._libraryManager );
-                        curr.Value[ ii ] = item;
-                    }
-                    retVal.Add( curr.Value );
+
+                    retVal.Add( cleanCurrList( curr.Value ) );
                 }
             }
 
@@ -819,8 +825,7 @@ namespace Statistics2026.Data
             var retVal = new TextBasedStatCard( title, help, EStatCardSize.eMedium )
             {
                 SubTitle = ( user == null ) ? "(Watched across Users)" : string.Empty,
-                ListType = TextBasedStatCard.EListType.eNumberedGroupByKey,
-                MaxGroupSize = Plugin.Instance?.Configuration.numTiedToReport ?? 5
+                ListType = TextBasedStatCard.EListType.eNumberedGroupByKey
             };
 
             foreach( var currList in watchedMedia )
@@ -828,7 +833,8 @@ namespace Statistics2026.Data
                 foreach( var curr in currList )
                 {
                     retVal.AddLine( $"{curr.Title()}", curr.ItemId, curr.ImageUrl );
-                    retVal.AddKey( curr.PlayCount.ToString() );
+                    var key = (long)( 100 * curr.PlayCountPerUser );
+                    retVal.AddKey( key.ToString() );
                 }
             }
 
