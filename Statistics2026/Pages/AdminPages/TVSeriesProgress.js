@@ -11,6 +11,7 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet(e);
                 Helpers.injectSortableTableStyle(document);
+                Helpers.setupSortability('TVSeriesProgressTable', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
                 Helpers.loadUsers(view, `#selectUser_tvprogress`, loadData);
             });

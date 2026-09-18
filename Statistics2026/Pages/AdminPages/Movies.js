@@ -9,14 +9,11 @@
         'use strict';
 
         return function (view, params) {
-
-            // init code here
             view.addEventListener('viewshow', function (e) {
-
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Movies", AdminHelpers.getTabs), AdminHelpers.getTabs);
-
                 Helpers.injectStyleSheet(e);
                 Helpers.injectSortableTableStyle(document);
+                Helpers.setupSortability('movie_results_table', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
                 loadTableData();
             });

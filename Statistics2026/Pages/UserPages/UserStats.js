@@ -18,7 +18,7 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
                 Helpers.injectStyleSheet(e);
 
-                loadData(view, instance.params.userId);
+                loadData(view, params.userId);
             });
 
             view.addEventListener('viewhide', function (e) {

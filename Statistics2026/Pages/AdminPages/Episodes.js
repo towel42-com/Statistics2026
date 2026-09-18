@@ -16,6 +16,7 @@
 
                 Helpers.injectStyleSheet(e);
                 Helpers.injectSortableTableStyle(document);
+                Helpers.setupSortability('episode_results_table', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
                 loadTableData();
             });

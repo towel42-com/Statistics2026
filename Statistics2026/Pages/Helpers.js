@@ -1,6 +1,39 @@
 define(function () {
     const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
 
+    async function CheckForValidConfig() {
+        var urlText = "/emby/Statistics2026/database_status";
+        var url = ApiClient.getUrl(urlText);
+
+        let response = await ApiClient.getJSON(url).catch(error => {
+            var errorMessage = "'" + error + "' - '" + urlText + "'";
+            console.error("database_status failed:", errorMessage);
+        });
+
+        if (response.LastUpdated === undefined) {
+            showInfo("No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
+            return false;
+        }
+        if (response.DBStateOK == false) {
+            showInfo("The database has not been initialized, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
+            return false;
+        }
+        return true;
+    }
+
+    if (!String.prototype.endsWith2) {
+        String.prototype.endsWith2 = function (searchString, position) {
+            var subjectString = this.toString();
+            if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
+                position = subjectString.length;
+            }
+            position -= searchString.length;
+            var lastIndex = subjectString.indexOf(searchString, position);
+            return lastIndex !== -1 && lastIndex === position;
+        };
+    }
+
+
     function calculateProgressClass(value) {
         if (value == 0)
             return ``;
@@ -83,115 +116,6 @@ define(function () {
         } catch {
             hideLoadingFunc();
         }
-
-    }
-
-    function injectSortableTableStyle(document) {
-        var style = document.createElement('style');
-        style.innerHTML = sortableTableStyle();
-        var ref = document.querySelector('script');
-        ref.parentNode.insertBefore(style, ref);
-    }
-
-    function sortableTableStyle() {
-        var retVal = '.tooltip {position: relative;display: inline-block;border-bottom: 1px dotted black;} ' +
-            '.tooltip .tooltiptext {visibility: hidden; background-color: black; color: #fff; border-radius: 6px; padding: 5px 0; position: absolute;z-index: 1;} ' +
-            '.tooltip:hover .tooltiptext {visibility: visible;} ' +
-            '.info_cell {white-space: nowrap; padding-left:45px; padding-right:20px; font-size:smaller;}' +
-            '.info_cell_heading {white-space: nowrap; padding-left:20px; padding-right:20px;font-size:smaller;}' +
-            '.sortable-table-styled - styled {' +
-            '   width: 100 %;' +
-            '   border-collapse: collapse;' +
-            '} ' +
-            '.sortable-table-styled th {' +
-            '    cursor: pointer;' +
-            '    background - color: #f2f2f2;' +
-            '    padding: 10px;' +
-            '    user - select: none;' +
-            '}' +
-            '.sortable-table-styled td {' +
-            '   padding: 10px;' +
-            '   border - bottom: 1px solid #ddd;' +
-            '}' +
-            '.sortable-table-styled th .sort-icon::after {' +
-            '    content: " ↕";' +
-            '    opacity: 0.4;' +
-            '}' +
-            '.sortable-table-styled th.asc .sort-icon::after {' +
-            '    content: " ↑";' +
-            '    opacity: 1;' +
-            '}' +
-            '.sortable-table-styled th.desc .sort-icon::after {' +
-            '    content: " ↓";' +
-            '    opacity: 1;' +
-            '}';
-        return retVal;
-    }
-    const sortDirections = new Map();
-
-    function sortTable(columnIndex, dataType, tableId, showLoadingFunc, hideLoadingFunc, forcedDir) {
-        showLoadingFunc();
-
-        const table = document.getElementById(tableId);
-        const tbody = table.querySelector("tbody");
-        // Convert HTMLCollection of rows into a real Array
-        const rows = Array.from(tbody.querySelectorAll("tr"));
-
-        // Toggle between Ascending ('asc') and Descending ('desc')
-
-        let currentMap = sortDirections.get(tableId);
-        if (currentMap === undefined) {
-            sortDirections.set(tableId, new Map());
-            currentMap = sortDirections.get(tableId);
-        }
-
-        let currentDirection = currentMap.get(columnIndex);
-        if (forcedDir === undefined) {
-
-            currentDirection = currentMap.get(columnIndex);
-            if (currentDirection === undefined) {
-                currentDirection = 'asc';
-            } else {
-                currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-            }
-        } else {
-            currentDirection = 'desc';
-        }
-
-        sortDirections.get(tableId).set(columnIndex, currentDirection);
-
-        // Reset indicator classes on all headers
-        table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
-        // Add current sorting indicator class to the active header
-        table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
-
-        // Sort the row elements
-        rows.sort((rowA, rowB) => {
-            const cellA = rowA.children[columnIndex].textContent.trim();
-            const cellB = rowB.children[columnIndex].textContent.trim();
-
-            if (dataType === 'number') {
-                // Strip out currency symbols or non-numeric formatting characters if present
-                const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
-                const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
-                return currentDirection === 'asc' ? numA - numB : numB - numA;
-            } else if (dataType == 'string') {
-                // Text comparison using localeCompare for proper alphabetical ordering
-                return currentDirection === 'asc'
-                    ? cellA.localeCompare(cellB)
-                    : cellB.localeCompare(cellA);
-            } else { // progress
-                var numA = +cellA.match(/(?<percent>\d+)\%/).groups.percent;
-                var numB = +cellB.match(/(?<percent>\d+)\%/).groups.percent;
-
-                return currentDirection === 'asc' ? numA - numB : numB - numA;
-            }
-        });
-
-        // Re-append sorted rows to empty the body and place elements in new order
-        tbody.innerHTML = "";
-        rows.forEach(row => tbody.appendChild(row));
-        hideLoadingFunc();
     }
 
     function getMediaRowData(info) {
@@ -203,129 +127,6 @@ define(function () {
         retVal += "<td style='align='left'>" + info.DolbyVisionProfile + "</td>";
         retVal += "<td style='align='left'>" + info.ServerLocation + "</td>";
         return retVal;
-    }
-
-    async function CheckForValidConfig() {
-        var urlText = "/emby/Statistics2026/database_status";
-        var url = ApiClient.getUrl(urlText);
-
-        let response = await ApiClient.getJSON(url).catch(error => {
-            var errorMessage = "'" + error + "' - '" + urlText + "'";
-            console.error("database_status failed:", errorMessage);
-        });
-
-        if (response.LastUpdated === undefined) {
-            showInfo("No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
-            return false;
-        }
-        if (response.DBStateOK == false) {
-            showInfo("The database has not been initialized, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
-            return false;
-        }
-        return true;
-    }
-
-    function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, Helpers, onFinished) {
-        var url = ApiClient.getUrl(apiEndpoint);
-
-        var load_status = view.querySelector('#' + statusElementId);
-        load_status.innerHTML = "Loading Data...";
-
-        showLoadingFunc();
-        try {
-            getStatistics2026Data(url).then(function (resultData) {
-                // console.log("resultData: " + JSON.stringify(resultData));
-
-                var tableBody = view.querySelector('#' + resultsElementId);
-
-                let currentIndex = 0;
-                let chunkSize = Math.min(200, Math.trunc(resultData.length / 20));
-                function renderNextChunk() {
-                    const endIndex = Math.min(currentIndex + chunkSize, resultData.length);
-                    const fragment = document.createDocumentFragment();
-
-                    load_status.innerHTML = `Loading Data... ${currentIndex} of ${resultData.length}`;
-                    for (var index = currentIndex; index < endIndex; ++index) {
-                        var info = resultData[index];
-
-                        var row_bg_col = "#BBBBBB00";
-                        if (index % 2 == 0) {
-                            row_bg_col = "#BBBBBB1C";
-                        }
-
-                        const tr = document.createElement('tr');
-                        tr.style.backgroundColor = row_bg_col;
-                        tr.innerHTML = getRowDataFunc(info);
-                        fragment.appendChild(tr);
-                    }
-
-                    tableBody.appendChild(fragment);
-                    currentIndex = endIndex;
-
-                    if (currentIndex < resultData.length) {
-                        requestAnimationFrame(renderNextChunk);
-                    }
-                    else {
-                        if (onFinished !== undefined) {
-                            onFinished();
-                        }
-                        load_status.innerHTML = "&nbsp;";
-                        hideLoadingFunc();
-                    }
-                }
-                requestAnimationFrame(renderNextChunk);
-            },
-                function (response) {
-                    load_status.innerHTML = response.status + ":" + response.statusText;
-                });
-        } catch {
-            hideLoadingFunc();
-        }
-    }
-
-    if (!String.prototype.endsWith2) {
-        String.prototype.endsWith2 = function (searchString, position) {
-            var subjectString = this.toString();
-            if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
-                position = subjectString.length;
-            }
-            position -= searchString.length;
-            var lastIndex = subjectString.indexOf(searchString, position);
-            return lastIndex !== -1 && lastIndex === position;
-        };
-    }
-
-    function getTabIndex(tab_name, getTabsFn) {
-        var index = 0;
-
-        var tabs = getTabsFn();
-        for (index = 0; index < tabs.length; ++index) {
-            var path = tabs[index].href;
-            if (path.endsWith2("=" + tab_name)) {
-                return index;
-            }
-        }
-        return -1;
-    }
-
-    const STYLE_ID = 'my-plugin-stylesheet';
-    function injectStyleSheet(e) {
-        const cssUrl = 'configurationpage?name=style.css';
-        return injectStyleSheetEX(e, cssUrl);
-    }
-
-    function injectStyleSheetEX(e, cssUrl) {
-
-        if (document.getElementById(STYLE_ID))  // already added
-            return;
-
-        const link = document.createElement('link');
-        link.id = STYLE_ID;
-        link.rel = 'stylesheet';
-        link.type = 'text/css';
-        link.href = cssUrl;
-
-        document.head.appendChild(link);
     }
 
     getStatistics2026Data = function (url_to_get) {
@@ -365,72 +166,286 @@ define(function () {
         return `<div name="${div}" id="${div}"></div>`;
     }
 
-    function showInfo(_text, _title) {
-        ApiClient.getJSON(ApiClient.getUrl('Sessions'))
-            .then((sessions) => {
-                // 2. Find the session that matches this browser's unique Device ID
-                const myCurrentDevice = ApiClient.deviceId();
-                const mySession = sessions.find(s => s.DeviceId === myCurrentDevice);
+    function getTabIndex(tab_name, getTabsFn) {
+        var index = 0;
 
-                if (mySession) {
-                    const urlString = ApiClient.getUrl(`Sessions/${mySession.Id}/Message`);
-                    const payload = {
-                        Header: _title,
-                        Text: _text
-                    };
-                    ApiClient.ajax(
-                        {
-                            type: 'POST',
-                            url: urlString,
-                            data: JSON.stringify(payload),
-                            contentType: 'application/json'
-                        })
-                        .then(function (response) {
-                            console.log("Message sent successfully!");
-                        })
-                        .catch(function (error) {
-                            console.error("Failed to send message:", error);
-                        });
-                } else {
-                }
-            })
-            .catch((err) => console.error("Error fetching sessions:", err));
-    }
-
-    function loadUsers(view, comboBoxId, loadDataFunc) {
-        ApiClient.getUsers().then(function (users) {
-
-            console.log(`users: {users}`);
-            var select = view.querySelector(comboBoxId);
-            users.forEach((user) => {
-                var option = document.createElement(`option`);
-                option.value = user.Id;
-                option.innerHTML = user.Name;
-                select.appendChild(option);
-            });
-            if (users.length > 0) {
-                loadDataFunc(view, users[0].Id);
+        var tabs = getTabsFn();
+        for (index = 0; index < tabs.length; ++index) {
+            var path = tabs[index].href;
+            if (path.endsWith2("=" + tab_name)) {
+                return index;
             }
-        });
+        }
+        return -1;
     }
 
-    return {
-        pluginId,
-        LoadTVProgress,
-        LoadUserStats,
-        sortTable,
-        injectSortableTableStyle,
-        loadTableData,
-        getMediaRowData,
-        CheckForValidConfig,
-        getTabIndex,
-        injectStyleSheet,
-        getStatistics2026Data,
-        getSummaryInfo,
-        showInfo,
-        loadUsers
-    };
+    function sortableTableStyle() {
+        var retVal = '.tooltip {position: relative;display: inline-block;border-bottom: 1px dotted black;} ' +
+            '.tooltip .tooltiptext {visibility: hidden; background-color: black; color: #fff; border-radius: 6px; padding: 5px 0; position: absolute;z-index: 1;} ' +
+            '.tooltip:hover .tooltiptext {visibility: visible;} ' +
+            '.info_cell {white-space: nowrap; padding-left:45px; padding-right:20px; font-size:smaller;}' +
+            '.info_cell_heading {white-space: nowrap; padding-left:20px; padding-right:20px;font-size:smaller;}' +
+            '.sortable-table-styled - styled {' +
+            '   width: 100 %;' +
+            '   border-collapse: collapse;' +
+            '} ' +
+            '.sortable-table-styled th {' +
+            '    cursor: pointer;' +
+            '    background - color: #f2f2f2;' +
+            '    padding: 10px;' +
+            '    user - select: none;' +
+            '}' +
+            '.sortable-table-styled td {' +
+            '   padding: 10px;' +
+            '   border - bottom: 1px solid #ddd;' +
+            '}' +
+            '.sortable-table-styled th .sort-icon::after {' +
+            '    content: " ↕";' +
+            '    opacity: 0.4;' +
+            '}' +
+            '.sortable-table-styled th.asc .sort-icon::after {' +
+            '    content: " ↑";' +
+            '    opacity: 1;' +
+            '}' +
+            '.sortable-table-styled th.desc .sort-icon::after {' +
+            '    content: " ↓";' +
+            '    opacity: 1;' +
+            '}';
+        return retVal;
+    }
+
+    function injectSortableTableStyle(document) {
+        var style = document.createElement('style');
+        style.innerHTML = sortableTableStyle();
+        var ref = document.querySelector('script');
+        ref.parentNode.insertBefore(style, ref);
+    }
+
+    const STYLE_ID = 'statistics2026-stylesheet';
+    function injectStyleSheet(e) {
+        const cssUrl = 'configurationpage?name=style.css';
+        return injectStyleSheetEX(e, cssUrl);
+    }
+
+    function injectStyleSheetEX(e, cssUrl) {
+        if (document.getElementById(STYLE_ID))  // already added
+            return;
+
+        const link = document.createElement('link');
+        link.id = STYLE_ID;
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = cssUrl;
+
+        document.head.appendChild(link);
+    }
+
+    async function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, Helpers, onFinished) {
+        var url = ApiClient.getUrl(apiEndpoint);
+
+        var load_status = view.querySelector('#' + statusElementId);
+        load_status.innerHTML = "Loading Data...";
+
+        showLoadingFunc();
+        try {
+            console.log("url: " + url);
+            let resultData = await getStatistics2026Data(url).catch(error => {
+                var errorMessage = "'" + error + "' - '" + url + "'";
+                console.error("loadTableData failed:", errorMessage, "url:", url);
+                hideLoadingFunc();
+                return;
+            });
+
+            // load_status.innerHTML = response.status + ":" + response.statusText;
+
+
+            console.log("resultData: " + JSON.stringify(resultData));
+
+            var tableBody = view.querySelector('#' + resultsElementId);
+
+            let currentIndex = 0;
+            let chunkSize = Math.min(200, Math.trunc(resultData.length / 20));
+            function renderNextChunk() {
+                const endIndex = Math.min(currentIndex + chunkSize, resultData.length);
+                const fragment = document.createDocumentFragment();
+
+                load_status.innerHTML = `Loading Data... ${currentIndex} of ${resultData.length}`;
+                for (var index = currentIndex; index < endIndex; ++index) {
+                    var info = resultData[index];
+
+                    var row_bg_col = "#BBBBBB00";
+                    if (index % 2 == 0) {
+                        row_bg_col = "#BBBBBB1C";
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.style.backgroundColor = row_bg_col;
+                    tr.innerHTML = getRowDataFunc(info);
+                    fragment.appendChild(tr);
+                }
+
+                tableBody.appendChild(fragment);
+                currentIndex = endIndex;
+
+                if (currentIndex < resultData.length) {
+                    requestAnimationFrame(renderNextChunk);
+                }
+                else {
+                    if (onFinished !== undefined) {
+                        onFinished();
+                    }
+                    load_status.innerHTML = "&nbsp;";
+                    hideLoadingFunc();
+                }
+            }
+            requestAnimationFrame(renderNextChunk);
+        }
+        finally {
+            hideLoadingFunc();
+        }
+    }
+
+function loadUsers(view, comboBoxId, loadDataFunc) {
+    ApiClient.getUsers().then(function (users) {
+        console.log(`users: {users}`);
+        var select = view.querySelector(comboBoxId);
+        users.forEach((user) => {
+            var option = document.createElement(`option`);
+            option.value = user.Id;
+            option.innerHTML = user.Name;
+            select.appendChild(option);
+        });
+        if (users.length > 0) {
+            loadDataFunc(view, users[0].Id);
+        }
+    });
+}
+
+function setupSortability(tableId, showLoadingFunc, hideLoadingFunc) {
+    document.querySelectorAll(`#${tableId} thead th`).forEach((header, index) => {
+        header.addEventListener('click', () => {
+            const columnType = header.getAttribute('data-type');
+            sortTable(index, columnType, tableId, showLoadingFunc, hideLoadingFunc);
+        });
+    });
+}
+
+function showInfo(_text, _title) {
+    ApiClient.getJSON(ApiClient.getUrl('Sessions'))
+        .then((sessions) => {
+            // 2. Find the session that matches this browser's unique Device ID
+            const myCurrentDevice = ApiClient.deviceId();
+            const mySession = sessions.find(s => s.DeviceId === myCurrentDevice);
+
+            if (mySession) {
+                const urlString = ApiClient.getUrl(`Sessions/${mySession.Id}/Message`);
+                const payload = {
+                    Header: _title,
+                    Text: _text
+                };
+                ApiClient.ajax(
+                    {
+                        type: 'POST',
+                        url: urlString,
+                        data: JSON.stringify(payload),
+                        contentType: 'application/json'
+                    })
+                    .then(function (response) {
+                        console.log("Message sent successfully!");
+                    })
+                    .catch(function (error) {
+                        console.error("Failed to send message:", error);
+                    });
+            } else {
+            }
+        })
+        .catch((err) => console.error("Error fetching sessions:", err));
+}
+
+
+const sortDirections = new Map();
+function sortTable(columnIndex, dataType, tableId, showLoadingFunc, hideLoadingFunc, forcedDir) {
+    showLoadingFunc();
+
+    const table = document.getElementById(tableId);
+    const tbody = table.querySelector("tbody");
+    // Convert HTMLCollection of rows into a real Array
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+
+    // Toggle between Ascending ('asc') and Descending ('desc')
+
+    let currentMap = sortDirections.get(tableId);
+    if (currentMap === undefined) {
+        sortDirections.set(tableId, new Map());
+        currentMap = sortDirections.get(tableId);
+    }
+
+    let currentDirection = currentMap.get(columnIndex);
+    if (forcedDir === undefined) {
+
+        currentDirection = currentMap.get(columnIndex);
+        if (currentDirection === undefined) {
+            currentDirection = 'asc';
+        } else {
+            currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+        }
+    } else {
+        currentDirection = 'desc';
+    }
+
+    sortDirections.get(tableId).set(columnIndex, currentDirection);
+
+    // Reset indicator classes on all headers
+    table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
+    // Add current sorting indicator class to the active header
+    table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
+
+    // Sort the row elements
+    rows.sort((rowA, rowB) => {
+        const cellA = rowA.children[columnIndex].textContent.trim();
+        const cellB = rowB.children[columnIndex].textContent.trim();
+
+        if (dataType === 'number') {
+            // Strip out currency symbols or non-numeric formatting characters if present
+            const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
+            const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
+            return currentDirection === 'asc' ? numA - numB : numB - numA;
+        } else if (dataType == 'string') {
+            // Text comparison using localeCompare for proper alphabetical ordering
+            return currentDirection === 'asc'
+                ? cellA.localeCompare(cellB)
+                : cellB.localeCompare(cellA);
+        } else { // progress
+            var numA = +cellA.match(/(?<percent>\d+)\%/).groups.percent;
+            var numB = +cellB.match(/(?<percent>\d+)\%/).groups.percent;
+
+            return currentDirection === 'asc' ? numA - numB : numB - numA;
+        }
+    });
+
+    // Re-append sorted rows to empty the body and place elements in new order
+    tbody.innerHTML = "";
+    rows.forEach(row => tbody.appendChild(row));
+    hideLoadingFunc();
+}
+
+return {
+    pluginId,
+    CheckForValidConfig,
+    LoadTVProgress,
+    LoadUserStats,
+    getMediaRowData,
+    getStatistics2026Data,
+    getSummaryInfo,
+    getTabIndex,
+    injectSortableTableStyle,
+    injectStyleSheet,
+    loadTableData,
+    loadUsers,
+    setupSortability,
+    showInfo,
+    sortTable
+};
 
 })
 
-//# sourceURL=js
