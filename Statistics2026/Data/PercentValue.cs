@@ -7,6 +7,8 @@ namespace Statistics2026.Data
         private int? _count = null;
         public int? Total { get; set; } = null;
 
+        private bool hasTotal() { return Total != null && Total.Value != 0; }
+        private bool hasCount() { return _count != null && _count.Value != 0; }
         public string _string { get; set; } = string.Empty;
         public string String
         {
@@ -14,15 +16,15 @@ namespace Statistics2026.Data
             {
                 if( _string.IsEmpty() )
                 {
-                    if( _count == null && Total == null )
+                    if( !hasTotal() && !hasCount() )
                     {
                         _string = "0 of 0 (0%)";
                     }
-                    else if( _count == null && Total != null )
+                    else if( hasTotal() && !hasCount() )
                     {
                         _string = $"0 of {Total} (0%)";
                     }
-                    else if( _count != null && Total == null )
+                    else if( !hasTotal() && hasCount() )
                     {
                         _string = $"{_count} of 0 (100%)";
                     }
