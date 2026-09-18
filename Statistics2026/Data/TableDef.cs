@@ -8,9 +8,9 @@ namespace Statistics2026.Data
     {
         public TableColDef( string columnName, string columnType, bool allowNull, bool isPrimaryIndex = false )
         {
-            if( columnName == null || columnName == "" )
+            if( columnName == null || columnName == string.Empty )
                 throw new ArgumentException( "TableColDef: Must define the column name" );
-            if( columnType == null || columnType == "" )
+            if( columnType == null || columnType == string.Empty )
                 throw new ArgumentException( "TableColDef: Must define the column type" );
 
             Name = columnName;
@@ -92,7 +92,7 @@ namespace Statistics2026.Data
         public TableDef( string name, List<TableColDef> cols, List<string>? indexes = null )
         {
             Name = name;
-            if( Name == null || Name == "" )
+            if( Name == null || Name == string.Empty )
                 throw new ArgumentException( "TableDef: Must define the table name" );
             Columns = cols;
             if( Columns.Count() == 0 )
@@ -147,7 +147,7 @@ namespace Statistics2026.Data
 
             Indexes?.ForEach( columnName =>
                 {
-                    if( columnName == null || columnName == "" )
+                    if( columnName == null || columnName == string.Empty )
                         return;
 
                     TableColDef? column = null;

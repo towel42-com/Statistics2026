@@ -43,11 +43,11 @@ namespace Statistics2026.Api
 
         public class StatCardValues
         {
-            public string Value = "";
-            public string SecondValue = "";
-            public string Name = "";
-            public string ItemId = "";
-            public string ImageUrl = "";
+            public string Value = string.Empty;
+            public string SecondValue = string.Empty;
+            public string Name = string.Empty;
+            public string ItemId = string.Empty;
+            public string ImageUrl = string.Empty;
         };
 
         public StatCardValues GetStatCardValues()
@@ -126,7 +126,7 @@ namespace Statistics2026.Api
 
         private string FieldFor()
         {
-            var fieldName = "";
+            var fieldName = string.Empty;
             switch( WhichStatistic )
             {
                 case EStatisticType.Largest:
@@ -167,7 +167,7 @@ namespace Statistics2026.Api
 
         private string OrderClause()
         {
-            var orderClause = "";
+            var orderClause = string.Empty;
             switch( WhichStatistic )
             {
                 case EStatisticType.Largest:
@@ -263,12 +263,12 @@ namespace Statistics2026.Api
             else if( VideoType == EVideoType.Episode )
                 whereClauseList.Add( "IsEpisode" );
 
-            return whereClauseList.Count > 0 ? DBHelper.JoinClauses( whereClauseList ) + " " : "";
+            return whereClauseList.Count > 0 ? DBHelper.JoinClauses( whereClauseList ) + " " : string.Empty;
         }
 
         private string Title()
         {
-            var title = "";
+            var title = string.Empty;
             switch( WhichStatistic )
             {
                 case EStatisticType.Largest:
@@ -412,7 +412,7 @@ namespace Statistics2026.Api
 
         private string Help()
         {
-            var help = "";
+            var help = string.Empty;
             switch( WhichStatistic )
             {
                 case EStatisticType.Largest:
@@ -502,7 +502,7 @@ namespace Statistics2026.Api
                 break;
 
                 default:
-                    value = "";
+                    value = string.Empty;
                     break;
             }
 
@@ -511,7 +511,7 @@ namespace Statistics2026.Api
 
         private string SecondValue( IResultSet sqlResultValue, int index )
         {
-            var secondValue = "";
+            var secondValue = string.Empty;
             switch( WhichStatistic )
             {
                 case EStatisticType.Smallest:
@@ -551,7 +551,7 @@ namespace Statistics2026.Api
             if (number == 1)
                 return $" {starting} {number} {value} {ending}";
             if (number == 0 && removeZero)
-                return "";
+                return string.Empty;
             return $" {starting} {number} {value}s {ending}";
         }
 
@@ -565,7 +565,7 @@ namespace Statistics2026.Api
             {
                 var numberOfYears = Math.Floor( numberOfTotalMonths / (decimal)12 );
                 var numberOfMonth = Math.Floor( ( ( numberOfTotalMonths / (decimal)12 ) - numberOfYears ) * 12 );
-                return $"{CheckForPlural( "year", numberOfYears, "", "", false )} {CheckForPlural( "month", numberOfMonth, "and" )} ago";
+                return $"{CheckForPlural( "year", numberOfYears, string.Empty, string.Empty, false )} {CheckForPlural( "month", numberOfMonth, "and" )} ago";
             }
             else
             {
@@ -581,7 +581,7 @@ namespace Statistics2026.Api
                     return $"Yesterday";
                 }
                 else
-                    return $"{CheckForPlural("day", numberOfDays, "", "", false)} ago";
+                    return $"{CheckForPlural("day", numberOfDays, string.Empty, string.Empty, false)} ago";
             }
         }
     };

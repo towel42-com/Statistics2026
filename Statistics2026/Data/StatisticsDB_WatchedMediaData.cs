@@ -242,7 +242,7 @@ namespace Statistics2026.Data
 
         public string getUserTableName( string userId )
         {
-            userId = userId.ToString().Replace( "-", "" );
+            userId = userId.ToString().Replace( "-", string.Empty );
 
             return $"{sUserMediaTablePrefix}{userId}";
         }
@@ -818,8 +818,9 @@ namespace Statistics2026.Data
 
             var retVal = new TextBasedStatCard( title, help, EStatCardSize.eMedium )
             {
-                SubTitle = ( user == null ) ? "(Weighted Watched across Users)" : "",
-                ListType = TextBasedStatCard.EListType.eNumberedGroupByKey
+                SubTitle = ( user == null ) ? "(Watched across Users)" : string.Empty,
+                ListType = TextBasedStatCard.EListType.eNumberedGroupByKey,
+                MaxGroupSize = Plugin.Instance?.Configuration.numTiedToReport ?? 5
             };
 
             foreach( var currList in watchedMedia )

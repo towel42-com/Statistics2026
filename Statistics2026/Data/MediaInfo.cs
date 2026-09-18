@@ -204,7 +204,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                secondaryName = "";
+                secondaryName = string.Empty;
             }
 
             return (primaryName, secondaryName, descName);

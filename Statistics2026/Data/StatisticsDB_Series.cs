@@ -171,7 +171,7 @@ namespace Statistics2026.Data
                     return true;
                 } );
 
-            var seriesStatus = series.Status?.ToString() ?? "";
+            var seriesStatus = series.Status?.ToString() ?? string.Empty;
 
             cmd = new SQLCmdDef( "SELECT COUNT(*) FROM Series where ItemId=@ItemId", [ ("@ItemId", series.Id.ToString()) ] );
             var exists = false;
@@ -325,7 +325,7 @@ namespace Statistics2026.Data
                     SeriesStatus = status,
                     ItemUrl = imageUrl
                 };
-                if( curr.ItemUrl != null && curr.ItemUrl != "" )
+                if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
                 {
                     curr.ItemUrl = ItemImageUrl.ItemUrl( seriesId, curr.ItemUrl, curr.Name );
                     curr.Name = curr.ItemUrl;

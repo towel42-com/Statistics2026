@@ -31,9 +31,9 @@ namespace Statistics2026.Data
         public static string _addToHtml( int depth, string _html )
         {
             if( _html.IsNullOrEmpty() )
-                return "";
+                return string.Empty;
 
-            var retVal = "";
+            var retVal = string.Empty;
             if( depth > 0 )
                 retVal += new string( ' ', 4 * depth );
             retVal += _html;
@@ -343,7 +343,7 @@ namespace Statistics2026.Data
 
         public void AddLine( string value )
         {
-            AddLine( value, "", "" );
+            AddLine( value, string.Empty, string.Empty );
         }
 
         public void AddLine( string value, string itemId, string url )
@@ -375,8 +375,8 @@ namespace Statistics2026.Data
                 }
             }
 
-            var retVal = "";
-            var style = "";
+            var retVal = string.Empty;
+            var style = string.Empty;
             if( ListType != EListType.eUnordered )
             {
                 style = GetStyleString( EAlignment.eLeft );
@@ -384,6 +384,8 @@ namespace Statistics2026.Data
             }
 
             var prevKey = string.Empty;
+            //int currKeyCount = 0;
+
             for( var ii = 0; ii < ValueLines.Count; ++ii )
             {
                 var (data, itemId, url) = ValueLines[ ii ];
@@ -579,7 +581,7 @@ namespace Statistics2026.Data
                 valuesToUse = valuesToUse.OrderBy( row => row.Name ).ToList();
             }
 
-            var retVal = "";
+            var retVal = string.Empty;
             foreach( var row in valuesToUse )
             {
                 retVal += row.ToString( depth, _keyColumnAlignment, _columnAlignment );

@@ -67,7 +67,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
-                var rootDivName = request.rootDivName ?? "";
+                var rootDivName = request.rootDivName ?? string.Empty;
 
                 var groupData = db.MediaCodecs();
                 groupData.HtmlDivId = rootDivName;
@@ -83,7 +83,7 @@ namespace Statistics2026.Api
             return GetRequest( "GetResolutionSummary", timer =>
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
-                var rootDivName = request.rootDivName ?? "";
+                var rootDivName = request.rootDivName ?? string.Empty;
 
                 var groupData = db.MediaResolutions();
                 groupData.HtmlDivId = rootDivName;
@@ -100,7 +100,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
-                var rootDivName = request.rootDivName ?? "";
+                var rootDivName = request.rootDivName ?? string.Empty;
 
                 var groupData = db.DVProfileInfo();
                 groupData.HtmlDivId = rootDivName;

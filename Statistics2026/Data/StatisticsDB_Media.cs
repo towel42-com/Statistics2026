@@ -177,7 +177,7 @@ namespace Statistics2026.Data
                 ("@Genres", string.Join(",", mediaInfo.Genres)),
                 ("@ServerLocation", mediaInfo.ServerLocation),
                 ("@FileSize", mediaInfo.FileSize),
-                ("@ImageUrl",  mediaInfo.ImageUrl ??  "" ),
+                ("@ImageUrl",  mediaInfo.ImageUrl ??  string.Empty ),
                 ("@RunTimeTicks", mediaInfo.RunTimeTicks),
                 ("@Rating", mediaInfo.Rating),
                 ("@TotalBitrate", mediaInfo.TotalBitrate),
@@ -292,7 +292,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eReport );
 
-            var sql = "";
+            var sql = string.Empty;
             var parameters = new List<(string, object?)>();
             var title = Constants.TotalMovies;
             var help = Constants.HelpTotalMovies;
@@ -659,7 +659,7 @@ namespace Statistics2026.Data
                 var itemId = row.GetString( col++ );
                 var itemUrl = row.GetString( col++ );
                 curr.ItemUrl = ItemImageUrl.ItemUrl( itemId, itemUrl, curr.ListDisplayName );
-                if( curr.ItemUrl != null && curr.ItemUrl != "" )
+                if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
                 {
                     curr.ListDisplayName = curr.ItemUrl;
                 }
