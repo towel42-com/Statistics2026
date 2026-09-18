@@ -97,8 +97,8 @@ namespace Statistics2026.ScheduledTasks
                 var maxLen = 0;
                 foreach( var task in tasks )
                 {
-                    if( task.TableName.Length > maxLen )
-                        maxLen = task.TableName.Length;
+                    if( task.Description.Length > maxLen )
+                        maxLen = task.Description.Length;
                 }
 
                 if( maxLen > 20 )
@@ -106,7 +106,7 @@ namespace Statistics2026.ScheduledTasks
 
                 foreach( var task in tasks )
                 {
-                    _embyInterfaces._logger.Info( $"{task.TableName.PadLeft( maxLen )}: {task.RunTime} ms" );
+                    _embyInterfaces._logger.Info( $"{task.Description.PadLeft( maxLen )}: {task.RunTime} ms" );
                 }
             }
 
@@ -158,8 +158,7 @@ namespace Statistics2026.ScheduledTasks
             return new[] {
                 new TaskTriggerInfo
                 {
-                    Type = TaskTriggerInfo.TriggerWeekly,
-                    DayOfWeek = DayOfWeek.Sunday,
+                    Type = TaskTriggerInfo.TriggerDaily,
                     TimeOfDayTicks = TimeSpan.FromMinutes(30).Ticks
                 }
             };

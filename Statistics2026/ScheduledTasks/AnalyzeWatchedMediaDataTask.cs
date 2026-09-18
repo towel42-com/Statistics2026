@@ -16,11 +16,11 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeUserWatchDataTask : IScheduledTask
+    public class AnalyzeWatchedMediaDataTask : IScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
-        public AnalyzeUserWatchDataTask(
+        public AnalyzeWatchedMediaDataTask(
             ILogManager logManager,
             IServerConfigurationManager configManager,
             IUserManager userManager,
@@ -40,7 +40,7 @@ namespace Statistics2026.ScheduledTasks
 
         string IScheduledTask.Name => "\u2022 Analyze User Watch Data Information";
 
-        string IScheduledTask.Key => "Statistics2026AnalyzeUserWatchData";
+        string IScheduledTask.Key => "Statistics2026AnalyzeWatchedMediaData";
 
         string IScheduledTask.Description => "Task that will analyze the user watch data.";
 
@@ -62,7 +62,7 @@ namespace Statistics2026.ScheduledTasks
             long addUsers = 0;
             using( var timer = new AutoTimer( $"Adding User Watch Data", _embyInterfaces._logger ) )
             {
-                db.AnalyzeUserWatchData();
+                db.AnalyzeWatchedMediaData();
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }

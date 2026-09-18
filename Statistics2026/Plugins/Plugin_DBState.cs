@@ -45,6 +45,11 @@ namespace Statistics2026
 
     public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
+        public string DBStateString()
+        {
+            return DBState == null ? EDBState.eEmpty.ToPrettyString() : DBState.Value.ToPrettyString();
+        }
+
         public EDBState CurrDBState()
         {
             var value = EDBState.eEmpty;
@@ -100,10 +105,6 @@ namespace Statistics2026
             SetDBState( dbState, false );
         }
 
-        public string DBStateAsString()
-        {
-            return DBState == null ? EDBState.eEmpty.ToPrettyString() : DBState.Value.ToPrettyString();
-        }
         private void _SetDBState( EDBState state )
         {
             if( Plugin.Instance == null )
@@ -118,7 +119,7 @@ namespace Statistics2026
 
         public bool DBStateInitialized()
         {
-            return DBState != null && DBState != EDBState.eEmpty;
+            return DBState != null;
         }
 
         private EDBState? DBState

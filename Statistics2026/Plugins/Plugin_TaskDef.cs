@@ -10,18 +10,16 @@ namespace Statistics2026
     public class TaskDef
     {
         public TaskDef() { }
-        public TaskDef( string description, Type? typeOf, long runTime, string tableName )
+        public TaskDef( string description, Type? typeOf )
         {
             Description = description;
             TaskType = typeOf;
-            RunTime = runTime;
-            TableName = tableName;
+            RunTime = 0;
         }
 
         public string Description { get; private set; } = string.Empty;
         public Type? TaskType { get; private set; } = null;
         public long RunTime { get; set; } = 0;
-        public string TableName { get; private set; } = string.Empty;
     }
 
     public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
@@ -80,15 +78,15 @@ namespace Statistics2026
         {
             var tasks = new List<TaskDef>
             {
-                new($"Analyzing Users", typeof(AnalyzeUsersTask), 0, "Users"),
-                new($"Analyzing User Watch Data", typeof(AnalyzeUserWatchDataTask), 0, "UserWatchData"),
-                new($"Analyzing Media", typeof(AnalyzeMediaTask), 0, "Media"),
-                new($"Analyzing Collections", typeof(AnalyzeCollectionsTask), 0, "Collections"),
-                new($"Analyzing Series", typeof(AnalyzeSeriesTask), 0, "Series"),
+                new($"Analyzing Users", typeof(AnalyzeUsersTask)),
+                new($"Analyzing Watched Media Data", typeof(AnalyzeWatchedMediaDataTask)),
+                new($"Analyzing Media", typeof(AnalyzeMediaTask)),
+                new($"Analyzing Collections", typeof(AnalyzeCollectionsTask)),
+                new($"Analyzing Series", typeof(AnalyzeSeriesTask)),
             };
             if( includeRunAll )
             {
-                tasks.Add( new TaskDef( $"RunAll", typeof( RunAllTasksTask ), 0, "" ) );
+                tasks.Add( new TaskDef( $"RunAll", typeof( RunAllTasksTask ) ) );
             }
 
             return tasks;
