@@ -4,6 +4,7 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using RestSharp;
+using ServiceStack.Text;
 using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
@@ -52,7 +53,7 @@ namespace Statistics2026.Data
             }
         }
 
-        public void InitUserWatchData()
+        public void InitWatchedMediaTables()
         {
             CheckIsValid( ECheckType.eInit );
 
@@ -82,9 +83,9 @@ namespace Statistics2026.Data
                     foreach( var user in users )
                     {
                         _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-                        using( var userTimer = new AutoTimer( $"AnalyzeUserWatchData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
+                        using( var userTimer = new AutoTimer( $"AnalyzeWatchedMediaData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
                         {
-                            sqlCmds.AddRange( GetUserWatchInitTableCommands( user ) );
+                            sqlCmds.AddRange( GetInitWatchedMediaTableCommands( user ) );
                             _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
                         }
                     }
@@ -146,7 +147,7 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql, parameters ) );
         }
 
-        public void AnalyzeUserWatchData()
+        public void AnalyzeWatchedMediaData()
         {
             CheckIsValid( ECheckType.eUpdate );
 
@@ -156,7 +157,7 @@ namespace Statistics2026.Data
                 return;
             _dbHelper!.Progress?.Report( 100 );
 
-            _embyInterfaces?._logger?.Debug( $"AnalyzeUserWatchData - Starting User Watch Data Analysis" );
+            _embyInterfaces?._logger?.Debug( $"AnalyzeWatchedMediaData - Starting User Watch Data Analysis" );
 
             double count = users.Count;
             double curr = 0;
@@ -169,9 +170,9 @@ namespace Statistics2026.Data
                 foreach( var user in users )
                 {
                     _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-                    using( var userTimer = new AutoTimer( $"AnalyzeUserWatchData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
+                    using( var userTimer = new AutoTimer( $"AnalyzeWatchedMediaData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
                     {
-                        sqlCmds.AddRange( AddUserWatchData( user ) );
+                        sqlCmds.AddRange( AddWatchedDataForUser( user ) );
                         _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
@@ -197,7 +198,7 @@ namespace Statistics2026.Data
             }
 
             Plugin.Instance.AddDBState( EDBState.eUserDataInitialized );
-            _embyInterfaces?._logger?.Debug( $"AnalyzeUserWatchData - Finished User Watch Data Analysis" );
+            _embyInterfaces?._logger?.Debug( $"AnalyzeWatchedMediaData - Finished User Watch Data Analysis" );
         }
 
         public List<SQLCmdDef> DropAllUserMediaCmds()
@@ -216,8 +217,36 @@ namespace Statistics2026.Data
 
         public List<string> allUserMediaTables()
         {
-            return allTables( (regex: "UserMedia_%", like: true) );
+            return allTables( (regex: $"{sUserMediaTablePrefix}%", like: true) );
         }
+
+        public User? getUserForTableName( string tableName )
+        {
+            if( _embyInterfaces == null )
+                return null;
+
+            if( !tableName.StartsWith( sUserMediaTablePrefix ) )
+                return null;
+
+            var idString = tableName.Substring( sUserMediaTablePrefix.Length );
+            var guid = new Guid( idString );
+
+            return _embyInterfaces.GetUserById( guid );
+
+        }
+
+        public string getUserTableName( User? user )
+        {
+            return user == null ? string.Empty : getUserTableName( user.Id.ToString() );
+        }
+
+        public string getUserTableName( string userId )
+        {
+            userId = userId.ToString().Replace( "-", "" );
+
+            return $"{sUserMediaTablePrefix}{userId}";
+        }
+
 
         private readonly Dictionary<string, (bool hit, int playCount)> _baseCount = new()
                         {
@@ -420,13 +449,13 @@ namespace Statistics2026.Data
             _embyInterfaces._userDataManager.SaveUserData( user, video, userData, UserDataSaveReason.Import, token );
         }
 
-        public List<SQLCmdDef> GetUserWatchInitTableCommands( User? user )
+        public List<SQLCmdDef> GetInitWatchedMediaTableCommands( User? user )
         {
             if( _userMediaTemplate == null )
-                throw new Exception( $"GetUserWatchInitTableCommands: TableDef for UserMedia_<USER_ID> is null" );
+                throw new Exception( $"GetInitWatchedMediaTableCommands: TableDef for {sUserMediaTablePrefix}<USER_ID> is null" );
 
             if( user == null )
-                throw new Exception( $"GetUserWatchInitTableCommands: User is null" );
+                throw new Exception( $"GetInitWatchedMediaTableCommands: User is null" );
 
             var userTableName = getUserTableName( user );
 
@@ -436,14 +465,14 @@ namespace Statistics2026.Data
             for( var ii = 0; ii < cmds.Count(); ++ii )
             {
                 var cmd = new SQLCmdDef( cmds[ ii ] );
-                cmd.Replace( "UserMedia_<USER_ID>", userTableName );
+                cmd.Replace( "{sUserMediaTablePrefix}<USER_ID>", userTableName );
                 sqlCmds.Add( cmd );
             }
 
             return sqlCmds;
         }
 
-        private List<SQLCmdDef> AddUserWatchData( User? user )
+        private List<SQLCmdDef> AddWatchedDataForUser( User? user )
         {
             CheckIsValid( ECheckType.eUpdate );
 
@@ -452,7 +481,7 @@ namespace Statistics2026.Data
 
             var userTableName = getUserTableName( user );
             if( _userMediaTemplate == null )
-                throw new Exception( $"AddUserWatchData: TableDef for UserMedia_<USER_ID> is null" );
+                throw new Exception( $"AddWatchedDataForUser: TableDef for {sUserMediaTablePrefix}<USER_ID> is null" );
 
             var sqlCmds = new List<SQLCmdDef>();
 
