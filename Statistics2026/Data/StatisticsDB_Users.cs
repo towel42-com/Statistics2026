@@ -220,6 +220,7 @@ namespace Statistics2026.Data
             var help = Constants.HelpMostActiveUsers;
             help = help.Replace( "<numUsers>", numUsers.ToString() );
             var groupData = new TableBasedStatCard( Constants.MostActiveUsers, help, [ "Days", "Hours", "Minutes" ] );
+            groupData.SubTitle = "By Play Time";
 
             var cnt = 0;
             foreach( var currKVP in playTimeMap.Reverse() )
