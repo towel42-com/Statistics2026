@@ -17,6 +17,9 @@ namespace Statistics2026.Data
         internal const string MostActiveUsers = "Most Active Users";
         internal const string HelpMostActiveUsers = "Top <numUsers> users that are the most active on the Emby server. This includes viewing movies and episodes.";
 
+        internal const string PlayedUserMedia = "Played User Media";
+        internal const string HelpPlayedUserMedia = "Media played by users and it worked using the plugin.";
+
         // movie summary constants
         internal const string TotalMovies = "Total Movies";
         internal const string HelpTotalMovies = "Total movies in the Emby library.";

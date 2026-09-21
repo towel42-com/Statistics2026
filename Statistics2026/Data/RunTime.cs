@@ -9,6 +9,7 @@ namespace Statistics2026.Data
         public int Hours => _timeSpan.Hours;
         public int Minutes => _timeSpan.Minutes;
         public int Seconds => _timeSpan.Seconds;
+        public int Milliseconds => _timeSpan.Milliseconds;
         public long Ticks => _timeSpan.Ticks;
 
         public RunTime( TimeSpan timeSpan = new TimeSpan() )
@@ -51,13 +52,18 @@ namespace Statistics2026.Data
 
         }
 
+        public string ToShortString()
+        {
+            return $"{Days:D2}:{Hours:D2}:{Minutes:D2}:{Seconds:D2}.{Milliseconds:D3}";
+        }
+
         public int CompareTo( RunTime other )
         {
-            if (ReferenceEquals(this, other))
+            if( ReferenceEquals( this, other ) )
                 return 0;
-            if (ReferenceEquals(null, other))
+            if( ReferenceEquals( null, other ) )
                 return 1;
-            return _timeSpan.CompareTo(other._timeSpan);
+            return _timeSpan.CompareTo( other._timeSpan );
         }
     }
 }

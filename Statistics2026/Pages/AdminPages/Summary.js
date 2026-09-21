@@ -16,6 +16,7 @@
 
             if (!sysConfig.EnableDebugLevelLogging) {
                 view.querySelector(`#debugInfo`).style.display = 'none';
+                view.querySelector(`#playedUserMedia`).style.display = 'none';
                 return;
             }
 
@@ -35,6 +36,10 @@
 
             view.querySelector(`#debugInfo`).style.display = '';
             view.querySelector("#debugInfo").innerHTML = debugInfo;
+
+            var playedUserMedia = Helpers.getSummaryInfo(view, "played_user_media", "", "");
+            view.querySelector(`#playedUserMedia`).style.display = '';
+            view.querySelector("#playedUserMedia").innerHTML = (playedUserMedia);
         }
 
         function loadStats(view) {

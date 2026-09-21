@@ -53,7 +53,7 @@ namespace Statistics2026.Data
             RunTimeTicks = video.RunTimeTicks ?? 0;
             if( video is Episode episode )
             {
-                ListDisplayName = $"{PrimaryName} - S{Season:D2}E{Episode:D2} - {SecondaryName}";
+                ListDisplayName = GetDisplayName( PrimaryName, secondaryName, Season, Episode );
                 ImageUrl = ItemImageUrl._ItemImageUrl( episode );
                 if( episode.Series != null )
                 {
@@ -190,6 +190,13 @@ namespace Statistics2026.Data
             }
 
             return retVal;
+        }
+
+        public static string GetDisplayName( string primaryName, string secondaryName, int season, int episode )
+        {
+            if ( ( season >= 0 ) && (episode >= 0)  && !secondaryName.IsNullOrEmpty() )
+                return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";
+            return primaryName;
         }
 
         public static (string primaryName, string secondaryName, string descName) GetDescName( Video video )

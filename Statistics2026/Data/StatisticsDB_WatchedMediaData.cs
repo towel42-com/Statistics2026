@@ -4,6 +4,7 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using RestSharp;
+using ServiceStack;
 using ServiceStack.Text;
 using Statistics2026.Api;
 using System;
@@ -1002,6 +1003,62 @@ namespace Statistics2026.Data
             }
 
             return retVal;
+        }
+
+        public StatCard PlayedUserMedia()
+        {
+            CheckIsValid( ECheckType.eReport );
+
+            var tables = allUserMediaTables();
+
+            var sqlBase =
+                $"SELECT \n" +
+                $"    Users.UserName\n" +
+                $"  , Media.PrimaryName\n" +
+                $"  , Media.SecondaryName\n" +
+                $"  , Media.Season\n" +
+                $"  , Media.Episode\n" +
+                $"  , <TABLE_NAME>.TotalTicksPlayed\n" +
+                $"  , (IsPlayed*PlayCount)*Media.RunTimeTicks AS ComputedTotalTicksPlayed\n" +
+                $" FROM <TABLE_NAME>\n" +
+                $" LEFT JOIN Users ON <TABLE_NAME>.UserId=Users.UserId\n" +
+                $" LEFT JOIN Media ON <TABLE_NAME>.ItemId=Media.ItemId\n" +
+                $" WHERE <TABLE_NAME>.TotalTicksPlayed != (IsPlayed*PlayCount)*Media.RunTimeTicks\n"
+                ;
+
+            List<string> sqlCmds = [];
+            foreach( var tableName in tables )
+            {
+                var curr = sqlBase;
+                curr = curr.Replace( "<TABLE_NAME>", tableName );
+                sqlCmds.Add( curr );
+            }
+
+            var sql = sqlCmds.Join( "\nUNION\n\n" );
+            var groupData = new TableBasedStatCard( Constants.PlayedUserMedia, Constants.HelpPlayedUserMedia, [ "User Name", "Media Name", "Computed Time Played", "Time Played", "Difference" ] );
+            groupData.ShowCategory = false;
+            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            {
+                var row = statement.Current;
+
+                var col = 0;
+                var userName = row.GetString( col++ );
+                var primaryName = row.GetString( col++ );
+                var secondaryName = row.GetString( col++ );
+                var season = row.GetInt( col++ );
+                var episode = row.GetInt( col++ );
+                var totalTicksPlayed = row.GetInt64( col++ );
+                var computedTotalTicksPlayed = row.GetInt64( col++ );
+
+                var mediaName = MediaInfo.GetDisplayName( primaryName, secondaryName, season, episode );
+                var rtTotal = new RunTime( totalTicksPlayed );
+                var computedRT = new RunTime( computedTotalTicksPlayed );
+                var diffRT = new RunTime( Math.Abs( totalTicksPlayed - computedTotalTicksPlayed ) );
+                groupData.addRow( userName + "-" + mediaName, [ userName, mediaName, rtTotal.ToShortString(), computedRT.ToShortString(), diffRT.ToShortString() ] );
+                return true;
+            } );
+
+            return groupData;
         }
     }
 }

@@ -123,6 +123,18 @@ namespace Statistics2026.Api
             } );
         }
 
+        public object Get( GetPlayedUserMedia request )
+        {
+            return GetRequest( "GetPlayedUserMedia", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                var groupData = db.PlayedUserMedia();
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
         public object Get( GetMostActiveUsers request )
         {
             return GetRequest( "GetMostActiveUsers", timer =>

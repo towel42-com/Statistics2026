@@ -57,6 +57,12 @@ namespace Statistics2026.Api
     {
     }
 
+    [Route( "/Statistics2026/played_user_media", "GET", Summary = "Reports Media played and Tracked" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetPlayedUserMedia : IReturn<object>
+    {
+    }
+
     [Route( "/Statistics2026/most_active_users", "GET", Summary = "Gets the top 5 most active users" )]
     [Authenticated( Roles = "admin" )]
     public class GetMostActiveUsers : IReturn<object>

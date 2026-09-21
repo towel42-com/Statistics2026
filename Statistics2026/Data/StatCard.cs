@@ -175,23 +175,37 @@ namespace Statistics2026.Data
             return StatCard.EAlignment.eLeft;
         }
 
-        private void addData( ref string retVal, int depth = 0 )
+        public virtual bool ShowHeaderColumn( int columnNum )
         {
-            retVal = StatCardResponse._addToHtml( depth++, "<table>" );
+            return true;
+        }
 
+        private string AddHeader( int depth = 0 )
+        {
+            var retVal = string.Empty;
             if( Headers != null )
             {
                 retVal += StatCardResponse._addToHtml( depth++, "<tr>" );
-                retVal += StatCardResponse._addToHtml( depth, "<td>&nbsp;</td>" );
+                if ( ShowHeaderColumn( 0 ) )
+                    retVal += StatCardResponse._addToHtml( depth, "<td>&nbsp;</td>" );
                 for( var ii = 0; ii < Headers.Count(); ++ii )
                 {
+                    if( !ShowHeaderColumn( ii + 1 ) )
+                        continue;
                     var header = Headers[ ii ];
                     retVal += StatCardResponse._addToHtml( depth, $"<td {StatCard.GetStyleString( alignmentForColumn( ii ) )}>{header}</td>" );
                 }
 
                 retVal += StatCardResponse._addToHtml( --depth, "</tr>" );
             }
+            return retVal;
+        }
 
+        private void addData( ref string retVal, int depth = 0 )
+        {
+            retVal = StatCardResponse._addToHtml( depth++, "<table>" );
+
+            retVal += AddHeader( depth);
             retVal += GetDataString( depth );
 
             retVal += StatCardResponse._addToHtml( --depth, "</table>" );
@@ -466,29 +480,31 @@ namespace Statistics2026.Data
     public class TableBasedStatCardRow
     {
         public string Name { get; private set; } = string.Empty;
-        public List<long>? Values { get; private set; } = null;
+        public List<object>? Values { get; private set; } = null;
 
-        public TableBasedStatCardRow( string name, List<long>? values )
+        public TableBasedStatCardRow( string name, List<object>? values )
         {
             Name = name;
             Values = values;
         }
 
-        public void setValues( List<long> values )
+        public void setValues( List<object> values )
         {
             Values = values;
         }
 
-        public string ToString( int depth = 0, StatCard.EAlignment keyColAlignment = EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null )
+        public string ToString( int depth = 0, StatCard.EAlignment keyColAlignment = EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null, bool showCategory = true )
         {
             var retVal = StatCardResponse._addToHtml( depth++, $"<tr {StatCard.GetStyleString()}>" );
 
-            retVal += StatCardResponse._addToHtml( depth, $"<td {StatCard.GetStyleString( keyColAlignment )}>{Name}</td>" );
+            if( showCategory )
+                retVal += StatCardResponse._addToHtml( depth, $"<td {StatCard.GetStyleString( keyColAlignment )}>{Name}</td>" );
+
             if( Values != null )
             {
                 for( var ii = 0; ii < Values.Count(); ++ii )
                 {
-                    retVal += StatCardResponse._addToHtml( depth, $"<td {StatCard.GetStyleString( ii, columnAlignment )}>{Values[ ii ]}</td>" );
+                    retVal += StatCardResponse._addToHtml( depth, $"<td {StatCard.GetStyleString( ii, columnAlignment )}>{Values[ ii ].ToString()}</td>" );
                 }
             }
 
@@ -509,6 +525,7 @@ namespace Statistics2026.Data
         private readonly Dictionary<int, StatCard.EAlignment> _columnAlignment = [];
         private StatCard.EAlignment _keyColumnAlignment = EAlignment.eLeft;
         public override bool IsEmpty() { return Rows == null || Rows.Count == 0; }
+        public bool ShowCategory { get; set; } = true;
         public TableBasedStatCard()
             : base()
         {
@@ -520,6 +537,11 @@ namespace Statistics2026.Data
             Rows = [];
 
             Headers = headers;
+        }
+
+        public override bool ShowHeaderColumn( int columnNum )
+        {
+            return columnNum != 0;
         }
 
         public void SetDataColumnAlignment( int columnNum, StatCard.EAlignment alignment )
@@ -545,13 +567,13 @@ namespace Statistics2026.Data
 
         public void addRow( string category, List<int> values )
         {
-            var longValues = new List<long>();
+            var objList = new List<object>();
             foreach( var value in values )
-                longValues.Add( value );
-            addRow( category, longValues );
+                objList.Add( value );
+            addRow( category, objList );
         }
 
-        public void addRow( string category, List<long> values )
+        public void addRow( string category, List<object> values )
         {
             var currRow = findRow( category );
             TableBasedStatCardRow row;
@@ -584,7 +606,7 @@ namespace Statistics2026.Data
             var retVal = string.Empty;
             foreach( var row in valuesToUse )
             {
-                retVal += row.ToString( depth, _keyColumnAlignment, _columnAlignment );
+                retVal += row.ToString( depth, _keyColumnAlignment, _columnAlignment, ShowCategory );
             }
 
             return retVal;
