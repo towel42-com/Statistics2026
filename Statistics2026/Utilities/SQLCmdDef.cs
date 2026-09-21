@@ -3,7 +3,7 @@ using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
 
-namespace Statistics2026.Data
+namespace Statistics2026.Utilities
 {
     public class SQLCmdDef
     {

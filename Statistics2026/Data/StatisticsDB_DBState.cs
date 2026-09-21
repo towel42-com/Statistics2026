@@ -1,5 +1,5 @@
 ﻿using MediaBrowser.Model.Querying;
-using ServiceStack.Text;
+using Statistics2026.Utilities;
 
 using System;
 using System.Collections.Generic;
@@ -74,7 +74,7 @@ namespace Statistics2026.Data
                 tableName =>
                 {
                     var missingRows = CheckUserMediaTableHasData( tableName );
-                    if ( missingRows != null )
+                    if( missingRows != null )
                         missing.AddRange( missingRows );
                     return missingRows != null;
                 },
@@ -85,7 +85,7 @@ namespace Statistics2026.Data
                 }
             );
 
-            if ( missing != null && missing.Count > 0 )
+            if( missing != null && missing.Count > 0 )
                 dumpTable( [ "User", "Item ID", "Name", "Runtime Ticks", "Is Played?", "Play Count", "Total Ticks Played", "Series Name", "Season#", "Episode#" ], missing, text => _embyInterfaces?._logger.Warn( text ) );
         }
 

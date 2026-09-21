@@ -1,5 +1,5 @@
 ﻿using Statistics2026.Configuration;
-using Statistics2026.Data;
+using Statistics2026.Utilities;
 
 namespace Statistics2026.Api
 {

@@ -6,7 +6,7 @@ using MediaBrowser.Model.Providers;
 using System;
 using System.Linq;
 
-namespace Statistics2026.Data
+namespace Statistics2026.Utilities
 {
     public class MediaInfo : IDisposable
     {
@@ -194,7 +194,7 @@ namespace Statistics2026.Data
 
         public static string GetDisplayName( string primaryName, string secondaryName, int season, int episode )
         {
-            if ( ( season >= 0 ) && (episode >= 0)  && !secondaryName.IsNullOrEmpty() )
+            if( ( season >= 0 ) && ( episode >= 0 ) && !secondaryName.IsNullOrEmpty() )
                 return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";
             return primaryName;
         }

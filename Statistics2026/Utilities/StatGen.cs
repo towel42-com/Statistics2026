@@ -1,5 +1,5 @@
-﻿using SQLitePCL.pretty;
-using Statistics2026.Data;
+﻿using Statistics2026.Utilities;
+using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
 
@@ -361,45 +361,45 @@ namespace Statistics2026.Api
                 break;
                 case EStatisticType.LatestPremiereDate:
                 {
-                        if (VideoType == EVideoType.Movie)
-                            title = Constants.LatestMoviePremiere;
-                        else if (VideoType == EVideoType.Series)
-                            title = Constants.LatestSeriesPremiere;
-                        else
-                            title = Constants.LatestEpisodePremiere;
+                    if( VideoType == EVideoType.Movie )
+                        title = Constants.LatestMoviePremiere;
+                    else if( VideoType == EVideoType.Series )
+                        title = Constants.LatestSeriesPremiere;
+                    else
+                        title = Constants.LatestEpisodePremiere;
                 }
 
                 break;
                 case EStatisticType.OldestPremiereDate:
                 {
-                        if (VideoType == EVideoType.Movie)
-                            title = Constants.OldestMoviePremiere;
-                        else if (VideoType == EVideoType.Series)
-                            title = Constants.OldestSeriesPremiere;
-                        else
-                            title = Constants.OldestEpisodePremiere;
+                    if( VideoType == EVideoType.Movie )
+                        title = Constants.OldestMoviePremiere;
+                    else if( VideoType == EVideoType.Series )
+                        title = Constants.OldestSeriesPremiere;
+                    else
+                        title = Constants.OldestEpisodePremiere;
                 }
 
                 break;
                 case EStatisticType.LatestAdditionToServer:
                 {
-                        if (VideoType == EVideoType.Movie)
-                            title = Constants.LatestMovieAddition;
-                        else if (VideoType == EVideoType.Series)
-                            title = Constants.LatestSeriesAddition;
-                        else
-                            title = Constants.LatestEpisodeAddition;
+                    if( VideoType == EVideoType.Movie )
+                        title = Constants.LatestMovieAddition;
+                    else if( VideoType == EVideoType.Series )
+                        title = Constants.LatestSeriesAddition;
+                    else
+                        title = Constants.LatestEpisodeAddition;
                 }
 
                 break;
                 case EStatisticType.FirstAdditionToServer:
                 {
-                        if (VideoType == EVideoType.Movie)
-                            title = Constants.FirstMovieAddition;
-                        else if (VideoType == EVideoType.Series)
-                            title = Constants.LatestMovieAddition;
-                        else
-                            title = Constants.FirstEpisodeAddition;
+                    if( VideoType == EVideoType.Movie )
+                        title = Constants.FirstMovieAddition;
+                    else if( VideoType == EVideoType.Series )
+                        title = Constants.LatestMovieAddition;
+                    else
+                        title = Constants.FirstEpisodeAddition;
                 }
 
                 break;
@@ -548,9 +548,9 @@ namespace Statistics2026.Api
         }
         private string CheckForPlural( string value, decimal number, string starting = "", string ending = "", bool removeZero = true )
         {
-            if (number == 1)
+            if( number == 1 )
                 return $" {starting} {number} {value} {ending}";
-            if (number == 0 && removeZero)
+            if( number == 0 && removeZero )
                 return string.Empty;
             return $" {starting} {number} {value}s {ending}";
         }
@@ -572,16 +572,16 @@ namespace Statistics2026.Api
                 var numberOfDays = DateTime.Now.DayOfYear - date.DayOfYear;
                 if( numberOfDays < 0 )
                     numberOfDays *= -1;
-                if (numberOfDays == 0)
+                if( numberOfDays == 0 )
                 {
                     return $"Today";
                 }
-                else if (numberOfDays == 1)
+                else if( numberOfDays == 1 )
                 {
                     return $"Yesterday";
                 }
                 else
-                    return $"{CheckForPlural("day", numberOfDays, string.Empty, string.Empty, false)} ago";
+                    return $"{CheckForPlural( "day", numberOfDays, string.Empty, string.Empty, false )} ago";
             }
         }
     };

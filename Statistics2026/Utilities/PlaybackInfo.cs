@@ -3,9 +3,10 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
 using ServiceStack;
 using Statistics2026.Api;
+using Statistics2026.Data;
 using System.Collections.Generic;
 
-namespace Statistics2026.Data
+namespace Statistics2026.Utilities
 {
     public class PlaybackInfo
     {

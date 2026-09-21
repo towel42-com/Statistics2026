@@ -3,7 +3,7 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using System;
 
-namespace Statistics2026.Data
+namespace Statistics2026.Utilities
 {
     public sealed class ItemImageUrl
     {

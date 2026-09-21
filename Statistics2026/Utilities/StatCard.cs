@@ -1,12 +1,13 @@
 ﻿using Emby.Media.Common.Extensions;
+using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using static Statistics2026.Data.StatCard;
+
 using TextValueLine = (string data, string itemId, string url);
 
-namespace Statistics2026.Data
+namespace Statistics2026.Utilities
 {
     public class DynamicButton
     {
@@ -186,7 +187,7 @@ namespace Statistics2026.Data
             if( Headers != null )
             {
                 retVal += StatCardResponse._addToHtml( depth++, "<tr>" );
-                if ( ShowHeaderColumn( 0 ) )
+                if( ShowHeaderColumn( 0 ) )
                     retVal += StatCardResponse._addToHtml( depth, "<td>&nbsp;</td>" );
                 for( var ii = 0; ii < Headers.Count(); ++ii )
                 {
@@ -205,7 +206,7 @@ namespace Statistics2026.Data
         {
             retVal = StatCardResponse._addToHtml( depth++, "<table>" );
 
-            retVal += AddHeader( depth);
+            retVal += AddHeader( depth );
             retVal += GetDataString( depth );
 
             retVal += StatCardResponse._addToHtml( --depth, "</table>" );
@@ -264,7 +265,6 @@ namespace Statistics2026.Data
             {
                 retVal.addToHtml( depth, $"<div class=\"{titleClass}\">{SubTitle}</div>" );
             }
-
         }
 
         private int addData( int depth, ref StatCardResponse retVal )
@@ -493,7 +493,7 @@ namespace Statistics2026.Data
             Values = values;
         }
 
-        public string ToString( int depth = 0, StatCard.EAlignment keyColAlignment = EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null, bool showCategory = true )
+        public string ToString( int depth = 0, StatCard.EAlignment keyColAlignment = StatCard.EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null, bool showCategory = true )
         {
             var retVal = StatCardResponse._addToHtml( depth++, $"<tr {StatCard.GetStyleString()}>" );
 

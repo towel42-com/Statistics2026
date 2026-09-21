@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Statistics2026.Data
+namespace Statistics2026.Utilities
 {
     public class TableColDef
     {

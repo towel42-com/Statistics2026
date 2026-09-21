@@ -1,12 +1,10 @@
-﻿using Emby.Naming.Common;
-using MediaBrowser.Controller.Entities;
+﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
-using RestSharp;
 using ServiceStack;
-using ServiceStack.Text;
 using Statistics2026.Api;
+using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -247,7 +245,6 @@ namespace Statistics2026.Data
 
             return $"{sUserMediaTablePrefix}{userId}";
         }
-
 
         private readonly Dictionary<string, (bool hit, int playCount)> _baseCount = new()
                         {
@@ -968,7 +965,6 @@ namespace Statistics2026.Data
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
-
 
             string? title;
 

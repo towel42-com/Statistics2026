@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Reflection;
 
-namespace Statistics2026.Data
+namespace Statistics2026.Utilities
 {
     public static class BuildDateInfo
     {
@@ -12,7 +12,7 @@ namespace Statistics2026.Data
                 .GetCustomAttributes<AssemblyMetadataAttribute>()
                 .FirstOrDefault( a => a.Key == "BuildDate" );
 
-            if (attribute != null && DateTime.TryParse(attribute.Value, out DateTime buildDate))
+            if( attribute != null && DateTime.TryParse( attribute.Value, out DateTime buildDate ) )
             {
                 return buildDate;
             }

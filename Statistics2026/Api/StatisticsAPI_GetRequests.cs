@@ -1,7 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Services;
 using Statistics2026.Data;
+using Statistics2026.Utilities;
 using System;
 
 namespace Statistics2026.Api
@@ -381,9 +381,9 @@ namespace Statistics2026.Api
                     return new object();
 
                 bool? showEpisodes = null;
-                if (request.episodes == "true")
+                if( request.episodes == "true" )
                     showEpisodes = true;
-                else if (request.episodes == "all")
+                else if( request.episodes == "all" )
                     showEpisodes = null;
                 else
                     showEpisodes = false;
@@ -406,9 +406,9 @@ namespace Statistics2026.Api
                     return new object();
 
                 bool? showEpisodes = null;
-                if (request.episodes == "true")
+                if( request.episodes == "true" )
                     showEpisodes = true;
-                else if (request.episodes == "all")
+                else if( request.episodes == "all" )
                     showEpisodes = null;
                 else
                     showEpisodes = false;
@@ -442,10 +442,10 @@ namespace Statistics2026.Api
         {
             return GetRequest( "GetDatabaseStatus", timer =>
             {
-                if (Plugin.Instance == null)
+                if( Plugin.Instance == null )
                     return new GetDatabaseStatusReponse();
 
-                return new GetDatabaseStatusReponse(Plugin.Instance.Configuration);
+                return new GetDatabaseStatusReponse( Plugin.Instance.Configuration );
             } );
         }
 

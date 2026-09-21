@@ -12,7 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 
-namespace Statistics2026.Data
+namespace Statistics2026.Utilities
 {
     public enum ECheckLevel
     {

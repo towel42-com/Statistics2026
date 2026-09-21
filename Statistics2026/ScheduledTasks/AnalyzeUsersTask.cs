@@ -9,6 +9,7 @@ using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
 using Statistics2026.Data;
+using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -54,7 +55,7 @@ namespace Statistics2026.ScheduledTasks
             }
 
             var taskName = "Analyze All Users";
-            _embyInterfaces!._logger.Info($"Statistics 2026 : Starting Statistics 2026 {taskName} task");
+            _embyInterfaces!._logger.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
