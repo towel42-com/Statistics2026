@@ -29,9 +29,9 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eReport );
 
-            var retVal = new TextBasedStatCard( title, help, EStatCardSize.eSmall );
+            var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eCompact );
             var value = GetSingleValueFromSQL( sql, parameters, formatter );
-            retVal.AddLine( value );
+            retVal.AddLine( value, true );
             return retVal;
         }
 
@@ -39,8 +39,8 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eReport );
 
-            var retVal = new TextBasedStatCard( title, help, EStatCardSize.eSmall );
-            retVal.AddLine( value.ToString() );
+            var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eCompact );
+            retVal.AddLine( value.ToString(), false );
             return retVal;
         }
 

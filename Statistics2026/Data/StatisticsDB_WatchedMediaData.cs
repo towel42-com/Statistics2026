@@ -613,8 +613,8 @@ namespace Statistics2026.Data
                 return true;
             } );
 
-            var retVal = new TextBasedStatCard( Constants.TotalSeriesFinished, Constants.HelpTotalSeriesFinished, EStatCardSize.eSmall );
-            retVal.AddLine( seriesInfo.Count().ToString() );
+            var retVal = new TextBasedStatCard( Constants.TotalSeriesFinished, Constants.HelpTotalSeriesFinished, EStatCardStyle.eCompact );
+            retVal.AddLine( seriesInfo.Count().ToString(), false );
             return retVal;
         }
 
@@ -820,7 +820,7 @@ namespace Statistics2026.Data
                 help = leastWatched ? Constants.HelpLeastWatchedMovies : Constants.HelpMostWatchedMovies;
             }
 
-            var retVal = new TextBasedStatCard( title, help, EStatCardSize.eMedium )
+            var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eDetailed )
             {
                 SubTitle = ( user == null ) ? "(Watched across Users)" : string.Empty,
                 ListType = TextBasedStatCard.EListType.eNumberedGroupByKey
@@ -830,7 +830,7 @@ namespace Statistics2026.Data
             {
                 foreach( var curr in currList )
                 {
-                    retVal.AddLine( $"{curr.Title()}", curr.ItemId, curr.ImageUrl );
+                    retVal.AddLine( $"{curr.Title()}", curr.ItemId, curr.ImageUrl, false );
                     var key = (long)( 100 * curr.PlayCountPerUser );
                     retVal.AddKey( key.ToString() );
                 }
@@ -845,7 +845,7 @@ namespace Statistics2026.Data
                     name = "TV Episodes";
                 else // mediaType == EMediaType.eMovies
                     name = "Movies";
-                retVal.AddLine( $"Watch some {name} already!" );
+                retVal.AddLine( $"Watch some {name} already!", false );
             }
 
             return retVal;
@@ -980,7 +980,7 @@ namespace Statistics2026.Data
                 help = Constants.HelpLastSeenTVSeries;
             }
 
-            var retVal = new TextBasedStatCard( title, help, EStatCardSize.eMedium )
+            var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eDetailed )
             {
                 ListType = TextBasedStatCard.EListType.eNumbered,
                 IgnoreLength = true
@@ -989,13 +989,13 @@ namespace Statistics2026.Data
 
             foreach( var (name, lastPlayed) in values )
             {
-                retVal.AddLine( $"{name} - {lastPlayed:d}" );
+                retVal.AddLine( $"{name} - {lastPlayed:d}", false );
             }
 
             if( values.Count == 0 )
             {
                 string name = movies ? "Movies" : "TV Shows";
-                retVal.AddLine( $"Watch some {name} already!" );
+                retVal.AddLine( $"Watch some {name} already!", false );
             }
 
             return retVal;
@@ -1031,7 +1031,8 @@ namespace Statistics2026.Data
             }
 
             var sql = sqlCmds.Join( "\nUNION\n\n" );
-            var groupData = new TableBasedStatCard( Constants.PlayedUserMedia, Constants.HelpPlayedUserMedia, [ "User Name", "Media Name", "Computed Time Played", "Time Played", "Difference" ] );
+            var groupData = new TableBasedStatCard( Constants.PlayedUserMedia, Constants.HelpPlayedUserMedia, [ "User Name", "Media Name", "Computed Time Played", "Time Played", "Difference" ], EStatCardStyle.eDetailed );
+            groupData.UseSeparators = true;
             groupData.ShowCategory = false;
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {

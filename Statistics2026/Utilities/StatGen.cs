@@ -2,6 +2,7 @@
 using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
+using Emby.Media.Common.Extensions;
 
 namespace Statistics2026.Api
 {
@@ -76,19 +77,19 @@ namespace Statistics2026.Api
         {
             var title = Title();
             var help = Help();
-            var retVal = new TextBasedStatCard( title, help, EStatCardSize.eHalf );
+            var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eDetailed );
 
             var statCardValues = GetStatCardValues();
 
-            retVal.AddLine( statCardValues.Value );
-            if( string.IsNullOrEmpty( statCardValues.SecondValue ) )
+            retVal.AddLine( statCardValues.Value, false );
+            if( statCardValues.SecondValue.IsNullOrEmpty() )
             {
-                retVal.AddLine( statCardValues.Name );
+                retVal.AddLine( statCardValues.Name, false );
             }
             else
             {
-                retVal.AddLine( statCardValues.SecondValue );
-                retVal.AddLine( statCardValues.Name );
+                retVal.AddLine( statCardValues.SecondValue, false );
+                retVal.AddLine( statCardValues.Name, false );
             }
 
             retVal.ImageUrl = statCardValues.ImageUrl;

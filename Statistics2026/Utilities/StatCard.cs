@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-using TextValueLine = (string data, string itemId, string url);
+using TextValueLine = (string data, string itemId, string url, bool asTitle);
 
 namespace Statistics2026.Utilities
 {
@@ -71,28 +71,22 @@ namespace Statistics2026.Utilities
         }
     };
 
-    public enum EStatCardSize
+    public enum EStatCardStyle
     {
-        eSmall,  // 33%
-        eHalf,   // 50%
-        eMedium, // 66%
-        eLarge   // 100%
+        eCompact,
+        eDetailed
     };
 
     public abstract class StatCard
     {
-        public string ToString( EStatCardSize size )
+        public string ToString( EStatCardStyle size )
         {
             switch( size )
             {
-                case EStatCardSize.eSmall:
-                    return "small";
-                case EStatCardSize.eHalf:
-                    return "half";
-                case EStatCardSize.eMedium:
-                    return "medium";
-                case EStatCardSize.eLarge:
-                    return "large";
+                case EStatCardStyle.eDetailed:
+                    return "detailed";
+                case EStatCardStyle.eCompact:
+                    return "compact";
                 default:
                     return string.Empty;
             }
@@ -103,16 +97,18 @@ namespace Statistics2026.Utilities
 
         public string SubTitle { get; set; } = string.Empty;
 
-        public EStatCardSize Size { get; set; } = EStatCardSize.eSmall;
+        public EStatCardStyle Style { get; set; } = EStatCardStyle.eCompact;
         public string HelpText { get; set; } = string.Empty;
         public string ImageUrl { get; set; } = string.Empty;
         public string MediaItemId { get; set; } = string.Empty;
 
         public string HtmlDivId { get; set; } = string.Empty;
         public bool SortByKey { get; set; } = false;
+        public bool UseSeparators { get; set; } = false;
 
         public enum EAlignment
         {
+            eUnset,
             eLeft,
             eRight,
             eCenter
@@ -135,17 +131,26 @@ namespace Statistics2026.Utilities
 
         public static string GetStyleString( EAlignment alignment )
         {
-            var style = $"style=\"text-align: {AlignmentText( alignment )}; white-space: nowrap;\"";
-            return style;
+            var retVal = string.Empty;
+            if( alignment != EAlignment.eUnset )
+            {
+                retVal = $"style=\"text-align: {AlignmentText( alignment )}; white-space: nowrap;\"";
+            }
+            else
+            {
+                retVal = $"style=\"white-space: nowrap;\"";
+            }
+            return retVal;
         }
 
         public static EAlignment GetAlignmentForColumn( int column, Dictionary<int, StatCard.EAlignment>? columnAlignment )
         {
-            var colAlign = StatCard.EAlignment.eLeft;
+            var colAlign = StatCard.EAlignment.eUnset;
             if( columnAlignment != null && columnAlignment.TryGetValue( column, out var columnAlign ) )
                 colAlign = columnAlign;
             return colAlign;
         }
+
         public static string GetStyleString( int column, Dictionary<int, StatCard.EAlignment>? columnAlignment )
         {
             return GetStyleString( GetAlignmentForColumn( column, columnAlignment ) );
@@ -158,17 +163,18 @@ namespace Statistics2026.Utilities
 
         public StatCard()
         {
-            Size = EStatCardSize.eHalf;
+            Style = EStatCardStyle.eDetailed;
         }
 
-        public StatCard( string title, string? helpText, EStatCardSize size = EStatCardSize.eHalf )
+        public StatCard( string title, string? helpText, EStatCardStyle style = EStatCardStyle.eCompact )
         {
             Title = title;
             HelpText = helpText ?? string.Empty;
-            Size = size;
+            Style = style;
         }
 
         public abstract bool IsEmpty();
+        public abstract bool DataIsTable();
         public abstract string GetDataString( int depth = 0 );
 
         public virtual StatCard.EAlignment alignmentForColumn( int column )
@@ -204,12 +210,17 @@ namespace Statistics2026.Utilities
 
         private void addData( ref string retVal, int depth = 0 )
         {
-            retVal = StatCardResponse._addToHtml( depth++, "<table>" );
+            if( DataIsTable() )
+            {
+                retVal = StatCardResponse._addToHtml( depth++, "<table>" );
 
-            retVal += AddHeader( depth );
-            retVal += GetDataString( depth );
+                retVal += AddHeader( depth );
+                retVal += GetDataString( depth );
 
-            retVal += StatCardResponse._addToHtml( --depth, "</table>" );
+                retVal += StatCardResponse._addToHtml( --depth, "</table>" );
+            }
+            else
+                retVal = GetDataString( depth );
         }
 
         public override string ToString()
@@ -267,13 +278,20 @@ namespace Statistics2026.Utilities
             }
         }
 
+        protected string tableStyle( bool asTitle )
+        {
+            if( asTitle )
+                return "statCard-stats-title";
+            return UseSeparators ? "statCard-stats-numbersep" : "statCard-stats-number";
+        }
+
         private int addData( int depth, ref StatCardResponse retVal )
         {
             var tableInfo = ToString( depth + 1 );
 
             if( !tableInfo.IsNullOrEmpty() )
             {
-                retVal.addToHtml( depth++, $"<div class=\"statCard-stats-number\">" );
+                retVal.addToHtml( depth++, $"<div class=\"{tableStyle( false )}\">" );
                 retVal.addToHtml( 0, tableInfo );
                 retVal.addToHtml( --depth, "</div>" );
             }
@@ -291,7 +309,7 @@ namespace Statistics2026.Utilities
             }
 
             var depth = 0;
-            retVal.addToHtml( depth++, $"<div class=\"col {ToString( Size )}\" {rootDivName}>" );
+            retVal.addToHtml( depth++, $"<div class=\"col {ToString( Style )}\" {rootDivName}>" );
             retVal.addToHtml( depth++, "<div class=\"statCard\">" );
             retVal.addToHtml( depth++, "<div class=\"statCard-content\">" );
 
@@ -338,7 +356,7 @@ namespace Statistics2026.Utilities
             KeyValueLines = [];
         }
 
-        public TextBasedStatCard( string title, string? helpText, EStatCardSize size = EStatCardSize.eHalf )
+        public TextBasedStatCard( string title, string? helpText, EStatCardStyle size = EStatCardStyle.eDetailed )
             : base( title, helpText, size )
         {
             ValueLines = [];
@@ -355,16 +373,17 @@ namespace Statistics2026.Utilities
             KeyValueLines.Add( key );
         }
 
-        public void AddLine( string value )
+        public void AddLine( string value, bool asTitle )
         {
-            AddLine( value, string.Empty, string.Empty );
+            AddLine( value, string.Empty, string.Empty, asTitle );
         }
 
-        public void AddLine( string value, string itemId, string url )
+        public void AddLine( string value, string itemId, string url, bool asTitle )
         {
-            ValueLines.Add( (value, itemId, url) );
+            ValueLines.Add( (value, itemId, url, asTitle) );
         }
 
+        public override bool DataIsTable() { return false; }
         public override string GetDataString( int depth = 0 )
         {
             if( ListType == EListType.eNumberedGroupByKey && ( KeyValueLines.Count != ValueLines.Count ) )
@@ -402,14 +421,16 @@ namespace Statistics2026.Utilities
 
             for( var ii = 0; ii < ValueLines.Count; ++ii )
             {
-                var (data, itemId, url) = ValueLines[ ii ];
+                var (data, itemId, url, asTitle) = ValueLines[ ii ];
 
                 if( data.IsNullOrEmpty() )
                     continue;
                 var value = data;
                 if( ValueLines.Count() > 1 )
                     value = CheckMaxLength( value );
-                var dataHtml = $"<div class=\"statCard-stats-number\" {style}>{value}</div>";
+
+
+                var dataHtml = $"<div class=\"{tableStyle( asTitle )}\" {style}>{value}</div>";
 
                 var showImage = !url.IsNullOrEmpty() && !itemId.IsNullOrEmpty();
                 if( showImage )
@@ -531,7 +552,7 @@ namespace Statistics2026.Utilities
         {
             Rows = [];
         }
-        public TableBasedStatCard( string title, string helpText, List<string> headers, EStatCardSize size = EStatCardSize.eHalf )
+        public TableBasedStatCard( string title, string helpText, List<string> headers, EStatCardStyle size = EStatCardStyle.eDetailed )
             : base( title, helpText, size )
         {
             Rows = [];
@@ -541,7 +562,7 @@ namespace Statistics2026.Utilities
 
         public override bool ShowHeaderColumn( int columnNum )
         {
-            return columnNum != 0;
+            return ShowCategory ? true : ( columnNum != 0 );
         }
 
         public void SetDataColumnAlignment( int columnNum, StatCard.EAlignment alignment )
@@ -595,6 +616,7 @@ namespace Statistics2026.Utilities
             return StatCard.GetAlignmentForColumn( column, _columnAlignment );
         }
 
+        public override bool DataIsTable() { return true; }
         public override string GetDataString( int depth = 0 )
         {
             var valuesToUse = Rows;

@@ -336,7 +336,7 @@ namespace Statistics2026.Data
             if( totalTicks != 0 )
             {
                 var rt = new RunTime( totalTicks );
-                retVal.AddLine( DBHelper.FormatTicks( totalTicks ) );
+                retVal.AddLine( DBHelper.FormatTicks( totalTicks ), true );
             }
 
             return retVal;
@@ -401,16 +401,16 @@ namespace Statistics2026.Data
             var sqlEpisodes = $"SELECT {episodeColumn} FROM {episodeFrom}";
             var retVal = ValueGroupForSingleItem( titleEpisodes, helpEpisodes, sqlEpisodes, paramList );
 
-            retVal.AddLine( titleSeries );
+            retVal.AddLine( titleSeries, true );
             var sqlSeries = $"SELECT {seriesColumn} FROM {seriesFrom}";
             var value = GetSingleValueFromSQL( sqlSeries, paramList );
-            retVal.AddLine( value );
+            retVal.AddLine( value, true );
 
             if( user == null )
             {
                 value = GetSingleValueFromSQL( "SELECT SUM(RunTimeTicks) FROM MEDIA WHERE IsEpisode" );
                 value = DBHelper.FormatTicks( value.ToInt64() );
-                retVal.AddLine( value );
+                retVal.AddLine( value, true );
             }
 
             return retVal;
@@ -445,9 +445,9 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eReport );
 
-            var retVal = new TextBasedStatCard( movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, EStatCardSize.eSmall );
+            var retVal = new TextBasedStatCard( movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, EStatCardStyle.eCompact );
             var value = TotalStudioCountValue( user, movies );
-            retVal.AddLine( value.ToString() );
+            retVal.AddLine( value.ToString(), false );
             return retVal;
         }
 
