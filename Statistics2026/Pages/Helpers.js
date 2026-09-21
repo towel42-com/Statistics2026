@@ -223,14 +223,10 @@ define(function () {
 
     const STYLE_ID = 'statistics2026-stylesheet';
     function injectStyleSheet(e) {
-        const cssUrl = 'configurationpage?name=style.css';
-        return injectStyleSheetEX(e, cssUrl);
-    }
-
-    function injectStyleSheetEX(e, cssUrl) {
         if (document.getElementById(STYLE_ID))  // already added
             return;
 
+        const cssUrl = 'configurationpage?name=style.css';
         const link = document.createElement('link');
         link.id = STYLE_ID;
         link.rel = 'stylesheet';
