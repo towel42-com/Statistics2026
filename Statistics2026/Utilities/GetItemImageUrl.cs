@@ -5,7 +5,7 @@ using System;
 
 namespace Statistics2026.Utilities
 {
-    public sealed class ItemImageUrl
+    public static class ItemImageUrl
     {
         public static string _ItemImageUrl( string itemId, ILibraryManager libManager, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
