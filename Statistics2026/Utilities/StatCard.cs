@@ -105,6 +105,7 @@ namespace Statistics2026.Utilities
         public string HtmlDivId { get; set; } = string.Empty;
         public bool SortByKey { get; set; } = false;
         public bool UseSeparators { get; set; } = false;
+        public bool HideHeaders { get; set; } = false;
 
         public enum EAlignment
         {
@@ -190,6 +191,9 @@ namespace Statistics2026.Utilities
         private string AddHeader( int depth = 0 )
         {
             var retVal = string.Empty;
+            if( HideHeaders )
+                return retVal;
+
             if( Headers != null )
             {
                 retVal += StatCardResponse._addToHtml( depth++, "<tr>" );
