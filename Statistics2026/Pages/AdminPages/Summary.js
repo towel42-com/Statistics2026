@@ -14,11 +14,10 @@
                 return;
             });
 
-            if (!sysConfig.EnableDebugLevelLogging) {
+            if (!sysConfig.EnableDebugLevelLogging && !pluginConfig.showDebugInfo ) {
                 view.querySelector(`#debugInfo`).style.display = 'none';
                 view.querySelector(`#playedUserMedia`).style.display = 'none';
                 view.querySelector(`#userWatchMediaIssues`).style.display = 'none';
-                
                 return;
             }
 

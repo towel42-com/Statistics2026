@@ -17,6 +17,7 @@
                 view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
                 view.querySelector("#resetPlayCount").checked = config.resetPlayCount;
                 view.querySelector("#resetDBState").checked = config.resetDBState;
+                view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
             });
         }
 
@@ -59,6 +60,15 @@
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                         config.resetPlayCount = view.querySelector("#resetPlayCount").checked;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
+            view.querySelector("#showDebugInfo").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.showDebugInfo = view.querySelector("#showDebugInfo").checked;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
@@ -148,6 +158,10 @@
                     Helpers.showInfo("Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured", "Reset Database State");
                 });
 
+            view.querySelector("#showDebugInfoHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("More information is reported on the Summary screen, this functionality is also turned on if Debug Logging is enabled", "Show Debug Info");
+                });
 
             view.querySelector("#hasConnectUserIDHelp").addEventListener("click",
                 function () {
