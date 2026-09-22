@@ -17,6 +17,8 @@
             if (!sysConfig.EnableDebugLevelLogging) {
                 view.querySelector(`#debugInfo`).style.display = 'none';
                 view.querySelector(`#playedUserMedia`).style.display = 'none';
+                view.querySelector(`#userWatchMediaIssues`).style.display = 'none';
+                
                 return;
             }
 
@@ -40,6 +42,10 @@
             var playedUserMedia = Helpers.getSummaryInfo(view, "played_user_media", "", "");
             view.querySelector(`#playedUserMedia`).style.display = '';
             view.querySelector("#playedUserMedia").innerHTML = (playedUserMedia);
+
+            var userWatchMediaIssues = Helpers.getSummaryInfo(view, "user_watch_media_issues", "", "");
+            view.querySelector(`#userWatchMediaIssues`).style.display = '';
+            view.querySelector("#userWatchMediaIssues").innerHTML = (userWatchMediaIssues);
         }
 
         function loadStats(view) {

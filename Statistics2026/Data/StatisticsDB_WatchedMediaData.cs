@@ -484,7 +484,6 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
 
             var config = Statistics2026.Plugin.Instance!.Configuration;
-            var resetPlayCount = config.resetPlayCount || !Plugin.Instance.IsDBStateSet( EDBState.eUserDataInitialized );
 
             var allVideosForUser = Statistics2026API.GetAllEpisodesAndMovies( user, _embyInterfaces!._libraryManager, false ).forUser;
             //_tableList
@@ -521,10 +520,12 @@ namespace Statistics2026.Data
                     "  IsPlayed=@IsPlayed" +
                     ", PlayCount=@PlayCount" +
                     ", LastPlayedDate=@LastPlayedDate" +
-                " WHERE " +
-                " ItemId=@ItemId"
-                ;
-
+                    ", TotalTicksPlayed=(@IsPlayed*@PlayCount)*@RunTimeTicks " +
+                    $" WHERE " +
+                    " ItemId=@ItemId AND " +
+                    "( ( TotalTicksPlayed IS NULL ) OR ( TotalTicksPlayed == 0 ) ) "
+                    ;
+    
             foreach( var video in allVideosForUser )
             {
                 if( video == null )
@@ -533,7 +534,7 @@ namespace Statistics2026.Data
                 var isPlayed = video.Played;
                 var playCount = video.PlayCount;
 
-                if( resetPlayCount )
+                if( config.resetPlayCount )
                     ResetPlayCount( user, video, ref isPlayed, ref playCount );
                 var lastPlayedDate = video?.LastPlayedDate ?? null;
 
@@ -553,12 +554,13 @@ namespace Statistics2026.Data
                             ( "@IsPlayed", isPlayed),
                             ( "@PlayCount", playCount),
                             ( "@LastPlayedDate", _dbHelper.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value.DateTime : null )),
-                            ( "@SeriesId", mediaInfo.SeriesId)
+                            ( "@SeriesId", mediaInfo.SeriesId),
+                            ( "@RunTimeTicks", mediaInfo.RunTimeTicks )
                         ] ) );
                 }
             }
 
-            if( resetPlayCount )
+            if( config.resetPlayCount )
             {
                 var sqlUpdateTicks =
                     $"UPDATE {userTableName} " +
@@ -1001,6 +1003,193 @@ namespace Statistics2026.Data
             return retVal;
         }
 
+        private List<List<object>>? CheckUserMediaTableHasData( string tableName )
+        {
+            var sqlTicks = $"SELECT COUNT(*) FROM {tableName} WHERE TotalTicksPlayed IS NOT NULL AND iif( {tableName}.IsPlayed,  {tableName}.TotalTicksPlayed, 0 ) != 0";
+            var sqlPlayed = $"SELECT COUNT(*) FROM {tableName} WHERE PlayCount>0 AND IsPlayed";
+
+            long? ticksPlayed = null;
+            long systemPlayed = 0;
+
+            List<SQLCmdDef> cmds =
+            [
+                new( sqlTicks ),
+                new( sqlPlayed )
+            ];
+
+            _dbHelper.ExecuteCommands( cmds, statement =>
+            {
+                var row = statement.Current;
+                var value = row.GetInt64( 0 );
+                if( ticksPlayed == null )
+                    ticksPlayed = value;
+                else
+                    systemPlayed = value;
+                return true;
+            }
+            );
+
+            ticksPlayed ??= 0;
+
+            //_embyInterfaces!._logger.Debug( $"Table: {tableName} - # w/TicksPlayed {ticksPlayed} - # w/PlayCount {systemPlayed}" );
+            List<List<object>>? missing = null;
+            if( ticksPlayed != systemPlayed && ticksPlayed != 0 )
+            {
+                var user = getUserForTableName( tableName );
+                if( user == null )
+                {
+                    _embyInterfaces?._logger.Warn( $"Invalid user table name {tableName}" );
+                    return [];
+                }
+                else
+                {
+                    _embyInterfaces?._logger.Warn( $"User: {user.Name} has an invalid UserMedia table" );
+                }
+
+                var fields = $"Users.UserName, {tableName}.ItemID, {tableName}.Name, Media.RunTimeTicks, {tableName}.IsPlayed, {tableName}.PlayCount" 
+                    + $", iif( {tableName}.IsPlayed,  {tableName}.TotalTicksPlayed, 0 )" 
+                    + $", Series.Name, Media.Season, Media.Episode";
+                var joinClause = $" LEFT JOIN Users ON Users.UserId={tableName}.UserId LEFT JOIN Media ON Media.ItemId = {tableName}.ItemId LEFT JOIN Series On Series.ItemId={tableName}.SeriesId";
+
+                var pos = sqlTicks.IndexOf( "WHERE" );
+                if( pos != -1 )
+                    sqlTicks = sqlTicks.Insert( pos, joinClause + " " );
+
+                pos = sqlPlayed.IndexOf( "WHERE" );
+                if( pos != -1 )
+                    sqlPlayed = sqlPlayed.Insert( pos, joinClause + " " );
+
+                var sqlAtoB = sqlTicks + " EXCEPT " + sqlPlayed;
+                sqlAtoB = sqlAtoB.Replace( "COUNT(*)", fields );
+
+                var sqlBtoA = sqlPlayed + " EXCEPT " + sqlTicks;
+                sqlBtoA = sqlBtoA.Replace( "COUNT(*)", fields );
+
+                cmds =
+                [
+                    new( sqlAtoB ),
+                    new( sqlBtoA )
+                ];
+
+                missing = [];
+                _dbHelper.ExecuteCommands( cmds, statement =>
+                {
+                    var row = statement.Current;
+                    var col = 0;
+
+                    var userName = row.GetString( col++ );
+                    var itemId = row.GetString( col++ );
+                    var itemName = row.GetString( col++ );
+                    var runtimeTicks = row.GetInt64( col++ );
+                    var isPlayed = row.GetBoolean( col++ );
+                    var playCount = row.GetInt64( col++ );
+                    var totalTicksPlayed = row.GetInt64( col++ );
+                    var seriesName = row.GetString( col++ );
+                    var season = row.GetInt64( col++ );
+                    var episode = row.GetInt64( col++ );
+
+                    missing.Add( [ userName, itemId, itemName, runtimeTicks, isPlayed, playCount, totalTicksPlayed, seriesName, season, episode ] );
+
+                    return true;
+                } );
+            }
+
+            return ( ticksPlayed == systemPlayed ) ? null : missing;
+        }
+
+        public StatCard UserWatchMediaIssues()
+        {
+            CheckIsValid( ECheckType.eReport );
+
+            var fields =
+                "  Users.UserName\n" +
+                ", Media.PrimaryName\n" +
+                ", Media.SecondaryName\n" +
+                ", Media.Season\n" +
+                ", Media.Episode\n" +
+                ", Media.RunTimeTicks\n" +
+                ", <TABLE_NAME>.IsPlayed\n" +
+                ", <TABLE_NAME>.PlayCount\n" +
+                ", <TABLE_NAME>.TotalTicksPlayed\n"
+                ;
+
+            var joinClause =
+                "LEFT JOIN Users ON Users.UserId=<TABLE_NAME>.UserId\n" +
+                "LEFT JOIN Media ON Media.ItemId = <TABLE_NAME>.ItemId\n"
+                ;
+
+            var sqlTicks =
+                "SELECT\n" +
+                fields +
+                "FROM <TABLE_NAME>\n" +
+                joinClause +
+                "WHERE <TABLE_NAME>.TotalTicksPlayed IS NOT NULL AND iif( <TABLE_NAME>.IsPlayed, <TABLE_NAME>.TotalTicksPlayed, 0 ) != 0\n";
+
+            var sqlPlayed =
+                "SELECT\n" +
+                fields +
+                "FROM <TABLE_NAME>\n" +
+                joinClause +
+                "WHERE PlayCount>0 AND IsPlayed\n";
+
+            var sqlAtoB = sqlTicks + " EXCEPT \n" + sqlPlayed;
+
+            var sqlBtoA = sqlPlayed + " EXCEPT \n" + sqlTicks;
+
+            List<SQLCmdDef> sqlCmds = [];
+            var tables = allUserMediaTables();
+            foreach( var tableName in tables )
+            {
+                var curr = sqlAtoB;
+                curr = curr.Replace( "<TABLE_NAME>", tableName );
+                sqlCmds.Add( new SQLCmdDef( curr ) );
+
+                curr = sqlBtoA;
+                curr = curr.Replace( "<TABLE_NAME>", tableName );
+                sqlCmds.Add( new SQLCmdDef( curr ) );
+            }
+
+            var groupData = new TableBasedStatCard( Constants.WatchedUserMediaIssues, Constants.HelpWatchedUserMediaIssues,
+                [ "User Name", "Media Name", "Played", "Play Count", "Run Time", "Total Played" ], EStatCardStyle.eDetailed );
+            groupData.UseSeparators = true;
+            groupData.ShowCategory = false;
+
+            SortedDictionary<string, List<object>> items = [];
+
+            _dbHelper.ExecuteCommands( sqlCmds, statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+
+                var userName = row.GetString( col++ );
+                var primaryName = row.GetString( col++ );
+                var secondaryName = row.GetString( col++ );
+                var season = row.GetInt( col++ );
+                var episode = row.GetInt( col++ );
+                var runTimeTicks = row.GetInt64( col++ );
+                var isPlayed = row.GetBoolean( col++ );
+                var playCount = row.GetInt64( col++ );
+                var totalTicksPlayed = row.GetInt64( col++ );
+
+                var mediaName = MediaInfo.GetDisplayName( primaryName, secondaryName, season, episode );
+                var rtTicks = new RunTime( runTimeTicks );
+                var totalTicks = new RunTime( totalTicksPlayed );
+
+                items[ userName + "-" + mediaName ] = [ userName, mediaName, isPlayed ? "Yes" : "No", playCount, rtTicks.ToShortString(), totalTicks.ToShortString() ];
+                return true;
+            } );
+
+            foreach( var kvp in items )
+            {
+                groupData.addRow( kvp.Key, kvp.Value );
+            }
+            if ( groupData.IsEmpty() )
+            {
+                groupData.addRow( string.Empty, [ "No issues found" ] );
+            }    
+            return groupData;
+        }
+
         public StatCard PlayedUserMedia()
         {
             CheckIsValid( ECheckType.eReport );
@@ -1019,7 +1208,7 @@ namespace Statistics2026.Data
                 $" FROM <TABLE_NAME>\n" +
                 $" LEFT JOIN Users ON <TABLE_NAME>.UserId=Users.UserId\n" +
                 $" LEFT JOIN Media ON <TABLE_NAME>.ItemId=Media.ItemId\n" +
-                $" WHERE <TABLE_NAME>.TotalTicksPlayed != (IsPlayed*PlayCount)*Media.RunTimeTicks\n"
+                $" WHERE iif( <TABLE_NAME>.IsPlayed, <TABLE_NAME>.TotalTicksPlayed, 0 )  != (IsPlayed*PlayCount)*Media.RunTimeTicks\n"
                 ;
 
             List<string> sqlCmds = [];
@@ -1034,6 +1223,9 @@ namespace Statistics2026.Data
             var groupData = new TableBasedStatCard( Constants.PlayedUserMedia, Constants.HelpPlayedUserMedia, [ "User Name", "Media Name", "Computed Time Played", "Time Played", "Difference" ], EStatCardStyle.eDetailed );
             groupData.UseSeparators = true;
             groupData.ShowCategory = false;
+
+            SortedDictionary<string, List<object>> items = [];
+
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
@@ -1051,10 +1243,14 @@ namespace Statistics2026.Data
                 var rtTotal = new RunTime( totalTicksPlayed );
                 var computedRT = new RunTime( computedTotalTicksPlayed );
                 var diffRT = new RunTime( Math.Abs( totalTicksPlayed - computedTotalTicksPlayed ) );
-                groupData.addRow( userName + "-" + mediaName, [ userName, mediaName, rtTotal.ToShortString(), computedRT.ToShortString(), diffRT.ToShortString() ] );
+                items[ userName + "-" + mediaName ] = [ userName, mediaName, rtTotal.ToShortString(), computedRT.ToShortString(), diffRT.ToShortString() ];
                 return true;
             } );
 
+            foreach( var kvp in items )
+            {
+                groupData.addRow( kvp.Key, kvp.Value );
+            }
             return groupData;
         }
     }

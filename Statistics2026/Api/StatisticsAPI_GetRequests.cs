@@ -135,6 +135,18 @@ namespace Statistics2026.Api
             } );
         }
 
+        public object Get( GetUserWatchMediaIssues request )
+        {
+            return GetRequest( "GetUserWatchMediaIssues", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                var groupData = db.UserWatchMediaIssues();
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
         public object Get( GetMostActiveUsers request )
         {
             return GetRequest( "GetMostActiveUsers", timer =>

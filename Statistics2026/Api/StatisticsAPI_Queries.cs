@@ -57,9 +57,15 @@ namespace Statistics2026.Api
     {
     }
 
-    [Route( "/Statistics2026/played_user_media", "GET", Summary = "Reports Media played and Tracked" )]
+    [Route( "/Statistics2026/played_user_media", "GET", Summary = "Reports Media played by users (debug only)" )]
     [Authenticated( Roles = "admin" )]
     public class GetPlayedUserMedia : IReturn<object>
+    {
+    }
+
+    [Route( "/Statistics2026/user_watch_media_issues", "GET", Summary = "Reports user media data that is causing the db status to not be valid" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetUserWatchMediaIssues : IReturn<object>
     {
     }
 

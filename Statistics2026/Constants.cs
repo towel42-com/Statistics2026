@@ -20,6 +20,9 @@ namespace Statistics2026
         internal const string PlayedUserMedia = "Played User Media";
         internal const string HelpPlayedUserMedia = "Media played by users and it worked using the plugin.";
 
+        internal const string WatchedUserMediaIssues = "Watched User Media Issues";
+        internal const string HelpWatchedUserMediaIssues = "List of User Media that is causing problems with DB Stat.";
+
         // movie summary constants
         internal const string TotalMovies = "Total Movies";
         internal const string HelpTotalMovies = "Total movies in the Emby library.";
