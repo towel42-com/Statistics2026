@@ -586,14 +586,6 @@ namespace Statistics2026.Utilities
             return -1;
         }
 
-        public void addRow( string category, List<int> values )
-        {
-            var objList = new List<object>();
-            foreach( var value in values )
-                objList.Add( value );
-            addRow( category, objList );
-        }
-
         public void addRow( string category, List<object> values )
         {
             var currRow = findRow( category );
