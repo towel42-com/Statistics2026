@@ -1185,6 +1185,7 @@ namespace Statistics2026.Data
             }
             if ( groupData.IsEmpty() )
             {
+                groupData.HideHeaders = true;
                 groupData.addRow( string.Empty, [ "No issues found" ] );
             }    
             return groupData;
@@ -1242,7 +1243,7 @@ namespace Statistics2026.Data
                 var mediaName = MediaInfo.GetDisplayName( primaryName, secondaryName, season, episode );
                 var rtTotal = new RunTime( totalTicksPlayed );
                 var computedRT = new RunTime( computedTotalTicksPlayed );
-                var diffRT = new RunTime( Math.Abs( totalTicksPlayed - computedTotalTicksPlayed ) );
+                var diffRT = new RunTime( totalTicksPlayed - computedTotalTicksPlayed );
                 items[ userName + "-" + mediaName ] = [ userName, mediaName, rtTotal.ToShortString(), computedRT.ToShortString(), diffRT.ToShortString() ];
                 return true;
             } );
