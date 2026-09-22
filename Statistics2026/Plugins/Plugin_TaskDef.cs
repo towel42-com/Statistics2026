@@ -79,8 +79,8 @@ namespace Statistics2026
             var tasks = new List<TaskDef>
             {
                 new($"Analyzing Users", typeof(AnalyzeUsersTask)),
-                new($"Analyzing Watched Media Data", typeof(AnalyzeWatchedMediaDataTask)),
                 new($"Analyzing Media", typeof(AnalyzeMediaTask)),
+                new($"Analyzing Watched Media Data", typeof(AnalyzeWatchedMediaDataTask)),
                 new($"Analyzing Collections", typeof(AnalyzeCollectionsTask)),
                 new($"Analyzing Series", typeof(AnalyzeSeriesTask)),
             };
