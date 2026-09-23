@@ -9,7 +9,7 @@
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress", AdminHelpers.getTabs), AdminHelpers.getTabs);
-                Helpers.injectStyleSheet(e);
+                Helpers.injectStyleSheet();
                 Helpers.injectSortableTableStyle(document);
                 Helpers.setupSortability('TVSeriesProgressTable', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 

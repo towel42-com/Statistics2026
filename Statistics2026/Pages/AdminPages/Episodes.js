@@ -14,7 +14,7 @@
 
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Episodes", AdminHelpers.getTabs), AdminHelpers.getTabs);
 
-                Helpers.injectStyleSheet(e);
+                Helpers.injectStyleSheet();
                 Helpers.injectSortableTableStyle(document);
                 Helpers.setupSortability('episode_results_table', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 

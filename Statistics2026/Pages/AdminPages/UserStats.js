@@ -9,7 +9,7 @@
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats", AdminHelpers.getTabs), AdminHelpers.getTabs);
-                Helpers.injectStyleSheet(e);
+                Helpers.injectStyleSheet();
 
                 Helpers.loadUsers(view, `#selectUser_userstats`, loadData);
             });

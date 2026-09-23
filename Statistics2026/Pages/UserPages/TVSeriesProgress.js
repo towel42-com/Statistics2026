@@ -17,7 +17,7 @@
 
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
-                Helpers.injectStyleSheet(e);
+                Helpers.injectStyleSheet();
                 Helpers.injectSortableTableStyle(document);
                 Helpers.setupSortability('TVSeriesProgressTable', loading.show, loading.hide);
 

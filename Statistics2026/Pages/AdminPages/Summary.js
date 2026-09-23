@@ -6,6 +6,8 @@
     function (mainTabsManager, AdminHelpers, Helpers) {
         'use strict';
 
+        window.MyPluginHelpers = Helpers;
+
         async function loadDebugInfo(view, pluginConfig) {
             var url = ApiClient.getUrl("/emby/System/Configuration");
 
@@ -14,7 +16,7 @@
                 return;
             });
 
-            if (!sysConfig.EnableDebugLevelLogging && !pluginConfig.showDebugInfo ) {
+            if (!sysConfig.EnableDebugLevelLogging && !pluginConfig.showDebugInfo) {
                 view.querySelector(`#debugInfo`).style.display = 'none';
                 view.querySelector(`#playedUserMedia`).style.display = 'none';
                 view.querySelector(`#userWatchMediaIssues`).style.display = 'none';
@@ -141,10 +143,11 @@
             Dashboard.hideLoadingMsg();
         }
 
+
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Summary", AdminHelpers.getTabs), AdminHelpers.getTabs);
-                Helpers.injectStyleSheet(e);
+                Helpers.injectStyleSheet();
             });
 
             view.addEventListener('viewhide', function (e) {

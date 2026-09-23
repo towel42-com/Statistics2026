@@ -16,7 +16,7 @@
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
-                Helpers.injectStyleSheet(e);
+                Helpers.injectStyleSheet();
 
                 loadData(view, params.userId);
             });
