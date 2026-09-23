@@ -30,25 +30,18 @@ namespace Statistics2026.Api
     [Authenticated( Roles = "admin" )]
     public class GetCodecSummary : IReturn<object>
     {
-        [ApiMember( Name = "rootDivName", Description = "Root Division Name", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET" )]
-        public string rootDivName { get; set; } = string.Empty;
     }
 
     [Route( "/Statistics2026/resolution_summary", "GET", Summary = "Gets Resolution Summary for Library" )]
     [Authenticated( Roles = "admin" )]
     public class GetResolutionSummary : IReturn<object>
     {
-        [ApiMember( Name = "rootDivName", Description = "Root Division Name", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET" )]
-        public string rootDivName { get; set; } = string.Empty;
-
     }
 
     [Route( "/Statistics2026/dvprofile_summary", "GET", Summary = "Gets Dolby Vision Profile Summary for Library" )]
     [Authenticated( Roles = "admin" )]
     public class GetDVProfileSummary : IReturn<object>
     {
-        [ApiMember( Name = "rootDivName", Description = "Root Division Name", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "GET" )]
-        public string rootDivName { get; set; } = string.Empty;
     }
 
     [Route( "/Statistics2026/user_count", "GET", Summary = "Gets the total User Count" )]

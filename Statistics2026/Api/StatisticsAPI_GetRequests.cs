@@ -67,10 +67,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
-                var rootDivName = request.rootDivName ?? string.Empty;
-
                 var groupData = db.MediaCodecs();
-                groupData.HtmlDivId = rootDivName;
                 groupData.SortByKey = true;
                 var vgReponse = groupData.createStat();
 
@@ -83,10 +80,8 @@ namespace Statistics2026.Api
             return GetRequest( "GetResolutionSummary", timer =>
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
-                var rootDivName = request.rootDivName ?? string.Empty;
 
                 var groupData = db.MediaResolutions();
-                groupData.HtmlDivId = rootDivName;
                 groupData.SortByKey = false;
                 var vgReponse = groupData.createStat();
 
@@ -100,10 +95,7 @@ namespace Statistics2026.Api
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
-                var rootDivName = request.rootDivName ?? string.Empty;
-
                 var groupData = db.DVProfileInfo();
-                groupData.HtmlDivId = rootDivName;
                 groupData.SortByKey = true;
                 var vgReponse = groupData.createStat();
 
