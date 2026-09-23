@@ -130,13 +130,68 @@ img {
 }
 
 /* ==========================================================================
-   5. Typography Rules
+   5. Interactive Table Rules (Collapsible Detail Engine)
+   ========================================================================== */
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+}
+
+.chevron {
+    position: relative;
+    padding-left: 24px !important; /* Reserve exact clear space for indicator block */
+
+    &::before {
+        content: "▶";
+        position: absolute;
+        left: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.7rem;
+        color: rgba(255, 255, 255, 0.8) !important; /* Force highly visible color matching your text */
+        transition: transform 0.2s ease;
+    }
+}
+
+/* Toggle state engines */
+.open {
+    background-color: rgba(0, 0, 0, 0.2); /* Gives the opened header an active background state */
+
+    .chevron::before {
+        transform: translateY(-50%) rotate(90deg); /* Smoothly rotates indicator downwards */
+    }
+}
+
+.detail-row {
+    display: none !important; /* Force override structural table layouts */
+    background-color: rgba(0, 0, 0, 0.25);
+
+    &.show {
+        display: table-row !important;
+    }
+
+    .detail-content {
+        padding: 12px;
+        font-size: 0.95rem;
+        text-align: left; /* Overrides default td right-alignment */
+        /* Ensure nested child table elements maintain readable spacing */
+        table td {
+            padding: 8px 12px;
+        }
+    }
+}
+/* ==========================================================================
+   6. Typography Rules
    ========================================================================== */
 .statCard-stats-title,
 .statCard-stats-title-left {
     font-size: 1rem;
     padding-bottom: 5px;
-    text-align: center; 
+    text-align: center;
     white-space: nowrap;
 }
 
@@ -145,6 +200,16 @@ img {
     font-size: 1.2rem;
     font-weight: 500;
     width: 100%;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+    /* Optional Interaction Modifier Engine */
+    &.is-clickable {
+        cursor: pointer;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.12);
+            opacity: 0.95;
+        }
+    }
 
     table {
         width: 100%;
@@ -172,13 +237,27 @@ img {
 /* Table border rules */
 .statCard-stats-numbersep {
     th, td {
+        min-width: 120px;
         border-bottom: 1px solid #ccc;
 
         &:not(:last-child) {
             border-right: 1px solid #ccc;
         }
+
+        &:empty {
+            border-right: none !important; /* !important ensures it overrides the :not(:last-child) rule */
+            border-bottom: none;
+            min-width: 120px;
+        }
     }
 }
+
+th.statCard-stats-numbersep:empty,
+td.statCard-stats-numbersep:empty {
+    border-right: none;
+    border-bottom: none;
+}
+
 
 @media screen and (max-width: 680px) {
     .statCard-stats-title {
@@ -192,7 +271,7 @@ img {
 }
 
 /* ==========================================================================
-   6. State Metrics (Context Colors)
+   7. State Metrics (Context Colors)
    ========================================================================== */
 .progress-100 {
     background-color: #5B990D;

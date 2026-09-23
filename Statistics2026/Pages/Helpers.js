@@ -222,7 +222,7 @@ define(function () {
     }
 
     const STYLE_ID = 'statistics2026-stylesheet';
-    function injectStyleSheet(e) {
+    function injectStyleSheet() {
         if (document.getElementById(STYLE_ID))  // already added
             return;
 
@@ -301,147 +301,198 @@ define(function () {
         }
     }
 
-function loadUsers(view, comboBoxId, loadDataFunc) {
-    ApiClient.getUsers().then(function (users) {
-        console.log(`users: {users}`);
-        var select = view.querySelector(comboBoxId);
-        users.forEach((user) => {
-            var option = document.createElement(`option`);
-            option.value = user.Id;
-            option.innerHTML = user.Name;
-            select.appendChild(option);
-        });
-        if (users.length > 0) {
-            loadDataFunc(view, users[0].Id);
-        }
-    });
-}
-
-function setupSortability(tableId, showLoadingFunc, hideLoadingFunc) {
-    document.querySelectorAll(`#${tableId} thead th`).forEach((header, index) => {
-        header.addEventListener('click', () => {
-            const columnType = header.getAttribute('data-type');
-            sortTable(index, columnType, tableId, showLoadingFunc, hideLoadingFunc);
-        });
-    });
-}
-
-function showInfo(_text, _title) {
-    ApiClient.getJSON(ApiClient.getUrl('Sessions'))
-        .then((sessions) => {
-            // 2. Find the session that matches this browser's unique Device ID
-            const myCurrentDevice = ApiClient.deviceId();
-            const mySession = sessions.find(s => s.DeviceId === myCurrentDevice);
-
-            if (mySession) {
-                const urlString = ApiClient.getUrl(`Sessions/${mySession.Id}/Message`);
-                const payload = {
-                    Header: _title,
-                    Text: _text
-                };
-                ApiClient.ajax(
-                    {
-                        type: 'POST',
-                        url: urlString,
-                        data: JSON.stringify(payload),
-                        contentType: 'application/json'
-                    })
-                    .then(function (response) {
-                        console.log("Message sent successfully!");
-                    })
-                    .catch(function (error) {
-                        console.error("Failed to send message:", error);
-                    });
-            } else {
+    function loadUsers(view, comboBoxId, loadDataFunc) {
+        ApiClient.getUsers().then(function (users) {
+            console.log(`users: {users}`);
+            var select = view.querySelector(comboBoxId);
+            users.forEach((user) => {
+                var option = document.createElement(`option`);
+                option.value = user.Id;
+                option.innerHTML = user.Name;
+                select.appendChild(option);
+            });
+            if (users.length > 0) {
+                loadDataFunc(view, users[0].Id);
             }
-        })
-        .catch((err) => console.error("Error fetching sessions:", err));
-}
-
-
-const sortDirections = new Map();
-function sortTable(columnIndex, dataType, tableId, showLoadingFunc, hideLoadingFunc, forcedDir) {
-    showLoadingFunc();
-
-    const table = document.getElementById(tableId);
-    const tbody = table.querySelector("tbody");
-    // Convert HTMLCollection of rows into a real Array
-    const rows = Array.from(tbody.querySelectorAll("tr"));
-
-    // Toggle between Ascending ('asc') and Descending ('desc')
-
-    let currentMap = sortDirections.get(tableId);
-    if (currentMap === undefined) {
-        sortDirections.set(tableId, new Map());
-        currentMap = sortDirections.get(tableId);
+        });
     }
 
-    let currentDirection = currentMap.get(columnIndex);
-    if (forcedDir === undefined) {
+    function setupSortability(tableId, showLoadingFunc, hideLoadingFunc) {
+        document.querySelectorAll(`#${tableId} thead th`).forEach((header, index) => {
+            header.addEventListener('click', () => {
+                const columnType = header.getAttribute('data-type');
+                sortTable(index, columnType, tableId, showLoadingFunc, hideLoadingFunc);
+            });
+        });
+    }
 
-        currentDirection = currentMap.get(columnIndex);
-        if (currentDirection === undefined) {
-            currentDirection = 'asc';
+    function showInfo(_text, _title) {
+        ApiClient.getJSON(ApiClient.getUrl('Sessions'))
+            .then((sessions) => {
+                // 2. Find the session that matches this browser's unique Device ID
+                const myCurrentDevice = ApiClient.deviceId();
+                const mySession = sessions.find(s => s.DeviceId === myCurrentDevice);
+
+                if (mySession) {
+                    const urlString = ApiClient.getUrl(`Sessions/${mySession.Id}/Message`);
+                    const payload = {
+                        Header: _title,
+                        Text: _text
+                    };
+                    ApiClient.ajax(
+                        {
+                            type: 'POST',
+                            url: urlString,
+                            data: JSON.stringify(payload),
+                            contentType: 'application/json'
+                        })
+                        .then(function (response) {
+                            console.log("Message sent successfully!");
+                        })
+                        .catch(function (error) {
+                            console.error("Failed to send message:", error);
+                        });
+                } else {
+                }
+            })
+            .catch((err) => console.error("Error fetching sessions:", err));
+    }
+
+
+    const sortDirections = new Map();
+    function sortTable(columnIndex, dataType, tableId, showLoadingFunc, hideLoadingFunc, forcedDir) {
+        showLoadingFunc();
+
+        const table = document.getElementById(tableId);
+        const tbody = table.querySelector("tbody");
+        // Convert HTMLCollection of rows into a real Array
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+
+        // Toggle between Ascending ('asc') and Descending ('desc')
+
+        let currentMap = sortDirections.get(tableId);
+        if (currentMap === undefined) {
+            sortDirections.set(tableId, new Map());
+            currentMap = sortDirections.get(tableId);
+        }
+
+        let currentDirection = currentMap.get(columnIndex);
+        if (forcedDir === undefined) {
+
+            currentDirection = currentMap.get(columnIndex);
+            if (currentDirection === undefined) {
+                currentDirection = 'asc';
+            } else {
+                currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            }
         } else {
-            currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+            currentDirection = 'desc';
         }
-    } else {
-        currentDirection = 'desc';
+
+        sortDirections.get(tableId).set(columnIndex, currentDirection);
+
+        // Reset indicator classes on all headers
+        table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
+        // Add current sorting indicator class to the active header
+        table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
+
+        // Sort the row elements
+        rows.sort((rowA, rowB) => {
+            const cellA = rowA.children[columnIndex].textContent.trim();
+            const cellB = rowB.children[columnIndex].textContent.trim();
+
+            if (dataType === 'number') {
+                // Strip out currency symbols or non-numeric formatting characters if present
+                const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
+                const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
+                return currentDirection === 'asc' ? numA - numB : numB - numA;
+            } else if (dataType == 'string') {
+                // Text comparison using localeCompare for proper alphabetical ordering
+                return currentDirection === 'asc'
+                    ? cellA.localeCompare(cellB)
+                    : cellB.localeCompare(cellA);
+            } else { // progress
+                var numA = +cellA.match(/(?<percent>\d+)\%/).groups.percent;
+                var numB = +cellB.match(/(?<percent>\d+)\%/).groups.percent;
+
+                return currentDirection === 'asc' ? numA - numB : numB - numA;
+            }
+        });
+
+        // Re-append sorted rows to empty the body and place elements in new order
+        tbody.innerHTML = "";
+        rows.forEach(row => tbody.appendChild(row));
+        hideLoadingFunc();
     }
 
-    sortDirections.get(tableId).set(columnIndex, currentDirection);
+    function initCollapsibleTable(containerId) {
+        // Scope our selector to the active injected Emby view context
+        const container = document.getElementById(containerId);
+        if (!container)
+            return;
+        if (container.getAttribute("data-is-clickable") !== "true")
+            return;
 
-    // Reset indicator classes on all headers
-    table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
-    // Add current sorting indicator class to the active header
-    table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
+        if (container.dataset.listenerAttached === "true")
+            return;
 
-    // Sort the row elements
-    rows.sort((rowA, rowB) => {
-        const cellA = rowA.children[columnIndex].textContent.trim();
-        const cellB = rowB.children[columnIndex].textContent.trim();
+        container.dataset.listenerAttached = true;
 
-        if (dataType === 'number') {
-            // Strip out currency symbols or non-numeric formatting characters if present
-            const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
-            const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
-            return currentDirection === 'asc' ? numA - numB : numB - numA;
-        } else if (dataType == 'string') {
-            // Text comparison using localeCompare for proper alphabetical ordering
-            return currentDirection === 'asc'
-                ? cellA.localeCompare(cellB)
-                : cellB.localeCompare(cellA);
-        } else { // progress
-            var numA = +cellA.match(/(?<percent>\d+)\%/).groups.percent;
-            var numB = +cellB.match(/(?<percent>\d+)\%/).groups.percent;
-
-            return currentDirection === 'asc' ? numA - numB : numB - numA;
+        const thead = container.querySelector(`table thead`);
+        if (thead) {
+            const width = thead.getBoundingClientRect().width;
+            container.style.minWidth = `${width}px`;
+            thead.style.display = 'none';
         }
-    });
 
-    // Re-append sorted rows to empty the body and place elements in new order
-    tbody.innerHTML = "";
-    rows.forEach(row => tbody.appendChild(row));
-    hideLoadingFunc();
-}
+        container.addEventListener("click", (event) => {
+            const target = event.target;
 
-return {
-    pluginId,
-    CheckForValidConfig,
-    LoadTVProgress,
-    LoadUserStats,
-    getMediaRowData,
-    getStatistics2026Data,
-    getSummaryInfo,
-    getTabIndex,
-    injectSortableTableStyle,
-    injectStyleSheet,
-    loadTableData,
-    loadUsers,
-    setupSortability,
-    showInfo,
-    sortTable
-};
+            // 1. Prevent expanding if clicking an optional metric box
+            const clickableMetric = target.closest(".is-clickable");
+            if (clickableMetric) {
+                event.stopPropagation();
+                console.log("Emby Metric Clicked:", clickableMetric.textContent.trim());
+                return;
+            }
+
+            // 2. Handle structural collapsible summary row click
+            const mainRow = target.closest(".clickable-row");
+            if (!mainRow)
+                return;
+
+            // Secure Navigation: Search down the dynamic virtual DOM node
+            let detailRow = mainRow.nextElementSibling;
+            while (detailRow && !detailRow.classList.contains("detail-row")) {
+                detailRow = detailRow.nextElementSibling;
+            }
+
+            // Toggle state classes to match Section 5 CSS styles
+            if (detailRow) {
+                mainRow.classList.toggle("open");
+                detailRow.classList.toggle("show");
+            }
+        });
+    }
+
+    return {
+        pluginId,
+        CheckForValidConfig,
+        LoadTVProgress,
+        LoadUserStats,
+        getMediaRowData,
+        getStatistics2026Data,
+        getSummaryInfo,
+        getTabIndex,
+        initCollapsibleTable,
+        injectSortableTableStyle,
+        injectStyleSheet,
+        loadTableData,
+        loadUsers,
+        setupSortability,
+        showInfo,
+        sortTable
+    };
 
 })
 

@@ -102,7 +102,6 @@ namespace Statistics2026.Utilities
         public string ImageUrl { get; set; } = string.Empty;
         public string MediaItemId { get; set; } = string.Empty;
 
-        public string HtmlDivId { get; set; } = string.Empty;
         public bool SortByKey { get; set; } = false;
         public bool UseSeparators { get; set; } = false;
         public bool HideHeaders { get; set; } = false;
@@ -177,6 +176,7 @@ namespace Statistics2026.Utilities
         public abstract bool IsEmpty();
         public abstract bool DataIsTable();
         public abstract string GetDataString( int depth = 0 );
+        public abstract bool IsClickableTable();
 
         public virtual StatCard.EAlignment alignmentForColumn( int column )
         {
@@ -188,7 +188,7 @@ namespace Statistics2026.Utilities
             return true;
         }
 
-        private string AddHeader( int depth = 0 )
+        protected string AddHeader( int depth = 0, bool embedded = false )
         {
             var retVal = string.Empty;
             if( HideHeaders )
@@ -196,6 +196,7 @@ namespace Statistics2026.Utilities
 
             if( Headers != null )
             {
+                retVal += StatCardResponse._addToHtml( depth++, "<thead>" );
                 retVal += StatCardResponse._addToHtml( depth++, "<tr>" );
                 if( ShowHeaderColumn( 0 ) )
                     retVal += StatCardResponse._addToHtml( depth, "<td>&nbsp;</td>" );
@@ -203,11 +204,17 @@ namespace Statistics2026.Utilities
                 {
                     if( !ShowHeaderColumn( ii + 1 ) )
                         continue;
-                    var header = Headers[ ii ];
-                    retVal += StatCardResponse._addToHtml( depth, $"<td {StatCard.GetStyleString( alignmentForColumn( ii ) )}>{header}</td>" );
+                    if( embedded && ( ii == 0 ) )
+                        retVal += StatCardResponse._addToHtml( depth, $"<td></td>" );
+                    else
+                    {
+                        var header = Headers[ ii ];
+                        retVal += StatCardResponse._addToHtml( depth, $"<td {StatCard.GetStyleString( alignmentForColumn( ii ) )}>{header}</td>" );
+                    }
                 }
 
                 retVal += StatCardResponse._addToHtml( --depth, "</tr>" );
+                retVal += StatCardResponse._addToHtml( --depth, "</thead>" );
             }
             return retVal;
         }
@@ -219,7 +226,9 @@ namespace Statistics2026.Utilities
                 retVal = StatCardResponse._addToHtml( depth++, "<table>" );
 
                 retVal += AddHeader( depth );
+                retVal += StatCardResponse._addToHtml( depth++, "<tbody>" );
                 retVal += GetDataString( depth );
+                retVal += StatCardResponse._addToHtml( --depth, "</tbody>" );
 
                 retVal += StatCardResponse._addToHtml( --depth, "</table>" );
             }
@@ -243,11 +252,19 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        private void addHelp( ref StatCardResponse retVal, int depth )
+        public string DivId( string suffix = "" )
+        {
+            var divId = Regex.Replace( Title, @"\s", string.Empty );
+            if ( !suffix.IsNullOrEmpty() )
+                divId += "-" + suffix;
+            return divId;
+        }
+
+        private void addHelp( ref StatCardResponse retVal, ref int depth )
         {
             if( !HelpText.IsNullOrEmpty() )
             {
-                var id = Regex.Replace( Title, @"\s", string.Empty );
+                var id = DivId();
 
                 retVal.addToHtml( depth, $"<div id=\"{id}\" class=\"infoBlock\"><i class=\"md-icon\">info</i></div>" );
 
@@ -255,7 +272,7 @@ namespace Statistics2026.Utilities
             }
         }
 
-        private void addTitle( ref StatCardResponse retVal, int depth )
+        private void addTitle( ref StatCardResponse retVal, ref int depth )
         {
             var showImage = !ImageUrl.IsNullOrEmpty() && !MediaItemId.IsNullOrEmpty();
             string? titleClass;
@@ -282,7 +299,7 @@ namespace Statistics2026.Utilities
             }
         }
 
-        protected string tableStyle( bool asTitle )
+        protected string statCardClass( bool asTitle )
         {
             if( asTitle )
                 return "statCard-stats-title";
@@ -295,7 +312,12 @@ namespace Statistics2026.Utilities
 
             if( !tableInfo.IsNullOrEmpty() )
             {
-                retVal.addToHtml( depth++, $"<div class=\"{tableStyle( false )}\">" );
+                var divId = DivId( "statTable" );
+                var divData = $"id=\"{divId}\" class=\"{statCardClass( false )}\"";
+                if( IsClickableTable() )
+                    divData += " data-is-clickable=\"true\"";
+
+                retVal.addToHtml( depth++, $"<div {divData}>" );
                 retVal.addToHtml( 0, tableInfo );
                 retVal.addToHtml( --depth, "</div>" );
             }
@@ -303,330 +325,38 @@ namespace Statistics2026.Utilities
             return depth;
         }
 
-        public object createStat( string rootDivName = "" )
+        public object createStat()
         {
             var retVal = new StatCardResponse();
 
-            if( !rootDivName.IsNullOrEmpty() )
-            {
-                rootDivName = $" id=\"{rootDivName}\"";
-            }
-
             var depth = 0;
-            retVal.addToHtml( depth++, $"<div class=\"col {ToString( Style )}\" {rootDivName}>" );
+            retVal.addToHtml( depth++, $"<div class=\"col {ToString( Style )}\">" );
             retVal.addToHtml( depth++, "<div class=\"statCard\">" );
             retVal.addToHtml( depth++, "<div class=\"statCard-content\">" );
 
-            addHelp( ref retVal, depth );
-            addTitle( ref retVal, depth );
+            var preHelpDepth = depth;
+            addHelp( ref retVal, ref depth );
+            addTitle( ref retVal, ref depth );
 
             depth = addData( depth, ref retVal );
 
-            retVal.closeDivs( ref depth );
-            return retVal;
-        }
-    }
-
-    public class TextBasedStatCard : StatCard
-    {
-        public enum EListType
-        {
-            eUnordered,
-            eNumbered,
-            eNumberedGroupByKey
-        }
-
-        public EListType ListType
-        {
-            get
+            while( depth != preHelpDepth )
             {
-                if( ( ValueLines.Count == 1 ) || ( KeyValueLines.Count == 0 ) )
-                {
-                    return EListType.eUnordered;
-                }
-                return field;
+                retVal.addToHtml( --depth, "</div>" );
+            }
+            retVal.addToHtml( --depth, "</div>" ); // statCard-content
+            retVal.addToHtml( --depth, "</div>" ); // statCard
+
+            if( IsClickableTable() )
+            {
+                var divId = DivId( "statTable" );
+                retVal.addToHtml( depth++, "<img src=\"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///w==\"" );
+                retVal.addToHtml( depth, "style=\"display:none\"" );
+                retVal.addToHtml( depth, $"onerror=\"console.info('trigger on loading dummy gif hit'); if(window.MyPluginHelpers && window.MyPluginHelpers.initCollapsibleTable){{window.MyPluginHelpers.initCollapsibleTable('{divId}'); }} else {{ throw new Error('Emby Table Engine Failure: window.MyPluginHelpers.initCollapsibleTable is not defined or loaded yet.'); }} \"" );
+                retVal.addToHtml( --depth, "/>" );
             }
 
-            set;
-        } = EListType.eUnordered;
-        public bool IgnoreLength { get; set; } = false;
-        private List<TextValueLine> ValueLines { get; set; }
-        private List<string> KeyValueLines { get; set; }
-        public override bool IsEmpty() { return ValueLines == null || ValueLines.Count == 0; }
-        public TextBasedStatCard()
-            : base()
-        {
-            ValueLines = [];
-            KeyValueLines = [];
-        }
-
-        public TextBasedStatCard( string title, string? helpText, EStatCardStyle size = EStatCardStyle.eDetailed )
-            : base( title, helpText, size )
-        {
-            ValueLines = [];
-            KeyValueLines = [];
-        }
-
-        private string CheckMaxLength( string value )
-        {
-            return value;
-        }
-
-        public void AddKey( string key )
-        {
-            KeyValueLines.Add( key );
-        }
-
-        public void AddLine( string value, bool asTitle )
-        {
-            AddLine( value, string.Empty, string.Empty, asTitle );
-        }
-
-        public void AddLine( string value, string itemId, string url, bool asTitle )
-        {
-            ValueLines.Add( (value, itemId, url, asTitle) );
-        }
-
-        public override bool DataIsTable() { return false; }
-        public override string GetDataString( int depth = 0 )
-        {
-            if( ListType == EListType.eNumberedGroupByKey && ( KeyValueLines.Count != ValueLines.Count ) )
-            {
-                throw new Exception( "For grouped numbered lists, keys list must be of equal size to the values list" );
-            }
-
-            Dictionary<string, int>? keyCount = null;
-            if( ListType == EListType.eNumberedGroupByKey )
-            {
-                keyCount = [];
-                foreach( var key in KeyValueLines )
-                {
-                    if( keyCount.TryGetValue( key, out var value ) )
-                    {
-                        keyCount[ key ] = value + 1;
-                    }
-                    else
-                    {
-                        keyCount.Add( key, 1 );
-                    }
-                }
-            }
-
-            var retVal = string.Empty;
-            var style = string.Empty;
-            if( ListType != EListType.eUnordered )
-            {
-                style = GetStyleString( EAlignment.eLeft );
-                retVal += StatCardResponse._addToHtml( depth++, $"<ol>" );
-            }
-
-            var prevKey = string.Empty;
-            //int currKeyCount = 0;
-
-            for( var ii = 0; ii < ValueLines.Count; ++ii )
-            {
-                var (data, itemId, url, asTitle) = ValueLines[ ii ];
-
-                if( data.IsNullOrEmpty() )
-                    continue;
-                var value = data;
-                if( ValueLines.Count() > 1 )
-                    value = CheckMaxLength( value );
-
-
-                var dataHtml = $"<div class=\"{tableStyle( asTitle )}\" {style}>{value}</div>";
-
-                var showImage = !url.IsNullOrEmpty() && !itemId.IsNullOrEmpty();
-                if( showImage )
-                {
-                    dataHtml = ItemImageUrl.ItemUrl( itemId, url, dataHtml, "50px" );
-                }
-
-                var html = dataHtml;
-
-                if( ListType == EListType.eNumberedGroupByKey )
-                {
-                    if( prevKey != KeyValueLines[ ii ] )
-                    {
-                        if( !prevKey.IsNullOrEmpty() )
-                        {
-                            if( keyCount!.TryGetValue( prevKey, out var prevCnt ) )
-                            {
-                                if( prevCnt > 1 )
-                                {
-                                    retVal += StatCardResponse._addToHtml( --depth, "</ul>" );
-                                    retVal += StatCardResponse._addToHtml( --depth, "</li>" );
-                                }
-                            }
-                        }
-
-                        if( keyCount!.TryGetValue( KeyValueLines[ ii ], out var cnt ) )
-                        {
-                            if( cnt > 1 )
-                            {
-                                retVal += StatCardResponse._addToHtml( depth++, $"<li {style}>" );
-                                retVal += StatCardResponse._addToHtml( depth++, "<ul>" );
-                            }
-                        }
-
-                        prevKey = KeyValueLines[ ii ];
-                    }
-                }
-
-                if( ListType != EListType.eUnordered )
-                {
-                    html = $"<li {style}>" + dataHtml + "</li>";
-                }
-
-                retVal += StatCardResponse._addToHtml( depth, html );
-            }
-
-            if( ListType == EListType.eNumberedGroupByKey )
-            {
-                if( keyCount!.TryGetValue( KeyValueLines[ KeyValueLines.Count - 1 ], out var cnt ) )
-                {
-                    if( cnt > 1 )
-                    {
-                        retVal += StatCardResponse._addToHtml( --depth, "</ul>" );
-                        retVal += StatCardResponse._addToHtml( --depth, "</li>" );
-                    }
-                }
-            }
-
-            if( ListType != EListType.eUnordered )
-            {
-                retVal += StatCardResponse._addToHtml( --depth, "<ol>" );
-            }
-
-            return retVal;
-        }
-    };
-
-    public class TableBasedStatCardRow
-    {
-        public string Name { get; private set; } = string.Empty;
-        public List<object>? Values { get; private set; } = null;
-
-        public TableBasedStatCardRow( string name, List<object>? values )
-        {
-            Name = name;
-            Values = values;
-        }
-
-        public void setValues( List<object> values )
-        {
-            Values = values;
-        }
-
-        public string ToString( int depth = 0, StatCard.EAlignment keyColAlignment = StatCard.EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null, bool showCategory = true )
-        {
-            var retVal = StatCardResponse._addToHtml( depth++, $"<tr {StatCard.GetStyleString()}>" );
-
-            if( showCategory )
-                retVal += StatCardResponse._addToHtml( depth, $"<td {StatCard.GetStyleString( keyColAlignment )}>{Name}</td>" );
-
-            if( Values != null )
-            {
-                for( var ii = 0; ii < Values.Count(); ++ii )
-                {
-                    retVal += StatCardResponse._addToHtml( depth, $"<td {StatCard.GetStyleString( ii, columnAlignment )}>{Values[ ii ].ToString()}</td>" );
-                }
-            }
-
-            retVal += StatCardResponse._addToHtml( --depth, "</tr>" );
-
-            return retVal;
-        }
-
-        public override string ToString()
-        {
-            return ToString( 0 );
-        }
-    }
-
-    public class TableBasedStatCard : StatCard
-    {
-        private readonly List<TableBasedStatCardRow> Rows;
-        private readonly Dictionary<int, StatCard.EAlignment> _columnAlignment = [];
-        private StatCard.EAlignment _keyColumnAlignment = EAlignment.eLeft;
-        public override bool IsEmpty() { return Rows == null || Rows.Count == 0; }
-        public bool ShowCategory { get; set; } = true;
-        public TableBasedStatCard()
-            : base()
-        {
-            Rows = [];
-        }
-        public TableBasedStatCard( string title, string helpText, List<string> headers, EStatCardStyle size = EStatCardStyle.eDetailed )
-            : base( title, helpText, size )
-        {
-            Rows = [];
-
-            Headers = headers;
-        }
-
-        public override bool ShowHeaderColumn( int columnNum )
-        {
-            return ShowCategory ? true : ( columnNum != 0 );
-        }
-
-        public void SetDataColumnAlignment( int columnNum, StatCard.EAlignment alignment )
-        {
-            _columnAlignment[ columnNum ] = alignment;
-        }
-
-        public void SetKeyColumnAlignment( StatCard.EAlignment alignment )
-        {
-            _keyColumnAlignment = alignment;
-        }
-
-        private int findRow( string name )
-        {
-            for( var i = 0; i < Rows.Count; i++ )
-            {
-                if( Rows[ i ].Name == name )
-                    return i;
-            }
-
-            return -1;
-        }
-
-        public void addRow( string category, List<object> values )
-        {
-            var currRow = findRow( category );
-            TableBasedStatCardRow row;
-            if( currRow == -1 )
-            {
-                row = new TableBasedStatCardRow( category, null );
-                Rows.Add( row );
-            }
-            else
-            {
-                row = Rows[ currRow ];
-            }
-
-            row.setValues( values );
-        }
-
-        public override StatCard.EAlignment alignmentForColumn( int column )
-        {
-            return StatCard.GetAlignmentForColumn( column, _columnAlignment );
-        }
-
-        public override bool DataIsTable() { return true; }
-        public override string GetDataString( int depth = 0 )
-        {
-            var valuesToUse = Rows;
-            if( SortByKey )
-            {
-                valuesToUse = valuesToUse.OrderBy( row => row.Name ).ToList();
-            }
-
-            var retVal = string.Empty;
-            foreach( var row in valuesToUse )
-            {
-                retVal += row.ToString( depth, _keyColumnAlignment, _columnAlignment, ShowCategory );
-            }
-
+            retVal.addToHtml( --depth, "</div>" ); // col
             return retVal;
         }
     }

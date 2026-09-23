@@ -1244,13 +1244,22 @@ namespace Statistics2026.Data
                 var rtTotal = new RunTime( totalTicksPlayed );
                 var computedRT = new RunTime( computedTotalTicksPlayed );
                 var diffRT = new RunTime( totalTicksPlayed - computedTotalTicksPlayed );
+
                 items[ userName + "-" + mediaName ] = [ userName, mediaName, rtTotal.ToShortString(), computedRT.ToShortString(), diffRT.ToShortString() ];
                 return true;
             } );
 
+            var prevUser = string.Empty;
             foreach( var kvp in items )
             {
-                groupData.addRow( kvp.Key, kvp.Value );
+                if( prevUser != kvp.Value[ 0 ].ToString() )
+                {
+                    groupData.addRow( kvp.Value[ 0 ].ToString(), [ kvp.Value[ 0 ].ToString() ], true );
+                }
+
+                var values = kvp.Value;
+                values[ 0 ] = String.Empty;
+                groupData.addRow( kvp.Key, values );
             }
             return groupData;
         }
