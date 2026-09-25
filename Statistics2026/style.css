@@ -236,11 +236,33 @@ img {
 
 /* Table border rules */
 .statCard-stats-numbersep {
-    th, td {
+    td {
         min-width: 120px;
         border-bottom: 1px solid #ccc;
 
         &:not(:last-child) {
+            border-right: 1px solid #ccc;
+        }
+
+        &.override-red {
+            color: red !important;
+        }
+
+        &:empty {
+            border-right: none !important; /* !important ensures it overrides the :not(:last-child) rule */
+            border-bottom: none;
+            min-width: 120px;
+        }
+    }
+}
+
+.statCard-stats-numbersep {
+    th {
+        min-width: 120px;
+        border-bottom: 1px solid #ccc;
+        text-align: center;
+
+        &:not(:last-child):not(:has(+ th:empty)) {
             border-right: 1px solid #ccc;
         }
 
