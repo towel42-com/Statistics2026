@@ -16,6 +16,50 @@ namespace Statistics2026.Utilities
         public string title { get; set; } = string.Empty;
     };
 
+    public class HeaderDef
+    {
+        public HeaderDef() { }
+
+        public HeaderDef( string text, int numColumns = 1 )
+        {
+            Text = text;
+            NumColumns = numColumns;
+        }
+
+        public static implicit operator HeaderDef( string text )
+        {
+            return new HeaderDef( text );
+        }
+
+        public string Text { get; private set; } = string.Empty;
+        public int NumColumns { get; private set; } = 1;
+
+        public override string ToString()
+        {
+            return ToString( false, 0 );
+        }
+
+        public string ToString( bool embedded, int columnNum )
+        {
+            var retVal = "<th";
+            if( embedded && ( columnNum == 1 ) )
+            {
+                retVal += ">";
+            }
+            else
+            {
+                if( NumColumns != 1 )
+                {
+                    retVal += $" colspan=\"{NumColumns}\"";
+                }
+                retVal += $">{Text}";
+            }
+            retVal += "</th>";
+
+            return retVal;
+        }
+    }
+
     public class StatCardResponse
     {
         public string html { get; set; } = string.Empty;
@@ -93,7 +137,7 @@ namespace Statistics2026.Utilities
         }
 
         public string Title { get; set; } = string.Empty;
-        protected List<string>? Headers { get; set; } = null;
+        protected List<List<HeaderDef>>? Headers { get; set; } = null;
 
         public string SubTitle { get; set; } = string.Empty;
 
@@ -180,7 +224,7 @@ namespace Statistics2026.Utilities
 
         public virtual StatCard.EAlignment alignmentForColumn( int column )
         {
-            return StatCard.EAlignment.eLeft;
+            return StatCard.EAlignment.eUnset;
         }
 
         public virtual bool ShowHeaderColumn( int columnNum )
@@ -191,31 +235,32 @@ namespace Statistics2026.Utilities
         protected string AddHeader( int depth = 0, bool embedded = false )
         {
             var retVal = string.Empty;
-            if( HideHeaders )
+            if( HideHeaders || ( Headers == null ) )
                 return retVal;
 
-            if( Headers != null )
+            retVal += StatCardResponse._addToHtml( depth++, "<thead>" );
+
+            foreach( var currRow in Headers )
             {
-                retVal += StatCardResponse._addToHtml( depth++, "<thead>" );
                 retVal += StatCardResponse._addToHtml( depth++, "<tr>" );
                 if( ShowHeaderColumn( 0 ) )
                     retVal += StatCardResponse._addToHtml( depth, "<td>&nbsp;</td>" );
-                for( var ii = 0; ii < Headers.Count(); ++ii )
+
+                int colNum = 1;
+                foreach( var currColumn in currRow )
                 {
-                    if( !ShowHeaderColumn( ii + 1 ) )
+                    if( !ShowHeaderColumn( colNum ) )
                         continue;
-                    if( embedded && ( ii == 0 ) )
-                        retVal += StatCardResponse._addToHtml( depth, $"<td></td>" );
-                    else
-                    {
-                        var header = Headers[ ii ];
-                        retVal += StatCardResponse._addToHtml( depth, $"<td {StatCard.GetStyleString( alignmentForColumn( ii ) )}>{header}</td>" );
-                    }
+
+                    retVal += StatCardResponse._addToHtml( depth, currColumn.ToString( embedded, colNum ) );
+                    colNum += currColumn.NumColumns;
                 }
 
                 retVal += StatCardResponse._addToHtml( --depth, "</tr>" );
-                retVal += StatCardResponse._addToHtml( --depth, "</thead>" );
             }
+
+            retVal += StatCardResponse._addToHtml( --depth, "</thead>" );
+
             return retVal;
         }
 
@@ -255,7 +300,7 @@ namespace Statistics2026.Utilities
         public string DivId( string suffix = "" )
         {
             var divId = Regex.Replace( Title, @"\s", string.Empty );
-            if ( !suffix.IsNullOrEmpty() )
+            if( !suffix.IsNullOrEmpty() )
                 divId += "-" + suffix;
             return divId;
         }

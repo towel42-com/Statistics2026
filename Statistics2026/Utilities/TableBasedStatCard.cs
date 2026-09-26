@@ -22,13 +22,17 @@ namespace Statistics2026.Utilities
             Values = values;
         }
 
-        public string ToString( int depth = 0, int numColumns = 0, StatCard.EAlignment keyColAlignment = StatCard.EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null, bool showCategory = true )
+        public string ToString( int depth = 0, int numColumns = 0, StatCard.EAlignment keyColAlignment = StatCard.EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null, bool showCategory = true, Func<int, string, List<string>>? classesForValueFunc = null )
         {
             var rowText = "<tr ";
+            string classes = string.Empty;
             if( isClickable )
             {
-                rowText += "class=\"clickable-row\" ";
+                List<string> classArray = [];
+                classArray.Add( "clickable-row" );
+                classes = string.Join( " ", classArray );
             }
+            rowText += $"class=\"{string.Join( " ", classes )}\" ";
             rowText += $"{StatCard.GetStyleString()}>";
 
             var retVal = StatCardResponse._addToHtml( depth++, rowText );
@@ -49,24 +53,43 @@ namespace Statistics2026.Utilities
                 for( var ii = 0; ii < Values.Count(); ++ii )
                 {
                     var td = Values[ ii ].ToString();
-                    if ( !showCategory && ( Values.Count == 1 ) && ( ii == 0 ) && isClickable )
+                    if( !showCategory && ( Values.Count == 1 ) && ( ii == 0 ) && isClickable )
                     {
                         td = $"<span class=\"row-toggle\">▶</span>{td}";
                     }
 
                     var colSpan = "colSpan=\"1\"";
-                    if ( Values.Count() != numColumns )
+                    if( Values.Count() != numColumns )
                     {
                         colSpan = $"colSpan=\"{numColumns}\"";
                     }
 
-                    retVal += StatCardResponse._addToHtml( depth, $"<td {colSpan} {StatCard.GetStyleString( keyColAlignment )}>{td}</td>" );
+                    classes = string.Empty;
+                    if( classesForValueFunc != null )
+                    {
+                        var classArray = classesForValueFunc( ii, Values[ ii ].ToString() );
+                        if( classArray.Count != 0 )
+                        {
+                            classes = $"class=\"{string.Join( " ", classArray )}\"";
+                        }
+                    }
+                    retVal += StatCardResponse._addToHtml( depth, $"<td {classes} {colSpan} {GetStyleString( ii, columnAlignment )}>{td}</td>" );
                 }
             }
 
             retVal += StatCardResponse._addToHtml( --depth, "</tr>" );
 
             return retVal;
+        }
+
+        public string GetStyleString( int columnNumber, Dictionary<int, StatCard.EAlignment>? columnAlignment )
+        {
+            StatCard.EAlignment colAlign = StatCard.EAlignment.eUnset;
+            if( columnAlignment != null )
+            {
+                columnAlignment.TryGetValue( columnNumber, out colAlign );
+            }
+            return StatCard.GetStyleString( colAlign );
         }
 
         public override string ToString()
@@ -79,6 +102,7 @@ namespace Statistics2026.Utilities
     {
         private readonly List<TableBasedStatCardRow> Rows;
         private readonly Dictionary<int, StatCard.EAlignment> _columnAlignment = [];
+        private Func<int, string, List<string>>? _classesForColumnFunc = null;
         private StatCard.EAlignment _keyColumnAlignment = EAlignment.eLeft;
         public override bool IsEmpty() { return Rows == null || Rows.Count == 0; }
         public bool ShowCategory { get; set; } = true;
@@ -88,12 +112,44 @@ namespace Statistics2026.Utilities
         {
             Rows = [];
         }
+
+        public TableBasedStatCard( string title, string helpText, List<HeaderDef> headers, EStatCardStyle size = EStatCardStyle.eDetailed )
+            : base( title, helpText, size )
+        {
+            Rows = [];
+            Headers = [ headers ];
+        }
+
+        public TableBasedStatCard( string title, string helpText, List<List<HeaderDef>> headers, EStatCardStyle size = EStatCardStyle.eDetailed )
+            : base( title, helpText, size )
+        {
+            Rows = [];
+            Headers = headers;
+        }
+
         public TableBasedStatCard( string title, string helpText, List<string> headers, EStatCardStyle size = EStatCardStyle.eDetailed )
             : base( title, helpText, size )
         {
             Rows = [];
+            List<HeaderDef> tmp = [];
+            foreach( var curr in headers )
+                tmp.Add( new HeaderDef( curr ) );
+            Headers = [ tmp ];
+        }
 
-            Headers = headers;
+        public TableBasedStatCard( string title, string helpText, List<List<string>> headers, EStatCardStyle size = EStatCardStyle.eDetailed )
+            : base( title, helpText, size )
+        {
+            Rows = [];
+
+            Headers = [];
+            foreach( var currRow in headers )
+            {
+                List<HeaderDef> tmp = [];
+                foreach( var curr in currRow )
+                    tmp.Add( new HeaderDef( curr ) );
+                Headers.Add( tmp );
+            }
         }
 
         public override bool ShowHeaderColumn( int columnNum )
@@ -104,6 +160,11 @@ namespace Statistics2026.Utilities
         public void SetDataColumnAlignment( int columnNum, StatCard.EAlignment alignment )
         {
             _columnAlignment[ columnNum ] = alignment;
+        }
+
+        public void SetClassForColumnFunc( Func<int, string, List<string>> classesForColumnFunc )
+        {
+            _classesForColumnFunc = classesForColumnFunc;
         }
 
         public void SetKeyColumnAlignment( StatCard.EAlignment alignment )
@@ -200,7 +261,7 @@ namespace Statistics2026.Utilities
                     retVal += StatCardResponse._addToHtml( --depth, "</tr>" );
                 }
 
-                retVal += row.ToString( depth, ColumnCount ?? 0, _keyColumnAlignment, _columnAlignment, ShowCategory );
+                retVal += row.ToString( depth, ColumnCount ?? 0, _keyColumnAlignment, _columnAlignment, ShowCategory, _classesForColumnFunc );
 
                 if( row.isClickable )
                 {
