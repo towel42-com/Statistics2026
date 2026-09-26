@@ -525,7 +525,7 @@ namespace Statistics2026.Data
                     " ItemId=@ItemId AND " +
                     "( ( TotalTicksPlayed IS NULL ) OR ( TotalTicksPlayed == 0 ) ) "
                     ;
-    
+
             foreach( var video in allVideosForUser )
             {
                 if( video == null )
@@ -1046,8 +1046,8 @@ namespace Statistics2026.Data
                     _embyInterfaces?._logger.Warn( $"User: {user.Name} has an invalid UserMedia table" );
                 }
 
-                var fields = $"Users.UserName, {tableName}.ItemID, {tableName}.Name, Media.RunTimeTicks, {tableName}.IsPlayed, {tableName}.PlayCount" 
-                    + $", iif( {tableName}.IsPlayed,  {tableName}.TotalTicksPlayed, 0 )" 
+                var fields = $"Users.UserName, {tableName}.ItemID, {tableName}.Name, Media.RunTimeTicks, {tableName}.IsPlayed, {tableName}.PlayCount"
+                    + $", iif( {tableName}.IsPlayed,  {tableName}.TotalTicksPlayed, 0 )"
                     + $", Series.Name, Media.Season, Media.Episode";
                 var joinClause = $" LEFT JOIN Users ON Users.UserId={tableName}.UserId LEFT JOIN Media ON Media.ItemId = {tableName}.ItemId LEFT JOIN Series On Series.ItemId={tableName}.SeriesId";
 
@@ -1183,11 +1183,11 @@ namespace Statistics2026.Data
             {
                 groupData.addRow( kvp.Key, kvp.Value );
             }
-            if ( groupData.IsEmpty() )
+            if( groupData.IsEmpty() )
             {
                 groupData.HideHeaders = true;
                 groupData.addRow( string.Empty, [ "No issues found" ] );
-            }    
+            }
             return groupData;
         }
 
@@ -1205,7 +1205,7 @@ namespace Statistics2026.Data
                 $"  , Media.Season\n" +
                 $"  , Media.Episode\n" +
                 $"  , <TABLE_NAME>.TotalTicksPlayed\n" +
-                $"  , (IsPlayed*PlayCount)*Media.RunTimeTicks AS ComputedTotalTicksPlayed\n" +
+                $"  , (IsPlayed*PlayCount)*Media.RunTimeTicks AS PlayCountBasedTotalTicksPlayed\n" +
                 $" FROM <TABLE_NAME>\n" +
                 $" LEFT JOIN Users ON <TABLE_NAME>.UserId=Users.UserId\n" +
                 $" LEFT JOIN Media ON <TABLE_NAME>.ItemId=Media.ItemId\n" +
@@ -1221,9 +1221,25 @@ namespace Statistics2026.Data
             }
 
             var sql = sqlCmds.Join( "\nUNION\n\n" );
-            var groupData = new TableBasedStatCard( Constants.PlayedUserMedia, Constants.HelpPlayedUserMedia, [ "User Name", "Media Name", "Computed Time Played", "Time Played", "Difference" ], EStatCardStyle.eDetailed );
+            var groupData = new TableBasedStatCard( Constants.MediaTimePlayedPerUser, Constants.HelpMediaTimePlayedPerUser,
+                    [
+                        [ "", "", new HeaderDef( "Time Played", 2 ), "" ],
+                        [ "User Name", "Media Name", "Play Count * Runtime", "Tracked", "Difference" ]
+                    ], EStatCardStyle.eDetailed );
             groupData.UseSeparators = true;
             groupData.ShowCategory = false;
+            groupData.SetDataColumnAlignment( 2, StatCard.EAlignment.eRight );
+            groupData.SetDataColumnAlignment( 3, StatCard.EAlignment.eRight );
+            groupData.SetDataColumnAlignment( 4, StatCard.EAlignment.eRight );
+            groupData.SetClassForColumnFunc(
+                ( int column, string value ) =>
+                {
+                    if( ( column >= 2 && column <= 4 ) && value.TrimStart().StartsWith( "-" ) )
+                    {
+                        return ["override-red"];
+                    }
+                    return [];
+                } );
 
             SortedDictionary<string, List<object>> items = [];
 
@@ -1238,14 +1254,14 @@ namespace Statistics2026.Data
                 var season = row.GetInt( col++ );
                 var episode = row.GetInt( col++ );
                 var totalTicksPlayed = row.GetInt64( col++ );
-                var computedTotalTicksPlayed = row.GetInt64( col++ );
+                var playCountBasedTotalTicksPlayed = row.GetInt64( col++ );
 
                 var mediaName = MediaInfo.GetDisplayName( primaryName, secondaryName, season, episode );
                 var rtTotal = new RunTime( totalTicksPlayed );
-                var computedRT = new RunTime( computedTotalTicksPlayed );
-                var diffRT = new RunTime( totalTicksPlayed - computedTotalTicksPlayed );
+                var playCountRT = new RunTime( playCountBasedTotalTicksPlayed );
+                var diffRT = new RunTime( playCountBasedTotalTicksPlayed - totalTicksPlayed );
 
-                items[ userName + "-" + mediaName ] = [ userName, mediaName, rtTotal.ToShortString(), computedRT.ToShortString(), diffRT.ToShortString() ];
+                items[ userName + "-" + mediaName ] = [ userName, mediaName, rtTotal.ToShortString(), playCountRT.ToShortString(), diffRT.ToShortString() ];
                 return true;
             } );
 
