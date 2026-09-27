@@ -14,42 +14,58 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public class WatchedMediaValue
+        public void AnalyzeWatchedMediaDataTaskImpl()
         {
-            public string ItemId { get; set; } = string.Empty;
-            public string Name { get; set; } = string.Empty;
-            public string ImageUrl { get; set; } = string.Empty;
-            public long PlayCount { get; set; } = 0;
-            public long Denominator { get; set; } = 0;
-            public double PlayCountPerUser { get; set; } = 0.0;
-            public EMediaType MediaType { get; set; } = EMediaType.eEpisode;
+            CheckIsValid( ECheckType.eUpdate );
 
-            public string Title()
+            _dbHelper!.Progress?.Report( 0 );
+            var users = _embyInterfaces?._userManager.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+            if( users == null )
+                return;
+            _dbHelper!.Progress?.Report( 100 );
+
+            _embyInterfaces?._logger?.Debug( $"AnalyzeWatchedMediaData - Starting User Watch Data Analysis" );
+
+            double count = users.Count;
+            double curr = 0;
+
+            _dbHelper!.Progress?.Report( 0 );
+            var sqlCmds = new List<SQLCmdDef>();
+            using( var timer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", _embyInterfaces?._logger ) )
             {
-                var title = Name;
-                if( MediaType == EMediaType.eMovie )
+                curr = 0;
+                foreach( var user in users )
                 {
-                    title += $" - Watched {PlayCount} time";
-
-                    if( PlayCount != 1 )
-                        title += "s";
-                }
-                else
-                {
-                    if( Denominator == PlayCount )
+                    _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
+                    using( var userTimer = new AutoTimer( $"AnalyzeWatchedMediaData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
                     {
-                        title += $" - {Denominator} Episodes played 1 time each";
-                    }
-                    else
-                    {
-                        title += $" - For {Denominator} Episodes, a total of {PlayCount} play";
-                        if( PlayCount != 1 )
-                            title += "s";
+                        sqlCmds.AddRange( AddWatchedDataForUser( user ) );
+                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
 
-                return title;
+                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
             }
+
+            var config = Statistics2026.Plugin.Instance!.Configuration;
+            config.resetPlayCount = false;
+            Statistics2026.Plugin.Instance.UpdateConfiguration( config );
+
+            using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Commands", _embyInterfaces?._logger ) )
+            {
+                _dbHelper!.Progress?.Report( 80 );
+                _dbHelper.ExecuteCommands( sqlCmds );
+                _dbHelper!.Progress?.Report( 100 );
+            }
+
+            ComputeUserDataDBState();
+            if( !Plugin.Instance.IsDBStateSet( EDBState.eUserDataInitialized ) )
+            {
+                _embyInterfaces?._logger?.Error( "After initializing user watch data, user watch data still doesn't conform." );
+            }
+
+            Plugin.Instance.AddDBState( EDBState.eUserDataInitialized );
+            _embyInterfaces?._logger?.Debug( $"AnalyzeWatchedMediaData - Finished User Watch Data Analysis" );
         }
 
         public void InitWatchedMediaTables()
@@ -144,60 +160,6 @@ namespace Statistics2026.Data
                 ];
 
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql, parameters ) );
-        }
-
-        public void AnalyzeWatchedMediaData()
-        {
-            CheckIsValid( ECheckType.eUpdate );
-
-            _dbHelper!.Progress?.Report( 0 );
-            var users = _embyInterfaces?._userManager.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
-            if( users == null )
-                return;
-            _dbHelper!.Progress?.Report( 100 );
-
-            _embyInterfaces?._logger?.Debug( $"AnalyzeWatchedMediaData - Starting User Watch Data Analysis" );
-
-            double count = users.Count;
-            double curr = 0;
-
-            _dbHelper!.Progress?.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>();
-            using( var timer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", _embyInterfaces?._logger ) )
-            {
-                curr = 0;
-                foreach( var user in users )
-                {
-                    _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-                    using( var userTimer = new AutoTimer( $"AnalyzeWatchedMediaData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
-                    {
-                        sqlCmds.AddRange( AddWatchedDataForUser( user ) );
-                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
-                    }
-                }
-
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
-            }
-
-            var config = Statistics2026.Plugin.Instance!.Configuration;
-            config.resetPlayCount = false;
-            Statistics2026.Plugin.Instance.UpdateConfiguration( config );
-
-            using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Commands", _embyInterfaces?._logger ) )
-            {
-                _dbHelper!.Progress?.Report( 80 );
-                _dbHelper.ExecuteCommands( sqlCmds );
-                _dbHelper!.Progress?.Report( 100 );
-            }
-
-            ComputeUserDataDBState();
-            if( !Plugin.Instance.IsDBStateSet( EDBState.eUserDataInitialized ) )
-            {
-                _embyInterfaces?._logger?.Error( "After initializing user watch data, user watch data still doesn't conform." );
-            }
-
-            Plugin.Instance.AddDBState( EDBState.eUserDataInitialized );
-            _embyInterfaces?._logger?.Debug( $"AnalyzeWatchedMediaData - Finished User Watch Data Analysis" );
         }
 
         public List<SQLCmdDef> DropAllUserMediaCmds()
@@ -485,7 +447,7 @@ namespace Statistics2026.Data
 
             var config = Statistics2026.Plugin.Instance!.Configuration;
 
-            var allVideosForUser = Statistics2026API.GetAllEpisodesAndMovies( user, _embyInterfaces!._libraryManager, false ).forUser;
+            var allVideosForUser = Statistics2026API.GetAllEpisodesAndMoviesForUser( user, _embyInterfaces!._libraryManager );
             //_tableList
             var sql =
                 $"INSERT INTO {userTableName} " +
@@ -520,11 +482,16 @@ namespace Statistics2026.Data
                     "  IsPlayed=@IsPlayed" +
                     ", PlayCount=@PlayCount" +
                     ", LastPlayedDate=@LastPlayedDate" +
-                    ", TotalTicksPlayed=(@IsPlayed*@PlayCount)*@RunTimeTicks " +
-                    $" WHERE " +
-                    " ItemId=@ItemId AND " +
-                    "( ( TotalTicksPlayed IS NULL ) OR ( TotalTicksPlayed == 0 ) ) "
-                    ;
+                    ", TotalTicksPlayed=(@IsPlayed*@PlayCount)*@RunTimeTicks ";
+            
+            if( !config.resetPlayCount )
+            {
+                sql +=
+                      " WHERE " +
+                      " ItemId=@ItemId AND " +
+                      "( ( TotalTicksPlayed IS NULL ) OR ( TotalTicksPlayed == 0 ) ) "
+                      ;
+            }
 
             foreach( var video in allVideosForUser )
             {
@@ -1097,7 +1064,7 @@ namespace Statistics2026.Data
             return ( ticksPlayed == systemPlayed ) ? null : missing;
         }
 
-        public StatCard UserWatchMediaIssues()
+        public StatCard? UserWatchMediaIssues()
         {
             CheckIsValid( ECheckType.eReport );
 
@@ -1185,8 +1152,7 @@ namespace Statistics2026.Data
             }
             if( groupData.IsEmpty() )
             {
-                groupData.HideHeaders = true;
-                groupData.addRow( string.Empty, [ "No issues found" ] );
+                return null;
             }
             return groupData;
         }
@@ -1236,7 +1202,7 @@ namespace Statistics2026.Data
                 {
                     if( ( column >= 2 && column <= 4 ) && value.TrimStart().StartsWith( "-" ) )
                     {
-                        return ["override-red"];
+                        return [ "override-red" ];
                     }
                     return [];
                 } );
