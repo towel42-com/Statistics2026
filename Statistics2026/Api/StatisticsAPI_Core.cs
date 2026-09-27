@@ -46,11 +46,9 @@ namespace Statistics2026.Api
             return DBHelper.GetUserItems<T>( user, _embyInterfaces._libraryManager! );
         }
 
-        public static (IEnumerable<Video> forUser, IEnumerable<Video>? forAll) GetAllEpisodesAndMovies( User? user, ILibraryManager libManager, bool computeAll )
+        public static (IEnumerable<Video>? forUser, IEnumerable<Video>? forAll) GetAllEpisodesAndMovies( User? user, ILibraryManager libManager, bool computeAll )
         {
-            var episodesForUser = DBHelper.GetUserItems<Episode>( user, libManager ).OfType<Video>().ToList();
-            var moviesForUser = DBHelper.GetUserItems<Movie>( user, libManager ).OfType<Video>().ToList();
-            var forUser = episodesForUser.Concat( moviesForUser );
+            IEnumerable<Video>? forUser = ( user != null ) ? GetAllEpisodesAndMoviesForUser( user, libManager ) : null;
 
             IEnumerable<Video>? all = null;
             if( computeAll )
@@ -61,6 +59,15 @@ namespace Statistics2026.Api
             }
 
             return (forUser, all);
+        }
+
+        public static IEnumerable<Video> GetAllEpisodesAndMoviesForUser( User user, ILibraryManager libManager )
+        {
+            var episodesForUser = DBHelper.GetUserItems<Episode>( user, libManager ).OfType<Video>().ToList();
+            var moviesForUser = DBHelper.GetUserItems<Movie>( user, libManager ).OfType<Video>().ToList();
+            var forUser = episodesForUser.Concat( moviesForUser );
+
+            return forUser;
         }
 
         public static IEnumerable<BoxSet> GetAllBoxSets( User user, ILibraryManager libManager )

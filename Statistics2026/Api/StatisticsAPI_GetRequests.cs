@@ -31,7 +31,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 var retVal = db.GetTVSeriesProgress( user );
                 return retVal;
@@ -68,9 +68,11 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.MediaCodecs();
+                if( groupData == null )
+                    return new StatCardResponse();
                 groupData.SortByKey = true;
-                var vgReponse = groupData.createStat();
 
+                var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
@@ -82,9 +84,11 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.MediaResolutions();
+                if( groupData == null )
+                    return new StatCardResponse();
                 groupData.SortByKey = false;
-                var vgReponse = groupData.createStat();
 
+                var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
@@ -96,9 +100,11 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.DVProfileInfo();
+                if( groupData == null )
+                    return new StatCardResponse();
                 groupData.SortByKey = true;
-                var vgReponse = groupData.createStat();
 
+                var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
@@ -110,6 +116,9 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.UserCount();
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -122,6 +131,9 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.PlayedUserMedia();
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -134,6 +146,9 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.UserWatchMediaIssues();
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -146,7 +161,10 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.MostActiveUsers();
+                if( groupData == null )
+                    return new StatCardResponse();
                 groupData.SortByKey = false;
+
                 var vgReponse = groupData.createStat();
 
                 return vgReponse;
@@ -156,7 +174,11 @@ namespace Statistics2026.Api
         public object TotalMovieCount( User? user )
         {
             var db = StatisticsDB.GetInstance( _embyInterfaces );
+
             var groupData = db.TotalMovieCount( user, false );
+            if( groupData == null )
+                return new StatCardResponse();
+
             var vgReponse = groupData.createStat();
             return vgReponse;
         }
@@ -187,9 +209,12 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 var groupData = db.TotalMovieCount( user, true );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -200,7 +225,11 @@ namespace Statistics2026.Api
             return GetRequest( "GetTotalCollectionCount", timer =>
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
+
                 var groupData = db.TotalCollectionCount();
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -213,6 +242,9 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.TotalMovieStudioCount( null );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -221,7 +253,11 @@ namespace Statistics2026.Api
         public object TotalTVCount( User? user, bool watched )
         {
             var db = StatisticsDB.GetInstance( _embyInterfaces );
+
             var groupData = db.TotalTVCount( user, watched );
+            if( groupData == null )
+                return new StatCardResponse();
+
             var vgReponse = groupData.createStat();
             return vgReponse;
         }
@@ -252,9 +288,12 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 var groupData = db.TotalTVCount( user, true );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -268,9 +307,12 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 var groupData = db.TotalFinishedSeries( user );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -281,8 +323,10 @@ namespace Statistics2026.Api
             return GetRequest( "GetTotalTVStudioCount", timer =>
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
-
                 var groupData = db.TotalTVStudioCount( null );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -293,8 +337,9 @@ namespace Statistics2026.Api
             return GetRequest( "GetLeastWatchedMovies", timer =>
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
-
                 var groupData = db.WatchedMedia( null, true, EMediaType.eMovie );
+                if( groupData == null )
+                    return new StatCardResponse();
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
@@ -310,9 +355,11 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 var groupData = db.WatchedMedia( user, false, EMediaType.eMovie );
+                if( groupData == null )
+                    return new StatCardResponse();
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
@@ -326,6 +373,8 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.WatchedMedia( null, false, EMediaType.eMovie );
+                if( groupData == null )
+                    return new StatCardResponse();
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
@@ -339,6 +388,8 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.WatchedMedia( null, true, EMediaType.eSeries );
+                if( groupData == null )
+                    return new StatCardResponse();
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
@@ -353,9 +404,11 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 var groupData = db.WatchedMedia( user, false, EMediaType.eSeries );
+                if( groupData == null )
+                    return new StatCardResponse();
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
@@ -369,6 +422,8 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 var groupData = db.WatchedMedia( null, false, EMediaType.eSeries );
+                if( groupData == null )
+                    return new StatCardResponse();
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
@@ -382,7 +437,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 bool? showEpisodes = null;
                 if( request.episodes == "true" )
@@ -393,6 +448,8 @@ namespace Statistics2026.Api
                     showEpisodes = false;
 
                 var groupData = db.TotalTimeWatched( user, showEpisodes );
+                if( groupData == null )
+                    return new StatCardResponse();
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
@@ -407,7 +464,7 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 bool? showEpisodes = null;
                 if( request.episodes == "true" )
@@ -418,6 +475,8 @@ namespace Statistics2026.Api
                     showEpisodes = false;
 
                 var groupData = db.TotalWatchableTime( user, showEpisodes );
+                if( groupData == null )
+                    return new StatCardResponse();
 
                 var vgReponse = groupData.createStat();
                 return vgReponse;
@@ -432,11 +491,14 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 var episodes = request.episodes;
 
                 var groupData = db.LastSeen( user, !episodes );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -461,9 +523,12 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 var groupData = db.FavoriteYears( user, true );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -477,9 +542,12 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 var groupData = db.FavoriteGenre( user, true );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -493,9 +561,12 @@ namespace Statistics2026.Api
                 var userName = request.user;
                 var user = GetUserByName( userName );
                 if( user == null )
-                    return new object();
+                    return new StatCardResponse();
 
                 var groupData = db.FavoriteGenre( user, false );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 var vgReponse = groupData.createStat();
                 return vgReponse;
             } );
@@ -510,6 +581,9 @@ namespace Statistics2026.Api
                 timer.Text += $" - {whichStatistic}";
 
                 var groupData = db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Movie );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 return groupData.createStat();
             } );
         }
@@ -523,6 +597,9 @@ namespace Statistics2026.Api
                 timer.Text += $" - {whichStatistic}";
 
                 var groupData = db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Series );
+                if( groupData == null )
+                    return new StatCardResponse();
+
                 return groupData.createStat();
             } );
         }
@@ -536,6 +613,8 @@ namespace Statistics2026.Api
                 timer.Text += $" - {whichStatistic}";
 
                 var groupData = db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Episode );
+                if( groupData == null )
+                    return new StatCardResponse();
 
                 return groupData.createStat();
             } );
