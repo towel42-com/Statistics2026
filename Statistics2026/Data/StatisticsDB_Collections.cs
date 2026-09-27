@@ -9,7 +9,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public void AddAllCollections( CancellationToken cancellationToken, IProgress<double> progress )
+        public void AddAllCollectionsTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
         {
             CheckIsValid( ECheckType.eUpdate );
 

@@ -11,7 +11,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public void AddAllUsers()
+        public void AddAllUsersTaskImpl()
         {
             CheckIsValid( ECheckType.eUpdate );
 

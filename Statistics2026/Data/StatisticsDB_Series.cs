@@ -10,7 +10,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public void AddAllSeries()
+        public void AddAllSeriesTaskImpl()
         {
             CheckIsValid( ECheckType.eUpdate );
 

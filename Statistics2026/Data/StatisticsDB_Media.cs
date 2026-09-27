@@ -12,7 +12,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public void AddAllMedia()
+        public void AddAllMediaTaskImpl()
         {
             CheckIsValid( ECheckType.eUpdate );
 

@@ -63,7 +63,7 @@ namespace Statistics2026.ScheduledTasks
             long addUsers = 0;
             using( var timer = new AutoTimer( $"Adding All Users", _embyInterfaces._logger ) )
             {
-                db.AddAllUsers();
+                db.AddAllUsersTaskImpl();
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }

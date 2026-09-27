@@ -64,7 +64,7 @@ namespace Statistics2026.ScheduledTasks
             long addCollections = 0;
             using( var timer = new AutoTimer( $"Adding Collections", _embyInterfaces._logger ) )
             {
-                db.AddAllCollections( cancellationToken, progress );
+                db.AddAllCollectionsTaskImpl( cancellationToken, progress );
                 addCollections = timer.ElapsedMilliseconds();
             }
 
