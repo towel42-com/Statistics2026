@@ -83,6 +83,8 @@ namespace Statistics2026
                 new($"Analyzing Watched Media Data", typeof(AnalyzeWatchedMediaDataTask)),
                 new($"Analyzing Collections", typeof(AnalyzeCollectionsTask)),
                 new($"Analyzing Series", typeof(AnalyzeSeriesTask)),
+                new($"Analyzing Series", typeof(AnalyzeMissingEpisodesTask)),
+                new($"Analyzing Series", typeof(AnalyzeMissingMoviesTask)),
             };
             if( includeRunAll )
             {

@@ -1,8 +1,11 @@
 ﻿using MediaBrowser.Common;
+using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Controller.Security;
+using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
@@ -25,21 +28,39 @@ namespace Statistics2026.ScheduledTasks
         private readonly EmbyInterfaces _embyInterfaces;
 
         public RunAllTasksTask(
-            ILogManager logManager,
-            IServerConfigurationManager configManager,
-            IUserManager userManager,
-            IUserDataManager userDataManager,
-            ILibraryManager libraryManager,
             IFileSystem fileSystem,
-            IJsonSerializer jsonSerializer,
+            ILibraryManager libraryManager,
+            ILogManager logManager,
             IServerApplicationPaths serverApplicationPaths,
+            IUserDataManager userDataManager,
+            IUserManager userManager,
             IApplicationHost appHost,
-            IProviderManager providerManager,
             Statistics2026API apiService,
-            ITaskManager taskManager
+            IJsonSerializer jsonSerializer,
+            IProviderManager providerManager,
+            IServerConfigurationManager configManager,
+            ITaskManager taskManager,
+            ISessionManager sessionManager,
+            IHttpClient httpClient,
+            IAuthenticationRepository authenticationRepository
             )
         {
-            _embyInterfaces = new EmbyInterfaces( fileSystem, libraryManager, logManager, logManager.GetLogger( "Statistics2026 - CalculateDataTask" ), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, configManager, taskManager );
+            _embyInterfaces = new EmbyInterfaces( appHost )
+            {
+                _fileSystem = fileSystem,
+                _libraryManager = libraryManager,
+                _logManager = logManager,
+                _logger = logManager.GetLogger( "Statistics2026 - RunAllTasksTask" ),
+                _serverApplicationPaths = serverApplicationPaths,
+                _userDataManager = userDataManager,
+                _userManager = userManager,
+                _appHost = appHost,
+                _apiService = apiService,
+                _jsonSerializer = jsonSerializer,
+                _providerManager = providerManager,
+                _configManager = configManager,
+                _taskManager = taskManager,
+            };
         }
 
         private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
@@ -59,7 +80,7 @@ namespace Statistics2026.ScheduledTasks
             }
 
             var taskName = "Analyze All";
-            _embyInterfaces!._logger.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
+            _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
             // purely for progress reporting
             var now = DateTime.Now;
             if( PluginConfiguration == null )
@@ -125,7 +146,7 @@ namespace Statistics2026.ScheduledTasks
             long retVal = 0;
             using( var timer = new AutoTimer( task.Description, _embyInterfaces._logger ) )
             {
-                var taskToRun = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskToRun => taskToRun.ScheduledTask.GetType() == task.TaskType );
+                var taskToRun = _embyInterfaces._taskManager!.ScheduledTasks.FirstOrDefault( taskToRun => taskToRun.ScheduledTask.GetType() == task.TaskType );
                 if( taskToRun == null )
                     throw new Exception( $"Task not found {task.TaskType?.Name}" );
 
