@@ -85,7 +85,7 @@ namespace Statistics2026.Utilities
         public DBHelper( EmbyInterfaces embyInterfaces )
         {
             _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
-            var db_file_name = Path.Combine( _embyInterfaces._configManager.ApplicationPaths.DataPath, "Statistics2026.db" );
+            var db_file_name = Path.Combine( _embyInterfaces!._configManager!.ApplicationPaths.DataPath, "Statistics2026.db" );
             CreateConnection( db_file_name );
         }
 
@@ -315,8 +315,11 @@ namespace Statistics2026.Utilities
             return GetUserItems<T>( null, _embyInterfaces!._libraryManager );
         }
 
-        public static IEnumerable<T> GetUserItems<T>( User? user, ILibraryManager libManager )
+        public static IEnumerable<T> GetUserItems<T>( User? user, ILibraryManager? libManager )
         {
+            if( libManager == null )
+                return Enumerable.Empty<T>();
+
             var query = new InternalItemsQuery( user )
             {
                 IncludeItemTypes = new[] { typeof( T ).Name },
@@ -452,6 +455,19 @@ namespace Statistics2026.Utilities
             }
 
             return (columnMissing, tableNeedsData);
+        }
+
+        public static string StreamToString( Stream stream )
+        {
+            if( stream.CanSeek )
+            {
+                stream.Position = 0;
+            }
+
+            using( StreamReader reader = new StreamReader( stream ) )
+            {
+                return reader.ReadToEnd();
+            }
         }
     }
 }
