@@ -56,7 +56,7 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException( "Plugin.Instance is null or Plugin.Instance.DBState is null" );
             }
 
-            var users = _embyInterfaces?._userManager.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+            var users = _embyInterfaces?._userManager!.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
 
             Plugin.Instance.RemoveDBState( EDBState.eUserTablesCreated );
             if( users == null )
@@ -86,7 +86,7 @@ namespace Statistics2026.Data
             );
 
             if( missing != null && missing.Count > 0 )
-                DumpTable.dumpTable( [ "User", "Item ID", "Name", "Runtime Ticks", "Is Played?", "Play Count", "Total Ticks Played", "Series Name", "Season#", "Episode#" ], missing, text => _embyInterfaces?._logger.Warn( text ) );
+                DumpTable.dumpTable( [ "User", "Item ID", "Name", "Runtime Ticks", "Is Played?", "Play Count", "Total Ticks Played", "Series Name", "Season#", "Episode#" ], missing, text => _embyInterfaces?._logger!.Warn( text ) );
         }
     }
 }

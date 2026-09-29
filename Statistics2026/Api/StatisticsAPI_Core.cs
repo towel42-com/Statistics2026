@@ -1,4 +1,5 @@
 ﻿using MediaBrowser.Common;
+using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
@@ -6,6 +7,8 @@ using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Controller.Security;
+using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
@@ -23,20 +26,42 @@ namespace Statistics2026.Api
         private readonly EmbyInterfaces _embyInterfaces;
 
         public Statistics2026API(
-            ILogManager logManager,
-            IServerConfigurationManager configManager,
-            IUserManager userManager,
-            IUserDataManager userDataManager,
-            ILibraryManager libraryManager,
             IFileSystem fileSystem,
-            IJsonSerializer jsonSerializer,
+            ILibraryManager libraryManager,
+            ILogManager logManager,
             IServerApplicationPaths serverApplicationPaths,
+            IUserDataManager userDataManager,
+            IUserManager userManager,
             IApplicationHost appHost,
+            Statistics2026API apiService,
+            IJsonSerializer jsonSerializer,
             IProviderManager providerManager,
-            ITaskManager taskManager
-            )
+            IServerConfigurationManager configManager,
+            ITaskManager taskManager,
+            ISessionManager sessionManager,
+            IHttpClient httpClient,
+            IAuthenticationRepository authenticationRepository
+        )
         {
-            _embyInterfaces = new EmbyInterfaces( fileSystem, libraryManager, logManager, logManager.GetLogger( "Statistics2026 - Statistics2026API" ), serverApplicationPaths, userDataManager, userManager, appHost, this, jsonSerializer, providerManager, configManager, taskManager );
+            _embyInterfaces = new EmbyInterfaces( appHost )
+            {
+                _fileSystem = fileSystem,
+                _libraryManager = libraryManager,
+                _logManager = logManager,
+                _logger = logManager.GetLogger( "Statistics2026 - Statistics2026API" ),
+                _serverApplicationPaths = serverApplicationPaths,
+                _userDataManager = userDataManager,
+                _userManager = userManager,
+                _appHost = appHost,
+                _apiService = this,
+                _jsonSerializer = jsonSerializer,
+                _providerManager = providerManager,
+                _configManager = configManager,
+                _taskManager = taskManager,
+                _sessionManager = sessionManager,
+                _httpClient = httpClient,
+                _authenticationRepository = authenticationRepository
+            };
         }
 
         public IRequest? Request { get; set; } = null;
@@ -46,8 +71,11 @@ namespace Statistics2026.Api
             return DBHelper.GetUserItems<T>( user, _embyInterfaces._libraryManager! );
         }
 
-        public static (IEnumerable<Video>? forUser, IEnumerable<Video>? forAll) GetAllEpisodesAndMovies( User? user, ILibraryManager libManager, bool computeAll )
+        public static (IEnumerable<Video>? forUser, IEnumerable<Video>? forAll) GetAllEpisodesAndMovies( User? user, ILibraryManager? libManager, bool computeAll )
         {
+            if( libManager == null )
+                return (null, null);
+
             IEnumerable<Video>? forUser = ( user != null ) ? GetAllEpisodesAndMoviesForUser( user, libManager ) : null;
 
             IEnumerable<Video>? all = null;
@@ -61,8 +89,10 @@ namespace Statistics2026.Api
             return (forUser, all);
         }
 
-        public static IEnumerable<Video> GetAllEpisodesAndMoviesForUser( User user, ILibraryManager libManager )
+        public static IEnumerable<Video> GetAllEpisodesAndMoviesForUser( User user, ILibraryManager? libManager )
         {
+            if( libManager == null )
+                return Enumerable.Empty<Video>();
             var episodesForUser = DBHelper.GetUserItems<Episode>( user, libManager ).OfType<Video>().ToList();
             var moviesForUser = DBHelper.GetUserItems<Movie>( user, libManager ).OfType<Video>().ToList();
             var forUser = episodesForUser.Concat( moviesForUser );

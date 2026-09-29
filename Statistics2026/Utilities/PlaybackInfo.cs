@@ -58,7 +58,7 @@ namespace Statistics2026.Utilities
                 var playbackInfo = _PlaybackTracker[ key ];
                 if( activeSessions.Contains( playbackInfo ) == false )
                 {
-                    embyInterfaces._logger.Info( "Saving final duration for Item : " + key );
+                    embyInterfaces._logger!.Info( "Saving final duration for Item : " + key );
 
                     playbackInfo.UpdatePlaybackState( embyInterfaces );
 

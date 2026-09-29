@@ -46,8 +46,8 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            var libraryOptions = _embyInterfaces!._libraryManager.GetLibraryOptions( series );
-            var allEpisodes = _embyInterfaces!._providerManager.GetAllEpisodes( series, libraryOptions, _dbHelper!.CancellationToken!.Value ).ConfigureAwait( false ).GetAwaiter().GetResult();
+            var libraryOptions = _embyInterfaces!._libraryManager!.GetLibraryOptions( series );
+            var allEpisodes = _embyInterfaces!._providerManager!.GetAllEpisodes( series, libraryOptions, _dbHelper!.CancellationToken!.Value ).ConfigureAwait( false ).GetAwaiter().GetResult();
 
             var episodes = allEpisodes.Where( e => !MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTime.Now ) ).Count();
             var specials = allEpisodes.Where( e => MediaInfo.isTVSpecial( e ) ).Count();
