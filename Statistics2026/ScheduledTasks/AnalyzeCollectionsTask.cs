@@ -1,8 +1,11 @@
 ﻿using MediaBrowser.Common;
+using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Controller.Security;
+using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
@@ -22,21 +25,39 @@ namespace Statistics2026.ScheduledTasks
         private readonly EmbyInterfaces _embyInterfaces;
 
         public AnalyzeCollectionsTask(
-            ILogManager logManager,
-            IServerConfigurationManager configManager,
-            IUserManager userManager,
-            IUserDataManager userDataManager,
-            ILibraryManager libraryManager,
             IFileSystem fileSystem,
-            IJsonSerializer jsonSerializer,
+            ILibraryManager libraryManager,
+            ILogManager logManager,
             IServerApplicationPaths serverApplicationPaths,
+            IUserDataManager userDataManager,
+            IUserManager userManager,
             IApplicationHost appHost,
-            IProviderManager providerManager,
             Statistics2026API apiService,
-            ITaskManager taskManager
+            IJsonSerializer jsonSerializer,
+            IProviderManager providerManager,
+            IServerConfigurationManager configManager,
+            ITaskManager taskManager,
+            ISessionManager sessionManager,
+            IHttpClient httpClient,
+            IAuthenticationRepository authenticationRepository
             )
         {
-            _embyInterfaces = new EmbyInterfaces( fileSystem, libraryManager, logManager, logManager.GetLogger( "Statistics2026 - CalculateDataTask" ), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, configManager, taskManager );
+            _embyInterfaces = new EmbyInterfaces( appHost )
+            {
+                _fileSystem = fileSystem,
+                _libraryManager = libraryManager,
+                _logManager = logManager,
+                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeCollectionsTask" ),
+                _serverApplicationPaths = serverApplicationPaths,
+                _userDataManager = userDataManager,
+                _userManager = userManager,
+                _appHost = appHost,
+                _apiService = apiService,
+                _jsonSerializer = jsonSerializer,
+                _providerManager = providerManager,
+                _configManager = configManager,
+                _taskManager = taskManager,
+            };
         }
 
         string IScheduledTask.Name => "\u2022 Analyze Collection information";
@@ -55,7 +76,7 @@ namespace Statistics2026.ScheduledTasks
             }
 
             var taskName = "Analyze Collections";
-            _embyInterfaces!._logger.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
+            _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
             // purely for progress reporting
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
