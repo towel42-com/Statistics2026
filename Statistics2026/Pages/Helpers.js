@@ -58,7 +58,7 @@ define(function () {
         return retVal;
     }
 
-    function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc, Helpers) {
+    function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc) {
         view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
 
         var url = "Statistics2026/tv_series_progress/" + userName;
@@ -67,10 +67,10 @@ define(function () {
             sortTable(1, "progress", 'TVSeriesProgressTable', showLoadingFunc, hideLoadingFunc, 'desc');
         };
 
-        loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, Helpers, sortit);
+        loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
     }
 
-    function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc, Helpers) {
+    function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
         showLoadingFunc();
 
         try {
@@ -120,7 +120,7 @@ define(function () {
 
     function getMediaRowData(info) {
         var retVal = "";
-        retVal += "<td style='align='left'>" + info.ListDisplayName + "</td>";
+        retVal += "<td style='align='left' sort-value='" + info.SortName +"'>" + info.ListDisplayName + "</td>";
         retVal += "<td style='align='right'>" + info.StartYear + "</td>";
         retVal += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
         retVal += "<td style='align='left'>" + info.Codec + "</td>";
@@ -236,7 +236,7 @@ define(function () {
         document.head.appendChild(link);
     }
 
-    async function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, Helpers, onFinished) {
+    async function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
         var url = ApiClient.getUrl(apiEndpoint);
 
         var load_status = view.querySelector('#' + statusElementId);
@@ -255,12 +255,12 @@ define(function () {
             // load_status.innerHTML = response.status + ":" + response.statusText;
 
 
-            console.log("resultData: " + JSON.stringify(resultData));
+            // console.log("resultData: " + JSON.stringify(resultData));
 
             var tableBody = view.querySelector('#' + resultsElementId);
 
             let currentIndex = 0;
-            let chunkSize = Math.min(200, Math.trunc(resultData.length / 20));
+            let chunkSize = Math.min(50, Math.trunc(resultData.length / 20));
             function renderNextChunk() {
                 const endIndex = Math.min(currentIndex + chunkSize, resultData.length);
                 const fragment = document.createDocumentFragment();
@@ -378,7 +378,6 @@ define(function () {
 
         let currentDirection = currentMap.get(columnIndex);
         if (forcedDir === undefined) {
-
             currentDirection = currentMap.get(columnIndex);
             if (currentDirection === undefined) {
                 currentDirection = 'asc';
@@ -386,7 +385,7 @@ define(function () {
                 currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
             }
         } else {
-            currentDirection = 'desc';
+            currentDirection = forcedDir;
         }
 
         sortDirections.get(tableId).set(columnIndex, currentDirection);
@@ -398,8 +397,15 @@ define(function () {
 
         // Sort the row elements
         rows.sort((rowA, rowB) => {
-            const cellA = rowA.children[columnIndex].textContent.trim();
-            const cellB = rowB.children[columnIndex].textContent.trim();
+            let cellA = rowA.children[columnIndex].getAttribute('sort-value');
+            if (cellA == null || cellA == '')
+                cellA = rowA.children[columnIndex].textContent;
+            cellA = cellA.trim();
+
+            let cellB = rowB.children[columnIndex].getAttribute('sort-value' );
+            if (cellB == null || cellB == '')
+                cellB = rowB.children[columnIndex].textContent;
+            cellB = cellB.trim();
 
             if (dataType === 'number') {
                 // Strip out currency symbols or non-numeric formatting characters if present
@@ -412,8 +418,11 @@ define(function () {
                     ? cellA.localeCompare(cellB)
                     : cellB.localeCompare(cellA);
             } else { // progress
-                var numA = +cellA.match(/(?<percent>\d+)\%/).groups.percent;
-                var numB = +cellB.match(/(?<percent>\d+)\%/).groups.percent;
+                const matchA = cellA.match(/(?<percent>\d+)\%/);
+                const matchB = cellB.match(/(?<percent>\d+)\%/);
+
+                const numA = matchA ? +matchA.groups.percent : 0;
+                const numB = matchB ? +matchB.groups.percent : 0;
 
                 return currentDirection === 'asc' ? numA - numB : numB - numA;
             }

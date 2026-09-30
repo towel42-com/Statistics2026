@@ -52,19 +52,21 @@ namespace Statistics2026.Api
             if( media == null )
                 return;
 
-            ListDisplayName = media!.ListDisplayName;
-            StartYear = media!.StartYear;
-            ResolutionDetail = media!.ResolutionDetail;
-            Codec = media!.Codec;
-            if( ( media.Codec == "hevc" ) || ( media!.Codec == "av1" ) )
+            ListDisplayName = media.ListDisplayName;
+            SortName = media.SortName;
+            StartYear = media.StartYear;
+            ResolutionDetail = media.ResolutionDetail;
+            Codec = media.Codec;
+            if( ( media.Codec == "hevc" ) || ( media.Codec == "av1" ) )
             {
-                DolbyVisionProfile = media!.DolbyVisionProfile;
+                DolbyVisionProfile = media.DolbyVisionProfile;
             }
 
-            ServerLocation = media!.ServerLocation;
+            ServerLocation = media.ServerLocation;
         }
 
         public string ListDisplayName { get; set; } = string.Empty;
+        public string SortName { get; set; } = string.Empty;
         public string StartYear { get; set; } = string.Empty;
         public string ResolutionDetail { get; set; } = string.Empty;
         public string Codec { get; set; } = string.Empty;

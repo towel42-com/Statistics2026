@@ -7,6 +7,7 @@ using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Statistics2026.Data
 {
@@ -618,7 +619,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private List<MediaItemResponse> getMediaListResponse( bool episodes )
+        private List<MediaItemResponse> getMediaListResponseOnServer( bool episodes )
         {
             var retVal = new List<MediaItemResponse>();
 
@@ -650,20 +651,22 @@ namespace Statistics2026.Data
                 var col = 0;
                 var curr = new MediaItemResponse()
                 {
-                    ListDisplayName = row.GetString( col++ ),
+                    SortName = CleanSortName( row.GetString( col++ ) ),
                     StartYear = row.GetString( col++ ),
                     ResolutionDetail = row.GetString( col++ ),
                     Codec = row.GetString( col++ ),
                     DolbyVisionProfile = row.GetString( col++ ),
                     ServerLocation = row.GetString( col++ )
                 };
+
                 var itemId = row.GetString( col++ );
                 var itemUrl = row.GetString( col++ );
-                curr.ItemUrl = ItemImageUrl.ItemUrl( itemId, itemUrl, curr.ListDisplayName );
+                curr.ItemUrl = ItemImageUrl.ItemUrl( itemId, itemUrl, curr.SortName );
+
                 if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
-                {
                     curr.ListDisplayName = curr.ItemUrl;
-                }
+                else
+                    curr.ListDisplayName = curr.SortName;
 
                 if( curr.Codec != "hevc" && curr.Codec != "av1" )
                     curr.DolbyVisionProfile = string.Empty;
@@ -671,8 +674,20 @@ namespace Statistics2026.Data
                 retVal.Add( curr );
                 return true;
             } );
+            return retVal;
+        }
 
-            sql = "SELECT " +
+        private string CleanSortName( string sortName )
+        {
+            var retVal = Regex.Replace( sortName, @"^[^a-zA-Z0-9]+", "" );
+            return retVal;
+        }
+
+        private List<MediaItemResponse> getMediaListResponseMissing( bool episodes )
+        {
+            var retVal = new List<MediaItemResponse>();
+
+            var sql = "SELECT " +
                 "  Missing.Title AS ListDisplayName" +
                 ", Missing.ReleaseDate";
             if( episodes )
@@ -684,7 +699,7 @@ namespace Statistics2026.Data
                 sql += ", Collections.Name";
             }
 
-            sql += 
+            sql +=
                 " FROM " +
                 "   Missing ";
 
@@ -700,7 +715,7 @@ namespace Statistics2026.Data
 
             sql += " ORDER BY ListDisplayName ASC";
 
-            if ( episodes )
+            if( episodes )
                 sql += ", Missing.SeasonNum ASC, Missing.EpisodeNum ASC ";
 
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
@@ -709,7 +724,8 @@ namespace Statistics2026.Data
                 var col = 0;
                 var curr = new MediaItemResponse()
                 {
-                    ListDisplayName = row.GetString( col++ ),
+                    ListDisplayName = row.GetString( col ),
+                    SortName = CleanSortName( row.GetString( col++ ) ),
                     StartYear = DBHelper.ReadDateTime( row.GetString( col++ ) ).Year.ToString(),
                     ResolutionDetail = string.Empty,
                     Codec = string.Empty,
@@ -731,6 +747,22 @@ namespace Statistics2026.Data
                 return true;
             } );
 
+            return retVal;
+        }
+
+
+        private List<MediaItemResponse> getMediaListResponse( bool episodes )
+        {
+            var retVal = getMediaListResponseOnServer( episodes );
+            retVal.AddRange( getMediaListResponseMissing( episodes ) );
+
+            retVal.Sort(
+                (x,y) =>
+                {
+                    var lhs = x.SortName;
+                    var rhs = y.SortName;
+                    return lhs.CompareTo( rhs );
+                } );
             return retVal;
         }
 
