@@ -141,8 +141,8 @@ namespace Statistics2026.Data
                         ("@ParentId", collection.Id.ToString() ),
                         ("@IsEpisode", false )
                     ] ) );
-
                 }
+                cancellationToken.ThrowIfCancellationRequested();
             }
 
             return retVal;
@@ -243,6 +243,7 @@ namespace Statistics2026.Data
                             ("@EpisodeNum", tmdbEpisode.EpisodeNumber )
                         ] ) );
                     }
+                    cancellationToken.ThrowIfCancellationRequested();
                 }
             }
 
