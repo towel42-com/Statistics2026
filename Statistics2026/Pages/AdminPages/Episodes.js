@@ -14,7 +14,7 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Episodes", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
                 Helpers.injectSortableTableStyle(document);
-                Helpers.setupSortability('episode_results_table', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+                Helpers.setupSortability('episode_results_table', 'episode_results_status', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
                 if (view.getAttribute('data-initialized') === 'true') {
                     return; // Exit and prevent reload

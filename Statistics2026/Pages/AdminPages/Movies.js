@@ -13,7 +13,7 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Movies", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
                 Helpers.injectSortableTableStyle(document);
-                Helpers.setupSortability('movie_results_table', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+                Helpers.setupSortability('movie_results_table', 'movie_results_status', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
                 if (view.getAttribute('data-initialized') === 'true') {
                     return; // Exit and prevent reload

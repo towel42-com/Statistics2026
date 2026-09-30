@@ -64,7 +64,7 @@ define(function () {
         var url = "Statistics2026/tv_series_progress/" + userName;
 
         const sortit = () => {
-            sortTable(1, "progress", 'TVSeriesProgressTable', showLoadingFunc, hideLoadingFunc, 'desc');
+            sortTable(1, "progress", 'TVSeriesProgressTable', 'TVSeriesProgressStatus', showLoadingFunc, hideLoadingFunc, 'desc');
         };
 
         loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
@@ -125,7 +125,7 @@ define(function () {
         retVal += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
         retVal += "<td style='align='left'>" + info.Codec + "</td>";
         retVal += "<td style='align='left'>" + info.DolbyVisionProfile + "</td>";
-        retVal += "<td style='align='left'>" + info.ServerLocation + "</td>";
+        retVal += "<td style='align='left' sort-value='" + info.LocationSortName + "'>" + info.ServerLocation + "</td>";
         return retVal;
     }
 
@@ -240,7 +240,9 @@ define(function () {
         var url = ApiClient.getUrl(apiEndpoint);
 
         var load_status = view.querySelector('#' + statusElementId);
+        load_status.style.display = '';
         load_status.innerHTML = "Loading Data...";
+
 
         showLoadingFunc();
         try {
@@ -252,8 +254,11 @@ define(function () {
                 return;
             });
 
-            // load_status.innerHTML = response.status + ":" + response.statusText;
-
+            if (resultData === undefined) {
+                console.error("loadTableData failed: result data was undefined", "url:", url);
+                hideLoadingFunc();
+                return;
+            }
 
             // console.log("resultData: " + JSON.stringify(resultData));
 
@@ -262,6 +267,7 @@ define(function () {
             let currentIndex = 0;
             let chunkSize = Math.min(50, Math.trunc(resultData.length / 20));
             function renderNextChunk() {
+                showLoadingFunc();
                 const endIndex = Math.min(currentIndex + chunkSize, resultData.length);
                 const fragment = document.createDocumentFragment();
 
@@ -290,7 +296,7 @@ define(function () {
                     if (onFinished !== undefined) {
                         onFinished();
                     }
-                    load_status.innerHTML = "&nbsp;";
+                    load_status.style.display = 'none';
                     hideLoadingFunc();
                 }
             }
@@ -317,11 +323,12 @@ define(function () {
         });
     }
 
-    function setupSortability(tableId, showLoadingFunc, hideLoadingFunc) {
+    function setupSortability(tableId, statusId, showLoadingFunc, hideLoadingFunc) {
         document.querySelectorAll(`#${tableId} thead th`).forEach((header, index) => {
             header.addEventListener('click', () => {
                 const columnType = header.getAttribute('data-type');
-                sortTable(index, columnType, tableId, showLoadingFunc, hideLoadingFunc);
+                let idx = header.cellIndex;
+                sortTable(idx, columnType, tableId, statusId, showLoadingFunc, hideLoadingFunc);
             });
         });
     }
@@ -360,8 +367,14 @@ define(function () {
 
 
     const sortDirections = new Map();
-    function sortTable(columnIndex, dataType, tableId, showLoadingFunc, hideLoadingFunc, forcedDir) {
+    async function sortTable(columnIndex, dataType, tableId, statusId, showLoadingFunc, hideLoadingFunc, forcedDir) {
         showLoadingFunc();
+
+        var load_status = document.querySelector('#' + statusId);
+        load_status.style.display = '';
+        load_status.innerHTML = "Sorting Data...";
+
+        await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 
         const table = document.getElementById(tableId);
         const tbody = table.querySelector("tbody");
@@ -395,43 +408,44 @@ define(function () {
         // Add current sorting indicator class to the active header
         table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
 
-        // Sort the row elements
-        rows.sort((rowA, rowB) => {
-            let cellA = rowA.children[columnIndex].getAttribute('sort-value');
-            if (cellA == null || cellA == '')
-                cellA = rowA.children[columnIndex].textContent;
-            cellA = cellA.trim();
+        setTimeout(() => {
+            rows.sort((rowA, rowB) => {
+                let cellA = rowA.children[columnIndex].getAttribute('sort-value');
+                if (cellA == null || cellA == '')
+                    cellA = rowA.children[columnIndex].textContent;
+                cellA = cellA.trim();
 
-            let cellB = rowB.children[columnIndex].getAttribute('sort-value' );
-            if (cellB == null || cellB == '')
-                cellB = rowB.children[columnIndex].textContent;
-            cellB = cellB.trim();
+                let cellB = rowB.children[columnIndex].getAttribute('sort-value');
+                if (cellB == null || cellB == '')
+                    cellB = rowB.children[columnIndex].textContent;
+                cellB = cellB.trim();
 
-            if (dataType === 'number') {
-                // Strip out currency symbols or non-numeric formatting characters if present
-                const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
-                const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
-                return currentDirection === 'asc' ? numA - numB : numB - numA;
-            } else if (dataType == 'string') {
-                // Text comparison using localeCompare for proper alphabetical ordering
-                return currentDirection === 'asc'
-                    ? cellA.localeCompare(cellB)
-                    : cellB.localeCompare(cellA);
-            } else { // progress
-                const matchA = cellA.match(/(?<percent>\d+)\%/);
-                const matchB = cellB.match(/(?<percent>\d+)\%/);
+                if (dataType === 'number') {
+                    // Strip out currency symbols or non-numeric formatting characters if present
+                    const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
+                    const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
+                    return currentDirection === 'asc' ? numA - numB : numB - numA;
+                } else if (dataType == 'string') {
+                    // Text comparison using localeCompare for proper alphabetical ordering
+                    return currentDirection === 'asc'
+                        ? cellA.localeCompare(cellB)
+                        : cellB.localeCompare(cellA);
+                } else { // progress
+                    const matchA = cellA.match(/(?<percent>\d+)\%/);
+                    const matchB = cellB.match(/(?<percent>\d+)\%/);
 
-                const numA = matchA ? +matchA.groups.percent : 0;
-                const numB = matchB ? +matchB.groups.percent : 0;
+                    const numA = matchA ? +matchA.groups.percent : 0;
+                    const numB = matchB ? +matchB.groups.percent : 0;
 
-                return currentDirection === 'asc' ? numA - numB : numB - numA;
-            }
-        });
+                    return currentDirection === 'asc' ? numA - numB : numB - numA;
+                }
+            });
 
-        // Re-append sorted rows to empty the body and place elements in new order
-        tbody.innerHTML = "";
-        rows.forEach(row => tbody.appendChild(row));
-        hideLoadingFunc();
+            tbody.innerHTML = "";
+            rows.forEach(row => tbody.appendChild(row));
+            load_status.style.display = 'none';
+            hideLoadingFunc();
+        }, 10);
     }
 
     function initCollapsibleTable(containerId) {
@@ -499,8 +513,7 @@ define(function () {
         loadTableData,
         loadUsers,
         setupSortability,
-        showInfo,
-        sortTable
+        showInfo
     };
 
 })
