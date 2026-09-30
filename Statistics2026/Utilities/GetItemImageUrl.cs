@@ -7,20 +7,26 @@ namespace Statistics2026.Utilities
 {
     public static class ItemImageUrl
     {
-        public static string _ItemImageUrl( string itemId, ILibraryManager libManager, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
+        public static string _ItemImageUrl( string itemId, ILibraryManager? libManager, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
             var guid = new Guid( itemId );
             return _ItemImageUrl( guid, libManager, imageType, maxWidth, quality, imageIndex );
         }
 
-        public static string _ItemImageUrl( long itemId, ILibraryManager libManager, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
+        public static string _ItemImageUrl( long itemId, ILibraryManager? libManager, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
+            if( libManager == null )
+                return string.Empty;
+
             var item = libManager.GetItemById( itemId );
             return item == null ? string.Empty : _ItemImageUrl( item, imageType, maxWidth, quality, imageIndex );
         }
 
-        public static string _ItemImageUrl( Guid itemId, ILibraryManager libManager, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
+        public static string _ItemImageUrl( Guid itemId, ILibraryManager? libManager, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
+            if( libManager == null )
+                return string.Empty;
+
             var item = libManager.GetItemById( itemId );
             return item == null ? string.Empty : _ItemImageUrl( item, imageType, maxWidth, quality, imageIndex );
         }

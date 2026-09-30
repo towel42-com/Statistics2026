@@ -19,7 +19,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckType.eUpdate );
 
             _dbHelper!.Progress?.Report( 0 );
-            var users = _embyInterfaces?._userManager.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+            var users = _embyInterfaces?._userManager!.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
             if( users == null )
                 return;
             _dbHelper!.Progress?.Report( 100 );
@@ -79,7 +79,7 @@ namespace Statistics2026.Data
             {
 
                 _dbHelper!.Progress?.Report( 0 );
-                var users = _embyInterfaces?._userManager.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+                var users = _embyInterfaces?._userManager!.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
                 if( users == null )
                 {
                     _dbHelper!.Progress?.Report( 100 );
@@ -292,7 +292,7 @@ namespace Statistics2026.Data
             bool? newFavorite = null;
             var updateLastPlayedDate = false;
 
-            var userData = _embyInterfaces!._userDataManager.GetUserData( user, video );
+            var userData = _embyInterfaces!._userDataManager!.GetUserData( user, video );
             if( userData == null )
                 return;
 
@@ -1005,12 +1005,12 @@ namespace Statistics2026.Data
                 var user = getUserForTableName( tableName );
                 if( user == null )
                 {
-                    _embyInterfaces?._logger.Warn( $"Invalid user table name {tableName}" );
+                    _embyInterfaces?._logger!.Warn( $"Invalid user table name {tableName}" );
                     return [];
                 }
                 else
                 {
-                    _embyInterfaces?._logger.Warn( $"User: {user.Name} has an invalid UserMedia table" );
+                    _embyInterfaces?._logger!.Warn( $"User: {user.Name} has an invalid UserMedia table" );
                 }
 
                 var fields = $"Users.UserName, {tableName}.ItemID, {tableName}.Name, Media.RunTimeTicks, {tableName}.IsPlayed, {tableName}.PlayCount"

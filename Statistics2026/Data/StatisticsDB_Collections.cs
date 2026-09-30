@@ -87,7 +87,7 @@ namespace Statistics2026.Data
                 Recursive = true
             };
 
-            var baseItems = _embyInterfaces._libraryManager.GetItemList( query );
+            var baseItems = _embyInterfaces._libraryManager!.GetItemList( query );
             var videos = baseItems.OfType<Video>().ToList();
 
             double count = videos.Count;

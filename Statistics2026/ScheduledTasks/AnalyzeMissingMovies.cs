@@ -15,16 +15,17 @@ using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeCollectionsTask : IScheduledTask
+    public class AnalyzeMissingMoviesTask : IScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
-        public AnalyzeCollectionsTask(
+        public AnalyzeMissingMoviesTask(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -47,7 +48,7 @@ namespace Statistics2026.ScheduledTasks
                 _fileSystem = fileSystem,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeCollectionsTask" ),
+                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeMissingMoviesTask" ),
                 _serverApplicationPaths = serverApplicationPaths,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
@@ -57,14 +58,17 @@ namespace Statistics2026.ScheduledTasks
                 _providerManager = providerManager,
                 _configManager = configManager,
                 _taskManager = taskManager,
+                _httpClient = httpClient,
+                _authenticationRepository = authenticationRepository,
+                _sessionManager = sessionManager,
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze Collection information";
+        string IScheduledTask.Name => "\u2022 Analyze Missing Movies";
 
-        string IScheduledTask.Key => "Statistics2026CalculateAllCollections";
+        string IScheduledTask.Key => "Statistics2026CalculateMissing";
 
-        string IScheduledTask.Description => "Task that will analyze the library's collections.";
+        string IScheduledTask.Description => "Task that will analyze the library's missing movies.";
 
         string IScheduledTask.Category => "Statistics 2026";
 
@@ -75,24 +79,24 @@ namespace Statistics2026.ScheduledTasks
                 throw new Exception( "Statistics 2026 task is running" );
             }
 
-            var taskName = "Analyze Collections";
-            _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
+            var taskName = "Analyze Missing";
+            _embyInterfaces!._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
             // purely for progress reporting
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
 
-            long addCollections = 0;
-            using( var timer = new AutoTimer( $"Adding Collections", _embyInterfaces._logger ) )
+            long analyzeMissing = 0;
+            using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces._logger ) )
             {
-                db.AddAllCollectionsTaskImpl( cancellationToken, progress );
-                addCollections = timer.ElapsedMilliseconds();
+                db.AnalyzeMissingMoviesTaskImpl( cancellationToken, progress ).ConfigureAwait( false ).GetAwaiter().GetResult();
+                analyzeMissing = timer.ElapsedMilliseconds();
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"    Collections: {addCollections} ms" );
+            _embyInterfaces._logger.Info( $"    Missing: {analyzeMissing} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
             _embyInterfaces._logger.Info( $"Statistics 2026 : Finished Statistics 2026 {taskName} task" );
 

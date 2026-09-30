@@ -16,7 +16,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckType.eUpdate );
 
             _dbHelper!.Progress?.Report( 0 );
-            var users = _embyInterfaces?._userManager.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+            var users = _embyInterfaces?._userManager!.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
             if( users == null )
                 return;
 
@@ -66,12 +66,12 @@ namespace Statistics2026.Data
             long watched = 0;
             if( user == null && userList != null ) // use the list of users
             {
-                watched = allVideos.Where( video => userList.Any( u => _embyInterfaces!._userDataManager.GetUserData( u, video ).Played ) ).Sum( item => item.RunTimeTicks ?? 0 );
+                watched = allVideos.Where( video => userList.Any( u => _embyInterfaces._userDataManager!.GetUserData( u, video ).Played ) ).Sum( item => item.RunTimeTicks ?? 0 );
                 watchable = allVideos.Sum( item => item.RunTimeTicks ?? 0 );
             }
             else
             {
-                watched = allVideosForUser.Where( video => _embyInterfaces!._userDataManager.GetUserData( user, video ).Played ).Sum( item => item.RunTimeTicks ?? 0 );
+                watched = allVideosForUser.Where( video => _embyInterfaces!._userDataManager!.GetUserData( user, video ).Played ).Sum( item => item.RunTimeTicks ?? 0 );
                 watchable = allVideosForUser.Sum( item => item.RunTimeTicks ?? 0 );
             }
 

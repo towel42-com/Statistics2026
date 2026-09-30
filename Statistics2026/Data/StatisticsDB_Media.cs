@@ -672,6 +672,65 @@ namespace Statistics2026.Data
                 return true;
             } );
 
+            sql = "SELECT " +
+                "  Missing.Title AS ListDisplayName" +
+                ", Missing.ReleaseDate";
+            if( episodes )
+            {
+                sql += ", Series.Name";
+            }
+            else
+            {
+                sql += ", Collections.Name";
+            }
+
+            sql += 
+                " FROM " +
+                "   Missing ";
+
+            if( episodes )
+                sql += " LEFT JOIN Series ON Series.ItemId=Missing.ParentId ";
+            else
+                sql += " LEFT JOIN Collections ON Collections.ItemId=Missing.ParentId ";
+
+            if( episodes )
+                sql += " WHERE Missing.IsEpisode ";
+            else
+                sql += " WHERE NOT Missing.IsEpisode ";
+
+            sql += " ORDER BY ListDisplayName ASC";
+
+            if ( episodes )
+                sql += ", Missing.SeasonNum ASC, Missing.EpisodeNum ASC ";
+
+            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+                var curr = new MediaItemResponse()
+                {
+                    ListDisplayName = row.GetString( col++ ),
+                    StartYear = DBHelper.ReadDateTime( row.GetString( col++ ) ).Year.ToString(),
+                    ResolutionDetail = string.Empty,
+                    Codec = string.Empty,
+                    DolbyVisionProfile = string.Empty,
+                    ServerLocation = "<MISSING>"
+                };
+                var parentName = row.GetString( col++ );
+                var parentType = episodes ? "Series" : "Collection";
+                curr.ServerLocation = $"Missing from {parentType} '{parentName}'";
+                var itemId = string.Empty;
+                var itemUrl = string.Empty;
+                curr.ItemUrl = string.Empty;
+                if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
+                {
+                    curr.ListDisplayName = curr.ItemUrl;
+                }
+
+                retVal.Add( curr );
+                return true;
+            } );
+
             return retVal;
         }
 

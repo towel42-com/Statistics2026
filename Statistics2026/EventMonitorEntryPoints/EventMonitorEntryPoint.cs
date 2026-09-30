@@ -1,9 +1,11 @@
 ﻿using MediaBrowser.Common;
+using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Controller.Security;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
@@ -25,24 +27,39 @@ namespace Statistics2026.EventMonitorEntryPoints
         private readonly object syncLock = new();
 
         public EventMonitorEntryPoint(
-            ISessionManager sessionManager,
-            ILogManager logManager,
-            IServerConfigurationManager configManager,
-            IUserManager userManager,
-            IUserDataManager userDataManager,
-            ILibraryManager libraryManager,
             IFileSystem fileSystem,
-            IJsonSerializer jsonSerializer,
+            ILibraryManager libraryManager,
+            ILogManager logManager,
             IServerApplicationPaths serverApplicationPaths,
+            IUserDataManager userDataManager,
+            IUserManager userManager,
             IApplicationHost appHost,
-            IProviderManager providerManager,
             Statistics2026API apiService,
-            ITaskManager taskManager
+            IJsonSerializer jsonSerializer,
+            IProviderManager providerManager,
+            IServerConfigurationManager configManager,
+            ITaskManager taskManager,
+            ISessionManager sessionManager,
+            IHttpClient httpClient,
+            IAuthenticationRepository authenticationRepository
             )
         {
 
-            _embyInterfaces = new EmbyInterfaces( fileSystem, libraryManager, logManager, logManager.GetLogger( "Statistics2026 - EventMonitorEntryPoint" ), serverApplicationPaths, userDataManager, userManager, appHost, apiService, jsonSerializer, providerManager, configManager, taskManager )
+            _embyInterfaces = new EmbyInterfaces( appHost )
             {
+                _fileSystem = fileSystem,
+                _libraryManager = libraryManager,
+                _logManager = logManager,
+                _logger = logManager.GetLogger( "Statistics2026 - EventMonitorEntryPoint" ),
+                _serverApplicationPaths = serverApplicationPaths,
+                _userDataManager = userDataManager,
+                _userManager = userManager,
+                _appHost = appHost,
+                _apiService = apiService,
+                _jsonSerializer = jsonSerializer,
+                _providerManager = providerManager,
+                _configManager = configManager,
+                _taskManager = taskManager,
                 _sessionManager = sessionManager
             };
         }

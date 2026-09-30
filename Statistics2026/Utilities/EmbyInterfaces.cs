@@ -1,9 +1,12 @@
 ﻿using MediaBrowser.Common;
+using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
+using MediaBrowser.Controller.Authentication;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Controller.Security;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
@@ -16,34 +19,10 @@ namespace Statistics2026.Api
     public class EmbyInterfaces
     {
         public EmbyInterfaces(
-            IFileSystem fileSystem,
-            ILibraryManager libraryManager,
-            ILogManager logManager,
-            ILogger logger,
-            IServerApplicationPaths serverApplicationPaths,
-            IUserDataManager userDataManager,
-            IUserManager userManager,
-            IApplicationHost appHost,
-            Statistics2026API apiService,
-            IJsonSerializer jsonSerializer,
-            IProviderManager providerManager,
-            IServerConfigurationManager configManager,
-            ITaskManager taskManager
+            IApplicationHost appHost
         )
         {
-            _fileSystem = fileSystem;
-            _libraryManager = libraryManager;
-            _logManager = logManager;
-            _logger = logger;
-            _serverApplicationPaths = serverApplicationPaths;
-            _userDataManager = userDataManager;
-            _userManager = userManager;
             _appHost = appHost;
-            _apiService = apiService;
-            _jsonSerializer = jsonSerializer;
-            _providerManager = providerManager;
-            _configManager = configManager;
-            _taskManager = taskManager;
             Plugin.Instance?.ServerId = _appHost.SystemId;
         }
 
@@ -63,14 +42,14 @@ namespace Statistics2026.Api
             return _userManager!.GetUserById( id );
         }
 
-        public readonly IFileSystem _fileSystem;
-        public readonly ILibraryManager _libraryManager;
-        public readonly ILogManager _logManager;
-        public readonly ILogger _logger;
-        public readonly IServerApplicationPaths _serverApplicationPaths;
-        public readonly IUserDataManager _userDataManager;
-        public readonly IUserManager _userManager;
-        public IApplicationHost _appHost
+        public IFileSystem? _fileSystem = null;
+        public ILibraryManager? _libraryManager = null;
+        public ILogManager? _logManager = null;
+        public ILogger? _logger = null;
+        public IServerApplicationPaths? _serverApplicationPaths = null;
+        public IUserDataManager? _userDataManager = null;
+        public IUserManager? _userManager = null;
+        public IApplicationHost? _appHost
         {
             set
             {
@@ -80,11 +59,13 @@ namespace Statistics2026.Api
             }
             get;
         }
-        public readonly Statistics2026API _apiService;
-        public readonly IJsonSerializer _jsonSerializer;
-        public readonly IProviderManager _providerManager;
-        public readonly IServerConfigurationManager _configManager;
-        public readonly ITaskManager _taskManager;
+        public Statistics2026API? _apiService = null;
+        public IJsonSerializer? _jsonSerializer = null;
+        public IProviderManager? _providerManager = null;
+        public IServerConfigurationManager? _configManager = null;
+        public ITaskManager? _taskManager = null;
         public ISessionManager? _sessionManager = null;
+        public IHttpClient? _httpClient = null;
+        public IAuthenticationRepository? _authenticationRepository = null;
     }
 }
