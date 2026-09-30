@@ -43,7 +43,7 @@
                 }
 
                 ApiClient.getUser(userId).then(function (user) {
-                    Helpers.LoadTVProgress(view, user.Name, loading.show, loading.hide, Helpers);
+                    Helpers.LoadTVProgress(view, user.Name, loading.show, loading.hide);
                 });
             }
         };

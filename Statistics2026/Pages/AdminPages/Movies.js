@@ -15,6 +15,10 @@
                 Helpers.injectSortableTableStyle(document);
                 Helpers.setupSortability('movie_results_table', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
+                if (view.getAttribute('data-initialized') === 'true') {
+                    return; // Exit and prevent reload
+                }
+                view.setAttribute('data-initialized', 'true');
                 loadTableData();
             });
 
@@ -31,7 +35,7 @@
                     Dashboard.hideLoadingMsg();
                     return;
                 }
-                Helpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+                Helpers.loadTableData(view, 'movie_results_status', 'movie_results', 'Statistics2026/movie_list', Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
             }
 
         };

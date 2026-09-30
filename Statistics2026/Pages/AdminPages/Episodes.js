@@ -11,13 +11,15 @@
         return function (view, params) {
 
             view.addEventListener('viewshow', function (e) {
-
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Episodes", AdminHelpers.getTabs), AdminHelpers.getTabs);
-
                 Helpers.injectStyleSheet();
                 Helpers.injectSortableTableStyle(document);
                 Helpers.setupSortability('episode_results_table', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
+                if (view.getAttribute('data-initialized') === 'true') {
+                    return; // Exit and prevent reload
+                }
+                view.setAttribute('data-initialized', 'true');
                 loadTableData();
             });
 
@@ -32,7 +34,7 @@
                     Dashboard.hideLoadingMsg();
                     return;
                 }
-                Helpers.loadTableData(view, 'episode_results_status', 'episode_results', 'Statistics2026/episode_list', Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+                Helpers.loadTableData(view, 'episode_results_status', 'episode_results', 'Statistics2026/episode_list', Helpers.getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
             }
         };
     }

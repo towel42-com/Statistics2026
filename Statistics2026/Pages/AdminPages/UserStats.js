@@ -34,7 +34,7 @@
                 }
 
                 ApiClient.getUser(userId).then(function (user) {
-                    Helpers.LoadUserStats(view, user.Name, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg, Helpers);
+                    Helpers.LoadUserStats(view, user.Name, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
                 });
             }
         }

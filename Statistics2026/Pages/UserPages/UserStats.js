@@ -36,7 +36,7 @@
                 }
 
                 ApiClient.getUser(userId).then(function (user) {
-                    Helpers.LoadUserStats(view, user.Name, loading.show, loading.hide, Helpers);
+                    Helpers.LoadUserStats(view, user.Name, loading.show, loading.hide);
                 });
             }
         };
