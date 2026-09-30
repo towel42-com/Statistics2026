@@ -96,7 +96,7 @@ namespace Statistics2026.Data
                         new TableColDef( "SeasonNum", "INT", true ),
                         new TableColDef( "EpisodeNum", "INT", true ),
                     ]
-                ),
+                ){ ValidationRequiresData = false },
                 new TableDef("Collections",
                     [
                             new TableColDef( "ItemId", "TEXT", false, true),

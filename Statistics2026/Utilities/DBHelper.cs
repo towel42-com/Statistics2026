@@ -396,7 +396,7 @@ namespace Statistics2026.Utilities
             return " WHERE " + string.Join( " AND ", clauses ) + " ";
         }
 
-        public void ValidateTables( List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState )
+        public void ValidateTables( List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState )
         {
             if( tables.IsNullOrEmpty() )
             {
@@ -414,7 +414,7 @@ namespace Statistics2026.Utilities
                 var tableNeedsData = false;
                 if( !tableMissing )
                 {
-                    (columnMissing, tableNeedsData) = ValidateTable( tableName, getColumnsFunc( tableName ), additionalNeedsDataFunc );
+                    (columnMissing, tableNeedsData) = ValidateTable( tableName, getColumnsFunc( tableName ), validationRequiresDataFunc, additionalNeedsDataFunc );
                 }
                 else
                 {
@@ -431,7 +431,7 @@ namespace Statistics2026.Utilities
             updateDBState( aTableMissing || aColumnMissing, aTableNeedsData );
         }
 
-        public (bool columnMissing, bool dataMissing) ValidateTable( string tableName, List<string> columns, Func<string, bool>? additionalNeedsDataFunc )
+        public (bool columnMissing, bool dataMissing) ValidateTable( string tableName, List<string> columns, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc )
         {
             var columnMissing = false;
             foreach( var columnName in columns )
@@ -439,8 +439,9 @@ namespace Statistics2026.Utilities
                 columnMissing = columnMissing || !ColumnExists( tableName, columnName );
             }
 
-            var tableNeedsData = true;
-            if( !columnMissing )
+            var validationRequiresData = validationRequiresDataFunc( tableName );
+            var tableNeedsData = columnMissing;
+            if( !columnMissing && validationRequiresData )
             {
                 var sql = $"SELECT COUNT(*) FROM {tableName} LIMIT 1";
 

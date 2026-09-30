@@ -33,6 +33,17 @@ namespace Statistics2026.Data
                         return [];
                     }
                 },
+                tableName =>
+                {
+                    if( _tableMap.TryGetValue( tableName, out var tableDef ) )
+                    {
+                        return tableDef.ValidationRequiresData;
+                    }
+                    else
+                    {
+                        return false;
+                    }
+                },
                 null,
                 ( createTableNeeded, initDataNeeded ) =>
                 {
@@ -70,6 +81,10 @@ namespace Statistics2026.Data
                 tableName =>
                 {
                     return _userMediaTemplate!.ColumnNames();
+                },
+                tableName =>
+                {
+                    return true;
                 },
                 tableName =>
                 {

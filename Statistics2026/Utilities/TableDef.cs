@@ -251,5 +251,6 @@ namespace Statistics2026.Utilities
         public List<TableColDef> Columns { get; private set; }
         public List<string> Indexes { get; private set; }
         public bool DeprecatedTable { get; set; } = false;
+        public bool ValidationRequiresData { get; set; } = true;
     }
 }
