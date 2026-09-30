@@ -660,6 +660,7 @@ namespace Statistics2026.Data
                     ServerLocation = row.GetString( col++ )
                 };
 
+                curr.LocationSortName = curr.ServerLocation;
                 var itemId = row.GetString( col++ );
                 var itemUrl = row.GetString( col++ );
                 curr.ItemUrl = ItemImageUrl.ItemUrl( itemId, itemUrl, curr.SortName );
@@ -735,16 +736,17 @@ namespace Statistics2026.Data
                     ResolutionDetail = string.Empty,
                     Codec = string.Empty,
                     DolbyVisionProfile = string.Empty,
-                    ServerLocation = "<MISSING>"
                 };
                 var parentName = row.GetString( col++ );
                 var posterPath = row.GetString( col++ );
                 var seasonNum = row.GetInt( col++ );
                 var episodeNum = row.GetInt( col++ );
 
-                if( !posterPath.StartsWith( "/" ) )
+                if( posterPath != null && !posterPath.StartsWith( "/" ) )
+                {
                     posterPath = "/" + posterPath;
-                curr.ItemUrl = "https://image.tmdb.org/t/p/w185" + posterPath;
+                    curr.ItemUrl = "https://image.tmdb.org/t/p/w185" + posterPath;
+                }
                 if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
                 {
                     curr.ListDisplayName = $"<a is=\"emby-linkbutton\" href=\"{curr.ItemUrl}\"><img loading=\"lazy\" src=\"{curr.ItemUrl}\" height=\"105px\"/>{curr.SortName}</a>";
@@ -752,30 +754,31 @@ namespace Statistics2026.Data
 
                 var parentType = episodes ? "Series" : "Collection";
                 curr.ServerLocation = $"Missing from {parentType} '{parentName}'";
+                var searchKey = curr.SortName;
+                if( episodes )
+                {
+                    searchKey = parentName;
+                    string subKey = string.Empty;
+                    if( seasonNum != 0 )
+                        subKey += $"S{seasonNum:D2}";
+                    if( episodeNum != 0 )
+                        subKey += $"S{episodeNum:D2}";
+                    if( !string.IsNullOrEmpty( subKey ) )
+                        searchKey += " " + subKey;
+                }
+                else
+                {
+                    searchKey += " " + curr.StartYear.ToString();
+                }
 
                 if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
                 {
-                    var searchKey = curr.SortName;
-                    if( episodes )
-                    {
-                        searchKey = parentName;
-                        string subKey = string.Empty;
-                        if( seasonNum != 0 )
-                            subKey += "S{seasonNum:D2}";
-                        if( episodeNum != 0 )
-                            subKey += "S{episodeNum:D2}";
-                        if( !string.IsNullOrEmpty( subKey ) )
-                            searchKey += " " + subKey;
-                    }
-                    else
-                    {
-                        searchKey += " " + curr.StartYear.ToString();
-                    }
-
                     var searchUrl = Plugin.Instance!.Configuration.searchLocation;
                     if( !searchUrl.EndsWith( "?q=" ) )
                         searchUrl += "?q=";
                     searchUrl += searchKey;
+
+                    curr.LocationSortName = $"{parentName} - {searchKey}";
 
                     var displayText = $"{curr.ServerLocation} - Click to Search for '{searchKey}'";
 
@@ -793,8 +796,8 @@ namespace Statistics2026.Data
 
         private List<MediaItemResponse> getMediaListResponse( bool episodes )
         {
-            var retVal = getMediaListResponseOnServer( episodes );
-            retVal.AddRange( getMediaListResponseMissing( episodes ) );
+            var retVal = getMediaListResponseMissing( episodes );
+            retVal.AddRange( getMediaListResponseOnServer( episodes ) );
 
             retVal.Sort(
                 (x,y) =>
