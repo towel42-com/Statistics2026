@@ -33,7 +33,6 @@ namespace Statistics2026.Api
             IUserDataManager userDataManager,
             IUserManager userManager,
             IApplicationHost appHost,
-            Statistics2026API apiService,
             IJsonSerializer jsonSerializer,
             IProviderManager providerManager,
             IServerConfigurationManager configManager,
