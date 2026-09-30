@@ -1,5 +1,7 @@
 ﻿using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using ServiceStack;
@@ -468,6 +470,94 @@ namespace Statistics2026.Utilities
             {
                 return reader.ReadToEnd();
             }
+        }
+
+        public Season? GetSeasonFromSeries( Series series, int seasonNum )
+        {
+            var result = series.GetItems( new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { nameof( Season ) },
+                Recursive = true
+            } );
+
+            var seasons = result.Items.Cast<Season>().ToList();
+            foreach( var season in seasons )
+            {
+                if( season.IndexNumber == seasonNum )
+                    return season;
+            }
+            return null;
+        }
+
+        public Movie? GetMovieByTmdbId( ILibraryManager? libraryManager, string tmdbId )
+        {
+            if( libraryManager == null )
+                return null;
+
+            var query = new InternalItemsQuery
+            {
+                // Target only Movie types to ensure accuracy
+                IncludeItemTypes = new[] { typeof( Movie ).Name },
+                // Look up by the formatted provider string
+                AnyProviderIdEquals = new[]
+                {
+                    new KeyValuePair<string, string>("Tmdb", tmdbId)
+                },
+                // Search across all libraries recursively
+                Recursive = true
+            };
+
+            // Execute query and grab the first match
+            var result = libraryManager.GetItemList( query );
+            if( result == null )
+                return null;
+
+            return result.FirstOrDefault() as Movie;
+        }
+
+        public Episode? GetEpisodeFromTmdbId( ILibraryManager? libraryManager, Season embySeason, string tmdbId, int episodeNum )
+        {
+            if( ( libraryManager == null ) || ( embySeason == null ) )
+                return null;
+
+            var query = new InternalItemsQuery
+            {
+                Parent = embySeason,
+                // Target only Movie types to ensure accuracy
+                IncludeItemTypes = new[] { typeof( Episode ).Name },
+                // Look up by the formatted provider string
+                AnyProviderIdEquals = new[]
+                {
+                    new KeyValuePair<string, string>("Tmdb", tmdbId)
+                },
+                // Search across all libraries recursively
+                Recursive = true
+            };
+
+            // Execute query and grab the first match
+            var result = libraryManager.GetItemList( query );
+            if( result != null && result.Count() != 0 )
+            {
+                var episode = result.FirstOrDefault() as Episode;
+                if( episode != null )
+                    return episode;
+            }
+
+            var queryResult = embySeason.GetItems( new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { nameof( Episode ) },
+                Recursive = true
+            } );
+
+            // Extract the episode numbers
+            var retVal = queryResult.Items
+                .Cast<Episode>()
+                .FirstOrDefault( ep =>
+                ep.IndexNumber == episodeNum ||
+                ( ep.IndexNumberEnd != null && ( ep.IndexNumber <= episodeNum ) && ( ep.IndexNumberEnd >= episodeNum ) ) )
+                ;
+
+            return retVal;
         }
     }
 }

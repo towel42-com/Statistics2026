@@ -69,18 +69,17 @@ namespace Statistics2026.Utilities
                 CacheMode = CacheMode.None
             };
 
-            var response = _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ).GetAwaiter().GetResult();
-            //_embyInterfaces._logger!.Debug( DBHelper.StreamToString( response.Content ) );
+            var response = _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false );
         }
 
 
-        public async Task<List<TmdbMovie>> GetRemoteCollectionMembersAsync( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
+        public async Task<TmdbCollection?> GetRemoteCollectionMembersAsync( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
         {
             if( string.IsNullOrEmpty( tmdbId ) )
-                return [];
+                return null;
 
             if( ( _embyInterfaces == null ) || ( _embyInterfaces._httpClient == null ) || ( _embyInterfaces._jsonSerializer == null ) || ( _embyInterfaces._providerManager == null ) )
-                return [];
+                return null;
 
             //string url = $"https://themoviedb.org/{tmdbCollectionId}?api_key={kApiKeyV3}&language={language}";
             var builder = new UriBuilder();
@@ -102,14 +101,21 @@ namespace Statistics2026.Utilities
                 CacheMode = CacheMode.None
             };
 
-            using( var response = await _embyInterfaces._httpClient.GetResponse( options ).ConfigureAwait( false ) )
+            try
             {
-                var collections = _embyInterfaces._jsonSerializer.DeserializeFromStream<TmdbCollectionResponse>( response.Content );
-                return collections?.Parts ?? new List<TmdbMovie>();
+                using( var response = await _embyInterfaces._httpClient.GetResponse( options ).ConfigureAwait( false ) )
+                {
+                    var collections = _embyInterfaces._jsonSerializer.DeserializeFromStream<TmdbCollection>( response.Content );
+                    return collections ?? null;
+                }
+            }
+            catch
+            {
+                return null;
             }
         }
 
-        public async Task<TmdbSeries?> GetRemoteSeriesAsync( string tmdbId, bool includeEpisodes, CancellationToken? cancellationToken = null, string language = "en-US" )
+        public async Task<TmdbSeries?> GetRemoteSeriesAsync( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
         {
             TmdbSeries? retVal = null;
             if( string.IsNullOrEmpty( tmdbId ) )
@@ -137,34 +143,41 @@ namespace Statistics2026.Utilities
                 CacheLength = System.TimeSpan.FromDays( 1 ),
                 CacheMode = CacheMode.None
             };
-
-            using( var response = await _embyInterfaces._httpClient.GetResponse( options ).ConfigureAwait( false ) )
+            try
             {
-                var text = DBHelper.StreamToString( response.Content );
-                //var seriesList = TmdbSeriesResponse.FromJson( text, _embyInterfaces._jsonSerializer );
-                var series = _embyInterfaces._jsonSerializer.DeserializeFromString<TmdbSeries>( text );
-                if( series == null )
-                    return retVal;
-                if( series.Seasons != null && series.Seasons.Count > 0 )
+
+                using( var response = await _embyInterfaces._httpClient.GetResponse( options ).ConfigureAwait( false ) )
                 {
-                    List<TmdbSeason> seasons = [];
-                    foreach( var season in series.Seasons )
+                    var text = DBHelper.StreamToString( response.Content );
+                    //var seriesList = TmdbSeriesResponse.FromJson( text, _embyInterfaces._jsonSerializer );
+                    var series = _embyInterfaces._jsonSerializer.DeserializeFromString<TmdbSeries>( text );
+                    if( series == null )
+                        return retVal;
+                    if( series.Seasons != null && series.Seasons.Count > 0 )
                     {
-                        if( season == null )
-                            continue;
-                        seasons.Add( season );
-                        if( seasons.Count == 20 )
+                        List<TmdbSeason> seasons = [];
+                        foreach( var season in series.Seasons )
+                        {
+                            if( season == null )
+                                continue;
+                            seasons.Add( season );
+                            if( seasons.Count == 20 )
+                            {
+                                retVal = await GetRemoteEpisodesAsync( retVal, seasons, tmdbId, cancellationToken ).ConfigureAwait( false );
+                                seasons.Clear();
+                            }
+                        }
+                        if( seasons.Count > 0 )
                         {
                             retVal = await GetRemoteEpisodesAsync( retVal, seasons, tmdbId, cancellationToken ).ConfigureAwait( false );
-                            seasons.Clear();
                         }
                     }
-                    if( seasons.Count > 0 )
-                    {
-                        retVal = await GetRemoteEpisodesAsync( retVal, seasons, tmdbId, cancellationToken ).ConfigureAwait( false );
-                    }
+                    return retVal;
                 }
-                return retVal;
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -193,7 +206,7 @@ namespace Statistics2026.Utilities
             List<string> seasonStrings = [];
             foreach( var season in seasons )
             {
-                seasonStrings.Add( $"season/{season.Season_Number.ToString()}" );
+                seasonStrings.Add( $"season/{season.SeasonNumber.ToString()}" );
             }
             query[ "append_to_response" ] = String.Join( ",", seasonStrings );
             builder.Query = query.ToString();
@@ -219,7 +232,7 @@ namespace Statistics2026.Utilities
 
     // Data contracts mapped exactly to TMDB's native collection response footprint
     [DataContract]
-    public class TmdbCollectionResponse
+    public class TmdbCollection
     {
         [DataMember( Name = "id" )]
         public string Id { get; set; } = string.Empty;
@@ -231,7 +244,7 @@ namespace Statistics2026.Utilities
         public string Overview { get; set; } = string.Empty;
 
         [DataMember( Name = "parts" )]
-        public List<TmdbMovie> Parts { get; set; } = [];
+        public List<TmdbMovie> Movies { get; set; } = [];
     }
 
     [DataContract]
@@ -287,7 +300,7 @@ namespace Statistics2026.Utilities
                 if( season == null )
                     continue;
 
-                retVal.Add( season.Season_Number );
+                retVal.Add( season.SeasonNumber );
             }
             return retVal;
         }
@@ -325,7 +338,7 @@ namespace Statistics2026.Utilities
                 if( detailedSeason == null )
                     continue;
 
-                var existingSeason = retVal.Seasons.FirstOrDefault( s => ( s != null ) && ( s.Season_Number == detailedSeason.Season_Number ) );
+                var existingSeason = retVal.Seasons.FirstOrDefault( s => ( s != null ) && ( s.SeasonNumber == detailedSeason.SeasonNumber ) );
                 if( existingSeason != null )
                 {
                     // Merge the full episode array into your main dataset
@@ -353,19 +366,19 @@ namespace Statistics2026.Utilities
         public string Name { get; set; } = string.Empty;
 
         [DataMember( Name = "season_number" )]
-        public int Season_Number { get; set; } = 0;
+        public int SeasonNumber { get; set; } = 0;
 
         [DataMember( Name = "episode_count" )]
-        public int Episode_Count { get; set; } = 0;
+        public int EpisodeCount { get; set; } = 0;
 
         [DataMember( Name = "air_date" )]
-        public string Air_date { get; set; } = string.Empty;
+        public string AirDateStr { get; set; } = string.Empty;
 
         [DataMember( Name = "overview" )]
         public string Overview { get; set; } = string.Empty;
 
         [DataMember( Name = "poster_path" )]
-        public string Poster_Path { get; set; } = string.Empty;
+        public string PosterPath { get; set; } = string.Empty;
 
         [DataMember( Name = "episodes" )]
         public List<TmdbEpisode> Episodes { get; set; } = [];
@@ -373,10 +386,10 @@ namespace Statistics2026.Utilities
         // Helper method for safely parsing the date string
         public DateTime AirDate()
         {
-            if( string.IsNullOrEmpty( Air_date ) )
+            if( string.IsNullOrEmpty( AirDateStr ) )
                 return DateTime.MinValue;
 
-            return DBHelper.ReadDateTime( Air_date );
+            return DBHelper.ReadDateTime( AirDateStr );
         }
     }
 
@@ -390,24 +403,24 @@ namespace Statistics2026.Utilities
         public string Name { get; set; } = string.Empty;
 
         [DataMember( Name = "air_date" )]
-        public string Air_Date { get; set; } = string.Empty;
+        public string AirDateStr { get; set; } = string.Empty;
 
         [DataMember( Name = "overview" )]
         public string Overview { get; set; } = string.Empty;
 
         [DataMember( Name = "still_path" )]
-        public string Still_Path { get; set; } = string.Empty;
+        public string StillPath { get; set; } = string.Empty;
 
         [DataMember( Name = "episode_number" )]
-        public int Episode_Number { get; set; } = 0;
+        public int EpisodeNumber { get; set; } = 0;
 
         // Helper method for safely parsing the date string
         public DateTime AirDate()
         {
-            if( string.IsNullOrEmpty( Air_Date ) )
+            if( string.IsNullOrEmpty( AirDateStr ) )
                 return DateTime.MinValue;
 
-            return DBHelper.ReadDateTime( Air_Date );
+            return DBHelper.ReadDateTime( AirDateStr );
         }
     }
 
