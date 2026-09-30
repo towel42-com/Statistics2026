@@ -86,6 +86,7 @@
             movieStats_totals += Helpers.getSummaryInfo(view, "total_movie_count", "");
             movieStats_totals += Helpers.getSummaryInfo(view, "total_collection_count", "");
             movieStats_totals += Helpers.getSummaryInfo(view, "total_movie_studio_count", "");
+            movieStats_totals += Helpers.getSummaryInfo(view, "total_missing_movies", "");
             view.querySelector("#movieStats_totals").innerHTML = movieStats_totals;
 
             var movieStats_size = "";
@@ -123,6 +124,7 @@
             var seriesStats_totals = "";
             seriesStats_totals += Helpers.getSummaryInfo(view, "total_tv_count", "");
             seriesStats_totals += Helpers.getSummaryInfo(view, "total_tv_studio_count", "");
+            seriesStats_totals += Helpers.getSummaryInfo(view, "total_missing_episodes", "");
             view.querySelector("#seriesStats_totals").innerHTML = seriesStats_totals;
 
             var seriesStats_size = "";

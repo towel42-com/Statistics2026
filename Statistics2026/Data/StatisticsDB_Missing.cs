@@ -2,6 +2,8 @@
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Configuration;
 using MediaBrowser.Model.Entities;
+using RestSharp;
+using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
@@ -11,6 +13,8 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -248,6 +252,42 @@ namespace Statistics2026.Data
             }
 
             return retVal;
+        }
+
+        private StatCard TotalMissingMedia( bool episodes )
+        {
+            CheckIsValid( ECheckType.eReport );
+
+            var whereClause = episodes ? "IsEpisode" : "NOT IsEpisode";
+
+            var sql = $"SELECT COUNT( * ) FROM Missing WHERE {whereClause}";
+            var value = GetSingleValueFromSQL( sql );
+            var numMissing = value.ToInt64();
+
+            sql = $"SELECT COUNT( DISTINCT ParentId ) FROM Missing WHERE {whereClause}";
+            value = GetSingleValueFromSQL( sql );
+            var numCollections = value.ToInt64();
+
+            var title = episodes ? Constants.MissingEpisodes : Constants.MissingMovies;
+            var subTitle = episodes ? Constants.MissingEpisodesSubTitle : Constants.MissingMoviesSubTitle;
+            var help = episodes ? Constants.MissingEpisodesHelp : Constants.MissingMoviesHelp;
+
+            var retVal = new TextBasedStatCard( Constants.MissingMovies, Constants.MissingMoviesHelp, EStatCardStyle.eCompact );
+
+            retVal.AddLine( numMissing.ToString(), true );
+            retVal.AddLine( subTitle, true );
+            retVal.AddLine( numCollections.ToString(), true );
+            return retVal;
+        }
+
+        public StatCard TotalMissingMovies()
+        {
+            return TotalMissingMedia( false );
+        }
+
+        public StatCard TotalMissingEpisodes()
+        {
+            return TotalMissingMedia( true );
         }
     }
 }

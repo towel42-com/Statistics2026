@@ -220,6 +220,37 @@ namespace Statistics2026.Api
             } );
         }
 
+        public object Get( GetTotalMissingMovies request )
+        {
+            return GetRequest( "GetTotalMissingMovies", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                var groupData = db.TotalMissingMovies();
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        
+        public object Get( GetTotalMissingEpisodes request )
+        {
+            return GetRequest( "GetTotalMissingEpisodes", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                var groupData = db.TotalMissingEpisodes();
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
         public object Get( GetTotalCollectionCount request )
         {
             return GetRequest( "GetTotalCollectionCount", timer =>

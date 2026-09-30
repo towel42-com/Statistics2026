@@ -36,6 +36,14 @@ namespace Statistics2026
         internal const string TotalCollections = "Total Collections";
         internal const string HelpTotalCollections = "Total collections in the Emby library.";
 
+        internal const string MissingMovies = "Number of Movies Missing from Collections.";
+        internal const string MissingMoviesSubTitle = "Number of Collections with Missing Movies";
+        internal const string MissingMoviesHelp = "From the collections in use the list of Movies missing.";
+
+        internal const string MissingEpisodes = "Number of Episodes Missing from Series.";
+        internal const string MissingEpisodesSubTitle = "Number of Series with Missing Episodes";
+        internal const string MissingEpisodesHelp = "From the Series in use the list of Episodes missing.";
+
         internal const string TotalStudios = "Total Studios";
         internal const string HelpTotalStudios = "Total studios in the Emby library.";
         internal const string BiggestMovie = "Largest Movie";
