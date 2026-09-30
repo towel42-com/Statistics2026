@@ -12,6 +12,7 @@
                 view.querySelector("#showUnknownDVProfiles").checked = config.showUnknownDVProfiles;
                 view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
                 view.querySelector("#numMostActive").value = config.numMostActiveUsers;
+                view.querySelector("#searchLocation").value = config.searchLocation;
                 view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
                 view.querySelector("#numTiedToReport").value = config.numTiedToReport;
                 view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
@@ -102,6 +103,15 @@
                 }
             );
 
+            view.querySelector("#searchLocation").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.searchLocation = view.querySelector("#searchLocation").value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
             view.querySelector("#numWatchedToReport").addEventListener("input",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -137,6 +147,10 @@
                 }
             );
 
+            view.querySelector("#searchLocationHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("URL to the search location for missing videos ie \"https://thepiratebay.org/search.php\"", "Search Location for Missing Videos");
+                });
 
             view.querySelector("#numMostActiveHelp").addEventListener("click",
                 function () {

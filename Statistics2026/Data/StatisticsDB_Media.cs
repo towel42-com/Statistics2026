@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
@@ -689,7 +690,8 @@ namespace Statistics2026.Data
 
             var sql = "SELECT " +
                 "  Missing.Title AS ListDisplayName" +
-                ", Missing.ReleaseDate";
+                ", Missing.ReleaseDate"
+                ;
             if( episodes )
             {
                 sql += ", Series.Name";
@@ -700,6 +702,9 @@ namespace Statistics2026.Data
             }
 
             sql +=
+                ", Missing.PosterPath" +
+                ", Missing.SeasonNum" + 
+                ", Missing.EpisodeNum" +
                 " FROM " +
                 "   Missing ";
 
@@ -733,14 +738,49 @@ namespace Statistics2026.Data
                     ServerLocation = "<MISSING>"
                 };
                 var parentName = row.GetString( col++ );
-                var parentType = episodes ? "Series" : "Collection";
-                curr.ServerLocation = $"Missing from {parentType} '{parentName}'";
-                var itemId = string.Empty;
-                var itemUrl = string.Empty;
-                curr.ItemUrl = string.Empty;
+                var posterPath = row.GetString( col++ );
+                var seasonNum = row.GetInt( col++ );
+                var episodeNum = row.GetInt( col++ );
+
+                if( !posterPath.StartsWith( "/" ) )
+                    posterPath = "/" + posterPath;
+                curr.ItemUrl = "https://image.tmdb.org/t/p/w185" + posterPath;
                 if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
                 {
-                    curr.ListDisplayName = curr.ItemUrl;
+                    curr.ListDisplayName = $"<a is=\"emby-linkbutton\" href=\"{curr.ItemUrl}\"><img loading=\"lazy\" src=\"{curr.ItemUrl}\" height=\"105px\"/>{curr.SortName}</a>";
+                }
+
+                var parentType = episodes ? "Series" : "Collection";
+                curr.ServerLocation = $"Missing from {parentType} '{parentName}'";
+
+                if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
+                {
+                    var searchKey = curr.SortName;
+                    if( episodes )
+                    {
+                        searchKey = parentName;
+                        string subKey = string.Empty;
+                        if( seasonNum != 0 )
+                            subKey += "S{seasonNum:D2}";
+                        if( episodeNum != 0 )
+                            subKey += "S{episodeNum:D2}";
+                        if( !string.IsNullOrEmpty( subKey ) )
+                            searchKey += " " + subKey;
+                    }
+                    else
+                    {
+                        searchKey += " " + curr.StartYear.ToString();
+                    }
+
+                    var searchUrl = Plugin.Instance!.Configuration.searchLocation;
+                    if( !searchUrl.EndsWith( "?q=" ) )
+                        searchUrl += "?q=";
+                    searchUrl += searchKey;
+
+                    var displayText = $"{curr.ServerLocation} - Click to Search for '{searchKey}'";
+
+                    var serverLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {searchKey}\">{displayText}</a>";
+                    curr.ServerLocation = serverLocation;
                 }
 
                 retVal.Add( curr );
