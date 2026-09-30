@@ -6,7 +6,6 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using ServiceStack;
 using SQLitePCL.pretty;
-using Statistics2026.Api;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -467,7 +466,7 @@ namespace Statistics2026.Utilities
                 stream.Position = 0;
             }
 
-            using( StreamReader reader = new StreamReader( stream ) )
+            using( var reader = new StreamReader( stream ) )
             {
                 return reader.ReadToEnd();
             }
@@ -487,6 +486,7 @@ namespace Statistics2026.Utilities
                 if( season.IndexNumber == seasonNum )
                     return season;
             }
+
             return null;
         }
 

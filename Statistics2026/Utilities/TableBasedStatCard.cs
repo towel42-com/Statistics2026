@@ -1,12 +1,6 @@
-﻿using Emby.Media.Common.Extensions;
-using SQLitePCL;
-using Statistics2026.Utilities;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
-
-using TextValueLine = (string data, string itemId, string url, bool asTitle);
 
 namespace Statistics2026.Utilities
 {
@@ -25,13 +19,14 @@ namespace Statistics2026.Utilities
         public string ToString( int depth = 0, int numColumns = 0, StatCard.EAlignment keyColAlignment = StatCard.EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null, bool showCategory = true, Func<int, string, List<string>>? classesForValueFunc = null )
         {
             var rowText = "<tr ";
-            string classes = string.Empty;
+            var classes = string.Empty;
             if( isClickable )
             {
                 List<string> classArray = [];
                 classArray.Add( "clickable-row" );
                 classes = string.Join( " ", classArray );
             }
+
             rowText += $"class=\"{string.Join( " ", classes )}\" ";
             rowText += $"{StatCard.GetStyleString()}>";
 
@@ -43,6 +38,7 @@ namespace Statistics2026.Utilities
                 {
                     td = $"<span class=\"row-toggle\">▶</span> {Name}";
                 }
+
                 retVal += StatCardResponse._addToHtml( depth++, $"<td {StatCard.GetStyleString( keyColAlignment )}>" );
                 retVal += StatCardResponse._addToHtml( depth, td );
                 retVal += StatCardResponse._addToHtml( --depth, $"</td>" );
@@ -73,6 +69,7 @@ namespace Statistics2026.Utilities
                             classes = $"class=\"{string.Join( " ", classArray )}\"";
                         }
                     }
+
                     retVal += StatCardResponse._addToHtml( depth, $"<td {classes} {colSpan} {GetStyleString( ii, columnAlignment )}>{td}</td>" );
                 }
             }
@@ -154,7 +151,7 @@ namespace Statistics2026.Utilities
 
         public override bool ShowHeaderColumn( int columnNum )
         {
-            return ShowCategory ? true : ( columnNum != 0 );
+            return ShowCategory || ( columnNum != 0 );
         }
 
         public void SetDataColumnAlignment( int columnNum, StatCard.EAlignment alignment )
@@ -207,7 +204,7 @@ namespace Statistics2026.Utilities
 
         private void UpdateColumnCount()
         {
-            for( int ii = 0; ii < Rows.Count; ++ii )
+            for( var ii = 0; ii < Rows.Count; ++ii )
             {
                 if( Rows[ ii ].isClickable )
                     continue;
@@ -215,7 +212,9 @@ namespace Statistics2026.Utilities
                     continue;
 
                 if( ColumnCount == null )
+                {
                     ColumnCount = Rows[ ii ].Values!.Count;
+                }
                 else
                 {
                     if( ColumnCount != Rows[ ii ].Values!.Count )
@@ -236,6 +235,7 @@ namespace Statistics2026.Utilities
                 if( row.isClickable )
                     return true;
             }
+
             return false;
         }
 
@@ -249,7 +249,7 @@ namespace Statistics2026.Utilities
             }
 
             var retVal = string.Empty;
-            bool inClickableGroup = false;
+            var inClickableGroup = false;
 
             foreach( var row in valuesToUse )
             {
@@ -282,6 +282,7 @@ namespace Statistics2026.Utilities
                 retVal += StatCardResponse._addToHtml( --depth, "</td>" );
                 retVal += StatCardResponse._addToHtml( --depth, "</tr>" );
             }
+
             return retVal;
         }
     }

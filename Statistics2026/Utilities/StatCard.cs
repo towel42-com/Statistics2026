@@ -1,11 +1,7 @@
 ﻿using Emby.Media.Common.Extensions;
-using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
-
-using TextValueLine = (string data, string itemId, string url, bool asTitle);
 
 namespace Statistics2026.Utilities
 {
@@ -52,8 +48,10 @@ namespace Statistics2026.Utilities
                 {
                     retVal += $" colspan=\"{NumColumns}\"";
                 }
+
                 retVal += $">{Text}";
             }
+
             retVal += "</th>";
 
             return retVal;
@@ -246,7 +244,7 @@ namespace Statistics2026.Utilities
                 if( ShowHeaderColumn( 0 ) )
                     retVal += StatCardResponse._addToHtml( depth, "<td>&nbsp;</td>" );
 
-                int colNum = 1;
+                var colNum = 1;
                 foreach( var currColumn in currRow )
                 {
                     if( !ShowHeaderColumn( colNum ) )
@@ -278,7 +276,9 @@ namespace Statistics2026.Utilities
                 retVal += StatCardResponse._addToHtml( --depth, "</table>" );
             }
             else
+            {
                 retVal = GetDataString( depth );
+            }
         }
 
         public override string ToString()
@@ -338,6 +338,7 @@ namespace Statistics2026.Utilities
             {
                 retVal.addToHtml( depth, $"<div class=\"{titleClass}\">{Title}</div>" );
             }
+
             if( !SubTitle.IsNullOrEmpty() )
             {
                 retVal.addToHtml( depth, $"<div class=\"{titleClass}\">{SubTitle}</div>" );
@@ -389,6 +390,7 @@ namespace Statistics2026.Utilities
             {
                 retVal.addToHtml( --depth, "</div>" );
             }
+
             retVal.addToHtml( --depth, "</div>" ); // statCard-content
             retVal.addToHtml( --depth, "</div>" ); // statCard
 

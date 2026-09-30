@@ -1,14 +1,4 @@
-﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Querying;
-using ServiceStack;
-using Statistics2026.Api;
-using Statistics2026.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using WatchedMediaValueItemData = (string id, string name, long playCount, long denominator, double playCountPerUser);
+﻿using Statistics2026.Data;
 
 namespace Statistics2026.Utilities
 {

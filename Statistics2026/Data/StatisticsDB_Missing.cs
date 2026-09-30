@@ -1,20 +1,11 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Model.Configuration;
 using MediaBrowser.Model.Entities;
-using RestSharp;
 using ServiceStack;
-using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
-using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,7 +13,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        const string kSQLAddToMissing =
+        private const string kSQLAddToMissing =
             "INSERT INTO Missing" +
             "(" +
                 "  Key" +
@@ -81,8 +72,10 @@ namespace Statistics2026.Data
             var curr = 0.0;
 
             progress.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>();
-            sqlCmds.Add( new SQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode" ) );
+            var sqlCmds = new List<SQLCmdDef>
+            {
+                new( "DELETE FROM Missing WHERE NOT IsEpisode" )
+            };
 
             foreach( var collection in collections )
             {
@@ -146,6 +139,7 @@ namespace Statistics2026.Data
                         ("@IsEpisode", false )
                     ] ) );
                 }
+
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
@@ -167,9 +161,10 @@ namespace Statistics2026.Data
             var curr = 0.0;
 
             progress.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>();
-            sqlCmds.Add( new SQLCmdDef( "DELETE FROM Missing WHERE IsEpisode" ) );
-
+            var sqlCmds = new List<SQLCmdDef>
+            {
+                new( "DELETE FROM Missing WHERE IsEpisode" )
+            };
 
             foreach( var series in allSeries )
             {
@@ -187,7 +182,6 @@ namespace Statistics2026.Data
             progress.Report( 100 );
             _embyInterfaces!._logger?.Debug( $"AnalyzeMissingEpisodes - Finished Analysis" );
         }
-
 
         private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodes( TmdbCollectionReader reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
         {
@@ -247,6 +241,7 @@ namespace Statistics2026.Data
                             ("@EpisodeNum", tmdbEpisode.EpisodeNumber )
                         ] ) );
                     }
+
                     cancellationToken.ThrowIfCancellationRequested();
                 }
             }

@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Services;
 using System.Collections.Generic;
+using Statistics2026.Utilities;
 
 namespace Statistics2026.Api
 {
@@ -122,8 +123,8 @@ namespace Statistics2026.Api
     {
     }
 
-    [ Route( "/Statistics2026/total_missing_movies", "GET", Summary = "Get the total number of movies missing from Collections" ) ]
-    [ Authenticated( Roles = "admin" ) ]
+    [Route( "/Statistics2026/total_missing_movies", "GET", Summary = "Get the total number of movies missing from Collections" )]
+    [Authenticated( Roles = "admin" )]
     public class GetTotalMissingMovies : IReturn<object>
     {
     }
@@ -133,10 +134,8 @@ namespace Statistics2026.Api
     public class GetTotalMissingEpisodes : IReturn<object>
     {
     }
-    
 
-
-    [ Route( "/Statistics2026/total_movie_studio_count", "GET", Summary = "Get the total Movie Studio Count" )]
+    [Route( "/Statistics2026/total_movie_studio_count", "GET", Summary = "Get the total Movie Studio Count" )]
     [Authenticated( Roles = "admin" )]
     public class GetTotalMovieStudioCount : IReturn<object>
     {

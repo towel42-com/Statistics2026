@@ -483,7 +483,7 @@ namespace Statistics2026.Data
                     ", PlayCount=@PlayCount" +
                     ", LastPlayedDate=@LastPlayedDate" +
                     ", TotalTicksPlayed=(@IsPlayed*@PlayCount)*@RunTimeTicks ";
-            
+
             if( !config.resetPlayCount )
             {
                 sql +=
@@ -615,6 +615,7 @@ namespace Statistics2026.Data
 
                 return clauses;
             }
+
             CheckIsValid( ECheckType.eReport );
 
             var excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
@@ -728,7 +729,9 @@ namespace Statistics2026.Data
                     sortedMapping[ key ] = value;
                 }
                 else
+                {
                     sortedMapping[ key ] = [ item ];
+                }
             }
 
             var retVal = new List<List<WatchedMediaValue>>();
@@ -738,7 +741,7 @@ namespace Statistics2026.Data
                 var numToKeep = Math.Min( inList.Count, maxPerGroup );
                 var subList = inList.Take( numToKeep ).ToList();
 
-                for( int ii = 0; ii < numToKeep; ++ii )
+                for( var ii = 0; ii < numToKeep; ++ii )
                 {
                     var item = subList[ ii ];
                     item.ImageUrl = ItemImageUrl._ItemImageUrl( item.ItemId, _embyInterfaces!._libraryManager );
@@ -963,7 +966,7 @@ namespace Statistics2026.Data
 
             if( values.Count == 0 )
             {
-                string name = movies ? "Movies" : "TV Shows";
+                var name = movies ? "Movies" : "TV Shows";
                 retVal.AddLine( $"Watch some {name} already!", false );
             }
 
@@ -1117,9 +1120,11 @@ namespace Statistics2026.Data
             }
 
             var groupData = new TableBasedStatCard( Constants.WatchedUserMediaIssues, Constants.HelpWatchedUserMediaIssues,
-                [ "User Name", "Media Name", "Played", "Play Count", "Run Time", "Total Played" ], EStatCardStyle.eDetailed );
-            groupData.UseSeparators = true;
-            groupData.ShowCategory = false;
+                [ "User Name", "Media Name", "Played", "Play Count", "Run Time", "Total Played" ], EStatCardStyle.eDetailed )
+            {
+                UseSeparators = true,
+                ShowCategory = false
+            };
 
             SortedDictionary<string, List<object>> items = [];
 
@@ -1191,9 +1196,11 @@ namespace Statistics2026.Data
                     [
                         [ "", "", new HeaderDef( "Time Played", 2 ), "" ],
                         [ "User Name", "Media Name", "Play Count * Runtime", "Tracked", "Difference" ]
-                    ], EStatCardStyle.eDetailed );
-            groupData.UseSeparators = true;
-            groupData.ShowCategory = false;
+                    ], EStatCardStyle.eDetailed )
+            {
+                UseSeparators = true,
+                ShowCategory = false
+            };
             groupData.SetDataColumnAlignment( 2, StatCard.EAlignment.eRight );
             groupData.SetDataColumnAlignment( 3, StatCard.EAlignment.eRight );
             groupData.SetDataColumnAlignment( 4, StatCard.EAlignment.eRight );
@@ -1240,9 +1247,10 @@ namespace Statistics2026.Data
                 }
 
                 var values = kvp.Value;
-                values[ 0 ] = String.Empty;
+                values[ 0 ] = string.Empty;
                 groupData.addRow( kvp.Key, values );
             }
+
             return groupData;
         }
     }

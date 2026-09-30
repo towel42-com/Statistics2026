@@ -1,46 +1,25 @@
-﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Providers;
-using MediaBrowser.Model.Entities;
-using Statistics2026.Utilities;
+﻿using MediaBrowser.Common.Net;
+using MediaBrowser.Model.Serialization;
+using ServiceStack.Text;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Data.SqlTypes;
-using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Text.Json.Nodes;
 using System.Threading;
-using ServiceStack.Text;
+using System.Threading.Tasks;
+using System.Web;
 
 namespace Statistics2026.Utilities
 {
-    using Emby.Media.Common.Extensions;
-    using MediaBrowser.Common.Net;
-    using MediaBrowser.Controller.Configuration;
-    using MediaBrowser.Model.Serialization;
-    using ServiceStack;
-    using Statistics2026.Api;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Text;
-    using System.Text.Json;
-    using System.Text.Json.Serialization;
-    using System.Text.Json.Nodes;
-    using System.Threading;
-    using System.Threading.Tasks;
-    using System.Web;
-
     public class TmdbCollectionReader
     {
         private readonly EmbyInterfaces? _embyInterfaces = null;
 
         // Replace with your plugin's TMDB API Key configuration accessor
         //private const string ApiKey = "YOUR_TMDB_API_KEY";
-        const string kApiKeyV3 = "7c58ff37c9fadd56c51dae3a97339378";
-        const string kApiKeyV4 = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3YzU4ZmYzN2M5ZmFkZDU2YzUxZGFlM2E5NzMzOTM3OCIsInN1YiI6IjVmYTAzMzJiNjM1MDEzMDAzMTViZjg2NyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.MBAzJIxvsRm54kgPKcfixxtfbg2bdNGDHKnEt15Nuac";
-
+        private const string kApiKeyV3 = "7c58ff37c9fadd56c51dae3a97339378";
+        private const string kApiKeyV4 = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3YzU4ZmYzN2M5ZmFkZDU2YzUxZGFlM2E5NzMzOTM3OCIsInN1YiI6IjVmYTAzMzJiNjM1MDEzMDAzMTViZjg2NyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.MBAzJIxvsRm54kgPKcfixxtfbg2bdNGDHKnEt15Nuac";
 
         public TmdbCollectionReader( EmbyInterfaces? embyInterfaces, CancellationToken? cancellationToken = null )
         {
@@ -54,11 +33,13 @@ namespace Statistics2026.Utilities
 
         private void login( CancellationToken? cancellationToken = null )
         {
-            var builder = new UriBuilder();
-            builder.Scheme = "https";
-            builder.Host = "api.themoviedb.org";
-            builder.Path = "/3/configuration";
-            builder.Query = $"api_key={kApiKeyV3}";
+            var builder = new UriBuilder
+            {
+                Scheme = "https",
+                Host = "api.themoviedb.org",
+                Path = "/3/configuration",
+                Query = $"api_key={kApiKeyV3}"
+            };
 
             var url = builder.Uri.ToString();
             var options = new HttpRequestOptions
@@ -69,9 +50,8 @@ namespace Statistics2026.Utilities
                 CacheMode = CacheMode.None
             };
 
-            var response = _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false );
+            _ = _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false );
         }
-
 
         public async Task<TmdbCollection?> GetRemoteCollectionMembersAsync( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
         {
@@ -82,10 +62,12 @@ namespace Statistics2026.Utilities
                 return null;
 
             //string url = $"https://themoviedb.org/{tmdbCollectionId}?api_key={kApiKeyV3}&language={language}";
-            var builder = new UriBuilder();
-            builder.Scheme = "https";
-            builder.Host = "api.themoviedb.org";
-            builder.Path = $"/3/collection/{tmdbId}?language={language}";
+            var builder = new UriBuilder
+            {
+                Scheme = "https",
+                Host = "api.themoviedb.org",
+                Path = $"/3/collection/{tmdbId}?language={language}"
+            };
 
             var query = HttpUtility.ParseQueryString( builder.Query );
             query[ "api_key" ] = kApiKeyV3;
@@ -125,10 +107,12 @@ namespace Statistics2026.Utilities
                 return retVal;
 
             //string url = $"https://themoviedb.org/{tmdbCollectionId}?api_key={kApiKeyV3}&language={language}";
-            var builder = new UriBuilder();
-            builder.Scheme = "https";
-            builder.Host = "api.themoviedb.org";
-            builder.Path = $"/3/tv/{tmdbId}?language={language}";
+            var builder = new UriBuilder
+            {
+                Scheme = "https",
+                Host = "api.themoviedb.org",
+                Path = $"/3/tv/{tmdbId}?language={language}"
+            };
 
             var query = HttpUtility.ParseQueryString( builder.Query );
             query[ "api_key" ] = kApiKeyV3;
@@ -167,11 +151,13 @@ namespace Statistics2026.Utilities
                                 seasons.Clear();
                             }
                         }
+
                         if( seasons.Count > 0 )
                         {
                             retVal = await GetRemoteEpisodesAsync( retVal, seasons, tmdbId, cancellationToken ).ConfigureAwait( false );
                         }
                     }
+
                     return retVal;
                 }
             }
@@ -196,19 +182,22 @@ namespace Statistics2026.Utilities
 
             //string url = $"https://themoviedb.org/{tmdbCollectionId}?api_key={kApiKeyV3}&language={language}";
 
-            var builder = new UriBuilder();
-            builder.Scheme = "https";
-            builder.Host = "api.themoviedb.org";
-            builder.Path = $"/3/tv/{tmdbId}?language={language}";
+            var builder = new UriBuilder
+            {
+                Scheme = "https",
+                Host = "api.themoviedb.org",
+                Path = $"/3/tv/{tmdbId}?language={language}"
+            };
 
             var query = HttpUtility.ParseQueryString( builder.Query );
             query[ "api_key" ] = kApiKeyV3;
             List<string> seasonStrings = [];
             foreach( var season in seasons )
             {
-                seasonStrings.Add( $"season/{season.SeasonNumber.ToString()}" );
+                seasonStrings.Add( $"season/{season.SeasonNumber}" );
             }
-            query[ "append_to_response" ] = String.Join( ",", seasonStrings );
+
+            query[ "append_to_response" ] = string.Join( ",", seasonStrings );
             builder.Query = query.ToString();
 
             var url = builder.Uri.ToString();
@@ -302,6 +291,7 @@ namespace Statistics2026.Utilities
 
                 retVal.Add( season.SeasonNumber );
             }
+
             return retVal;
         }
 
@@ -315,7 +305,7 @@ namespace Statistics2026.Utilities
                 return null;
 
             var seasons = retVal.listOfSeasons();
-            var jsonNode = JsonObject.Parse( jsonString );
+            var jsonNode = System.Text.Json.Nodes.JsonObject.Parse( jsonString );
             if( jsonNode == null )
                 return null;
 
@@ -354,7 +344,6 @@ namespace Statistics2026.Utilities
             return retVal;
         }
     }
-
 
     [DataContract]
     public class TmdbSeason
@@ -423,5 +412,4 @@ namespace Statistics2026.Utilities
             return DBHelper.ReadDateTime( AirDateStr );
         }
     }
-
 }

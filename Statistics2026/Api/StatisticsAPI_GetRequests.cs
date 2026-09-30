@@ -235,7 +235,6 @@ namespace Statistics2026.Api
             } );
         }
 
-        
         public object Get( GetTotalMissingEpisodes request )
         {
             return GetRequest( "GetTotalMissingEpisodes", timer =>

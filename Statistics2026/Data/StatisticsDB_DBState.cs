@@ -4,7 +4,6 @@ using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization;
 
 namespace Statistics2026.Data
 {

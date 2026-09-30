@@ -1,10 +1,9 @@
-﻿using Statistics2026.Utilities;
+﻿using Emby.Media.Common.Extensions;
 using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
-using Emby.Media.Common.Extensions;
 
-namespace Statistics2026.Api
+namespace Statistics2026.Utilities
 {
     public class StatGen
     {

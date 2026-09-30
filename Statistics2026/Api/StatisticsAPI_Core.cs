@@ -75,7 +75,7 @@ namespace Statistics2026.Api
             if( libManager == null )
                 return (null, null);
 
-            IEnumerable<Video>? forUser = ( user != null ) ? GetAllEpisodesAndMoviesForUser( user, libManager ) : null;
+            var forUser = ( user != null ) ? GetAllEpisodesAndMoviesForUser( user, libManager ) : null;
 
             IEnumerable<Video>? all = null;
             if( computeAll )

@@ -21,6 +21,7 @@ namespace Statistics2026.Utilities
                 {
                     throw new InvalidDataContractException( "Header column count is different than row column count" );
                 }
+
                 for( var ii = 0; ii < currRow.Count(); ++ii )
                 {
                     var currItemString = currRow[ ii ]?.ToString() ?? string.Empty;
@@ -36,6 +37,7 @@ namespace Statistics2026.Utilities
             {
                 dumpRow( columnWidths, currRow.Cast<object>().ToList(), dumpFunc );
             }
+
             dumpRow( columnWidths, null, dumpFunc );
         }
 
@@ -50,6 +52,7 @@ namespace Statistics2026.Utilities
                     {
                         rowString += "|";
                     }
+
                     rowString += new string( '-', columnWidths[ ii ] );
                     rowString += "|";
                 }
@@ -72,10 +75,12 @@ namespace Statistics2026.Utilities
                     {
                         rowString += "|";
                     }
+
                     rowString += currItem;
                     rowString += "|";
                 }
             }
+
             dumpFunc( rowString );
         }
     }

@@ -1,9 +1,7 @@
 ﻿using Emby.Media.Common.Extensions;
-using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 using TextValueLine = (string data, string itemId, string url, bool asTitle);
 
@@ -115,7 +113,6 @@ namespace Statistics2026.Utilities
                 var value = data;
                 if( ValueLines.Count() > 1 )
                     value = CheckMaxLength( value );
-
 
                 var dataHtml = $"<div class=\"{statCardClass( asTitle )}\" {style}>{value}</div>";
 

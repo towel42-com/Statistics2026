@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
@@ -704,7 +703,7 @@ namespace Statistics2026.Data
 
             sql +=
                 ", Missing.PosterPath" +
-                ", Missing.SeasonNum" + 
+                ", Missing.SeasonNum" +
                 ", Missing.EpisodeNum" +
                 " FROM " +
                 "   Missing ";
@@ -747,6 +746,7 @@ namespace Statistics2026.Data
                     posterPath = "/" + posterPath;
                     curr.ItemUrl = "https://image.tmdb.org/t/p/w185" + posterPath;
                 }
+
                 if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
                 {
                     curr.ListDisplayName = $"<a is=\"emby-linkbutton\" href=\"{curr.ItemUrl}\"><img loading=\"lazy\" src=\"{curr.ItemUrl}\" height=\"105px\"/>{curr.SortName}</a>";
@@ -758,7 +758,7 @@ namespace Statistics2026.Data
                 if( episodes )
                 {
                     searchKey = parentName;
-                    string subKey = string.Empty;
+                    var subKey = string.Empty;
                     if( seasonNum != 0 )
                         subKey += $"S{seasonNum:D2}";
                     if( episodeNum != 0 )
@@ -793,14 +793,13 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-
         private List<MediaItemResponse> getMediaListResponse( bool episodes )
         {
             var retVal = getMediaListResponseMissing( episodes );
             retVal.AddRange( getMediaListResponseOnServer( episodes ) );
 
             retVal.Sort(
-                (x,y) =>
+                ( x, y ) =>
                 {
                     var lhs = x.SortName;
                     var rhs = y.SortName;
