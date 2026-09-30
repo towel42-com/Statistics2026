@@ -89,7 +89,7 @@ namespace Statistics2026.ScheduledTasks
             long analyzeMissing = 0;
             using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces._logger ) )
             {
-                db.AnalyzeMissingEpisodesTaskImpl( cancellationToken, progress );
+                db.AnalyzeMissingEpisodesTaskImpl( cancellationToken, progress ).ConfigureAwait( false ).GetAwaiter().GetResult();
                 analyzeMissing = timer.ElapsedMilliseconds();
             }
 

@@ -18,6 +18,7 @@
                 view.querySelector("#resetPlayCount").checked = config.resetPlayCount;
                 view.querySelector("#resetDBState").checked = config.resetDBState;
                 view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
+                view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
             });
         }
 
@@ -60,6 +61,15 @@
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                         config.resetPlayCount = view.querySelector("#resetPlayCount").checked;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
+            view.querySelector("#reportOnMissingSpecials").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.reportOnMissingSpecials = view.querySelector("#reportOnMissingSpecials").checked;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
@@ -156,6 +166,11 @@
             view.querySelector("#resetDBStateHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured", "Reset Database State");
+                });
+
+            view.querySelector("#reportOnMissingSpecialsHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("When analyzing missing episodes, check for episodes that are considered special (Season 0)", "Report on Missing Specials");
                 });
 
             view.querySelector("#showDebugInfoHelp").addEventListener("click",

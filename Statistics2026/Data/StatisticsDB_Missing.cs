@@ -1,20 +1,68 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Model.Configuration;
+using MediaBrowser.Model.Entities;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public void AnalyzeMissingMoviesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
+        const string kSQLAddToMissing =
+            "INSERT INTO Missing" +
+            "(" +
+                "  Key" +
+                ", TmdbId" +
+                ", Title" +
+                ", OriginalTitle" +
+                ", ReleaseDate" +
+                ", Overview" +
+                ", PosterPath" +
+                ", ParentId" +
+                ", IsEpisode" +
+                ", SeasonNum" +
+                ", EpisodeNum" +
+            ")" +
+            " VALUES " +
+            "(" +
+                "  @Key" +
+                ", @TmdbId" +
+                ", @Title" +
+                ", @OriginalTitle" +
+                ", @ReleaseDate" +
+                ", @Overview" +
+                ", @PosterPath" +
+                ", @ParentId" +
+                ", @IsEpisode" +
+                ", @SeasonNum" +
+                ", @EpisodeNum" +
+            ")" +
+            " ON CONFLICT(Key) " +
+            " DO UPDATE " +
+            " SET " +
+                "  TmdbId=@TmdbId" +
+                ", Title=@Title" +
+                ", OriginalTitle=@OriginalTitle" +
+                ", ReleaseDate=@ReleaseDate" +
+                ", Overview=@Overview" +
+                ", PosterPath=@PosterPath" +
+                ", ParentId=@ParentId" +
+                ", IsEpisode=@IsEpisode" +
+                ", SeasonNum=@SeasonNum" +
+                ", EpisodeNum=@EpisodeNum"
+                ;
+
+        public async Task AnalyzeMissingMoviesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
         {
             CheckIsValid( ECheckType.eUpdate );
 
@@ -23,16 +71,20 @@ namespace Statistics2026.Data
             var collections = _dbHelper.GetLibraryItems<BoxSet>();
             progress.Report( 100 );
 
+            var reader = new TmdbCollectionReader( _embyInterfaces, cancellationToken );
+
             double count = collections.Count();
             var curr = 0.0;
 
             progress.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
+            sqlCmds.Add( new SQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode" ) );
 
             foreach( var collection in collections )
             {
                 progress.Report( 80.0 * ( ++curr ) / count );
-                sqlCmds.AddRange( AnalyzeMissingMovies( collection, cancellationToken, progress ) );
+                var cmds = await AnalyzeMissingMoviesInCollection( reader, collection, cancellationToken, progress ).ConfigureAwait( false );
+                sqlCmds.AddRange( cmds );
                 cancellationToken.ThrowIfCancellationRequested();
                 _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies -     Processed Collection ({curr} of {count}) - {collection.Name} items processed" );
             }
@@ -45,12 +97,58 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies - Finished Analysis" );
         }
 
-        private List< SQLCmdDef> AnalyzeMissingMovies( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollection( TmdbCollectionReader reader, BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
         {
-            return [];
+            _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies -     Analyzing Collection {collection.Name} - checking for missing movies" );
+
+            var collectionTmbdId = collection.GetProviderId( MetadataProviders.Tmdb );
+            if( string.IsNullOrEmpty( collectionTmbdId ) )
+                return [];
+
+            var tmdbCollection = await reader.GetRemoteCollectionMembersAsync( collectionTmbdId, cancellationToken ).ConfigureAwait( false );
+            if( tmdbCollection == null )
+            {
+                _embyInterfaces._logger!.Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
+                return [];
+            }
+
+            List<SQLCmdDef> retVal = [];
+            foreach( var tmdbMovie in tmdbCollection.Movies )
+            {
+                if( tmdbMovie.ReleaseDate() > DateTime.Today )
+                    continue;
+
+                if( tmdbMovie.ReleaseDate() == DateTime.MinValue )
+                    continue;
+
+                var movieTmdbId = tmdbMovie.Id;
+                _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies -         Looking for movie {tmdbMovie.Title} for {collection.Name}" );
+                var embyMovie = _dbHelper.GetMovieByTmdbId( _embyInterfaces._libraryManager, movieTmdbId );
+
+                if( embyMovie == null )
+                {
+                    _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies -             {tmdbMovie.Title} is missing" );
+                    var key = $"{tmdbCollection.Id}-{tmdbMovie.Id}";
+                    retVal.Add( new SQLCmdDef( kSQLAddToMissing,
+                    [
+                        ("@Key", key ),
+                        ("@TmdbId", tmdbMovie.Id ),
+                        ("@Title", tmdbMovie.Title ),
+                        ("@OriginalTitle", tmdbMovie.OriginalTitle ),
+                        ("@ReleaseDate", _dbHelper.ToDateTimeParamValue( tmdbMovie.ReleaseDate() ) ),
+                        ("@Overview", tmdbMovie.Overview ),
+                        ("@PosterPath", tmdbMovie.PosterPath ),
+                        ("@ParentId", collection.Id.ToString() ),
+                        ("@IsEpisode", false )
+                    ] ) );
+
+                }
+            }
+
+            return retVal;
         }
 
-        public void AnalyzeMissingEpisodesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task AnalyzeMissingEpisodesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
         {
             CheckIsValid( ECheckType.eUpdate );
 
@@ -59,16 +157,21 @@ namespace Statistics2026.Data
             var allSeries = _dbHelper.GetLibraryItems<Series>().Cast<Series>().ToList();
             progress.Report( 100 );
 
+            var reader = new TmdbCollectionReader( _embyInterfaces, cancellationToken );
+
             double count = allSeries.Count();
             var curr = 0.0;
 
             progress.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
+            sqlCmds.Add( new SQLCmdDef( "DELETE FROM Missing WHERE IsEpisode" ) );
+
 
             foreach( var series in allSeries )
             {
                 progress.Report( 80.0 * ( ++curr ) / count );
-                sqlCmds.AddRange( AnalyzeMissingEpisodes( series, cancellationToken, progress ) );
+                var cmds = await AnalyzeMissingEpisodes( reader, series, cancellationToken, progress );
+                sqlCmds.AddRange( cmds );
                 cancellationToken.ThrowIfCancellationRequested();
                 _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies -     Processed Collection ({curr} of {count}) - {series.Name} items processed" );
             }
@@ -82,9 +185,68 @@ namespace Statistics2026.Data
         }
 
 
-        private List<SQLCmdDef> AnalyzeMissingEpisodes( Series series, CancellationToken cancellationToken, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodes( TmdbCollectionReader reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
         {
-            return [];
+            _embyInterfaces!._logger?.Debug( $"AnalyzeMissingEpisodes -     Analyzing Series {series.Name} - checking for missing episodes" );
+
+            var seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
+            if( string.IsNullOrEmpty( seriesTmbdId ) )
+                return [];
+
+            var tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId, cancellationToken ).ConfigureAwait( false );
+            if( tmdbSeries == null )
+            {
+                _embyInterfaces._logger!.Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
+                return [];
+            }
+
+            List<SQLCmdDef> retVal = [];
+            foreach( var tmdbSeason in tmdbSeries.Seasons )
+            {
+                if( tmdbSeason.SeasonNumber == 0 && !Plugin.Instance!.Configuration.reportOnMissingSpecials )
+                    continue;
+
+                var embySeason = _dbHelper.GetSeasonFromSeries( series, tmdbSeason.SeasonNumber );
+                if( embySeason == null )
+                    continue;
+
+                foreach( var tmdbEpisode in tmdbSeason.Episodes )
+                {
+                    if( tmdbEpisode.AirDate() > DateTime.Today )
+                        continue;
+
+                    var episodeTmdbId = tmdbEpisode.Id;
+                    var episodeIdent = $"S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2}";
+                    _embyInterfaces!._logger?.Debug( $"AnalyzeMissingEpisodes -         Looking for episode {episodeIdent} for {series.Name}" );
+                    var embyEpisode = _dbHelper.GetEpisodeFromTmdbId( _embyInterfaces._libraryManager, embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber );
+
+                    if( embyEpisode == null )
+                    {
+                        _embyInterfaces!._logger?.Debug( $"AnalyzeMissingEpisodes -             episode {episodeIdent} is missing" );
+
+                        var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
+                        //return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";
+
+                        var title = $"{tmdbSeries.Name} - S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber} - {tmdbEpisode.Name}";
+                        retVal.Add( new SQLCmdDef( kSQLAddToMissing,
+                        [
+                            ("@Key", key ),
+                            ("@TmdbId", tmdbEpisode.Id ),
+                            ("@Title", title ),
+                            ("@OriginalTitle", string.Empty ),
+                            ("@ReleaseDate", _dbHelper.ToDateTimeParamValue( tmdbEpisode.AirDate() ) ),
+                            ("@Overview", tmdbEpisode.Overview ),
+                            ("@PosterPath", tmdbEpisode.StillPath ),
+                            ("@ParentId", series.Id.ToString() ),
+                            ("@IsEpisode", true ),
+                            ("@SeasonNum", tmdbSeason.SeasonNumber ),
+                            ("@EpisodeNum", tmdbEpisode.EpisodeNumber )
+                        ] ) );
+                    }
+                }
+            }
+
+            return retVal;
         }
     }
 }
