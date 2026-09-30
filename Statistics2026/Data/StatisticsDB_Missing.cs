@@ -272,7 +272,7 @@ namespace Statistics2026.Data
             var subTitle = episodes ? Constants.MissingEpisodesSubTitle : Constants.MissingMoviesSubTitle;
             var help = episodes ? Constants.MissingEpisodesHelp : Constants.MissingMoviesHelp;
 
-            var retVal = new TextBasedStatCard( Constants.MissingMovies, Constants.MissingMoviesHelp, EStatCardStyle.eCompact );
+            var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eCompact );
 
             retVal.AddLine( numMissing.ToString(), true );
             retVal.AddLine( subTitle, true );
