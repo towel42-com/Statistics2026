@@ -6,7 +6,10 @@
         <FileVersion>1.0.0.5</FileVersion>
         <LangVersion>latest</LangVersion>
         <Nullable>enable</Nullable>
-    </PropertyGroup>
+		<TmdbApiKeyV3 Condition="'$(TmdbApiKeyV3)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV3>
+		<TmdbApiKeyV4 Condition="'$(TmdbApiKeyV4)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV4>
+	</PropertyGroup>
+	
     <PropertyGroup>
         <OutputPath>build\$(Configuration)</OutputPath>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -43,7 +46,18 @@
         <MakeDir Directories="$(MSBuildProjectDirectory)\.vs\$(ProjectName)\$(Configuration)" />
         <WriteLinesToFile File="$(MSBuildProjectDirectory)/.vs/$(ProjectName)/$(Configuration)/embyroot.cache" Lines="$(EmbyServerRoot)" Overwrite="true" WriteOnlyWhenDifferent="true" />
     </Target>
-    
+
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>TMDB_API_KEY_V3</_Parameter1>
+			<_Parameter2>$(TmdbApiKeyV3)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>TMDB_API_KEY_V4</_Parameter1>
+			<_Parameter2>$(TmdbApiKeyV4)</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
+	
     <ItemGroup>
       <Compile Remove="build\**" />
       <EmbeddedResource Remove="build\**" />
