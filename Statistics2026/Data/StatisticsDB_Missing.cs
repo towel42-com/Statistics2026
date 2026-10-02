@@ -102,12 +102,19 @@ namespace Statistics2026.Data
             if( string.IsNullOrEmpty( collectionTmbdId ) )
                 return [];
 
-            var tmdbCollection = await reader.GetRemoteCollectionMembersAsync( collectionTmbdId, cancellationToken ).ConfigureAwait( false );
+            var tmdbCollection = await reader.GetRemoteCollectionMembersAsyncViaCustom( collectionTmbdId, cancellationToken ).ConfigureAwait( false );
             if( tmdbCollection == null )
             {
                 _embyInterfaces._logger!.Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
                 return [];
             }
+
+            //var tmdbCollectionProvider = await reader.GetRemoteCollectionMembersAsyncViaProviders( collectionTmbdId, collection.InternalId, cancellationToken ).ConfigureAwait( false );
+            //if( tmdbCollectionProvider == null )
+            //{
+            //    _embyInterfaces._logger!.Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
+            //    return [];
+            //}
 
             List<SQLCmdDef> retVal = [];
             foreach( var tmdbMovie in tmdbCollection.Movies )
