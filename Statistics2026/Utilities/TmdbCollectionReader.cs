@@ -1,11 +1,12 @@
 ﻿using MediaBrowser.Common.Net;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
-using ServiceStack.Text;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
-using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -25,10 +26,63 @@ namespace Statistics2026.Utilities
         {
             _embyInterfaces = embyInterfaces;
 
-            if( ( _embyInterfaces == null ) || ( _embyInterfaces._httpClient == null ) || ( _embyInterfaces._jsonSerializer == null ) )
-                return;
+            CheckIsValid();
 
             login( cancellationToken );
+        }
+
+        private bool CheckIsValid( bool throwOnInvalid = true )
+        {
+            if( Statistics2026.Plugin.Instance == null )
+            {
+                if( throwOnInvalid )
+                    throw new ArgumentNullException( "Statistics2026.Plugin.Instance" );
+                else if( ( _embyInterfaces != null ) && ( _embyInterfaces._logger != null ) )
+                    _embyInterfaces._logger.Error( "Statistics2026.Plugin.Instance is null" );
+                return false;
+            }
+
+            if( _embyInterfaces == null )
+            {
+                if( throwOnInvalid )
+                    throw new ArgumentNullException( "_embyInterfaces" );
+                return false;
+            }
+
+            if( _embyInterfaces._logger == null )
+            {
+                if( throwOnInvalid )
+                    throw new ArgumentNullException( "_embyInterfaces._logger" );
+            }
+
+            if( _embyInterfaces._httpClient == null )
+            {
+                if( throwOnInvalid )
+                    throw new ArgumentNullException( "_embyInterfaces._httpClient" );
+                else if( ( _embyInterfaces._httpClient != null ) && ( _embyInterfaces._httpClient != null ) )
+                    _embyInterfaces!._logger!.Error( "_embyInterfaces._httpClient is null" );
+                return false;
+            }
+
+            if( _embyInterfaces._jsonSerializer == null )
+            {
+                if( throwOnInvalid )
+                    throw new ArgumentNullException( "_embyInterfaces._jsonSerializer" );
+                else if( ( _embyInterfaces._jsonSerializer != null ) && ( _embyInterfaces._jsonSerializer != null ) )
+                    _embyInterfaces!._logger!.Error( "_embyInterfaces._jsonSerializer is null" );
+                return false;
+            }
+
+            if( _embyInterfaces._providerManager == null )
+            {
+                if( throwOnInvalid )
+                    throw new ArgumentNullException( "_embyInterfaces._providerManager" );
+                else if( ( _embyInterfaces._providerManager != null ) && ( _embyInterfaces._providerManager != null ) )
+                    _embyInterfaces!._logger!.Error( "_embyInterfaces._providerManager is null" );
+                return false;
+            }
+
+            return true;
         }
 
         private void login( CancellationToken? cancellationToken = null )
@@ -53,12 +107,12 @@ namespace Statistics2026.Utilities
             _ = _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false );
         }
 
-        public async Task<TmdbCollection?> GetRemoteCollectionMembersAsync( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
+        public async Task<TmdbCollection?> GetRemoteCollectionMembersAsyncViaCustom( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
         {
             if( string.IsNullOrEmpty( tmdbId ) )
                 return null;
 
-            if( ( _embyInterfaces == null ) || ( _embyInterfaces._httpClient == null ) || ( _embyInterfaces._jsonSerializer == null ) || ( _embyInterfaces._providerManager == null ) )
+            if( !CheckIsValid( false ) )
                 return null;
 
             //string url = $"https://themoviedb.org/{tmdbCollectionId}?api_key={kApiKeyV3}&language={language}";
@@ -85,9 +139,9 @@ namespace Statistics2026.Utilities
 
             try
             {
-                using( var response = await _embyInterfaces._httpClient.GetResponse( options ).ConfigureAwait( false ) )
+                using( var response = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ) )
                 {
-                    var collections = _embyInterfaces._jsonSerializer.DeserializeFromStream<TmdbCollection>( response.Content );
+                    var collections = _embyInterfaces!._jsonSerializer!.DeserializeFromStream<TmdbCollection>( response.Content );
                     return collections ?? null;
                 }
             }
@@ -97,14 +151,60 @@ namespace Statistics2026.Utilities
             }
         }
 
+        public async Task<TmdbCollection?> GetRemoteCollectionMembersAsyncViaProviders( string tmdbId, long internalEmbyId, CancellationToken? cancellationToken = null, string language = "en-US" )
+        {
+            if( string.IsNullOrEmpty( tmdbId ) )
+                return null;
+
+            if( !CheckIsValid( false ) )
+                return null;
+
+            var languageCode = string.IsNullOrEmpty( language ) ? "en" : language.Split( '-' )[ 0 ];
+            var countryCode = ( !string.IsNullOrEmpty( language ) && language.Split( '-' ).Length > 1 ) ? language.Split( '-' )[ 1 ] : "US";
+            var boxSetLookupInfo = new BoxSetInfo
+            {
+                Name = "Collection",
+                MetadataLanguage = languageCode,
+                MetadataCountryCode = countryCode
+            };
+            boxSetLookupInfo.ProviderIds[ "TmdbCollection" ] = tmdbId;
+            var searchQuery = new RemoteSearchQuery<BoxSetInfo>
+            {
+                SearchInfo = boxSetLookupInfo,
+                ItemId = internalEmbyId,
+                IncludeDisabledProviders = true,
+                Providers = new[] { "TheMovieDb" }
+            };
+
+            var cancelToken = cancellationToken ?? CancellationToken.None;
+
+            try
+            {
+                IEnumerable<RemoteSearchResult> results = await _embyInterfaces!._providerManager!.GetRemoteSearchResults<BoxSet, BoxSetInfo>( searchQuery, null, cancelToken ).ConfigureAwait( false );
+
+                foreach( var result in results )
+                {
+                    foreach( var providerId in result.ProviderIds )
+                    {
+                        _embyInterfaces!._logger!.Info( "   -> External Provider: {0}, ID: {1}", providerId.Key, providerId.Value );
+                    }
+                }
+            }
+            catch( Exception ex )
+            {
+                _embyInterfaces!._logger!.Warn( "Failed to discover remote BoxSet results", ex );
+            }
+            return null;
+        }
+
         public async Task<TmdbSeries?> GetRemoteSeriesAsync( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
         {
             TmdbSeries? retVal = null;
             if( string.IsNullOrEmpty( tmdbId ) )
                 return retVal;
 
-            if( ( _embyInterfaces == null ) || ( _embyInterfaces._httpClient == null ) || ( _embyInterfaces._jsonSerializer == null ) || ( _embyInterfaces._providerManager == null ) )
-                return retVal;
+            if( !CheckIsValid( false ) )
+                return null;
 
             //string url = $"https://themoviedb.org/{tmdbCollectionId}?api_key={kApiKeyV3}&language={language}";
             var builder = new UriBuilder
@@ -129,12 +229,11 @@ namespace Statistics2026.Utilities
             };
             try
             {
-
-                using( var response = await _embyInterfaces._httpClient.GetResponse( options ).ConfigureAwait( false ) )
+                using( var response = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ) )
                 {
                     var text = DBHelper.StreamToString( response.Content );
                     //var seriesList = TmdbSeriesResponse.FromJson( text, _embyInterfaces._jsonSerializer );
-                    var series = _embyInterfaces._jsonSerializer.DeserializeFromString<TmdbSeries>( text );
+                    var series = _embyInterfaces!._jsonSerializer!.DeserializeFromString<TmdbSeries>( text );
                     if( series == null )
                         return retVal;
                     if( series.Seasons != null && series.Seasons.Count > 0 )
