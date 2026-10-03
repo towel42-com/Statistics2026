@@ -5,17 +5,27 @@ using Statistics2026.Utilities;
 
 namespace Statistics2026.Api
 {
-    // http://localhost:8096/emby/Statistics2026/episode_list
     [Route( "/Statistics2026/episode_list", "GET", Summary = "Gets Codec Info for Episodes" )]
     [Authenticated( Roles = "admin" )]
     public class GetEpisodeList : IReturn<List<MediaItemResponse>>
     {
     }
 
-    // http://localhost:8096/emby/Statistics2026/movie_list
     [Route( "/Statistics2026/movie_list", "GET", Summary = "Gets Codec Info for Movies" )]
     [Authenticated( Roles = "admin" )]
     public class GetMovieList : IReturn<List<MediaItemResponse>>
+    {
+    }
+
+    [Route( "/Statistics2026/missing_episode_list", "GET", Summary = "Gets Codec Info for Episodes" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetMissingEpisodeList : IReturn<List<MediaItemResponse>>
+    {
+    }
+
+    [Route( "/Statistics2026/missing_movie_list", "GET", Summary = "Gets Codec Info for Movies" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetMissingMovieList : IReturn<List<MediaItemResponse>>
     {
     }
 

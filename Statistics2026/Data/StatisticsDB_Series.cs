@@ -292,7 +292,7 @@ namespace Statistics2026.Data
 
             var getSeriesSQL = "SELECT " +
                 "  Series.Name" +
-                ", strftime('%Y', Series.PremiereDate) AS PremierDate" +
+                ", strftime('%Y', Series.PremiereDate) AS PremiereDate" +
                 ", Series.NumEpisodes" +
                 ", Series.NumSpecials" +
                 ", Series.Rating" +

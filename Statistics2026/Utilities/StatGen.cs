@@ -488,7 +488,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.LatestPremiereDate:
                 {
                     var premiereDate = DBHelper.ReadDateTime( sqlResultValue.GetString( index ) );
-                    value = premiereDate.ToShortDateString();
+                    value = premiereDate?.ToShortDateString() ?? string.Empty;
                 }
 
                 break;
@@ -496,7 +496,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.LatestAdditionToServer:
                 {
                     var premiereDate = DBHelper.ReadDateTime( sqlResultValue.GetString( index ) );
-                    value = premiereDate.ToShortDateString();
+                    value = premiereDate?.ToShortDateString() ?? string.Empty;
                 }
 
                 break;
@@ -527,7 +527,10 @@ namespace Statistics2026.Utilities
                 case EStatisticType.LatestPremiereDate:
                 {
                     var premiereDate = DBHelper.ReadDateTime( sqlResultValue.GetString( index ) );
-                    secondValue = TimeSince( premiereDate );
+                    if ( premiereDate == null )
+                        secondValue = string.Empty;
+                    else
+                        secondValue = TimeSince( premiereDate.Value );
                 }
 
                 break;
@@ -535,7 +538,10 @@ namespace Statistics2026.Utilities
                 case EStatisticType.LatestAdditionToServer:
                 {
                     var premiereDate = DBHelper.ReadDateTime( sqlResultValue.GetString( index ) );
-                    secondValue = TimeSince( premiereDate );
+                    if ( premiereDate == null )
+                        secondValue = string.Empty;
+                    else
+                        secondValue = TimeSince( premiereDate.Value );
                 }
 
                 break;

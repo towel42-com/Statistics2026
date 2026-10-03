@@ -254,13 +254,20 @@ namespace Statistics2026.Utilities
             return ( kind == DateTimeKind.Utc ) ? _datetimeFormatUtc : _datetimeFormatLocal;
         }
 
-        public static DateTime ReadDateTime( string dateText )
+        public static DateTime? ReadDateTime( string dateText )
         {
-            return DateTime.ParseExact(
-                dateText,
-                _datetimeFormats,
-                DateTimeFormatInfo.InvariantInfo,
-                DateTimeStyles.None ).ToUniversalTime();
+            try
+            {
+                return DateTime.ParseExact(
+                    dateText,
+                    _datetimeFormats,
+                    DateTimeFormatInfo.InvariantInfo,
+                    DateTimeStyles.None ).ToUniversalTime();
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public string? ToDateTimeParamValue( DateTime? dateValue )

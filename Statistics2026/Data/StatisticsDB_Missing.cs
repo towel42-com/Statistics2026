@@ -126,7 +126,7 @@ namespace Statistics2026.Data
                     continue;
 
                 var movieTmdbId = tmdbMovie.Id;
-                _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies -         Looking for movie {tmdbMovie.Title} for {collection.Name}" );
+                _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies -         Checking for movie {tmdbMovie.Title} for {collection.Name} on server" );
                 var embyMovie = _dbHelper.GetMovieByTmdbId( _embyInterfaces._libraryManager, movieTmdbId );
 
                 if( embyMovie == null )
@@ -222,7 +222,7 @@ namespace Statistics2026.Data
 
                     var episodeTmdbId = tmdbEpisode.Id;
                     var episodeIdent = $"S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2}";
-                    _embyInterfaces!._logger?.Debug( $"AnalyzeMissingEpisodes -         Looking for episode {episodeIdent} for {series.Name}" );
+                    _embyInterfaces!._logger?.Debug( $"AnalyzeMissingEpisodes -         Checking for episode {episodeIdent} for {series.Name} on server" );
                     var embyEpisode = _dbHelper.GetEpisodeFromTmdbId( _embyInterfaces._libraryManager, embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber );
 
                     if( embyEpisode == null )
@@ -232,7 +232,7 @@ namespace Statistics2026.Data
                         var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
                         //return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";
 
-                        var title = $"{tmdbSeries.Name} - S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber} - {tmdbEpisode.Name}";
+                        var title = $"{tmdbSeries.Name} - S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2} - {tmdbEpisode.Name}";
                         retVal.Add( new SQLCmdDef( kSQLAddToMissing,
                         [
                             ("@Key", key ),

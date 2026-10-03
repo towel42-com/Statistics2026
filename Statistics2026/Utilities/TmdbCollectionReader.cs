@@ -317,195 +317,195 @@ namespace Statistics2026.Utilities
 
     // Data contracts mapped exactly to TMDB's native collection response footprint
     [DataContract]
-public class TmdbCollection
-{
-    [DataMember( Name = "id" )]
-    public string Id { get; set; } = string.Empty;
-
-    [DataMember( Name = "name" )]
-    public string Name { get; set; } = string.Empty;
-
-    [DataMember( Name = "overview" )]
-    public string Overview { get; set; } = string.Empty;
-
-    [DataMember( Name = "parts" )]
-    public List<TmdbMovie> Movies { get; set; } = [];
-}
-
-[DataContract]
-public class TmdbMovie
-{
-    [DataMember( Name = "id" )]
-    public string Id { get; set; } = string.Empty; // The TMDB Movie ID (Crucial for Emby matching)
-
-    [DataMember( Name = "title" )]
-    public string Title { get; set; } = string.Empty;
-
-    [DataMember( Name = "original_title" )]
-    public string OriginalTitle { get; set; } = string.Empty;
-
-    [DataMember( Name = "release_date" )]
-    public string ReleaseDateText { get; set; } = string.Empty;
-
-    [DataMember( Name = "overview" )]
-    public string Overview { get; set; } = string.Empty;
-
-    [DataMember( Name = "poster_path" )]
-    public string PosterPath { get; set; } = string.Empty;
-
-    public DateTime ReleaseDate()
+    public class TmdbCollection
     {
-        if( string.IsNullOrEmpty( ReleaseDateText ) )
-            return DateTime.MinValue;
+        [DataMember( Name = "id" )]
+        public string Id { get; set; } = string.Empty;
 
-        return DBHelper.ReadDateTime( ReleaseDateText );
+        [DataMember( Name = "name" )]
+        public string Name { get; set; } = string.Empty;
+
+        [DataMember( Name = "overview" )]
+        public string Overview { get; set; } = string.Empty;
+
+        [DataMember( Name = "parts" )]
+        public List<TmdbMovie> Movies { get; set; } = [];
     }
-}
 
-[DataContract]
-public class TmdbSeries
-{
-    [DataMember( Name = "id" )]
-    public string Id { get; set; } = string.Empty;
-
-    [DataMember( Name = "name" )]
-    public string Name { get; set; } = string.Empty;
-
-    [DataMember( Name = "overview" )]
-    public string Overview { get; set; } = string.Empty;
-
-    [DataMember( Name = "seasons" )]
-    public List<TmdbSeason> Seasons { get; set; } = [];
-
-    public List<int> listOfSeasons()
+    [DataContract]
+    public class TmdbMovie
     {
-        List<int> retVal = [];
-        foreach( var season in Seasons )
-        {
-            if( season == null )
-                continue;
+        [DataMember( Name = "id" )]
+        public string Id { get; set; } = string.Empty; // The TMDB Movie ID (Crucial for Emby matching)
 
-            retVal.Add( season.SeasonNumber );
+        [DataMember( Name = "title" )]
+        public string Title { get; set; } = string.Empty;
+
+        [DataMember( Name = "original_title" )]
+        public string OriginalTitle { get; set; } = string.Empty;
+
+        [DataMember( Name = "release_date" )]
+        public string ReleaseDateText { get; set; } = string.Empty;
+
+        [DataMember( Name = "overview" )]
+        public string Overview { get; set; } = string.Empty;
+
+        [DataMember( Name = "poster_path" )]
+        public string PosterPath { get; set; } = string.Empty;
+
+        public DateTime? ReleaseDate()
+        {
+            if( string.IsNullOrEmpty( ReleaseDateText ) )
+                return null;
+
+            return DBHelper.ReadDateTime( ReleaseDateText );
+        }
+    }
+
+    [DataContract]
+    public class TmdbSeries
+    {
+        [DataMember( Name = "id" )]
+        public string Id { get; set; } = string.Empty;
+
+        [DataMember( Name = "name" )]
+        public string Name { get; set; } = string.Empty;
+
+        [DataMember( Name = "overview" )]
+        public string Overview { get; set; } = string.Empty;
+
+        [DataMember( Name = "seasons" )]
+        public List<TmdbSeason> Seasons { get; set; } = [];
+
+        public List<int> listOfSeasons()
+        {
+            List<int> retVal = [];
+            foreach( var season in Seasons )
+            {
+                if( season == null )
+                    continue;
+
+                retVal.Add( season.SeasonNumber );
+            }
+
+            return retVal;
         }
 
-        return retVal;
-    }
-
-    public static TmdbSeries? FromJson( TmdbSeries? series, string jsonString, IJsonSerializer jsonSerializer )
-    {
-        TmdbSeries? retVal = series;
-        if( retVal == null )
-            retVal = jsonSerializer.DeserializeFromString<TmdbSeries>( jsonString );
-
-        if( retVal == null )
-            return null;
-
-        var seasons = retVal.listOfSeasons();
-        var jsonNode = System.Text.Json.Nodes.JsonObject.Parse( jsonString );
-        if( jsonNode == null )
-            return null;
-
-        var jsonObject = jsonNode.AsObject();
-
-        foreach( var seasonNum in seasons )
+        public static TmdbSeries? FromJson( TmdbSeries? series, string jsonString, IJsonSerializer jsonSerializer )
         {
-            var keyName = $"season/{seasonNum}";
-            if( !jsonObject.ContainsKey( keyName ) )
+            TmdbSeries? retVal = series;
+            if( retVal == null )
+                retVal = jsonSerializer.DeserializeFromString<TmdbSeries>( jsonString );
+
+            if( retVal == null )
+                return null;
+
+            var seasons = retVal.listOfSeasons();
+            var jsonNode = System.Text.Json.Nodes.JsonObject.Parse( jsonString );
+            if( jsonNode == null )
+                return null;
+
+            var jsonObject = jsonNode.AsObject();
+
+            foreach( var seasonNum in seasons )
             {
-                continue;
+                var keyName = $"season/{seasonNum}";
+                if( !jsonObject.ContainsKey( keyName ) )
+                {
+                    continue;
+                }
+
+                var detailedSeasonObj = jsonObject[ keyName ]!.AsObject();
+                if( detailedSeasonObj == null )
+                    continue;
+
+                var detailedSeasonString = detailedSeasonObj.ToJsonString();
+                var detailedSeason = jsonSerializer.DeserializeFromString<TmdbSeason>( detailedSeasonString );
+                if( detailedSeason == null )
+                    continue;
+
+                var existingSeason = retVal.Seasons.FirstOrDefault( s => ( s != null ) && ( s.SeasonNumber == detailedSeason.SeasonNumber ) );
+                if( existingSeason != null )
+                {
+                    // Merge the full episode array into your main dataset
+                    existingSeason.Episodes = detailedSeason.Episodes;
+                }
+                else
+                {
+                    // Fallback just in case TMDB returns a season not present in the array
+                    retVal.Seasons.Add( detailedSeason );
+                }
             }
 
-            var detailedSeasonObj = jsonObject[ keyName ]!.AsObject();
-            if( detailedSeasonObj == null )
-                continue;
-
-            var detailedSeasonString = detailedSeasonObj.ToJsonString();
-            var detailedSeason = jsonSerializer.DeserializeFromString<TmdbSeason>( detailedSeasonString );
-            if( detailedSeason == null )
-                continue;
-
-            var existingSeason = retVal.Seasons.FirstOrDefault( s => ( s != null ) && ( s.SeasonNumber == detailedSeason.SeasonNumber ) );
-            if( existingSeason != null )
-            {
-                // Merge the full episode array into your main dataset
-                existingSeason.Episodes = detailedSeason.Episodes;
-            }
-            else
-            {
-                // Fallback just in case TMDB returns a season not present in the array
-                retVal.Seasons.Add( detailedSeason );
-            }
+            return retVal;
         }
-
-        return retVal;
     }
-}
 
-[DataContract]
-public class TmdbSeason
-{
-    [DataMember( Name = "id" )]
-    public string Id { get; set; } = string.Empty;
-
-    [DataMember( Name = "name" )]
-    public string Name { get; set; } = string.Empty;
-
-    [DataMember( Name = "season_number" )]
-    public int SeasonNumber { get; set; } = 0;
-
-    [DataMember( Name = "episode_count" )]
-    public int EpisodeCount { get; set; } = 0;
-
-    [DataMember( Name = "air_date" )]
-    public string AirDateStr { get; set; } = string.Empty;
-
-    [DataMember( Name = "overview" )]
-    public string Overview { get; set; } = string.Empty;
-
-    [DataMember( Name = "poster_path" )]
-    public string PosterPath { get; set; } = string.Empty;
-
-    [DataMember( Name = "episodes" )]
-    public List<TmdbEpisode> Episodes { get; set; } = [];
-
-    // Helper method for safely parsing the date string
-    public DateTime AirDate()
+    [DataContract]
+    public class TmdbSeason
     {
-        if( string.IsNullOrEmpty( AirDateStr ) )
-            return DateTime.MinValue;
+        [DataMember( Name = "id" )]
+        public string Id { get; set; } = string.Empty;
 
-        return DBHelper.ReadDateTime( AirDateStr );
+        [DataMember( Name = "name" )]
+        public string Name { get; set; } = string.Empty;
+
+        [DataMember( Name = "season_number" )]
+        public int SeasonNumber { get; set; } = 0;
+
+        [DataMember( Name = "episode_count" )]
+        public int EpisodeCount { get; set; } = 0;
+
+        [DataMember( Name = "air_date" )]
+        public string AirDateStr { get; set; } = string.Empty;
+
+        [DataMember( Name = "overview" )]
+        public string Overview { get; set; } = string.Empty;
+
+        [DataMember( Name = "poster_path" )]
+        public string PosterPath { get; set; } = string.Empty;
+
+        [DataMember( Name = "episodes" )]
+        public List<TmdbEpisode> Episodes { get; set; } = [];
+
+        // Helper method for safely parsing the date string
+        public DateTime? AirDate()
+        {
+            if( string.IsNullOrEmpty( AirDateStr ) )
+                return null;
+
+            return DBHelper.ReadDateTime( AirDateStr );
+        }
     }
-}
 
-[DataContract]
-public class TmdbEpisode
-{
-    [DataMember( Name = "id" )]
-    public string Id { get; set; } = string.Empty;
-
-    [DataMember( Name = "name" )]
-    public string Name { get; set; } = string.Empty;
-
-    [DataMember( Name = "air_date" )]
-    public string AirDateStr { get; set; } = string.Empty;
-
-    [DataMember( Name = "overview" )]
-    public string Overview { get; set; } = string.Empty;
-
-    [DataMember( Name = "still_path" )]
-    public string StillPath { get; set; } = string.Empty;
-
-    [DataMember( Name = "episode_number" )]
-    public int EpisodeNumber { get; set; } = 0;
-
-    // Helper method for safely parsing the date string
-    public DateTime AirDate()
+    [DataContract]
+    public class TmdbEpisode
     {
-        if( string.IsNullOrEmpty( AirDateStr ) )
-            return DateTime.MinValue;
+        [DataMember( Name = "id" )]
+        public string Id { get; set; } = string.Empty;
 
-        return DBHelper.ReadDateTime( AirDateStr );
+        [DataMember( Name = "name" )]
+        public string Name { get; set; } = string.Empty;
+
+        [DataMember( Name = "air_date" )]
+        public string AirDateStr { get; set; } = string.Empty;
+
+        [DataMember( Name = "overview" )]
+        public string Overview { get; set; } = string.Empty;
+
+        [DataMember( Name = "still_path" )]
+        public string StillPath { get; set; } = string.Empty;
+
+        [DataMember( Name = "episode_number" )]
+        public int EpisodeNumber { get; set; } = 0;
+
+        // Helper method for safely parsing the date string
+        public DateTime? AirDate()
+        {
+            if( string.IsNullOrEmpty( AirDateStr ) )
+                return null;
+
+            return DBHelper.ReadDateTime( AirDateStr );
+        }
     }
-}
 }

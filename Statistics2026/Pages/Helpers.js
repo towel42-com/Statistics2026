@@ -121,10 +121,18 @@ define(function () {
     function getMediaRowData(info) {
         var retVal = "";
         retVal += "<td style='align='left' sort-value='" + info.SortName +"'>" + info.ListDisplayName + "</td>";
-        retVal += "<td style='align='right'>" + info.StartYear + "</td>";
+        retVal += "<td style='align='right'>" + info.PremiereYear + "</td>";
         retVal += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
         retVal += "<td style='align='left'>" + info.Codec + "</td>";
         retVal += "<td style='align='left'>" + info.DolbyVisionProfile + "</td>";
+        retVal += "<td style='align='left' sort-value='" + info.LocationSortName + "'>" + info.ServerLocation + "</td>";
+        return retVal;
+    }
+
+    function getMissingMediaRowData(info) {
+        var retVal = "";
+        retVal += "<td style='align='left' sort-value='" + info.SortName + "'>" + info.ListDisplayName + "</td>";
+        retVal += "<td style='align='right'>" + info.PremiereDate + "</td>";
         retVal += "<td style='align='left' sort-value='" + info.LocationSortName + "'>" + info.ServerLocation + "</td>";
         return retVal;
     }
@@ -425,6 +433,10 @@ define(function () {
                     const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
                     const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
                     return currentDirection === 'asc' ? numA - numB : numB - numA;
+                } else if (dataType == 'date') {
+                    const dateA = new Date(cellA);
+                    const dateB = new Date(cellB);
+                    return currentDirection === 'asc' ? dateA - dateB : dateB - dateA;
                 } else if (dataType == 'string') {
                     // Text comparison using localeCompare for proper alphabetical ordering
                     return currentDirection === 'asc'
@@ -504,6 +516,7 @@ define(function () {
         LoadTVProgress,
         LoadUserStats,
         getMediaRowData,
+        getMissingMediaRowData,
         getStatistics2026Data,
         getSummaryInfo,
         getTabIndex,

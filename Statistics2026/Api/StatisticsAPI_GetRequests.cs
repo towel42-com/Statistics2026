@@ -50,12 +50,35 @@ namespace Statistics2026.Api
             return retVal;
         }
 
+        public object Get( GetMissingEpisodeList request )
+        {
+            var retVal = GetRequest( "GetMissingEpisodeList", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+                var episodes = db.GetMissingEpisodeList();
+
+                return episodes ?? new object();
+            } );
+            return retVal;
+        }
+
         public object Get( GetMovieList request )
         {
             return GetRequest( "GetMovieList", timer =>
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var movies = db.GetMovieList();
+
+                return movies ?? new object();
+            } );
+        }
+
+        public object Get( GetMissingMovieList request )
+        {
+            return GetRequest( "GetMissingMovieList", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+                var movies = db.GetMissingMovieList();
 
                 return movies ?? new object();
             } );

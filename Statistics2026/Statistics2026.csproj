@@ -69,8 +69,12 @@
 
 		<EmbeddedResource Include="Pages\AdminPages\Episodes.html" />
         <EmbeddedResource Include="Pages\AdminPages\Episodes.js" />
+		<EmbeddedResource Include="Pages\AdminPages\MissingEpisodes.html" />
+        <EmbeddedResource Include="Pages\AdminPages\MissingEpisodes.js" />
         <EmbeddedResource Include="Pages\AdminPages\Movies.html" />
         <EmbeddedResource Include="Pages\AdminPages\Movies.js" />
+        <EmbeddedResource Include="Pages\AdminPages\MissingMovies.html" />
+        <EmbeddedResource Include="Pages\AdminPages\MissingMovies.js" />
         <EmbeddedResource Include="Pages\AdminPages\Settings.html" />
         <EmbeddedResource Include="Pages\AdminPages\Settings.js" />
         <EmbeddedResource Include="Pages\AdminPages\Summary.html" />

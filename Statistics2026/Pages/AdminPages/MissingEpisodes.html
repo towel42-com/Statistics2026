@@ -1,0 +1,22 @@
+<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/MissingEpisodes.js">
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <h2 style="margin-top: 0px;margin-bottom: 0px;">TV Episodes Information</h2>
+
+            <div id="missing_episode_results_status">Loading Data...</div>
+            <table class="sortable-table-styled" id="missing_episode_results_table" cellpadding="6" style="width: 95%; padding-bottom: 250px;">
+                <thead>
+                    <tr style="text-align: left;">
+                        <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
+                        <th data-column="PremiereDate" data-type="date" class="info_cell_heading">Premiere Date<span class="sort-icon"></span></th>
+                        <th data-column="Search" data-type="string" class="info_cell_heading">Click to Search<span class="sort-icon"></span></th>
+                    </tr>
+                </thead>
+                <tbody class="resultBody" id="missing_episode_results">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

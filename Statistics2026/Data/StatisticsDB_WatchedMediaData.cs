@@ -924,7 +924,9 @@ namespace Statistics2026.Data
                 var name = row.GetString( 0 );
                 var date = row.GetString( 1 );
                 var lastPlayedDate = DBHelper.ReadDateTime( date );
-                retVal.Add( (name, lastPlayedDate) );
+                if ( lastPlayedDate == null )
+                    lastPlayedDate = DateTime.MinValue;
+                retVal.Add( (name, lastPlayedDate.Value) );
                 return true;
             } );
 

@@ -300,6 +300,7 @@ namespace Statistics2026.Utilities
         public string DivId( string suffix = "" )
         {
             var divId = Regex.Replace( Title, @"\s", string.Empty );
+            divId = Regex.Replace( divId, @"[^0-9A-Za-z]", "_" );
             if( !suffix.IsNullOrEmpty() )
                 divId += "-" + suffix;
             return divId;

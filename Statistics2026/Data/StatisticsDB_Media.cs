@@ -619,10 +619,24 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private List<MediaItemResponse> getMediaListResponseOnServer( bool episodes )
-        {
-            var retVal = new List<MediaItemResponse>();
 
+        private enum EWhichMediaList
+        {
+            eOnServer = 0x01,
+            eMissing = 0x02,
+            eEpisodes = 0x10,
+            eMovies = 0x20,
+            eEpisodesOnServer = eEpisodes | eOnServer,
+            eEpisodesMissing = eEpisodes | eMissing,
+            eMoviesOnServer = eMovies | eOnServer,
+            eMoviesMissing = eMovies | eMissing,
+        };
+
+        private List<MediaItemResponse> getMediaListResponseOnServer( EWhichMediaList whichMedia )
+        {
+            var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
+
+            var retVal = new List<MediaItemResponse>();
             var sql = "SELECT ";
             if( episodes )
                 sql += "  PrimaryName || ' - S' || printf( '%02d', Season ) || 'E' || printf('%02d', Episode) || ' - ' || SecondaryName AS ListDisplayName";
@@ -630,7 +644,7 @@ namespace Statistics2026.Data
                 sql += "  PrimaryName AS ListDisplayName";
 
             sql +=
-                ", StartYear" +
+                ", PremiereDate" +
                 ", ResolutionDetail" +
                 ", Codec" +
                 ", DolbyVisionProfile" +
@@ -652,7 +666,8 @@ namespace Statistics2026.Data
                 var curr = new MediaItemResponse()
                 {
                     SortName = CleanSortName( row.GetString( col++ ) ),
-                    StartYear = row.GetString( col++ ),
+                    PremiereDate = DBHelper.ReadDateTime( row.GetString( col++ ) )?.Date.ToShortDateString() ?? string.Empty,
+                    PremiereYear = DBHelper.ReadDateTime( row.GetString( col - 1 ) )?.Year.ToString() ?? string.Empty,
                     ResolutionDetail = row.GetString( col++ ),
                     Codec = row.GetString( col++ ),
                     DolbyVisionProfile = row.GetString( col++ ),
@@ -684,8 +699,10 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private List<MediaItemResponse> getMediaListResponseMissing( bool episodes )
+        private List<MediaItemResponse> getMediaListResponseMissing( EWhichMediaList whichMedia )
         {
+            var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
+
             var retVal = new List<MediaItemResponse>();
 
             var sql = "SELECT " +
@@ -731,7 +748,8 @@ namespace Statistics2026.Data
                 {
                     ListDisplayName = row.GetString( col ),
                     SortName = CleanSortName( row.GetString( col++ ) ),
-                    StartYear = DBHelper.ReadDateTime( row.GetString( col++ ) ).Year.ToString(),
+                    PremiereDate = DBHelper.ReadDateTime( row.GetString( col++ ) )?.Date.ToShortDateString() ?? string.Empty,
+                    PremiereYear = DBHelper.ReadDateTime( row.GetString( col - 1 ) )?.Year.ToString() ?? string.Empty,
                     ResolutionDetail = string.Empty,
                     Codec = string.Empty,
                     DolbyVisionProfile = string.Empty,
@@ -762,13 +780,13 @@ namespace Statistics2026.Data
                     if( seasonNum != 0 )
                         subKey += $"S{seasonNum:D2}";
                     if( episodeNum != 0 )
-                        subKey += $"S{episodeNum:D2}";
+                        subKey += $"E{episodeNum:D2}";
                     if( !string.IsNullOrEmpty( subKey ) )
                         searchKey += " " + subKey;
                 }
                 else
                 {
-                    searchKey += " " + curr.StartYear.ToString();
+                    searchKey += " " + curr.PremiereYear;
                 }
 
                 if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
@@ -793,10 +811,19 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private List<MediaItemResponse> getMediaListResponse( bool episodes )
+        private List<MediaItemResponse> getMediaListResponse( EWhichMediaList whichMedia )
         {
-            var retVal = getMediaListResponseMissing( episodes );
-            retVal.AddRange( getMediaListResponseOnServer( episodes ) );
+            List<MediaItemResponse> retVal = [];
+
+            if( ( whichMedia & EWhichMediaList.eMissing ) != 0 )
+            {
+                retVal.AddRange( getMediaListResponseMissing( whichMedia ) );
+            }
+
+            if( ( whichMedia & EWhichMediaList.eOnServer ) != 0 )
+            {
+                retVal.AddRange( getMediaListResponseOnServer( whichMedia ) );
+            }
 
             retVal.Sort(
                 ( x, y ) =>
@@ -810,12 +837,22 @@ namespace Statistics2026.Data
 
         public List<MediaItemResponse> GetEpisodeList()
         {
-            return getMediaListResponse( true );
+            return getMediaListResponse( EWhichMediaList.eEpisodesOnServer );
+        }
+
+        public List<MediaItemResponse> GetMissingEpisodeList()
+        {
+            return getMediaListResponse( EWhichMediaList.eEpisodesMissing );
         }
 
         public List<MediaItemResponse> GetMovieList()
         {
-            return getMediaListResponse( false );
+            return getMediaListResponse( EWhichMediaList.eMoviesOnServer );
+        }
+
+        public List<MediaItemResponse> GetMissingMovieList()
+        {
+            return getMediaListResponse( EWhichMediaList.eMoviesMissing );
         }
     }
 }
