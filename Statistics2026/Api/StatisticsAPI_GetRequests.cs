@@ -4,6 +4,7 @@ using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
 using System.Net.NetworkInformation;
+using static Statistics2026.Data.StatisticsDB;
 
 namespace Statistics2026.Api
 {
@@ -62,19 +63,22 @@ namespace Statistics2026.Api
             var retVal = GetRequest( "GetEpisodeList", timer =>
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
-                var episodes = db.GetEpisodeList();
+                var showOnServer = request.showOnServer;
+                var showMissing = request.showMissing;
 
-                return episodes ?? new object();
-            } );
-            return retVal;
-        }
+                if( !showOnServer && !showMissing )
+                {
+                    showOnServer = true;
+                    showMissing = true;
+                }
 
-        public object Get( GetMissingEpisodeList request )
-        {
-            var retVal = GetRequest( "GetMissingEpisodeList", timer =>
-            {
-                var db = StatisticsDB.GetInstance( _embyInterfaces );
-                var episodes = db.GetMissingEpisodeList();
+                var whichMedia = EWhichMediaList.eEpisodes;
+                if( showOnServer )
+                    whichMedia = whichMedia | EWhichMediaList.eOnServer;
+                if( showMissing )
+                    whichMedia = whichMedia | EWhichMediaList.eMissing;
+
+                var episodes = db.getMediaListResponse( whichMedia );
 
                 return episodes ?? new object();
             } );
@@ -83,24 +87,29 @@ namespace Statistics2026.Api
 
         public object Get( GetMovieList request )
         {
-            return GetRequest( "GetMovieList", timer =>
+            var retVal = GetRequest( "GetEpisodeList", timer =>
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
-                var movies = db.GetMovieList();
+                var showOnServer = request.showOnServer;
+                var showMissing = request.showMissing;
 
-                return movies ?? new object();
+                if( !showOnServer && !showMissing )
+                {
+                    showOnServer = true;
+                    showMissing = true;
+                }
+
+                var whichMedia = EWhichMediaList.eMovies;
+                if( showOnServer )
+                    whichMedia = whichMedia | EWhichMediaList.eOnServer;
+                if( showMissing )
+                    whichMedia = whichMedia | EWhichMediaList.eMissing;
+
+                var episodes = db.getMediaListResponse( whichMedia );
+
+                return episodes ?? new object();
             } );
-        }
-
-        public object Get( GetMissingMovieList request )
-        {
-            return GetRequest( "GetMissingMovieList", timer =>
-            {
-                var db = StatisticsDB.GetInstance( _embyInterfaces );
-                var movies = db.GetMissingMovieList();
-
-                return movies ?? new object();
-            } );
+            return retVal;
         }
 
         public object Get( GetCodecSummary request )

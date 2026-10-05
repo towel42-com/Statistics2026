@@ -18,16 +18,8 @@ define(function () {
                 name: 'Episodes'
             }
             , {
-                href: Dashboard.getConfigurationPageUrl('MissingEpisodes'),
-                name: 'Missing Episodes'
-            }
-            , {
                 href: Dashboard.getConfigurationPageUrl('Movies'),
                 name: 'Movies'
-            }
-            , {
-                href: Dashboard.getConfigurationPageUrl('MissingMovies'),
-                name: 'Missing Movies'
             }
             , {
                 href: Dashboard.getConfigurationPageUrl('Settings'),

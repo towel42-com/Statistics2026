@@ -58,16 +58,27 @@ define(function () {
         return retVal;
     }
 
+    function getTVProgressHeader() {
+        var retVal = "";
+        retVal += "<tr style=\"text-align: left; white-space: nowrap;\">";
+        retVal += "    <th data-column=\"Name\" data-type=\"string\" class=\"info_cell_heading\">TV Series (Premiere Year)<span class=\"sort-icon\"></span></th>";
+        retVal += "    <th data-column=\"EpisodeProgess\" data-type=\"progress\" class=\"info_cell_heading\" style=\"white-space: nowrap;\">Progress<span class=\"sort-icon\"></span><span class=\"infoBlock\" id=\"episodesInfo\"><i class=\"md-icon\">info</i></span></th>";
+        retVal += "    <th data-column=\"Score\" data-type=\"number\" class=\"info_cell_heading\">Score<span class=\"sort-icon\"></span></th>";
+        retVal += "    <th data-column=\"Status\" data-type=\"string\" class=\"info_cell_heading\">Series Status<span class=\"sort-icon\"></span></th>";
+        retVal += "</tr>";
+        return retVal;
+    }
+
     function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc) {
         view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
 
         var url = "Statistics2026/tv_series_progress/" + userName;
 
         const sortit = () => {
-            sortTable(1, "progress", 'TVSeriesProgressTable', 'TVSeriesProgressStatus', showLoadingFunc, hideLoadingFunc, 'desc');
+            sortTable(1, "progress", 'TVSeriesProgress', showLoadingFunc, hideLoadingFunc, 'desc');
         };
 
-        loadTableData(view, 'TVSeriesProgressStatus', 'TVSeriesProgressTable_results', url, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
+        loadTableData(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
     }
 
     function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
@@ -118,14 +129,43 @@ define(function () {
         }
     }
 
-    function getMediaRowData(info) {
+    function getMediaRowData(info, showOnServer, showMissing) {
         var retVal = "";
-        retVal += "<td style='align='left' sort-value='" + info.SortName +"'>" + info.ListDisplayName + "</td>";
-        retVal += "<td style='align='right'>" + info.PremiereYear + "</td>";
-        retVal += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
-        retVal += "<td style='align='left'>" + info.Codec + "</td>";
-        retVal += "<td style='align='left'>" + info.DolbyVisionProfile + "</td>";
-        retVal += "<td style='align='left' sort-value='" + info.LocationSortName + "'>" + info.ServerLocation + "</td>";
+        retVal += "<td style='align='left' sort-value='" + info.SortName + "'>" + info.ListDisplayName + "</td>";
+        retVal += "<td style='align='right'>" + info.PremiereDate + "</td>";
+
+        if (showOnServer) {
+            retVal += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
+            retVal += "<td style='align='left'>" + info.Codec + "</td>";
+            retVal += "<td style='align='left'>" + info.DolbyVisionProfile + "</td>";
+            retVal += "<td style='align='left' sort-value='" + info.LocationSortName + "'>" + info.ServerLocation + "</td>";
+        }
+
+        if (showMissing) {
+            retVal += "<td style='align='left' sort-value='" + info.SearchSortName + "'>" + info.SearchLocation + "</td>";
+        }
+
+        return retVal;
+    }
+
+    function getMediaHeader(showOnServer, showMissing) {
+        var retVal = "";
+        retVal += "<tr style=\"text-align: left;\">";
+        retVal += "    <th data-column=\"Name\" data-type=\"string\" class=\"info_cell_heading\">Name<span class=\"sort-icon\"></span></th>";
+        retVal += "    <th data-column=\"PremiereDate\" data-type=\"date\" class=\"info_cell_heading\">Premiere Date<span class=\"sort-icon\"></span></th>";
+
+        if (showOnServer) {
+            retVal += "    <th data-column=\"Resolution\" data-type=\"string\" class=\"info_cell_heading\">Resolution<span class=\"sort-icon\"></span></th>";
+            retVal += "    <th data-column=\"Codec\" data-type=\"string\" class=\"info_cell_heading\">Codec<span class=\"sort-icon\"></span></th>";
+            retVal += "    <th data-column=\"DolbyVisionProfile\" data-type=\"string\" class=\"info_cell_heading\">Dolby Vision Profile<span class=\"sort-icon\"></span></th>";
+            retVal += "    <th data-column=\"ServerLocation\" data-type=\"string\" class=\"info_cell_heading\">Location on Server<span class=\"sort-icon\"></span></th>";
+        }
+
+        if (showMissing) {
+            retVal += "    <th data-column=\"Search\" data-type=\"string\" class=\"info_cell_heading\">Click to Search<span class=\"sort-icon\"></span></th>";
+        }
+
+        retVal += "</tr>";
         return retVal;
     }
 
@@ -146,17 +186,33 @@ define(function () {
         });
     };
 
-    function getLastRunInfo(view, whichRun, div) {
-        var urlText = "/emby/Statistics2026/last_run/" + whichRun;
-        console.info("last_run- '" + urlText + "'");
-        var url = ApiClient.getUrl(urlText);
+    async function getLastRunInfo(view, whichRuns, div) {
+        const promises = whichRuns.map(whichRun => {
 
-        ApiClient.getJSON(url).then(response => {
-            view.querySelector("#" + div).innerHTML = response.html;
-        }).catch(error => {
-            var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
-            console.error("getLastRunInfo failed:", errorMessage);
+            var urlText = "/emby/Statistics2026/last_run/" + whichRun;
+            console.info("last_run- '" + urlText + "'");
+            var url = ApiClient.getUrl(urlText);
+
+            return ApiClient.getJSON(url).then(response => {
+                return response.html;
+            }).catch(error => {
+                var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
+                console.error("getLastRunInfo failed:", errorMessage);
+                return `<tr><td colspan="2">Error loading ${whichRun}</td></tr>`;
+            });
         });
+
+        try {
+            const htmlChunks = await Promise.all(promises);
+            let tableHtml = "<table><tbody>";
+            for (const chunk of htmlChunks) {
+                tableHtml += `<tr><td>${chunk}</td></tr>`;
+            }
+            tableHtml += "</tbody></table>";
+            view.querySelector("#" + div).innerHTML = tableHtml;
+        } catch (criticalError) {
+            console.error("Critical error in batch execution:", criticalError);
+        }
     }
 
     function getSummaryInfo(view, whichSummary, user, parameters = "", div = "") {
@@ -257,13 +313,14 @@ define(function () {
         document.head.appendChild(link);
     }
 
-    async function loadTableData(view, statusElementId, resultsElementId, apiEndpoint, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
+    // 'missing_episode_results_status', 'missing_episode_results_body', 'missing_episode_results_head',
+
+    async function loadTableData(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
         var url = ApiClient.getUrl(apiEndpoint);
 
-        var load_status = view.querySelector('#' + statusElementId);
+        var load_status = view.querySelector('#' + baseId + '_status');
         load_status.style.display = '';
         load_status.innerHTML = "Loading Data...";
-
 
         showLoadingFunc();
         try {
@@ -283,7 +340,12 @@ define(function () {
 
             // console.log("resultData: " + JSON.stringify(resultData));
 
-            var tableBody = view.querySelector('#' + resultsElementId);
+            var tbody = view.querySelector('#' + baseId + '_body');
+            tbody.innerHTML = "";
+
+            var thead = view.querySelector('#' + baseId + '_head');
+            thead.innerHTML = getHeaderFunc();
+            setupSortability(baseId, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
             let currentIndex = 0;
             let chunkSize = Math.min(50, Math.trunc(resultData.length / 20));
@@ -307,7 +369,7 @@ define(function () {
                     fragment.appendChild(tr);
                 }
 
-                tableBody.appendChild(fragment);
+                tbody.appendChild(fragment);
                 currentIndex = endIndex;
 
                 if (currentIndex < resultData.length) {
@@ -344,12 +406,12 @@ define(function () {
         });
     }
 
-    function setupSortability(tableId, statusId, showLoadingFunc, hideLoadingFunc) {
-        document.querySelectorAll(`#${tableId} thead th`).forEach((header, index) => {
+    function setupSortability(baseId, showLoadingFunc, hideLoadingFunc) {
+        document.querySelectorAll(`#${baseId}_table thead th`).forEach((header, index) => {
             header.addEventListener('click', () => {
                 const columnType = header.getAttribute('data-type');
                 let idx = header.cellIndex;
-                sortTable(idx, columnType, tableId, statusId, showLoadingFunc, hideLoadingFunc);
+                sortTable(idx, columnType, baseId, showLoadingFunc, hideLoadingFunc);
             });
         });
     }
@@ -388,15 +450,16 @@ define(function () {
 
 
     const sortDirections = new Map();
-    async function sortTable(columnIndex, dataType, tableId, statusId, showLoadingFunc, hideLoadingFunc, forcedDir) {
+    async function sortTable(columnIndex, dataType, baseId, showLoadingFunc, hideLoadingFunc, forcedDir) {
         showLoadingFunc();
 
-        var load_status = document.querySelector('#' + statusId);
-        load_status.style.display = '';
+        var load_status = document.querySelector('#' + baseId + '_status');
         load_status.innerHTML = "Sorting Data...";
+        load_status.style.display = '';
 
         await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 
+        var tableId = baseId + '_table';
         const table = document.getElementById(tableId);
         const tbody = table.querySelector("tbody");
         // Convert HTMLCollection of rows into a real Array
@@ -528,6 +591,7 @@ define(function () {
         CheckForValidConfig,
         LoadTVProgress,
         LoadUserStats,
+        getMediaHeader,
         getMediaRowData,
         getMissingMediaRowData,
         getStatistics2026Data,

@@ -19,11 +19,6 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
                 Helpers.injectStyleSheet();
                 Helpers.injectSortableTableStyle(document);
-                Helpers.setupSortability('TVSeriesProgressTable', 'TVSeriesProgressStatus', loading.show, loading.hide);
-
-                view.querySelector("#episodesInfo").addEventListener(`click`, function () {
-                    Helpers.showInfo('This column displays the number of watched episodes and the number of total episodes. You will have 100% when you viewed all normal episodes (no specials, only aired)<br/>. ', 'Watched Episodes');
-                });
 
                 Helpers.getLastRunInfo(view, "UserWatchDataAnalysis", "lastRunInfo");
                 loadData(view, params.userId);

@@ -6,28 +6,20 @@ using System.Collections.Generic;
 
 namespace Statistics2026.Api
 {
-    [Route( "/Statistics2026/episode_list", "GET", Summary = "Gets Codec Info for Episodes" )]
+    [Route( "/Statistics2026/episode_list", "GET", Summary = "Gets Episodes" )]
     [Authenticated( Roles = "admin" )]
     public class GetEpisodeList : IReturn<List<MediaItemResponse>>
     {
+        public bool showOnServer { get; set; } = false;
+        public bool showMissing { get; set; } = false;
     }
 
-    [Route( "/Statistics2026/movie_list", "GET", Summary = "Gets Codec Info for Movies" )]
+    [Route( "/Statistics2026/movie_list", "GET", Summary = "Gets Movies" )]
     [Authenticated( Roles = "admin" )]
     public class GetMovieList : IReturn<List<MediaItemResponse>>
     {
-    }
-
-    [Route( "/Statistics2026/missing_episode_list", "GET", Summary = "Gets Codec Info for Episodes" )]
-    [Authenticated( Roles = "admin" )]
-    public class GetMissingEpisodeList : IReturn<List<MediaItemResponse>>
-    {
-    }
-
-    [Route( "/Statistics2026/missing_movie_list", "GET", Summary = "Gets Codec Info for Movies" )]
-    [Authenticated( Roles = "admin" )]
-    public class GetMissingMovieList : IReturn<List<MediaItemResponse>>
-    {
+        public bool showOnServer { get; set; } = false;
+        public bool showMissing { get; set; } = false;
     }
 
     // http://localhost:8096/emby/Statistics2026/tv_series_progress/{User}

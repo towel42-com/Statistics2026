@@ -4,21 +4,31 @@
     <div data-role="content">
         <div class="content-primary" style="padding-top:2px;">
             <h2 style="margin-top: 0px;margin-bottom: 0px;">Movies Information</h2>
+
+			<div class="radioButtonsContainer" style="display: flex; flex-direction: row; gap: 24px; align-items: center; margin-top: 15px; margin-bottom: 15px;">
+				<label class="radioContainer">
+					<input name="movieDisplay" is="emby-radio" type="radio" value="OnServer" checked />
+					<span>Show Movies on Server?</span>
+				</label>
+
+				<label class="radioContainer">
+					<input name="movieDisplay" is="emby-radio" type="radio" value="Missing" />
+					<span>Show Missing Movies?</span>
+				</label>
+
+				<label class="radioContainer">
+					<input name="movieDisplay" is="emby-radio" type="radio" value="All" />
+					<span>Show All Movies?</span>
+				</label>
+			</div>
+				
             <p name="lastRunInfo" id="lastRunInfo" />
 
             <div id="movie_results_status">Loading Data...</div>
             <table class="sortable-table-styled" id="movie_results_table" cellpadding="6" style="width:95%; padding-bottom: 250px;">
-                <thead>
-                    <tr style="text-align: left;">
-                        <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
-                        <th data-column="PremiereDate" data-type="date" class="info_cell_heading">Premiere Date<span class="sort-icon"></span></th>
-                        <th data-column="Resolution" data-type="string" class="info_cell_heading">Resolution<span class="sort-icon"></span></th>
-                        <th data-column="Codec" data-type="string" class="info_cell_heading">Codec<span class="sort-icon"></span></th>
-                        <th data-column="DolbyVisionProfile" data-type="string" class="info_cell_heading">Dolby Vision Profile<span class="sort-icon"></span></th>
-                        <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
-                    </tr>
+                <thead id="movie_results_head">
                 </thead>
-                <tbody class="resultBody" id="movie_results">
+                <tbody class="resultBody" id="movie_results_body">
                 </tbody>
             </table>
         </div>

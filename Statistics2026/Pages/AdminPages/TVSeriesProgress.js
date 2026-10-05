@@ -11,9 +11,8 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
                 Helpers.injectSortableTableStyle(document);
-                Helpers.setupSortability('TVSeriesProgressTable', 'TVSeriesProgressStatus', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
-                Helpers.getLastRunInfo(view, "UserWatchDataAnalysis", "lastRunInfo");
+                Helpers.getLastRunInfo(view, ["UserWatchDataAnalysis"], "lastRunInfo");
                 Helpers.loadUsers(view, `#selectUser_tvprogress`, loadData);
             });
 
@@ -28,10 +27,6 @@
             view.querySelector("#selectUser_tvprogress").addEventListener(`change`, function () {
                 const userId = this.options[this.selectedIndex].value;
                 loadData(view, userId);
-            });
-
-            view.querySelector("#episodesInfo").addEventListener(`click`, function () {
-                Helpers.showInfo('This column displays the number of watched episodes and the number of total episodes. You will have 100% when you viewed all normal episodes (no specials, only aired)<br/>. ', 'Watched Episodes');
             });
 
             function loadData(view, userId) {

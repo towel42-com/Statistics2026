@@ -620,7 +620,7 @@ namespace Statistics2026.Data
         }
 
 
-        private enum EWhichMediaList
+        public enum EWhichMediaList
         {
             eOnServer = 0x01,
             eMissing = 0x02,
@@ -772,6 +772,8 @@ namespace Statistics2026.Data
 
                 var parentType = episodes ? "Series" : "Collection";
                 curr.ServerLocation = $"Missing from {parentType} '{parentName}'";
+                curr.LocationSortName = curr.ServerLocation;
+
                 var searchKey = curr.SortName;
                 if( episodes )
                 {
@@ -796,12 +798,12 @@ namespace Statistics2026.Data
                         searchUrl += "?q=";
                     searchUrl += searchKey;
 
-                    curr.LocationSortName = $"{parentName} - {searchKey}";
+                    curr.SearchSortName = $"{parentName} - {searchKey}";
 
                     var displayText = $"{curr.ServerLocation} - Click to Search for '{searchKey}'";
 
-                    var serverLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {searchKey}\">{displayText}</a>";
-                    curr.ServerLocation = serverLocation;
+                    var searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {searchKey}\">{displayText}</a>";
+                    curr.SearchLocation = searchLocation;
                 }
 
                 retVal.Add( curr );
@@ -811,7 +813,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private List<MediaItemResponse> getMediaListResponse( EWhichMediaList whichMedia )
+        public List<MediaItemResponse> getMediaListResponse( EWhichMediaList whichMedia )
         {
             List<MediaItemResponse> retVal = [];
 
@@ -833,26 +835,6 @@ namespace Statistics2026.Data
                     return lhs.CompareTo( rhs );
                 } );
             return retVal;
-        }
-
-        public List<MediaItemResponse> GetEpisodeList()
-        {
-            return getMediaListResponse( EWhichMediaList.eEpisodesOnServer );
-        }
-
-        public List<MediaItemResponse> GetMissingEpisodeList()
-        {
-            return getMediaListResponse( EWhichMediaList.eEpisodesMissing );
-        }
-
-        public List<MediaItemResponse> GetMovieList()
-        {
-            return getMediaListResponse( EWhichMediaList.eMoviesOnServer );
-        }
-
-        public List<MediaItemResponse> GetMissingMovieList()
-        {
-            return getMediaListResponse( EWhichMediaList.eMoviesMissing );
         }
     }
 }

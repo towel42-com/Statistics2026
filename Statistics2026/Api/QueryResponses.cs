@@ -60,6 +60,8 @@ namespace Statistics2026.Api
         public string DolbyVisionProfile { get; set; } = string.Empty;
         public string LocationSortName { get; set; } = string.Empty;
         public string ServerLocation { get; set; } = string.Empty;
+        public string SearchSortName { get; set; } = string.Empty;
+        public string SearchLocation { get; set; } = string.Empty;
         public string ItemUrl { get; set; } = string.Empty;
     }
 }

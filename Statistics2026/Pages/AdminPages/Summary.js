@@ -63,7 +63,7 @@
                 }
             });
 
-            Helpers.getLastRunInfo(view, "System", "lastRunInfo");
+            Helpers.getLastRunInfo(view, ["System"], "lastRunInfo");
             view.querySelector("#pageIntro").innerHTML =
                 "This plugin will calculate media and user statistics "
                 + "from this Emby server instance.";
