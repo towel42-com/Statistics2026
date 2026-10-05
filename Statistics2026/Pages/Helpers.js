@@ -313,9 +313,18 @@ define(function () {
         document.head.appendChild(link);
     }
 
-    // 'missing_episode_results_status', 'missing_episode_results_body', 'missing_episode_results_head',
+    const activeLoaders = new Map();
 
     async function loadTableData(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
+        if (activeLoaders.has(baseId)) {
+            activeLoaders.get(baseId).abort();
+            activeLoaders.delete(baseId);
+        }
+        
+        const abortController = new AbortController();
+        const { signal } = abortController;
+        activeLoaders.set(baseId, abortController);
+
         var url = ApiClient.getUrl(apiEndpoint);
 
         var load_status = view.querySelector('#' + baseId + '_status');
@@ -325,15 +334,21 @@ define(function () {
         showLoadingFunc();
         try {
             console.log("url: " + url);
-            let resultData = await getStatistics2026Data(url).catch(error => {
+            let resultData = await getStatistics2026Data(url, { signal }).catch(error => {
+                if (error.name === 'AbortError') {
+                    console.log(`Load operation for ${baseId} was interrupted during network fetch.`);
+                    return;
+                }
+
                 var errorMessage = "'" + error + "' - '" + url + "'";
                 console.error("loadTableData failed:", errorMessage, "url:", url);
                 hideLoadingFunc();
                 return;
             });
 
-            if (resultData === undefined) {
-                console.error("loadTableData failed: result data was undefined", "url:", url);
+            if (resultData === undefined || signal.aborted) {
+                if (!signal.aborted)
+                    console.error("loadTableData failed: result data was undefined", "url:", url);
                 hideLoadingFunc();
                 return;
             }
@@ -350,6 +365,11 @@ define(function () {
             let currentIndex = 0;
             let chunkSize = Math.min(50, Math.trunc(resultData.length / 20));
             function renderNextChunk() {
+                if (signal.aborted) {
+                    console.log(`Rendering loop for ${baseId} was interrupted.`);
+                    return; 
+                }
+
                 showLoadingFunc();
                 const endIndex = Math.min(currentIndex + chunkSize, resultData.length);
                 const fragment = document.createDocumentFragment();
@@ -376,6 +396,10 @@ define(function () {
                     requestAnimationFrame(renderNextChunk);
                 }
                 else {
+                    if (activeLoaders.get(baseId) === abortController) {
+                        activeLoaders.delete(baseId);
+                    }
+
                     if (onFinished !== undefined) {
                         onFinished();
                     }
@@ -384,6 +408,11 @@ define(function () {
                 }
             }
             requestAnimationFrame(renderNextChunk);
+        }
+        catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error("Unexpected error in loadTableData workflow:", error);
+            }
         }
         finally {
             hideLoadingFunc();
