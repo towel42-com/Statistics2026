@@ -6,7 +6,7 @@ namespace Statistics2026.Utilities
 {
     public class TableColDef
     {
-        public TableColDef( string columnName, string columnType, bool allowNull, bool isPrimaryIndex = false )
+        public TableColDef( string columnName, string columnType, bool allowNull, bool isPrimaryIndex = false, string defaultValue="" )
         {
             if( columnName == null || columnName == string.Empty )
                 throw new ArgumentException( "TableColDef: Must define the column name" );
@@ -17,6 +17,7 @@ namespace Statistics2026.Utilities
             Type = columnType;
             AllowNull = allowNull;
             IsPrimaryIndex = isPrimaryIndex;
+            DefaultValue = defaultValue;
         }
 
         public static string getIndexName( string tableName, string columnName )
@@ -60,6 +61,8 @@ namespace Statistics2026.Utilities
         public string ToString( bool alter )
         {
             var retVal = $"{Name} {Type}";
+            if ( DefaultValue != null && DefaultValue != string.Empty )
+                retVal += $" DEFAULT '{DefaultValue}'";
             if( !alter && !AllowNull )
                 retVal += " NOT NULL";
             if( IsPrimaryIndex )
@@ -77,6 +80,7 @@ namespace Statistics2026.Utilities
         public bool IsPrimaryIndex { get; private set; } = false;
         public bool DeprecatedColumn { get; set; } = false;
         public string? FormerColumnName { get; set; } = null;
+        public string? DefaultValue { get; private set; } = null;
     }
 
     public class TableDef
