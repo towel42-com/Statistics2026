@@ -11,6 +11,7 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
+using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
@@ -81,6 +82,7 @@ namespace Statistics2026.ScheduledTasks
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
+            db.ClearLastUpdated( StatisticsDB.EAction.CollectionsAnalysis );
 
             long addCollections = 0;
             using( var timer = new AutoTimer( $"Adding Collections", _embyInterfaces._logger ) )
@@ -94,7 +96,9 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info( $"=======================================" );
             _embyInterfaces._logger.Info( $"    Collections: {addCollections} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Statistics 2026 : Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
+
+            db.UpdateLastUpdated( StatisticsDB.EAction.CollectionsAnalysis, addCollections );
 
             db.ResetCancellationToken();
             return Task.CompletedTask;

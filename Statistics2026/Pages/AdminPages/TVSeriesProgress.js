@@ -13,6 +13,7 @@
                 Helpers.injectSortableTableStyle(document);
                 Helpers.setupSortability('TVSeriesProgressTable', 'TVSeriesProgressStatus', Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
+                Helpers.getLastRunInfo(view, "UserWatchDataAnalysis", "lastRunInfo");
                 Helpers.loadUsers(view, `#selectUser_tvprogress`, loadData);
             });
 

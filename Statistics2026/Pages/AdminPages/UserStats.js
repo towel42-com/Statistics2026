@@ -11,6 +11,7 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
 
+                Helpers.getLastRunInfo(view, "UserAnalysis", "lastRunInfo");
                 Helpers.loadUsers(view, `#selectUser_userstats`, loadData);
             });
 

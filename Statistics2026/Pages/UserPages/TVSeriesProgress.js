@@ -25,6 +25,7 @@
                     Helpers.showInfo('This column displays the number of watched episodes and the number of total episodes. You will have 100% when you viewed all normal episodes (no specials, only aired)<br/>. ', 'Watched Episodes');
                 });
 
+                Helpers.getLastRunInfo(view, "UserWatchDataAnalysis", "lastRunInfo");
                 loadData(view, params.userId);
             });
 

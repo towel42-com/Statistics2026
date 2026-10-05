@@ -3,6 +3,7 @@ using MediaBrowser.Model.Services;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
+using System.Net.NetworkInformation;
 
 namespace Statistics2026.Api
 {
@@ -23,6 +24,24 @@ namespace Statistics2026.Api
             }
         }
 
+        public object Get( GetLastRun request )
+        {
+            return GetRequest( "GetLastRun", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                if( Enum.TryParse( request.WhichRun, true, out StatisticsDB.EAction whichRun ) )
+                {
+                    var retVal = db.GetLastRunInfo( whichRun );
+                    return retVal;
+                }
+                else
+                {
+                    return new object();
+                }
+
+            } );
+        }
         public object Get( GetTVSeriesProgress request )
         {
             return GetRequest( "GetTVSeriesProgress", timer =>

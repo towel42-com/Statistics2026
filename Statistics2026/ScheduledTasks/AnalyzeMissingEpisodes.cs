@@ -84,20 +84,23 @@ namespace Statistics2026.ScheduledTasks
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
+            db.ClearLastUpdated( StatisticsDB.EAction.MissingEpisodesAnalysis );
 
-            long analyzeMissing = 0;
+            long analyzeMissingEpisodes = 0;
             using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces._logger ) )
             {
                 db.AnalyzeMissingEpisodesTaskImpl( cancellationToken, progress ).ConfigureAwait( false ).GetAwaiter().GetResult();
-                analyzeMissing = timer.ElapsedMilliseconds();
+                analyzeMissingEpisodes = timer.ElapsedMilliseconds();
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"    Missing: {analyzeMissing} ms" );
+            _embyInterfaces._logger.Info( $"    Missing: {analyzeMissingEpisodes} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Statistics 2026 : Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
+
+            db.UpdateLastUpdated( StatisticsDB.EAction.MissingEpisodesAnalysis, analyzeMissingEpisodes );
 
             db.ResetCancellationToken();
             return Task.CompletedTask;

@@ -20,6 +20,8 @@
                     return; // Exit and prevent reload
                 }
                 view.setAttribute('data-initialized', 'true');
+
+                Helpers.getLastRunInfo(view, "MissingEpisodesAnalysis", "lastRunInfo");
                 loadTableData();
             });
 
@@ -34,6 +36,12 @@
                     Dashboard.hideLoadingMsg();
                     return;
                 }
+
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                    var lastRunInfo = "Last Missing Episode Analysis finished at <b> " + config.LastUpdated + "</b>";
+                    view.querySelector("#lastRunInfo").innerHTML = lastRunInfo;
+                });
+
                 Helpers.loadTableData(view, 'missing_episode_results_status', 'missing_episode_results', 'Statistics2026/missing_episode_list', Helpers.getMissingMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
             }
         };

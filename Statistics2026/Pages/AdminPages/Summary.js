@@ -51,11 +51,8 @@
 
         function loadStats(view) {
             Dashboard.showLoadingMsg();
-
             ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                var lastRunInfo = "Last Codec Analysis finished at <b> " + config.LastUpdated + "</b>";
 
-                view.querySelector("#lastRunInfo").innerHTML = lastRunInfo;
                 view.querySelector(`#debugInfo`).style.display = 'none';
                 loadDebugInfo(view, config);
 
@@ -66,6 +63,7 @@
                 }
             });
 
+            Helpers.getLastRunInfo(view, "System", "lastRunInfo");
             view.querySelector("#pageIntro").innerHTML =
                 "This plugin will calculate media and user statistics "
                 + "from this Emby server instance.";

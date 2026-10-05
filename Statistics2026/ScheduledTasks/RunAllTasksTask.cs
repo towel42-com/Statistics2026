@@ -82,7 +82,7 @@ namespace Statistics2026.ScheduledTasks
             var taskName = "Analyze All";
             _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
             // purely for progress reporting
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             if( PluginConfiguration == null )
                 throw new ArgumentNullException( nameof( PluginConfiguration ) );
 
@@ -94,8 +94,9 @@ namespace Statistics2026.ScheduledTasks
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress, PluginConfiguration.resetPlayCount );
 
-            var overAllTimer = new AutoTimer( $"Adding All Data", _embyInterfaces._logger, false );
+            db.ClearLastUpdated( StatisticsDB.EAction.System );
 
+            var overAllTimer = new AutoTimer( $"Adding All Data", _embyInterfaces._logger, false );
             var tasks = Plugin.Instance?.GetKnownTasks( false );
 
             for( var ii = 0; ii < tasks?.Count; ii++ )
@@ -106,11 +107,11 @@ namespace Statistics2026.ScheduledTasks
                 tasks[ ii ] = task;
             }
 
-            db.UpdateLastUpdated( now, BuildDateInfo.GetBuildDate(), PluginConfiguration.Version );
             db.Initialize( cancellationToken, progress );
             cancellationToken.ThrowIfCancellationRequested();
 
             var overall = overAllTimer.ElapsedMilliseconds();
+            db.UpdateLastUpdated( StatisticsDB.EAction.System, overall );
             overAllTimer.Dispose();
             _embyInterfaces._logger.Info( $"=======================================" );
             _embyInterfaces._logger.Info( $"Time to Add: {overall} ms" );

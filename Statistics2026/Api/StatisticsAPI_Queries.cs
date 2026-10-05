@@ -1,7 +1,8 @@
 ﻿using MediaBrowser.Controller.Net;
 using MediaBrowser.Model.Services;
-using System.Collections.Generic;
+using ServiceStack.Text;
 using Statistics2026.Utilities;
+using System.Collections.Generic;
 
 namespace Statistics2026.Api
 {
@@ -34,7 +35,14 @@ namespace Statistics2026.Api
     public class GetTVSeriesProgress : IReturn<List<GetTVSeriesProgressResponse>>
     {
         public string user { get; set; } = string.Empty;
+    }
 
+
+    [Route( "/Statistics2026/last_run/{WhichRun}", "GET", Summary = "Returns the last time the analysis for run was finished" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetLastRun : IReturn<object>
+    {
+        public string WhichRun { get; set; } = string.Empty;
     }
 
     [Route( "/Statistics2026/codec_summary", "GET", Summary = "Gets Codec Summary for Library" )]

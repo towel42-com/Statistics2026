@@ -9,17 +9,27 @@ namespace Statistics2026.Data
     {
         public const string sUserMediaTablePrefix = "UserMedia_";
 
+
         private void ConstructTableList()
         {
             _tableList =
             [
                 new TableDef("LastUpdateTable",
                     [
+                        new TableColDef( "Action", "TEXT", false, true, "System" ),
                         new TableColDef( "LastUpdated", "DATETIME", true ),
+                        new TableColDef( "RunTimeMS", "INT", true ),
                         new TableColDef( "Version", "TEXT", true ),
                         new TableColDef( "BuildDate", "DATETIME", true )
                     ]
                 ),
+                new TableDef("StatusInfo",
+                    [
+                        new TableColDef( "LastUpdated", "DATETIME", true ),
+                        new TableColDef( "Version", "TEXT", true ),
+                        new TableColDef( "BuildDate", "DATETIME", true )
+                    ]
+                ){ DeprecatedTable = true },
 
                 new TableDef("Media",
                     [

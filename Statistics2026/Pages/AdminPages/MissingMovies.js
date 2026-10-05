@@ -19,6 +19,7 @@
                     return; // Exit and prevent reload
                 }
                 view.setAttribute('data-initialized', 'true');
+                Helpers.getLastRunInfo(view, "MissingMoviesAnalysis", "lastRunInfo");
                 loadTableData();
             });
 

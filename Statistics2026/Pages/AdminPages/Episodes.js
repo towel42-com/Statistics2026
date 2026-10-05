@@ -20,6 +20,7 @@
                     return; // Exit and prevent reload
                 }
                 view.setAttribute('data-initialized', 'true');
+                Helpers.getLastRunInfo(view, "MediaAnalysis", "lastRunInfo");
                 loadTableData();
             });
 

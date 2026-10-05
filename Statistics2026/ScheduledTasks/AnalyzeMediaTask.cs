@@ -81,6 +81,7 @@ namespace Statistics2026.ScheduledTasks
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
+            db.ClearLastUpdated( StatisticsDB.EAction.MediaAnalysis );
 
             long addMedia = 0;
             using( var timer = new AutoTimer( $"Adding All Media", _embyInterfaces._logger ) )
@@ -94,8 +95,10 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info( $"=======================================" );
             _embyInterfaces._logger.Info( $"          Media: {addMedia} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Statistics 2026 : Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
 
+            db.UpdateLastUpdated( StatisticsDB.EAction.MediaAnalysis, addMedia );
+            
             db.ResetCancellationToken();
             return Task.CompletedTask;
         }

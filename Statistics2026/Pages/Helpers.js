@@ -146,6 +146,19 @@ define(function () {
         });
     };
 
+    function getLastRunInfo(view, whichRun, div) {
+        var urlText = "/emby/Statistics2026/last_run/" + whichRun;
+        console.info("last_run- '" + urlText + "'");
+        var url = ApiClient.getUrl(urlText);
+
+        ApiClient.getJSON(url).then(response => {
+            view.querySelector("#" + div).innerHTML = response.html;
+        }).catch(error => {
+            var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
+            console.error("getLastRunInfo failed:", errorMessage);
+        });
+    }
+
     function getSummaryInfo(view, whichSummary, user, parameters = "", div = "") {
         var urlText = "/emby/Statistics2026/" + whichSummary;
         if (user != "" && user !== undefined)
@@ -519,6 +532,7 @@ define(function () {
         getMissingMediaRowData,
         getStatistics2026Data,
         getSummaryInfo,
+        getLastRunInfo,
         getTabIndex,
         initCollapsibleTable,
         injectSortableTableStyle,

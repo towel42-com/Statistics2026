@@ -80,6 +80,7 @@ namespace Statistics2026.ScheduledTasks
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
+            db.ClearLastUpdated( StatisticsDB.EAction.UserAnalysis );
 
             long addUsers = 0;
             using( var timer = new AutoTimer( $"Adding All Users", _embyInterfaces._logger ) )
@@ -94,7 +95,9 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info( $"=======================================" );
             _embyInterfaces._logger.Info( $"          Users: {addUsers} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Statistics 2026 : Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
+
+            db.UpdateLastUpdated( StatisticsDB.EAction.UserAnalysis, addUsers );
 
             db.ResetCancellationToken();
             return Task.CompletedTask;
