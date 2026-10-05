@@ -63,7 +63,9 @@ namespace Statistics2026.Data
 
             _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies - Starting Analysis" );
             progress.Report( 0 );
-            var collections = _dbHelper.GetLibraryItems<BoxSet>();
+            var collections = _dbHelper.GetLibraryItems<BoxSet>().ToList();
+            collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
+
             progress.Report( 100 );
 
             var reader = new TmdbCollectionReader( _embyInterfaces, cancellationToken );
@@ -94,9 +96,23 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies - Finished Analysis" );
         }
 
+        private bool InvalidDate( DateTime? dt )
+        {
+            if( dt == null )
+                return true;
+
+            if( dt.Value.Date > DateTime.Today.Date )
+                return true;
+
+            if( dt == DateTime.MinValue )
+                return true;
+
+            return false;
+        }
+
         private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollection( TmdbCollectionReader reader, BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
         {
-            _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies -     Analyzing Collection {collection.Name} - checking for missing movies" );
+            _embyInterfaces!._logger?.Info( $"AnalyzeMissingMovies -     Analyzing Collection '{collection.Name}' - checking for missing movies" );
 
             var collectionTmbdId = collection.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( collectionTmbdId ) )
@@ -119,10 +135,7 @@ namespace Statistics2026.Data
             List<SQLCmdDef> retVal = [];
             foreach( var tmdbMovie in tmdbCollection.Movies )
             {
-                if( tmdbMovie.ReleaseDate() > DateTime.Today )
-                    continue;
-
-                if( tmdbMovie.ReleaseDate() == DateTime.MinValue )
+                if( InvalidDate( tmdbMovie.ReleaseDate() ) )
                     continue;
 
                 var movieTmdbId = tmdbMovie.Id;
@@ -131,7 +144,7 @@ namespace Statistics2026.Data
 
                 if( embyMovie == null )
                 {
-                    _embyInterfaces!._logger?.Debug( $"AnalyzeMissingMovies -             {tmdbMovie.Title} is missing" );
+                    _embyInterfaces!._logger?.Info( $"AnalyzeMissingMovies -             {tmdbMovie.Title} is missing" );
                     var key = $"{tmdbCollection.Id}-{tmdbMovie.Id}";
                     retVal.Add( new SQLCmdDef( kSQLAddToMissing,
                     [
@@ -160,6 +173,7 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug( $"AnalyzeMissingEpisodes - Starting Analysis" );
             progress.Report( 0 );
             var allSeries = _dbHelper.GetLibraryItems<Series>().Cast<Series>().ToList();
+            allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             progress.Report( 100 );
 
             var reader = new TmdbCollectionReader( _embyInterfaces, cancellationToken );
@@ -192,7 +206,7 @@ namespace Statistics2026.Data
 
         private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodes( TmdbCollectionReader reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
         {
-            _embyInterfaces!._logger?.Debug( $"AnalyzeMissingEpisodes -     Analyzing Series {series.Name} - checking for missing episodes" );
+            _embyInterfaces!._logger?.Info( $"AnalyzeMissingEpisodes -     Analyzing Series '{series.Name}' - checking for missing episodes" );
 
             var seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( seriesTmbdId ) )
@@ -217,7 +231,7 @@ namespace Statistics2026.Data
 
                 foreach( var tmdbEpisode in tmdbSeason.Episodes )
                 {
-                    if( tmdbEpisode.AirDate() > DateTime.Today )
+                    if( InvalidDate( tmdbEpisode.AirDate() ) )
                         continue;
 
                     var episodeTmdbId = tmdbEpisode.Id;
@@ -227,7 +241,7 @@ namespace Statistics2026.Data
 
                     if( embyEpisode == null )
                     {
-                        _embyInterfaces!._logger?.Debug( $"AnalyzeMissingEpisodes -             episode {episodeIdent} is missing" );
+                        _embyInterfaces!._logger?.Info( $"AnalyzeMissingEpisodes -             episode {episodeIdent} is missing" );
 
                         var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
                         //return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";
