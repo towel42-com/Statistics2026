@@ -190,7 +190,7 @@ define(function () {
             }).catch(error => {
                 var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
                 console.error("getLastRunInfo failed:", errorMessage);
-                return `<tr><td colspan="2">Error loading ${whichRun}</td></tr>`;
+                return `<tr><td colspan="2">Error loading ${whichRun} status</td></tr>`;
             });
         });
 
@@ -396,9 +396,21 @@ define(function () {
                         activeLoaders.delete(baseId);
                     }
 
-                    if (onFinished !== undefined) {
-                        onFinished();
-                    }
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        var found = false;
+                        config.SortEntries.forEach(entry => {
+                            if (entry.TableId == baseId) {
+                                var dataType = thead.querySelectorAll("th")[entry.ColumnNum].getAttribute('data-type');
+                                sortTable(entry.ColumnNum, dataType, entry.TableId, showLoadingFunc, hideLoadingFunc, entry.AscDesc);
+                                found = true;
+                            }
+                        });
+
+                        if (found == false && onFinished !== undefined) {
+                            onFinished();
+                        }
+                    });
+
                     load_status.style.display = 'none';
                     hideLoadingFunc();
                 }
@@ -517,6 +529,26 @@ define(function () {
         // Add current sorting indicator class to the active header
         table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
 
+        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            var found = false;
+            config.SortEntries.forEach(entry => {
+                if (entry.TableId == baseId) {
+                    entry.ColumnIndex = columnIndex;
+                    entry.AscDesc = currentDirection;
+                    found = true;
+                }
+            });
+
+            if (!found) {
+                config.SortEntries.push({
+                    TableId: baseId,
+                    ColumnNum: columnIndex,
+                    AscDesc: currentDirection
+                });
+            }
+            ApiClient.updatePluginConfiguration(pluginId, config);
+        });
+
         setTimeout(() => {
             rows.sort((rowA, rowB) => {
                 let cellA = rowA.children[columnIndex].getAttribute('sort-value');
@@ -543,7 +575,7 @@ define(function () {
                     const dateA = new Date(cellA);
                     const dateB = new Date(cellB);
                     diff = currentDirection === 'asc' ? dateA - dateB : dateB - dateA;
-                } else if (dateType == 'progress') {
+                } else if (dataType == 'progress') {
                     const matchA = cellA.match(/(?<percent>\d+)\%/);
                     const matchB = cellB.match(/(?<percent>\d+)\%/);
 

@@ -1,25 +1,47 @@
 ﻿define([
-        'mainTabsManager',
-        'appRouter',
-        Dashboard.getConfigurationResourceUrl('AdminHelpers.js'),
-        Dashboard.getConfigurationResourceUrl('Helpers.js'),
-        'emby-linkbutton'
+    'mainTabsManager',
+    'appRouter',
+    Dashboard.getConfigurationResourceUrl('AdminHelpers.js'),
+    Dashboard.getConfigurationResourceUrl('Helpers.js'),
+    'emby-linkbutton'
 ],
     function (mainTabsManager, appRouter, AdminHelpers, Helpers) {
         'use strict';
 
+        const baseId = 'movie_results';
+        const filterId = 'movieDisplay';
+        const baseUrl = "Statistics2026/movie_list";
+        const tabName = "Movies";
+        const lastRunArray =  ["MediaAnalysis", "MissingMoviesAnalysis"];
+
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, Helpers.getTabIndex("Movies", AdminHelpers.getTabs), AdminHelpers.getTabs);
+                mainTabsManager.setTabs(this, Helpers.getTabIndex(tabName, AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
                 Helpers.injectSortableTableStyle(document);
-                view.querySelector('input[name="movieDisplay"][value="All"]').checked = true;
 
                 if (view.getAttribute('data-initialized') === 'true') {
                     return; // Exit and prevent reload
                 }
-                Helpers.getLastRunInfo(view, ["MediaAnalysis", "MissingMoviesAnalysis"], "lastRunInfo");
-                loadTableData();
+
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                    var found = false;
+                    config.SortEntries.forEach(entry => {
+                        if (entry.TableId == baseId) {
+                            if (entry.ExtraFilter != null && entry.ExtraFilter != "") {
+                                view.querySelector(`input[name="${filterId}"][value="${entry.ExtraFilter}"]`).checked = true;
+                                found = true;
+                            }
+                        }
+                    });
+
+                    if (found == false) {
+                        view.querySelector(`input[name="${filterId}"][value="All"]`).checked = true;
+                    }
+
+                    Helpers.getLastRunInfo(view, lastRunArray, "lastRunInfo");
+                    loadTableData();
+                });
             });
 
             view.addEventListener('viewhide', function (e) {
@@ -29,17 +51,17 @@
             });
 
             function getMediaHeader() {
-                var showAll = view.querySelector('input[name="movieDisplay"][value="All"]').checked;
-                var showOnServer = showAll || view.querySelector('input[name="movieDisplay"][value="OnServer"]').checked;
-                var showMissing = showAll || view.querySelector('input[name="movieDisplay"][value="Missing"]').checked;
+                var showAll = view.querySelector(`input[name="${filterId}"][value="All"]`).checked;
+                var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
+                var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
 
-                return Helpers.getMediaHeader( showOnServer, showMissing );
+                return Helpers.getMediaHeader(showOnServer, showMissing);
             }
 
             function getMediaRowData(info) {
-                var showAll = view.querySelector('input[name="movieDisplay"][value="All"]').checked;
-                var showOnServer = showAll || view.querySelector('input[name="movieDisplay"][value="OnServer"]').checked;
-                var showMissing = showAll || view.querySelector('input[name="movieDisplay"][value="Missing"]').checked;
+                var showAll = view.querySelector(`input[name="${filterId}"][value="All"]`).checked;
+                var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
+                var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
 
                 return Helpers.getMediaRowData(info, showOnServer, showMissing);
             }
@@ -50,11 +72,11 @@
                     return;
                 }
 
-                var showOnServer = view.querySelector('input[name="movieDisplay"][value="OnServer"]').checked;
-                var showMissing = view.querySelector('input[name="movieDisplay"][value="Missing"]').checked;
-                var showAll = view.querySelector('input[name="movieDisplay"][value="All"]').checked;
+                var showOnServer = view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
+                var showMissing = view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
+                var showAll = view.querySelector(`input[name="${filterId}"][value="All"]`).checked;
 
-                var url = "Statistics2026/movie_list";
+                var url = baseUrl;
                 if (showOnServer) {
                     url += "?showOnServer=true";
                 }
@@ -64,18 +86,29 @@
                 if (showAll) {
                     url += "?showOnServer=true&showMissing=true";
                 }
-                Helpers.loadTableData(view, 'movie_results', url, getMediaHeader, getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+
+                Helpers.loadTableData(view, baseId, url, getMediaHeader, getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
                 view.setAttribute('data-initialized', 'true');
             }
 
-            const radioGroup = view.querySelectorAll('input[name="movieDisplay"]');
+            const radioGroup = view.querySelectorAll(`input[name="${filterId}"]`);
 
             radioGroup.forEach(function (radio) {
                 radio.addEventListener("change", function () {
                     view.setAttribute('data-initialized', 'false');
+
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.SortEntries.forEach(entry => {
+                            if (entry.TableId == baseId) {
+                                entry.ExtraFilter = radio.value;
+                                ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                            }
+                        });
+                    });
+
                     loadTableData();
                 });
-            } );
+            });
         };
     }
 );

@@ -1,11 +1,21 @@
 ﻿using MediaBrowser.Model.Plugins;
+using System.Collections.Generic;
 
 namespace Statistics2026.Configuration
 {
+    public class SortEntry
+    {
+        public string TableId { get; set; } = string.Empty;
+        public int ColumnNum { get; set; } = 0;
+        public string AscDesc { get; set; } = string.Empty;
+        public string ExtraFilter { get; set; } = string.Empty;
+    }
+
     public class PluginConfiguration : BasePluginConfiguration
     {
         public PluginConfiguration()
         {
+
         }
 
         public string BuildDate { get; set; } = string.Empty;
@@ -29,6 +39,8 @@ namespace Statistics2026.Configuration
         public bool showDebugInfo { get; set; } = false;
 
         public bool dbStateOK { get; set; } = false;
+
+        public List<SortEntry> SortEntries { get; set; } = [];
     }
 }
 
