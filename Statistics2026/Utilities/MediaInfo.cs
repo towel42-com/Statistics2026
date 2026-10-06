@@ -51,6 +51,9 @@ namespace Statistics2026.Utilities
             ServerLocation = video.Path ?? "Unknown";
             FileSize = video.Size;
             RunTimeTicks = video.RunTimeTicks ?? 0;
+            if( video.PremiereDate.HasValue )
+                PremiereDate = video.PremiereDate.Value.DateTime;
+
             if( video is Episode episode )
             {
                 ListDisplayName = GetDisplayName( PrimaryName, secondaryName, Season, Episode );
@@ -59,6 +62,10 @@ namespace Statistics2026.Utilities
                 {
                     SortName = episode.Series.SortName + " - " + episode.SortName;
                     SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series );
+                    if( PremiereDate == null && episode.Series.PremiereDate.HasValue )
+                    {
+                        PremiereDate = episode.Series.PremiereDate.Value.DateTime;
+                    }
                 }
             }
             else
@@ -67,9 +74,19 @@ namespace Statistics2026.Utilities
                 ListDisplayName = PrimaryName;
             }
 
+            if ( PremiereDate == null )
+            {
+                BaseItem curr = video;
+                while( curr != null && curr.PremiereDate == null )
+                {
+                    curr = curr.Parent;
+                }
+                if( curr != null && curr.PremiereDate != null )
+                {
+                    PremiereDate = curr.PremiereDate.Value.DateTime;
+                }
+            }
             TotalBitrate = video.TotalBitrate;
-            if( video.PremiereDate.HasValue )
-                PremiereDate = video.PremiereDate.Value.DateTime;
             DateAdded = video.DateCreated.DateTime;
 
             aOK = !ItemId.IsNullOrEmpty() && ( RunTimeTicks != 0 );
