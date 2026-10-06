@@ -20,11 +20,11 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeSeriesTask : IScheduledTask
+    public class AnalyzeUsersTask : IScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
-        public AnalyzeSeriesTask(
+        public AnalyzeUsersTask(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -47,7 +47,7 @@ namespace Statistics2026.ScheduledTasks
                 _fileSystem = fileSystem,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeSeriesTask" ),
+                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeUsersTask" ),
                 _serverApplicationPaths = serverApplicationPaths,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
@@ -60,11 +60,11 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "• Analyze Series information";
+        string IScheduledTask.Name => "\u2022 Analyze User Information";
 
-        string IScheduledTask.Key => "Statistics2026CalculateSeriesTask";
+        string IScheduledTask.Key => "Statistics2026_UsersTask";
 
-        string IScheduledTask.Description => "Task that will analyze the library's series.";
+        string IScheduledTask.Description => "Task that will analyze the user data.";
 
         string IScheduledTask.Category => "Statistics 2026";
 
@@ -75,27 +75,29 @@ namespace Statistics2026.ScheduledTasks
                 throw new Exception( "Statistics 2026 task is running" );
             }
 
-            var taskName = "Analyze Series";
+            var taskName = "Analyze All Users";
             _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
+
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
-            db.ClearLastUpdated( StatisticsDB.EAction.SeriesAnalysis );
+            db.ClearLastUpdated( StatisticsDB.EAction.UserAnalysis );
 
-            long addSeries = 0;
-            using( var timer = new AutoTimer( $"Adding All Series", _embyInterfaces._logger ) )
+            long addUsers = 0;
+            using( var timer = new AutoTimer( $"Adding All Users", _embyInterfaces._logger ) )
             {
-                db.AddAllSeriesTaskImpl();
-                addSeries = timer.ElapsedMilliseconds();
+                db.AddAllUsersTaskImpl();
+                addUsers = timer.ElapsedMilliseconds();
+                cancellationToken.ThrowIfCancellationRequested();
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
-
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"         Series: {addSeries} ms" );
+            _embyInterfaces._logger.Info( $"Analyze all users" );
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Statistics 2026 : Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces._logger.Info( $"          Users: {addUsers} ms" );
+            _embyInterfaces._logger.Info( $"=======================================" );
+            _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.SeriesAnalysis, addSeries );
+            db.UpdateLastUpdated( StatisticsDB.EAction.UserAnalysis, addUsers );
 
             db.ResetCancellationToken();
             return Task.CompletedTask;

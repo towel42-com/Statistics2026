@@ -11,6 +11,7 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
+using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
@@ -20,11 +21,11 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeMissingMoviesTask : IScheduledTask
+    public class AnalyzeWatchedMediaDataTask : IScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
-        public AnalyzeMissingMoviesTask(
+        public AnalyzeWatchedMediaDataTask(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -47,7 +48,7 @@ namespace Statistics2026.ScheduledTasks
                 _fileSystem = fileSystem,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeMissingMoviesTask" ),
+                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeWatchedMediaDataTask" ),
                 _serverApplicationPaths = serverApplicationPaths,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
@@ -57,17 +58,14 @@ namespace Statistics2026.ScheduledTasks
                 _providerManager = providerManager,
                 _configManager = configManager,
                 _taskManager = taskManager,
-                _httpClient = httpClient,
-                _authenticationRepository = authenticationRepository,
-                _sessionManager = sessionManager,
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze Missing Movies";
+        string IScheduledTask.Name => "\u2022 Analyze User Watched Data Information";
 
-        string IScheduledTask.Key => "Statistics2026CalculateMissing";
+        string IScheduledTask.Key => "Statistics2026_UserWatchedDataTask";
 
-        string IScheduledTask.Description => "Task that will analyze the library's missing movies.";
+        string IScheduledTask.Description => "Task that will analyze the user watch data.";
 
         string IScheduledTask.Category => "Statistics 2026";
 
@@ -78,31 +76,31 @@ namespace Statistics2026.ScheduledTasks
                 throw new Exception( "Statistics 2026 task is running" );
             }
 
-            var taskName = "Analyze Missing";
-            _embyInterfaces!._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
-            // purely for progress reporting
+            var taskName = "Analyze User Watch Data";
+            _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
-            db.ClearLastUpdated( StatisticsDB.EAction.MissingMoviesAnalysis );
+            db.ClearLastUpdated( StatisticsDB.EAction.UserWatchDataAnalysis );
 
-            long analyzeMissingMovies = 0;
-            using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces._logger ) )
+            long addUsers = 0;
+            using( var timer = new AutoTimer( $"Adding User Watch Data", _embyInterfaces._logger ) )
             {
-                db.AnalyzeMissingMoviesTaskImpl( cancellationToken, progress ).ConfigureAwait( false ).GetAwaiter().GetResult();
-                analyzeMissingMovies = timer.ElapsedMilliseconds();
+                db.AnalyzeWatchedMediaDataTaskImpl();
+                addUsers = timer.ElapsedMilliseconds();
+                cancellationToken.ThrowIfCancellationRequested();
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
-
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"    Missing: {analyzeMissingMovies} ms" );
+            _embyInterfaces._logger.Info( $"User Watch Data : {addUsers} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
             _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.MissingMoviesAnalysis, analyzeMissingMovies );
-
+            db.UpdateLastUpdated( StatisticsDB.EAction.UserWatchDataAnalysis, addUsers );
+            
             db.ResetCancellationToken();
+            Plugin.Instance?.AddDBState( EDBState.eUserTablesCreated );
+
             return Task.CompletedTask;
         }
 

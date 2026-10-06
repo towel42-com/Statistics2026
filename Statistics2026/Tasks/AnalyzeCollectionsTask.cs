@@ -21,11 +21,11 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeWatchedMediaDataTask : IScheduledTask
+    public class AnalyzeCollectionsTask : IScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
-        public AnalyzeWatchedMediaDataTask(
+        public AnalyzeCollectionsTask(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -48,7 +48,7 @@ namespace Statistics2026.ScheduledTasks
                 _fileSystem = fileSystem,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeWatchedMediaDataTask" ),
+                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeCollectionsTask" ),
                 _serverApplicationPaths = serverApplicationPaths,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
@@ -61,11 +61,11 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze User Watch Data Information";
+        string IScheduledTask.Name => "\u2022 Analyze Collection information";
 
-        string IScheduledTask.Key => "Statistics2026AnalyzeWatchedMediaData";
+        string IScheduledTask.Key => "Statistics2026_CollectionsTask";
 
-        string IScheduledTask.Description => "Task that will analyze the user watch data.";
+        string IScheduledTask.Description => "Task that will analyze the library's collections.";
 
         string IScheduledTask.Category => "Statistics 2026";
 
@@ -76,31 +76,31 @@ namespace Statistics2026.ScheduledTasks
                 throw new Exception( "Statistics 2026 task is running" );
             }
 
-            var taskName = "Analyze User Watch Data";
+            var taskName = "Analyze Collections";
             _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
+            // purely for progress reporting
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
-            db.ClearLastUpdated( StatisticsDB.EAction.UserWatchDataAnalysis );
+            db.ClearLastUpdated( StatisticsDB.EAction.CollectionsAnalysis );
 
-            long addUsers = 0;
-            using( var timer = new AutoTimer( $"Adding User Watch Data", _embyInterfaces._logger ) )
+            long addCollections = 0;
+            using( var timer = new AutoTimer( $"Adding Collections", _embyInterfaces._logger ) )
             {
-                db.AnalyzeWatchedMediaDataTaskImpl();
-                addUsers = timer.ElapsedMilliseconds();
-                cancellationToken.ThrowIfCancellationRequested();
+                db.AddAllCollectionsTaskImpl( cancellationToken, progress );
+                addCollections = timer.ElapsedMilliseconds();
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
+
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"User Watch Data : {addUsers} ms" );
+            _embyInterfaces._logger.Info( $"    Collections: {addCollections} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
             _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.UserWatchDataAnalysis, addUsers );
-            
-            db.ResetCancellationToken();
-            Plugin.Instance?.AddDBState( EDBState.eUserTablesCreated );
+            db.UpdateLastUpdated( StatisticsDB.EAction.CollectionsAnalysis, addCollections );
 
+            db.ResetCancellationToken();
             return Task.CompletedTask;
         }
 

@@ -11,20 +11,23 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
+using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeUsersTask : IScheduledTask
+    public class RunAllTasksTask : IScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
-        public AnalyzeUsersTask(
+        public RunAllTasksTask(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -47,7 +50,7 @@ namespace Statistics2026.ScheduledTasks
                 _fileSystem = fileSystem,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeUsersTask" ),
+                _logger = logManager.GetLogger( "Statistics2026 - RunAllTasksTask" ),
                 _serverApplicationPaths = serverApplicationPaths,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
@@ -60,52 +63,29 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze User Information";
+        private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
+        string IScheduledTask.Name => "Calculate Media and User Information for all library media and users";
 
-        string IScheduledTask.Key => "Statistics2026CalculateAllUsers";
+        string IScheduledTask.Key => "Statistics2026CalculateStatsTask";
 
-        string IScheduledTask.Description => "Task that will analyze the user data.";
+        string IScheduledTask.Description => "Task that will calculate Statistics for all media in library.";
 
         string IScheduledTask.Category => "Statistics 2026";
 
         Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            if( Plugin.Instance != null && Plugin.Instance.IsStatistics2026TaskRunning( GetType() ) )
-            {
-                throw new Exception( "Statistics 2026 task is running" );
-            }
-
-            var taskName = "Analyze All Users";
-            _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
-
-            var db = StatisticsDB.GetInstance( _embyInterfaces );
-            db.Initialize( cancellationToken, progress );
-            db.ClearLastUpdated( StatisticsDB.EAction.UserAnalysis );
-
-            long addUsers = 0;
-            using( var timer = new AutoTimer( $"Adding All Users", _embyInterfaces._logger ) )
-            {
-                db.AddAllUsersTaskImpl();
-                addUsers = timer.ElapsedMilliseconds();
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Analyze all users" );
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"          Users: {addUsers} ms" );
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
-
-            db.UpdateLastUpdated( StatisticsDB.EAction.UserAnalysis, addUsers );
-
-            db.ResetCancellationToken();
-            return Task.CompletedTask;
+            return PostMediaScanTask.RunAllTasks( this, _embyInterfaces, progress, cancellationToken );
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()
         {
-            return Array.Empty<TaskTriggerInfo>();
+            return new[] {
+                new TaskTriggerInfo
+                {
+                    Type = TaskTriggerInfo.TriggerDaily,
+                    TimeOfDayTicks = TimeSpan.FromMinutes(30).Ticks
+                }
+            };
         }
     }
 }

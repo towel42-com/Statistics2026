@@ -20,11 +20,11 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeMissingEpisodesTask : IScheduledTask
+    public class AnalyzeMediaTask : IScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
-        public AnalyzeMissingEpisodesTask(
+        public AnalyzeMediaTask(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -47,7 +47,7 @@ namespace Statistics2026.ScheduledTasks
                 _fileSystem = fileSystem,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeMissingEpisodesTask" ),
+                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeMediaTask" ),
                 _serverApplicationPaths = serverApplicationPaths,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
@@ -57,17 +57,14 @@ namespace Statistics2026.ScheduledTasks
                 _providerManager = providerManager,
                 _configManager = configManager,
                 _taskManager = taskManager,
-                _httpClient = httpClient,
-                _authenticationRepository = authenticationRepository,
-                _sessionManager = sessionManager,
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze Missing Episodes";
+        string IScheduledTask.Name => "\u2022 Analyze Media information";
 
-        string IScheduledTask.Key => "Statistics2026CalculateMissing";
+        string IScheduledTask.Key => "Statistics2026_MediaTask";
 
-        string IScheduledTask.Description => "Task that will analyze the library's missing episodes.";
+        string IScheduledTask.Description => "Task that will analyze the library's media.";
 
         string IScheduledTask.Category => "Statistics 2026";
 
@@ -78,30 +75,30 @@ namespace Statistics2026.ScheduledTasks
                 throw new Exception( "Statistics 2026 task is running" );
             }
 
-            var taskName = "Analyze Missing Episodes";
-            _embyInterfaces!._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
+            var taskName = "Analyze Media";
+            _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
             // purely for progress reporting
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
-            db.ClearLastUpdated( StatisticsDB.EAction.MissingEpisodesAnalysis );
+            db.ClearLastUpdated( StatisticsDB.EAction.MediaAnalysis );
 
-            long analyzeMissingEpisodes = 0;
-            using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces._logger ) )
+            long addMedia = 0;
+            using( var timer = new AutoTimer( $"Adding All Media", _embyInterfaces._logger ) )
             {
-                db.AnalyzeMissingEpisodesTaskImpl( cancellationToken, progress ).ConfigureAwait( false ).GetAwaiter().GetResult();
-                analyzeMissingEpisodes = timer.ElapsedMilliseconds();
+                db.AddAllMediaTaskImpl();
+                addMedia = timer.ElapsedMilliseconds();
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"    Missing: {analyzeMissingEpisodes} ms" );
+            _embyInterfaces._logger.Info( $"          Media: {addMedia} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
             _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.MissingEpisodesAnalysis, analyzeMissingEpisodes );
-
+            db.UpdateLastUpdated( StatisticsDB.EAction.MediaAnalysis, addMedia );
+            
             db.ResetCancellationToken();
             return Task.CompletedTask;
         }

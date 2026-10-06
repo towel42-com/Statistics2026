@@ -11,7 +11,6 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
-using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
@@ -21,11 +20,11 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeCollectionsTask : IScheduledTask
+    public class AnalyzeSeriesTask : IScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
-        public AnalyzeCollectionsTask(
+        public AnalyzeSeriesTask(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -48,7 +47,7 @@ namespace Statistics2026.ScheduledTasks
                 _fileSystem = fileSystem,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeCollectionsTask" ),
+                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeSeriesTask" ),
                 _serverApplicationPaths = serverApplicationPaths,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
@@ -61,11 +60,11 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze Collection information";
+        string IScheduledTask.Name => "• Analyze Series information";
 
-        string IScheduledTask.Key => "Statistics2026CalculateAllCollections";
+        string IScheduledTask.Key => "Statistics2026_SeriesTask";
 
-        string IScheduledTask.Description => "Task that will analyze the library's collections.";
+        string IScheduledTask.Description => "Task that will analyze the library's series.";
 
         string IScheduledTask.Category => "Statistics 2026";
 
@@ -76,29 +75,27 @@ namespace Statistics2026.ScheduledTasks
                 throw new Exception( "Statistics 2026 task is running" );
             }
 
-            var taskName = "Analyze Collections";
+            var taskName = "Analyze Series";
             _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
-            // purely for progress reporting
-
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( cancellationToken, progress );
-            db.ClearLastUpdated( StatisticsDB.EAction.CollectionsAnalysis );
+            db.ClearLastUpdated( StatisticsDB.EAction.SeriesAnalysis );
 
-            long addCollections = 0;
-            using( var timer = new AutoTimer( $"Adding Collections", _embyInterfaces._logger ) )
+            long addSeries = 0;
+            using( var timer = new AutoTimer( $"Adding All Series", _embyInterfaces._logger ) )
             {
-                db.AddAllCollectionsTaskImpl( cancellationToken, progress );
-                addCollections = timer.ElapsedMilliseconds();
+                db.AddAllSeriesTaskImpl();
+                addSeries = timer.ElapsedMilliseconds();
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"    Collections: {addCollections} ms" );
+            _embyInterfaces._logger.Info( $"         Series: {addSeries} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces._logger.Info( $"Statistics 2026 : Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.CollectionsAnalysis, addCollections );
+            db.UpdateLastUpdated( StatisticsDB.EAction.SeriesAnalysis, addSeries );
 
             db.ResetCancellationToken();
             return Task.CompletedTask;
