@@ -53,7 +53,6 @@ namespace Statistics2026.Api
     {
         public string ListDisplayName { get; set; } = string.Empty;
         public string SortName { get; set; } = string.Empty;
-        public string PremiereYear { get; set; } = string.Empty;
         public string PremiereDate { get; set; } = string.Empty;
         public string ResolutionDetail { get; set; } = string.Empty;
         public string Codec { get; set; } = string.Empty;
