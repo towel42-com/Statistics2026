@@ -32,6 +32,7 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             var existing = new Dictionary<string, bool>();
 
+            sqlCmds.Add( new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ) );
             foreach( var video in videoList )
             {
                 if( video == null )
@@ -667,7 +668,6 @@ namespace Statistics2026.Data
                 {
                     SortName = CleanSortName( row.GetString( col++ ) ),
                     PremiereDate = DBHelper.ReadDateTime( row.GetString( col++ ) )?.Date.ToShortDateString() ?? string.Empty,
-                    PremiereYear = DBHelper.ReadDateTime( row.GetString( col - 1 ) )?.Year.ToString() ?? string.Empty,
                     ResolutionDetail = row.GetString( col++ ),
                     Codec = row.GetString( col++ ),
                     DolbyVisionProfile = row.GetString( col++ ),
@@ -744,12 +744,12 @@ namespace Statistics2026.Data
             {
                 var row = statement.Current;
                 var col = 0;
+                var premiereYear = DBHelper.ReadDateTime( row.GetString( 2 ) )?.Year ?? 0;
                 var curr = new MediaItemResponse()
                 {
                     ListDisplayName = row.GetString( col ),
                     SortName = CleanSortName( row.GetString( col++ ) ),
                     PremiereDate = DBHelper.ReadDateTime( row.GetString( col++ ) )?.Date.ToShortDateString() ?? string.Empty,
-                    PremiereYear = DBHelper.ReadDateTime( row.GetString( col - 1 ) )?.Year.ToString() ?? string.Empty,
                     ResolutionDetail = string.Empty,
                     Codec = string.Empty,
                     DolbyVisionProfile = string.Empty,
@@ -788,7 +788,8 @@ namespace Statistics2026.Data
                 }
                 else
                 {
-                    searchKey += " " + curr.PremiereYear;
+                    if ( premiereYear != 0 )
+                        searchKey += " " + premiereYear;
                 }
 
                 if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
