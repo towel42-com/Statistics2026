@@ -169,14 +169,6 @@ define(function () {
         return retVal;
     }
 
-    function getMissingMediaRowData(info) {
-        var retVal = "";
-        retVal += "<td style='align='left' sort-value='" + info.SortName + "'>" + info.ListDisplayName + "</td>";
-        retVal += "<td style='align='right'>" + info.PremiereDate + "</td>";
-        retVal += "<td style='align='left' sort-value='" + info.LocationSortName + "'>" + info.ServerLocation + "</td>";
-        return retVal;
-    }
-
     getStatistics2026Data = function (url_to_get) {
         console.log("getStatistics2026Data Url = " + url_to_get);
         return ApiClient.ajax({
@@ -362,8 +354,12 @@ define(function () {
             thead.innerHTML = getHeaderFunc();
             setupSortability(baseId, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
+            let minChunkSize = 50;
+            let chunkSize = Math.min(minChunkSize, Math.trunc(resultData.length / 20));
+            if ( chunkSize == 0 )
+                chunkSize = minChunkSize;
+
             let currentIndex = 0;
-            let chunkSize = Math.min(50, Math.trunc(resultData.length / 20));
             function renderNextChunk() {
                 if (signal.aborted) {
                     console.log(`Rendering loop for ${baseId} was interrupted.`);
@@ -533,29 +529,35 @@ define(function () {
                     cellB = rowB.children[columnIndex].textContent;
                 cellB = cellB.trim();
 
+                if (cellA == '' || cellB == '') {
+                    return currentDirection === 'asc' ? 1 : -1;
+                }
+
+                let diff = 0;
                 if (dataType === 'number') {
                     // Strip out currency symbols or non-numeric formatting characters if present
                     const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
                     const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
-                    return currentDirection === 'asc' ? numA - numB : numB - numA;
+                    diff = currentDirection === 'asc' ? numA - numB : numB - numA;
                 } else if (dataType == 'date') {
                     const dateA = new Date(cellA);
                     const dateB = new Date(cellB);
-                    return currentDirection === 'asc' ? dateA - dateB : dateB - dateA;
-                } else if (dataType == 'string') {
-                    // Text comparison using localeCompare for proper alphabetical ordering
-                    return currentDirection === 'asc'
-                        ? cellA.localeCompare(cellB)
-                        : cellB.localeCompare(cellA);
-                } else { // progress
+                    diff = currentDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                } else if (dateType == 'progress') {
                     const matchA = cellA.match(/(?<percent>\d+)\%/);
                     const matchB = cellB.match(/(?<percent>\d+)\%/);
 
                     const numA = matchA ? +matchA.groups.percent : 0;
                     const numB = matchB ? +matchB.groups.percent : 0;
 
-                    return currentDirection === 'asc' ? numA - numB : numB - numA;
+                    diff = currentDirection === 'asc' ? numA - numB : numB - numA;
+                } else { //if (dataType == 'string') {
+                    // Text comparison using localeCompare for proper alphabetical ordering
+                    diff = currentDirection === 'asc'
+                        ? cellA.localeCompare(cellB)
+                        : cellB.localeCompare(cellA);
                 }
+                return diff;
             });
 
             tbody.innerHTML = "";
@@ -622,7 +624,6 @@ define(function () {
         LoadUserStats,
         getMediaHeader,
         getMediaRowData,
-        getMissingMediaRowData,
         getStatistics2026Data,
         getSummaryInfo,
         getLastRunInfo,
