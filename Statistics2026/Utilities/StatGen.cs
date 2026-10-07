@@ -274,7 +274,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.Largest:
                 {
                     if( VideoType == EVideoType.Movie )
-                        title = Constants.BiggestMovie;
+                        title = Constants.LargestMovie;
                     else if( VideoType == EVideoType.Series )
                         title = Constants.BiggestSeries;
                     else

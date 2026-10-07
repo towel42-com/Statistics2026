@@ -46,7 +46,7 @@ namespace Statistics2026
 
         internal const string TotalStudios = "Total Studios";
         internal const string HelpTotalStudios = "Total studios in the Emby library.";
-        internal const string BiggestMovie = "Largest Movie";
+        internal const string LargestMovie = "Largest Movie";
         internal const string SmallestMovie = "Smallest Movie";
         internal const string LongestMovie = "Longest Movie";
         internal const string ShortestMovie = "Shortest Movie";
@@ -106,6 +106,9 @@ namespace Statistics2026
         internal const string LeastWatchedMovies = "Least Watched Movies";
         internal const string HelpMostWatchedMovies = "Most watched movies based on the number of watches of the movie per user.";
         internal const string HelpLeastWatchedMovies = "Least watched movies based on the number of watches of the movie per user.";
+
+        internal const string MoviesInMultipleCollections = "Movies in Multiple Collections";
+
 
         internal const string MissingVideoStream = "Missing Video Stream";
         internal const string UnknownDolbyProfile = "Unknown Dolby Profile";
