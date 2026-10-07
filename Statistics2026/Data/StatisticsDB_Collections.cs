@@ -1,9 +1,17 @@
 ﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
+using ServiceStack;
+using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Xml.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
@@ -57,20 +65,21 @@ namespace Statistics2026.Data
                 "(" +
                     "  CollectionId" +
                     ", ItemId" +
-                    ", CollectionName" +
                 ")" +
                 " VALUES " +
                 "(" +
                 "  @CollectionId" +
                 ", @ItemId" +
-                ", @CollectionName" +
-                ")";
+                ")" +
+                " ON CONFLICT(CollectionId,ItemId) " +
+                " DO NOTHING "
+                ;
+
 
             sqlCmds.Add( new SQLCmdDef( sql,
             [
                 ("@CollectionId", collection.Id.ToString()),
                 ("@ItemId", video.Id.ToString()),
-                ("@CollectionName", collection.Name),
             ] ) );
             return sqlCmds;
         }
@@ -122,12 +131,14 @@ namespace Statistics2026.Data
                 "INSERT INTO Collections " +
                 "(" +
                     "  ItemId" +
+                    ", TmdbId" +
                     ", Name" +
                     ", SortName" +
                 ")" +
                 " VALUES " +
                 "(" +
                 "  @ItemId" +
+                ", @TmdbId" +
                 ", @Name" +
                 ", @SortName" +
                 ")" +
@@ -135,15 +146,23 @@ namespace Statistics2026.Data
                 " DO UPDATE " +
                 " SET " +
                     "  Name=@Name" +
-                    ", SortName=@SortName"
+                    ", SortName=@SortName" +
+                    ", TmdbId=@TmdbId"
                     ;
 
+            var tmdbId = collection.GetProviderId( MetadataProviders.Tmdb );
+            if( ( tmdbId != null ) && !long.TryParse( tmdbId, out long result ) )
+            {
+                tmdbId = null;
+            }
+
             sqlCmds.Add( new SQLCmdDef( sql,
-            [
-                ("@ItemId", collection.Id.ToString()),
-                ("@Name", collection.Name),
-                ("@SortName", collection.SortName),
-            ] ) );
+                [
+                    ("@ItemId", collection.Id.ToString()),
+                    ("@TmdbId", tmdbId),
+                    ("@Name", collection.Name),
+                    ("@SortName", collection.SortName),
+                ] ) );
             _embyInterfaces!._logger?.Debug( $"AddAllCollections -     AddCollection - Successfully Added Collection" );
 
             sqlCmds.AddRange( AddCollectionMembers( collection, cancellationToken, progress ) );
@@ -157,6 +176,140 @@ namespace Statistics2026.Data
             var sql = "SELECT COUNT( ItemId ) FROM Collections";
 
             return ValueGroupForSingleItem( Constants.TotalCollections, Constants.HelpTotalCollections, sql );
+        }
+
+        public StatCard MultiCollectionMovies()
+        {
+            CheckIsValid( ECheckType.eReport );
+            var sql = "SELECT  "
+                + "  Media.SortName "
+                + ", Media.ItemId "
+                + ", Collections.Name "
+                + ", Collections.SortName "
+                + ", CollectionMembership.CollectionId  "
+                + "FROM "
+                + " CollectionMembership "
+                + " INNER JOIN Media ON Media.ItemId=CollectionMembership.ItemId"
+                + " INNER JOIN Collections ON Collections.ItemId=CollectionMembership.CollectionId "
+                + "WHERE NOT Media.IsEpisode"
+                + "  AND CollectionMembership.ItemId IN ("
+                + "      SELECT ItemId "
+                + "      FROM CollectionMembership "
+                + "      GROUP BY ItemId "
+                + "      HAVING COUNT(*) > 1"
+                + "  )"
+                + "ORDER BY Media.SortName ASC, Collections.SortName ASC"
+                ;
+
+            var retVal = new GroupedTextBasedStatCard( Constants.MoviesInMultipleCollections, null, EStatCardStyle.eDetailed )
+            {
+                ListType = EListType.eUnordered
+            };
+
+            Dictionary<string, string> urlMap = [];
+
+            var sqlCmd = new SQLCmdDef( sql );
+            _dbHelper.ExecuteCommand( sqlCmd, statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+
+                var itemSortName = row.GetString( col++ );
+                var itemId = row.GetString( col++ );
+                var collectionName = row.GetString( col++ );
+                var collectionSortName = row.GetString( col++ );
+                var collectionId = row.GetString( col++ );
+
+                if( !urlMap.TryGetValue( itemId, out string itemImageUrl ) )
+                {
+                    itemImageUrl = ItemImageUrl._ItemImageUrl( itemId, _embyInterfaces!._libraryManager );
+                    urlMap.Add( itemId, itemImageUrl );
+                }
+
+                if( !urlMap.TryGetValue( collectionId, out string collectionImageUrl ) )
+                {
+                    collectionImageUrl = ItemImageUrl._ItemImageUrl( collectionId, _embyInterfaces!._libraryManager );
+                    urlMap.Add( collectionId, collectionImageUrl );
+                }
+
+                retVal.AddLine( (itemSortName, itemId, itemImageUrl, false), (collectionSortName, collectionId, collectionImageUrl, false) );
+
+                return true;
+            } );
+
+            return retVal;
+        }
+
+        public SortByText? GetCollectionName( string collectionId )
+        {
+            CheckIsValid( ECheckType.eReport );
+
+            var sql = "SELECT " +
+                "  Collections.Name" +
+                ", Collections.SortName" +
+                " FROM Collections" +
+                " WHERE " +
+                " Collections.ItemId=@ItemId"
+                ;
+
+            var sqlCmd = new SQLCmdDef( sql,
+            [
+                ("@ItemId", collectionId)
+            ] );
+
+            List<string> names = [];
+            List<string> sortByNames = [];
+
+            _dbHelper.ExecuteCommand( sqlCmd, statement =>
+            {
+                var row = statement.Current;
+                names.Add( row.GetString( 0 ) );
+                sortByNames.Add( row.GetString( 1 ) );
+                return true;
+            } );
+
+            if( names.Count == 0 || sortByNames.Count == 0 )
+                return null;
+
+            var retVal = new SortByText( string.Join( ", ", names ), string.Join( ", ", sortByNames ) );
+            return retVal;
+        }
+
+        public SortByText? GetCollectionsForMovie( string movieId )
+        {
+            CheckIsValid( ECheckType.eReport );
+            var sql = "SELECT " +
+                "  Collections.Name" +
+                ", Collections.SortName" +
+                " FROM CollectionMembership" +
+                " LEFT JOIN Collections" +
+                "    ON Collections.Itemid=CollectionMembership.CollectionId" +
+                " WHERE " +
+                " CollectionMembership.ItemId=@ItemId" +
+                " ORDER BY Collections.SortName ASC"
+                ;
+
+            var sqlCmd = new SQLCmdDef( sql,
+            [
+                ("@ItemId", movieId)
+            ] );
+
+            List<string> names = [];
+            List<string> sortByNames = [];
+
+            _dbHelper.ExecuteCommand( sqlCmd, statement =>
+            {
+                var row = statement.Current;
+                names.Add( row.GetString( 0 ) );
+                sortByNames.Add( row.GetString( 1 ) );
+                return true;
+            } );
+
+            if( names.Count == 0 || sortByNames.Count == 0 )
+                return null;
+
+            var retVal = new SortByText( string.Join( ", ", names ), string.Join( ", ", sortByNames ) );
+            return retVal;
         }
     }
 }
