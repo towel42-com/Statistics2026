@@ -1,4 +1,5 @@
-﻿using Statistics2026.Configuration;
+﻿using ServiceStack;
+using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 
 namespace Statistics2026.Api
@@ -49,18 +50,35 @@ namespace Statistics2026.Api
         public string SeriesStatus { get; set; } = string.Empty;
     }
 
+    public class SortByText
+    {
+        public SortByText( string sortBy="", string text = "" )
+        {
+            this.SortBy = sortBy;
+            this.Text = text;
+            if( Text.IsEmpty() )
+                Text = SortBy;
+            if( SortBy.IsEmpty() )
+                SortBy = Text;
+        }
+
+        public string SortBy { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+    }
+
     public class MediaItemResponse
     {
-        public string ListDisplayName { get; set; } = string.Empty;
-        public string SortName { get; set; } = string.Empty;
+        public SortByText DisplayName { get; set; } = new();
         public string PremiereDate { get; set; } = string.Empty;
         public string ResolutionDetail { get; set; } = string.Empty;
         public string Codec { get; set; } = string.Empty;
         public string DolbyVisionProfile { get; set; } = string.Empty;
-        public string LocationSortName { get; set; } = string.Empty;
-        public string ServerLocation { get; set; } = string.Empty;
-        public string SearchSortName { get; set; } = string.Empty;
-        public string SearchLocation { get; set; } = string.Empty;
+
+        public SortByText ServerLocation { get; set; } = new();
+        public SortByText SearchLocation { get; set; } = new();
+        public SortByText ParentName { get; set; } = new();
+
         public string ItemUrl { get; set; } = string.Empty;
+        public string ItemId { get; set; } = string.Empty;
     }
 }

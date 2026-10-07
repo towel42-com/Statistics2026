@@ -510,6 +510,22 @@ namespace Statistics2026.Api
                 return vgReponse;
             } );
         }
+
+        public object Get( GetMultiCollectionMovies request )
+        {
+            return GetRequest( "GetMultiCollectionMovies", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                var groupData = db.MultiCollectionMovies();
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
         public object Get( GetTotalTimeWatched request )
         {
             return GetRequest( "GetTotalTimeWatched", timer =>

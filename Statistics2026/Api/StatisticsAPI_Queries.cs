@@ -224,6 +224,11 @@ namespace Statistics2026.Api
     {
     }
 
+    [Route( "/Statistics2026/multi_collection_movies", "GET", Summary = "Get the List of Multi-Collection Movies" )]
+    public class GetMultiCollectionMovies : IReturn<object>
+    {
+    }
+
     [Route( "/Statistics2026/total_time_watched/{User}", "GET", Summary = "Get the Total Time Watched for User" )]
     public class GetTotalTimeWatched : IReturn<object>
     {
