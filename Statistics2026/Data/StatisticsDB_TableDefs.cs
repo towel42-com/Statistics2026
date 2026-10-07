@@ -108,6 +108,7 @@ namespace Statistics2026.Data
                 new TableDef("Collections",
                     [
                             new TableColDef( "ItemId", "TEXT", false, true),
+                            new TableColDef( "TmdbId", "TEXT", true ),
                             new TableColDef( "Name", "TEXT", false ),
                             new TableColDef( "SortName", "TEXT", false )
                     ]
@@ -117,8 +118,14 @@ namespace Statistics2026.Data
                         new TableColDef( "CollectionId", "TEXT", false ),
                         new TableColDef( "ItemId", "TEXT", false ),
                         new TableColDef( "CollectionName", "TEXT", false ) // for debugging purposes
+                        {
+                            DeprecatedColumn = true
+                        }
                     ]
-                ),
+                )
+                {
+                    CompositeIndex = new List<string>(){"CollectionId", "ItemId" }
+                },
                 new TableDef("CachedStats",
                     [
                         new TableColDef( "LongestSeries", "TEXT", true ),
