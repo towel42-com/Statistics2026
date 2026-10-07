@@ -131,27 +131,29 @@ define(function () {
 
     function getMediaRowData(info, showOnServer, showMissing) {
         var retVal = "";
-        retVal += "<td style='align='left' sort-value='" + info.SortName + "'>" + info.ListDisplayName + "</td>";
+        retVal += "<td style='align='left' sort-value='" + info.DisplayName.SortBy + "'>" + info.DisplayName.Text + "</td>";
+        retVal += "<td style='align='left' sort-value='" + info.ParentName.SortBy + "'>" + info.ParentName.Text + "</td>";
         retVal += "<td style='align='right'>" + info.PremiereDate + "</td>";
 
         if (showOnServer) {
             retVal += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
             retVal += "<td style='align='left'>" + info.Codec + "</td>";
             retVal += "<td style='align='left'>" + info.DolbyVisionProfile + "</td>";
-            retVal += "<td style='align='left' sort-value='" + info.LocationSortName + "'>" + info.ServerLocation + "</td>";
+            retVal += "<td style='align='left' sort-value='" + info.ServerLocation.SortBy + "'>" + info.ServerLocation.Text + "</td>";
         }
 
         if (showMissing) {
-            retVal += "<td style='align='left' sort-value='" + info.SearchSortName + "'>" + info.SearchLocation + "</td>";
+            retVal += "<td style='align='left' sort-value='" + info.SearchLocation.SortBy + "'>" + info.SearchLocation.Text + "</td>";
         }
 
         return retVal;
     }
 
-    function getMediaHeader(showOnServer, showMissing) {
+    function getMediaHeader(parentName, showOnServer, showMissing) {
         var retVal = "";
         retVal += "<tr style=\"text-align: left;\">";
         retVal += "    <th data-column=\"Name\" data-type=\"string\" class=\"info_cell_heading\">Name<span class=\"sort-icon\"></span></th>";
+        retVal += "    <th data-column=\"ParentName\" data-type=\"string\" class=\"info_cell_heading\">" + parentName + "<span class=\"sort-icon\"></span></th>";
         retVal += "    <th data-column=\"PremiereDate\" data-type=\"date\" class=\"info_cell_heading\">Premiere Date<span class=\"sort-icon\"></span></th>";
 
         if (showOnServer) {
@@ -561,7 +563,10 @@ define(function () {
                     cellB = rowB.children[columnIndex].textContent;
                 cellB = cellB.trim();
 
-                if (cellA == '' || cellB == '') {
+                if (cellA == '' && cellB != '') {
+                    return currentDirection === 'asc' ? -1 : 1;
+                }
+                if (cellB == '') {
                     return currentDirection === 'asc' ? 1 : -1;
                 }
 
