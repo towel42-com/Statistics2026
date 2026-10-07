@@ -174,6 +174,12 @@ namespace Statistics2026.Utilities
                 }
                 );
 
+            if ( CompositeIndex != null )
+            {
+                sql = $"CREATE UNIQUE INDEX IF NOT EXISTS {Name}_CompositeIndex ON {Name} ({string.Join( ", ", CompositeIndex )})";
+                retVal.Add( new SQLCmdDef( sql ) );
+            }
+
             return retVal;
         }
 
@@ -254,6 +260,7 @@ namespace Statistics2026.Utilities
         public string Name { get; private set; }
         public List<TableColDef> Columns { get; private set; }
         public List<string> Indexes { get; private set; }
+        public List<string>? CompositeIndex { get; set; } = null;
         public bool DeprecatedTable { get; set; } = false;
         public bool ValidationRequiresData { get; set; } = true;
     }
