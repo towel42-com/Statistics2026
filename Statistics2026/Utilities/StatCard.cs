@@ -262,8 +262,12 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        private void addData( ref string retVal, int depth = 0 )
+        private string addData( int depth = 0 )
         {
+            if( IsEmpty() )
+                return string.Empty;
+
+            var retVal = string.Empty;
             if( DataIsTable() )
             {
                 retVal = StatCardResponse._addToHtml( depth++, "<table>" );
@@ -279,6 +283,7 @@ namespace Statistics2026.Utilities
             {
                 retVal = GetDataString( depth );
             }
+            return retVal;
         }
 
         public override string ToString()
@@ -289,10 +294,8 @@ namespace Statistics2026.Utilities
         public string ToString( int depth = 0 )
         {
             var retVal = string.Empty;
-            if( IsEmpty() )
-                return retVal;
 
-            addData( ref retVal, depth );
+            retVal = addData( depth );
 
             return retVal;
         }
@@ -355,7 +358,7 @@ namespace Statistics2026.Utilities
 
         private int addData( int depth, ref StatCardResponse retVal )
         {
-            var tableInfo = ToString( depth + 1 );
+            var tableInfo = addData( depth );
 
             if( !tableInfo.IsNullOrEmpty() )
             {
