@@ -640,49 +640,60 @@ namespace Statistics2026.Data
             var retVal = new List<MediaItemResponse>();
             var sql = "SELECT ";
             if( episodes )
-                sql += "  PrimaryName || ' - S' || printf( '%02d', Season ) || 'E' || printf('%02d', Episode) || ' - ' || SecondaryName AS ListDisplayName";
+            {
+                sql += "  Media.PrimaryName || ' - S' || printf( '%02d', Media.Season ) || 'E' || printf('%02d', Media.Episode) || ' - ' || Media.SecondaryName AS ListDisplayName";
+                sql += ", Series.Name";
+                sql += ", Series.SortName";
+            }
             else
-                sql += "  PrimaryName AS ListDisplayName";
+            {
+                sql += "  Media.PrimaryName AS ListDisplayName, '', ''";
+            }
 
             sql +=
-                ", PremiereDate" +
+                ", Media.PremiereDate" +
                 ", ResolutionDetail" +
                 ", Codec" +
                 ", DolbyVisionProfile" +
                 ", ServerLocation" +
-                ", ItemId" +
-                ", ImageUrl" +
+                ", Media.ItemId" +
+                ", Media.ImageUrl" +
                 " FROM " +
                 "   Media ";
+
+            if( episodes )
+                sql += " LEFT JOIN Series ON Series.ItemId=Media.SeriesId";
+
             if( episodes )
                 sql += " WHERE IsEpisode ";
             else
                 sql += " WHERE NOT IsEpisode ";
 
-            sql += " ORDER BY PrimaryName ASC, Season ASC, Episode ASC ";
+            sql += " ORDER BY Media.SortName ASC, Media.Season ASC, Media.Episode ASC ";
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 var col = 0;
-                var curr = new MediaItemResponse()
-                {
-                    SortName = CleanSortName( row.GetString( col++ ) ),
-                    PremiereDate = DBHelper.ReadDateTime( row.GetString( col++ ) )?.Date.ToShortDateString() ?? string.Empty,
-                    ResolutionDetail = row.GetString( col++ ),
-                    Codec = row.GetString( col++ ),
-                    DolbyVisionProfile = row.GetString( col++ ),
-                    ServerLocation = row.GetString( col++ )
-                };
+                var curr = new MediaItemResponse();
+                curr.DisplayName = new SortByText( CleanSortName( row.GetString( col++ ) ), string.Empty );
+                var parentName = row.GetString( col++ );
+                var parentSortName = row.GetString( col++ );
+                curr.ParentName = new SortByText( parentName, parentSortName );
+                curr.PremiereDate = DBHelper.ReadDateTime( row.GetString( col++ ) )?.Date.ToShortDateString() ?? string.Empty;
+                curr.ResolutionDetail = row.GetString( col++ );
+                curr.Codec = row.GetString( col++ );
+                curr.DolbyVisionProfile = row.GetString( col++ );
+                curr.ServerLocation = new SortByText( row.GetString( col ), row.GetString( col ) );
+                col++;
 
-                curr.LocationSortName = curr.ServerLocation;
-                var itemId = row.GetString( col++ );
+                curr.ItemId = row.GetString( col++ );
                 var itemUrl = row.GetString( col++ );
-                curr.ItemUrl = ItemImageUrl.ItemUrl( itemId, itemUrl, curr.SortName );
+                curr.ItemUrl = ItemImageUrl.ItemUrl( curr.ItemId, itemUrl, curr.DisplayName.SortBy );
 
                 if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
-                    curr.ListDisplayName = curr.ItemUrl;
+                    curr.DisplayName.Text = curr.ItemUrl;
                 else
-                    curr.ListDisplayName = curr.SortName;
+                    curr.DisplayName.Text = curr.DisplayName.SortBy;
 
                 if( curr.Codec != "hevc" && curr.Codec != "av1" )
                     curr.DolbyVisionProfile = string.Empty;
@@ -690,6 +701,21 @@ namespace Statistics2026.Data
                 retVal.Add( curr );
                 return true;
             } );
+
+            if( !episodes )
+            {
+                for( int ii = 0; ii < retVal.Count; ++ii )
+                {
+                    var curr = retVal[ ii ];
+                    var collections = GetCollectionsForMovie( curr.ItemId );
+                    if( collections == null )
+                        continue;
+
+                    curr.ParentName = collections;
+                    retVal[ ii ] = curr;
+                }
+            }
+
             return retVal;
         }
 
@@ -703,8 +729,6 @@ namespace Statistics2026.Data
         {
             var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
 
-            var retVal = new List<MediaItemResponse>();
-
             var sql = "SELECT " +
                 "  Missing.Title AS ListDisplayName" +
                 ", Missing.ReleaseDate"
@@ -715,20 +739,19 @@ namespace Statistics2026.Data
             }
             else
             {
-                sql += ", Collections.Name";
+                sql += ", ''";
             }
 
             sql +=
                 ", Missing.PosterPath" +
                 ", Missing.SeasonNum" +
                 ", Missing.EpisodeNum" +
+                ", Missing.ParentId" +
                 " FROM " +
                 "   Missing ";
 
             if( episodes )
                 sql += " LEFT JOIN Series ON Series.ItemId=Missing.ParentId ";
-            else
-                sql += " LEFT JOIN Collections ON Collections.ItemId=Missing.ParentId ";
 
             if( episodes )
                 sql += " WHERE Missing.IsEpisode ";
@@ -740,24 +763,25 @@ namespace Statistics2026.Data
             if( episodes )
                 sql += ", Missing.SeasonNum ASC, Missing.EpisodeNum ASC ";
 
+            var retVal = new List<MediaItemResponse>();
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                var col = 0;
                 var premiereYear = DBHelper.ReadDateTime( row.GetString( 2 ) )?.Year ?? 0;
                 var curr = new MediaItemResponse()
                 {
-                    ListDisplayName = row.GetString( col ),
-                    SortName = CleanSortName( row.GetString( col++ ) ),
-                    PremiereDate = DBHelper.ReadDateTime( row.GetString( col++ ) )?.Date.ToShortDateString() ?? string.Empty,
+                    DisplayName = new SortByText( CleanSortName( row.GetString( 0 ) ), row.GetString( 0 ) ),
+                    PremiereDate = DBHelper.ReadDateTime( row.GetString( 1 ) )?.Date.ToShortDateString() ?? string.Empty,
                     ResolutionDetail = string.Empty,
                     Codec = string.Empty,
                     DolbyVisionProfile = string.Empty,
                 };
-                var parentName = row.GetString( col++ );
+                var col = 2;
+                curr.ParentName = new SortByText( row.GetString( col++ ), string.Empty );
                 var posterPath = row.GetString( col++ );
                 var seasonNum = row.GetInt( col++ );
                 var episodeNum = row.GetInt( col++ );
+                var parentId = row.GetString( col++ );
 
                 if( posterPath != null && !posterPath.StartsWith( "/" ) )
                 {
@@ -767,17 +791,13 @@ namespace Statistics2026.Data
 
                 if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
                 {
-                    curr.ListDisplayName = $"<a is=\"emby-linkbutton\" href=\"{curr.ItemUrl}\"><img loading=\"lazy\" src=\"{curr.ItemUrl}\" height=\"105px\"/>{curr.SortName}</a>";
+                    curr.DisplayName.Text = $"<a is=\"emby-linkbutton\" href=\"{curr.ItemUrl}\"><img loading=\"lazy\" src=\"{curr.ItemUrl}\" height=\"105px\"/>{curr.DisplayName.SortBy}</a>";
                 }
 
-                var parentType = episodes ? "Series" : "Collection";
-                curr.ServerLocation = $"Missing from {parentType} '{parentName}'";
-                curr.LocationSortName = curr.ServerLocation;
-
-                var searchKey = curr.SortName;
+                var searchKey = curr.DisplayName.SortBy;
                 if( episodes )
                 {
-                    searchKey = parentName;
+                    searchKey = curr.ParentName.SortBy;
                     var subKey = string.Empty;
                     if( seasonNum != 0 )
                         subKey += $"S{seasonNum:D2}";
@@ -788,8 +808,9 @@ namespace Statistics2026.Data
                 }
                 else
                 {
-                    if ( premiereYear != 0 )
+                    if( premiereYear != 0 )
                         searchKey += " " + premiereYear;
+                    curr.ParentName = new SortByText( parentId );
                 }
 
                 if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
@@ -799,18 +820,36 @@ namespace Statistics2026.Data
                         searchUrl += "?q=";
                     searchUrl += searchKey;
 
-                    curr.SearchSortName = $"{parentName} - {searchKey}";
+                    if( episodes )
+                        curr.SearchLocation.SortBy = $"{curr.ParentName.SortBy} - {searchKey}";
+                    else
+                        curr.SearchLocation.SortBy = searchKey;
 
-                    var displayText = $"{curr.ServerLocation} - Click to Search for '{searchKey}'";
-
+                    var displayText = $"Click to Search for '{searchKey}'";
                     var searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {searchKey}\">{displayText}</a>";
-                    curr.SearchLocation = searchLocation;
+                    curr.SearchLocation.Text = searchLocation;
+                    curr.SearchLocation.SortBy = searchKey;
                 }
 
                 retVal.Add( curr );
                 return true;
             } );
 
+            if( !episodes )
+            {
+                for( int ii = 0; ii < retVal.Count; ++ii )
+                {
+                    var curr = retVal[ ii ];
+                    var collections = GetCollectionName( curr.ParentName.Text );
+                    if( collections != null )
+                    {
+                        curr.ParentName = collections;
+                    }
+                    else
+                        curr.ParentName = new();
+                    retVal[ ii ] = curr;
+                }
+            }
             return retVal;
         }
 
@@ -831,8 +870,8 @@ namespace Statistics2026.Data
             retVal.Sort(
                 ( x, y ) =>
                 {
-                    var lhs = x.SortName;
-                    var rhs = y.SortName;
+                    var lhs = x.DisplayName.SortBy;
+                    var rhs = y.DisplayName.SortBy;
                     return lhs.CompareTo( rhs );
                 } );
             return retVal;

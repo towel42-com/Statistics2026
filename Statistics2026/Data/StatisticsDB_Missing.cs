@@ -125,13 +125,6 @@ namespace Statistics2026.Data
                 return [];
             }
 
-            //var tmdbCollectionProvider = await reader.GetRemoteCollectionMembersAsyncViaProviders( collectionTmbdId, collection.InternalId, cancellationToken ).ConfigureAwait( false );
-            //if( tmdbCollectionProvider == null )
-            //{
-            //    _embyInterfaces._logger!.Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
-            //    return [];
-            //}
-
             List<SQLCmdDef> retVal = [];
             foreach( var tmdbMovie in tmdbCollection.Movies )
             {
