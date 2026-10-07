@@ -792,19 +792,18 @@ namespace Statistics2026.Data
                 help = leastWatched ? Constants.HelpLeastWatchedMovies : Constants.HelpMostWatchedMovies;
             }
 
-            var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eDetailed )
+            var retVal = new GroupedTextBasedStatCard( title, help, EStatCardStyle.eDetailed )
             {
                 SubTitle = ( user == null ) ? "(Watched across Users)" : string.Empty,
-                ListType = TextBasedStatCard.EListType.eNumberedGroupByKey
+                ListType = EListType.eNumbered
             };
 
             foreach( var currList in watchedMedia )
             {
                 foreach( var curr in currList )
                 {
-                    retVal.AddLine( $"{curr.Title()}", curr.ItemId, curr.ImageUrl, false );
                     var key = (long)( 100 * curr.PlayCountPerUser );
-                    retVal.AddKey( key.ToString() );
+                    retVal.AddLine( key.ToString(), ($"{curr.Title()}", curr.ItemId, curr.ImageUrl, false) );
                 }
             }
 
@@ -956,7 +955,7 @@ namespace Statistics2026.Data
 
             var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eDetailed )
             {
-                ListType = TextBasedStatCard.EListType.eNumbered,
+                ListType = EListType.eNumbered,
                 IgnoreLength = true
             };
             var values = LastSeenValues( user, movies );
