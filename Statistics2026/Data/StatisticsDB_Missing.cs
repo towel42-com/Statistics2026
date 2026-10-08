@@ -101,7 +101,8 @@ namespace Statistics2026.Data
             if( dt == null )
                 return true;
 
-            var maxDate = DateTime.Today.Date.AddDays( Plugin.Instance!.Configuration.numDaysFuture );
+            var numDaysToAdd = Plugin.Instance!.Configuration.numDaysFutureForMissing;
+            var maxDate = DateTime.Today.Date.AddDays( numDaysToAdd );
             if( dt.Value.Date > DateTime.Today.Date )
                 return true;
 
@@ -220,8 +221,6 @@ namespace Statistics2026.Data
                     continue;
 
                 var embySeason = _dbHelper.GetSeasonFromSeries( series, tmdbSeason.SeasonNumber );
-                if( embySeason == null )
-                    continue;
 
                 foreach( var tmdbEpisode in tmdbSeason.Episodes )
                 {
@@ -231,7 +230,7 @@ namespace Statistics2026.Data
                     var episodeTmdbId = tmdbEpisode.Id;
                     var episodeIdent = $"S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2}";
                     _embyInterfaces!._logger?.Debug( $"         Checking for episode {episodeIdent} for {series.Name} on server" );
-                    var embyEpisode = _dbHelper.GetEpisodeFromTmdbId( _embyInterfaces._libraryManager, embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber );
+                    var embyEpisode = ( embySeason != null ) ? _dbHelper.GetEpisodeFromTmdbId( _embyInterfaces._libraryManager, embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber ) : null;
 
                     if( embyEpisode == null )
                     {
