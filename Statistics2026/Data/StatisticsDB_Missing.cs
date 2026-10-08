@@ -101,6 +101,7 @@ namespace Statistics2026.Data
             if( dt == null )
                 return true;
 
+            var maxDate = DateTime.Today.Date.AddDays( Plugin.Instance!.Configuration.numDaysFuture );
             if( dt.Value.Date > DateTime.Today.Date )
                 return true;
 
