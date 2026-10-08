@@ -230,7 +230,7 @@ namespace Statistics2026
 
                                 // Execute the action if not canceled
                                 var runAgain = await func( token );
-                                if ( !runAgain )
+                                if( !runAgain )
                                     break;
                             }
                         }
@@ -245,9 +245,14 @@ namespace Statistics2026
 
         public override void UpdateConfiguration( BasePluginConfiguration configuration )
         {
-            var prevNumDays = Configuration.numDaysFuture;
+            var prevNumDays = Configuration.numDaysFutureForMissing;
+            var prevReportOnMissing = Configuration.reportOnMissingSpecials;
+
             base.UpdateConfiguration( configuration );
-            if( configuration != null && ( Configuration.numDaysFuture != prevNumDays ) )
+            var numDaysChanged = ( Configuration.numDaysFutureForMissing != prevNumDays );
+            var reportMissingChanged = ( Configuration.reportOnMissingSpecials != prevReportOnMissing );
+            var needsRun = numDaysChanged || reportMissingChanged;
+            if( configuration != null && needsRun )
             {
                 if( _embyInterfaces == null )
                     return;
@@ -257,10 +262,16 @@ namespace Statistics2026
                 {
                     if( IsStatistics2026TaskRunning() )
                         return true;
-                    var task = launchSubTask( _embyInterfaces, typeof( AnalyzeMissingEpisodesTask ), cancellationToken );
-                    await task;
-                    task = launchSubTask( _embyInterfaces, typeof( AnalyzeMissingMoviesTask ), cancellationToken );
-                    await task;
+                    if( numDaysChanged || reportMissingChanged )
+                    {
+                        var task = launchSubTask( _embyInterfaces, typeof( AnalyzeMissingEpisodesTask ), cancellationToken );
+                        await task;
+                    }
+                    if( numDaysChanged )
+                    {
+                        var task = launchSubTask( _embyInterfaces, typeof( AnalyzeMissingMoviesTask ), cancellationToken );
+                        await task;
+                    }
                     return false;
                 } );
             }
