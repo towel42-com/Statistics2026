@@ -1,4 +1,5 @@
 ﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
 using Statistics2026.Api;
@@ -244,5 +245,36 @@ namespace Statistics2026.Data
 
             return groupData;
         }
+
+        public User? GetLastAddedUser()
+        {
+            var query = new UserQuery
+            {
+                // You can optionally add filters here, such as:
+                // IsDisabled = false,
+                // IsHidden = false
+            };
+
+            var queryResult = _embyInterfaces?._userManager!.GetUserList( query ) ?? null;
+            if( queryResult != null )
+            {
+                // 3. Find the newest user by sorting their creation date
+                var users = queryResult
+                    .OrderByDescending( u => u.DateCreated );
+
+                foreach( var user in users )
+                {
+                    if( user == null )
+                        continue;
+
+                    if( user.DateCreated.DateTime == DateTime.MinValue )
+                        continue;
+
+                    return user;
+                }
+            }
+            return null;
+        }
+
     }
 }

@@ -17,7 +17,7 @@ namespace Statistics2026.Data
             SeriesAnalysis,
             UserAnalysis,
             UserWatchDataAnalysis,
-            LastMediaAdded
+            LastMediaOrUserAdded
         }
 
         public DateTime? GetLastUpdated( EAction action )
@@ -54,8 +54,8 @@ namespace Statistics2026.Data
                 case EAction.System:
                     titleText = "System Analysis";
                     break;
-                case EAction.LastMediaAdded:
-                    titleText = "Last Media Added";
+                case EAction.LastMediaOrUserAdded:
+                    titleText = "Last Media or User Added";
                     break;
                 case EAction.CollectionsAnalysis:
                     titleText = "Collection Analysis";

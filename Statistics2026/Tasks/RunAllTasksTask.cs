@@ -78,25 +78,59 @@ namespace Statistics2026.ScheduledTasks
             return RunAllTasks( this, _embyInterfaces, true, progress, cancellationToken );
         }
 
-        public static bool AnalysisOutOfDate( EmbyInterfaces embyInterfaces, StatisticsDB db )
+        private static void UpdateLastAdded( StatisticsDB db )
+        {
+            var lastMediaAdded = db.GetLastMovieOrEpisodeAdded();
+            DateTime? lastAdded = null;
+            if( lastMediaAdded != null && lastMediaAdded!.DateCreated != DateTime.MinValue )
+            {
+                lastAdded = lastMediaAdded!.DateCreated.DateTime;
+            }
+            var lastUserAdded = db.GetLastAddedUser();
+            if( lastUserAdded != null && lastUserAdded!.DateCreated != DateTime.MinValue )
+            {
+                if( lastAdded == null )
+                    lastAdded = lastUserAdded!.DateCreated.DateTime;
+                else if( lastAdded < lastUserAdded!.DateCreated.DateTime )
+                    lastAdded = lastUserAdded!.DateCreated.DateTime;
+            }
+            if( lastAdded != null && lastAdded != DateTime.MinValue )
+            {
+                db.UpdateLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded, 0, lastAdded.Value );
+            }
+        }
+
+        private static bool AnalysisOutOfDate( StatisticsDB db, ILogger? logger  )
         {
             bool needToRun = false;
 
-            var lastMediaAddedAtAnalysis = db.GetLastUpdated( StatisticsDB.EAction.LastMediaAdded );
-            if( lastMediaAddedAtAnalysis == null || lastMediaAddedAtAnalysis.Value == DateTime.MinValue )
+            var lastAnalysisAdded = db.GetLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded );
+            if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTime.MinValue )
             {
                 needToRun = true;
             }
 
-            var lastMediaAddedToServer = db.GetLastMovieOrEpisodeAdded();
-            if( !needToRun && lastMediaAddedToServer != null && lastMediaAddedToServer!.DateCreated != DateTime.MinValue )
-            {
-                needToRun = lastMediaAddedAtAnalysis < lastMediaAddedToServer!.DateCreated.DateTime; // media was added since
-            }
-
+            DateTime? lastAdded = null;
             if( !needToRun )
             {
-                embyInterfaces._logger?.Info( "No media has been added since last run, not re-running Statistics Analysis" );
+                var lastMediaAddedToServer = db.GetLastMovieOrEpisodeAdded();
+                if( lastMediaAddedToServer != null && lastMediaAddedToServer!.DateCreated != DateTime.MinValue )
+                {
+                    lastAdded = lastMediaAddedToServer.DateCreated.DateTime;
+                }
+                var lastUserAddedToServer = db.GetLastAddedUser();
+                if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTime.MinValue )
+                {
+                    if( lastAdded > lastUserAddedToServer.DateCreated.DateTime )
+                        lastAdded = lastUserAddedToServer.DateCreated.DateTime;
+                }
+
+                needToRun = lastAnalysisAdded < lastAdded; // media or user was added since
+            }
+
+            if( !needToRun && logger != null)
+            {
+                logger.Info( "No media has been added since last run, not re-running Statistics Analysis" );
             }
             return needToRun;
         }
@@ -113,7 +147,7 @@ namespace Statistics2026.ScheduledTasks
             var db = StatisticsDB.GetInstance( embyInterfaces );
             db.Initialize( cancellationToken, progress, PluginConfiguration.resetPlayCount );
 
-            if( !force && !AnalysisOutOfDate( embyInterfaces, db ) )
+            if( !force && !AnalysisOutOfDate( db, embyInterfaces._logger ) )
                 return Task.CompletedTask;
 
             var taskName = "Analyze All";
@@ -127,11 +161,7 @@ namespace Statistics2026.ScheduledTasks
             Plugin.Instance?.UpdateConfiguration( PluginConfiguration );
 
             db.ClearLastUpdated( StatisticsDB.EAction.System );
-            var lastMediaAdded = db.GetLastMovieOrEpisodeAdded();
-            if( lastMediaAdded != null && lastMediaAdded!.DateCreated != DateTime.MinValue )
-            {
-                db.UpdateLastUpdated( StatisticsDB.EAction.LastMediaAdded, 0, lastMediaAdded.DateCreated.DateTime );
-            }
+            UpdateLastAdded( db );
 
             var overAllTimer = new AutoTimer( $"Adding All Data", embyInterfaces._logger, false );
             var tasks = Plugin.Instance?.GetKnownTasks( false );
