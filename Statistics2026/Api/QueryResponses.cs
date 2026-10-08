@@ -1,7 +1,6 @@
 ﻿using ServiceStack;
 using Statistics2026.Configuration;
 using Statistics2026.Utilities;
-using System.Net;
 
 namespace Statistics2026.Api
 {
@@ -64,12 +63,7 @@ namespace Statistics2026.Api
         }
 
         public string SortBy { get; set; } = string.Empty;
-        public string Text { get;
-            set 
-            {
-                field = WebUtility.HtmlEncode( value );
-            } 
-        } = string.Empty;
+        public string Text { get; set; } = string.Empty;
     }
 
     public class MediaItemResponse
