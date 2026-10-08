@@ -80,7 +80,7 @@ namespace Statistics2026.ScheduledTasks
             // purely for progress reporting
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
-            db.Initialize( cancellationToken, progress );
+            db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.MediaAnalysis );
 
             long addMedia = 0;

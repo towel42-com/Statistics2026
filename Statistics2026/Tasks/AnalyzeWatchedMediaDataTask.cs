@@ -80,7 +80,7 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
-            db.Initialize( cancellationToken, progress );
+            db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.UserWatchDataAnalysis );
 
             long addUsers = 0;
@@ -97,7 +97,7 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info( $"Statistics 2026: Finished Statistics 2026 {taskName} task" );
 
             db.UpdateLastUpdated( StatisticsDB.EAction.UserWatchDataAnalysis, addUsers );
-            
+
             db.ResetCancellationToken();
             Plugin.Instance?.AddDBState( EDBState.eUserTablesCreated );
 
