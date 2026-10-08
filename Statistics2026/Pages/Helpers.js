@@ -402,9 +402,14 @@ define(function () {
                         var found = false;
                         config.SortEntries.forEach(entry => {
                             if (entry.TableId == baseId) {
-                                var dataType = thead.querySelectorAll("th")[entry.ColumnNum].getAttribute('data-type');
-                                sortTable(entry.ColumnNum, dataType, entry.TableId, showLoadingFunc, hideLoadingFunc, entry.AscDesc);
-                                found = true;
+                                var headers = thead.querySelectorAll('th');
+                                headers.forEach( (header, index) => {
+                                    if (header.getAttribute('data-column') == entry.ColumnName) {
+                                        var dataType = header.getAttribute('data-type');
+                                        sortTable(index, dataType, entry.TableId, showLoadingFunc, hideLoadingFunc, entry.AscDesc);
+                                        found = true;
+                                    }
+                                });
                             }
                         });
 
@@ -532,10 +537,12 @@ define(function () {
         table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
 
         ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            let columnName = table.querySelectorAll("th")[columnIndex].getAttribute('data-column');
+
             var found = false;
             config.SortEntries.forEach(entry => {
                 if (entry.TableId == baseId) {
-                    entry.ColumnIndex = columnIndex;
+                    entry.ColumnName = columnName;
                     entry.AscDesc = currentDirection;
                     found = true;
                 }
@@ -544,7 +551,7 @@ define(function () {
             if (!found) {
                 config.SortEntries.push({
                     TableId: baseId,
-                    ColumnNum: columnIndex,
+                    ColumnName: columnName,
                     AscDesc: currentDirection
                 });
             }
