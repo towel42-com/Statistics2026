@@ -20,7 +20,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            _embyInterfaces!._logger?.Debug( $"AddAllMedia - Starting Video Analysis" );
+            _embyInterfaces!._logger?.Debug( $"Starting Video Analysis" );
 
             _dbHelper!.Progress?.Report( 0 );
             var videoList = _dbHelper.GetLibraryItems<Episode>().Cast<Video>().ToList();
@@ -53,7 +53,7 @@ namespace Statistics2026.Data
                         continue;
 
                     sqlCmds.AddRange( AddMediaInfo( mediaInfo ) );
-                    _embyInterfaces!._logger?.Debug( $"AddAllMedia -     Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
+                    _embyInterfaces!._logger?.Debug( $"    Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
                 }
 
                 _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
@@ -62,7 +62,7 @@ namespace Statistics2026.Data
             _dbHelper!.Progress?.Report( 80 );
             _dbHelper.ExecuteCommands( sqlCmds );
             _dbHelper!.Progress?.Report( 100 );
-            _embyInterfaces!._logger?.Debug( $"AddAllMedia - Finished Video Analysis" );
+            _embyInterfaces!._logger?.Debug( $"Finished Video Analysis" );
         }
 
         public List<SQLCmdDef> AddMediaInfo( MediaInfo mediaInfo )

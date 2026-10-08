@@ -14,7 +14,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            _embyInterfaces!._logger?.Debug( $"AddAllSeries- Starting Video Analysis" );
+            _embyInterfaces!._logger?.Debug( $"Starting Video Analysis" );
 
             _dbHelper!.Progress?.Report( 0 );
             var seriesList = _dbHelper.GetLibraryItems<Series>().Cast<Series>().ToList();
@@ -32,14 +32,14 @@ namespace Statistics2026.Data
                 sqlCmds.AddRange( AddSeries( series ) );
                 _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
 
-                _embyInterfaces!._logger?.Debug( $"AddAllSeries -     Processed Series ({curr} of {count}) - {series.Name}" );
+                _embyInterfaces!._logger?.Debug( $"    Processed Series ({curr} of {count}) - {series.Name}" );
             }
 
             _dbHelper!.Progress?.Report( 80 );
             _dbHelper.ExecuteCommands( sqlCmds );
             _dbHelper!.Progress?.Report( 100 );
             _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
-            _embyInterfaces!._logger?.Debug( $"AddAllSeries - Finished Video Analysis" );
+            _embyInterfaces!._logger?.Debug( $"Finished Video Analysis" );
         }
 
         private (int episodes, int specials) GetCountForSeries( Series series )
@@ -136,7 +136,7 @@ namespace Statistics2026.Data
                 return sqlCmds;
             }
 
-            _embyInterfaces!._logger?.Debug( $"AddAllSeries -    AddSeries - Adding Series {series.Name}" );
+            _embyInterfaces!._logger?.Debug( $"   AddSeries - Adding Series {series.Name}" );
 
             long totalFileSize = 0;
             long totalRuntime = 0;
@@ -279,7 +279,7 @@ namespace Statistics2026.Data
 
             sqlCmds.Add( new SQLCmdDef( sql, paramsList ) );
 
-            _embyInterfaces!._logger?.Debug( $"AddAllSeries -    AddSeries - Successfully Added Series {series.Name}" );
+            _embyInterfaces!._logger?.Debug( $"   AddSeries - Successfully Added Series {series.Name}" );
             return sqlCmds;
         }
 

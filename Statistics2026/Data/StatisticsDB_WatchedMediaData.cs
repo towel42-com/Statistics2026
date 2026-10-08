@@ -24,7 +24,7 @@ namespace Statistics2026.Data
                 return;
             _dbHelper!.Progress?.Report( 100 );
 
-            _embyInterfaces?._logger?.Debug( $"AnalyzeWatchedMediaData - Starting User Watch Data Analysis" );
+            _embyInterfaces?._logger?.Debug( $"Starting User Watch Data Analysis" );
 
             double count = users.Count;
             double curr = 0;
@@ -37,7 +37,7 @@ namespace Statistics2026.Data
                 foreach( var user in users )
                 {
                     _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-                    using( var userTimer = new AutoTimer( $"AnalyzeWatchedMediaData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
+                    using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
                     {
                         sqlCmds.AddRange( AddWatchedDataForUser( user ) );
                         _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
@@ -65,7 +65,7 @@ namespace Statistics2026.Data
             }
 
             Plugin.Instance.AddDBState( EDBState.eUserDataInitialized );
-            _embyInterfaces?._logger?.Debug( $"AnalyzeWatchedMediaData - Finished User Watch Data Analysis" );
+            _embyInterfaces?._logger?.Debug( $"Finished User Watch Data Analysis" );
         }
 
         public void InitWatchedMediaTables()
@@ -98,7 +98,7 @@ namespace Statistics2026.Data
                     foreach( var user in users )
                     {
                         _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-                        using( var userTimer = new AutoTimer( $"AnalyzeWatchedMediaData -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
+                        using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
                         {
                             sqlCmds.AddRange( GetInitWatchedMediaTableCommands( user ) );
                             _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();

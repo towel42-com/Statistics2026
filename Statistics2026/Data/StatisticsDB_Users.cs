@@ -23,7 +23,7 @@ namespace Statistics2026.Data
 
             _dbHelper!.Progress?.Report( 100 );
 
-            _embyInterfaces?._logger?.Debug( $"AddAllUsers - Starting User Analysis" );
+            _embyInterfaces?._logger?.Debug( $"Starting User Analysis" );
             double count = users.Count;
             double curr = 0;
 
@@ -34,7 +34,7 @@ namespace Statistics2026.Data
                 foreach( var user in users )
                 {
                     _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-                    using( var userTimer = new AutoTimer( $"AddAllUsers -     Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
+                    using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
                     {
                         sqlCmds.AddRange( AddUser( user ) );
                         _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
@@ -51,7 +51,7 @@ namespace Statistics2026.Data
                 _dbHelper!.Progress?.Report( 100 );
             }
 
-            _embyInterfaces?._logger?.Debug( $"AddAllUsers - Finished User Analysis" );
+            _embyInterfaces?._logger?.Debug( $"Finished User Analysis" );
         }
 
         private (long watched, long watchable) AnalyzeOverallTime( User? user, List<User>? userList )

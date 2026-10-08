@@ -192,9 +192,6 @@ namespace Statistics2026.ScheduledTasks
                         maxLen = task.Description.Length;
                 }
 
-                if( maxLen > 20 )
-                    maxLen = 20;
-
                 foreach( var task in tasks )
                 {
                     embyInterfaces._logger.Info( $"{task.Description.PadLeft( maxLen )}: {task.RunTime} ms" );
