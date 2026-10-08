@@ -19,6 +19,8 @@ namespace Statistics2026.Data
         private List<TableDef> _tableList = [];
         private TableDef? _userMediaTemplate = null;
         private readonly EmbyInterfaces? _embyInterfaces = null;
+        private MediaBrowser.Model.Tasks.IScheduledTask? _currentTask = null;
+
         public bool AllTablesExisted { get; private set; } = false;
         public bool DataExists { get; private set; } = false;
         public bool UserDataExists { get; private set; } = false;
@@ -81,14 +83,15 @@ namespace Statistics2026.Data
             else if( checkType == ECheckType.eUpdate )
                 _ = _dbHelper.CheckIsValid( ECheckLevel.eAllWithThrow );
 
-            if( Plugin.Instance != null && ( checkType == ECheckType.eReport ) && Plugin.Instance.IsStatistics2026TaskRunning() )
+            if( ( checkType != ECheckType.eInit ) && ( checkType != ECheckType.eReport ) && Plugin.Instance != null && Plugin.Instance.IsStatistics2026TaskRunning( _currentTask ) )
             {
                 throw new Exception( "Statistics 2026 task is running" );
             }
         }
 
-        public void Initialize( CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false )
+        public void Initialize( MediaBrowser.Model.Tasks.IScheduledTask? runningTask, CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false )
         {
+            _currentTask = runningTask;
             SetCancellationToken( cancellationToken, progress );
             CreateTables( reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate );
         }

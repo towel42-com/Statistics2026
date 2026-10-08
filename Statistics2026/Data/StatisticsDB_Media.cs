@@ -623,7 +623,6 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-
         public enum EWhichMediaList
         {
             eOnServer = 0x01,
