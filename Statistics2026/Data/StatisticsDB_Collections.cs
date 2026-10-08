@@ -242,8 +242,6 @@ namespace Statistics2026.Data
 
         public SortByText? GetCollectionName( string collectionId )
         {
-            CheckIsValid( ECheckType.eReport );
-
             var sql = "SELECT " +
                 "  Collections.Name" +
                 ", Collections.SortName" +
