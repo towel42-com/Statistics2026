@@ -156,7 +156,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
             if( Plugin.Instance.IsStatistics2026TaskRunning() )
             {
-                _embyInterfaces!._logger!.Warn( "PlaybackMonitoringTask : Task is running" );
+                _embyInterfaces!._logger!.Warn( "Task is running" );
                 return;
             }
 
@@ -165,25 +165,25 @@ namespace Statistics2026.EventMonitorEntryPoints
                 _ = StatisticsDB.GetInstance( _embyInterfaces );
                 if( !Plugin.Instance.DBStateInitialized() )
                 {
-                    _embyInterfaces!._logger!.Warn( "PlaybackMonitoringTask : Databases have not been initialized" );
+                    _embyInterfaces!._logger!.Warn( "Databases have not been initialized" );
                     return;
                 }
             }
 
             if( !Plugin.Instance.IsDBStateSet( EDBState.eSystemTablesCreated | EDBState.eUserTablesCreated | EDBState.eUserDataInitialized ) )
             {
-                _embyInterfaces!._logger!.Warn( "PlaybackMonitoringTask : Databases have not been initialized" );
+                _embyInterfaces!._logger!.Warn( "Databases have not been initialized" );
                 return;
             }
 
-            _embyInterfaces!._logger!.Debug( "PlaybackMonitoringTask : ProcessSessions Start" );
+            _embyInterfaces!._logger!.Debug( "ProcessSessions Start" );
             ActiveSessions = [];
 
             foreach( var session in _embyInterfaces!._sessionManager!.Sessions )
             {
                 if( session.NowPlayingItem == null )
                 {
-                    _embyInterfaces!._logger!.Debug( $"PlaybackMonitoringTask : user: {session.UserName} - No Media being played" );
+                    _embyInterfaces!._logger!.Debug( $"user: {session.UserName} - No Media being played" );
                     // nothing playing so move on to next
                     continue;
                 }
@@ -196,7 +196,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
             PlaybackInfo.RemoveInactivePlayinfo( ActiveSessions, _embyInterfaces );
             ActiveSessions.Clear();
-            _embyInterfaces!._logger!.Debug( "PlaybackMonitoringTask : ProcessSessions End" );
+            _embyInterfaces!._logger!.Debug( "ProcessSessions End" );
         }
     }
 }
