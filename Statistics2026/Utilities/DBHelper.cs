@@ -200,31 +200,42 @@ namespace Statistics2026.Utilities
             return true;
         }
 
-        public void ExecuteCommand( SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null )
+        public void ExecuteCommand( SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null, bool useTransaction=true )
         {
             List<SQLCmdDef> cmds = [ cmd ];
-            ExecuteCommands( cmds, onStatement );
+            ExecuteCommands( cmds, onStatement, useTransaction );
         }
 
-        public void ExecuteCommands( List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null )
+        public void ExecuteCommands( List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null, bool useTransaction = true )
         {
             _ = CheckIsValid( ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
 
-            var ii = 0;
+            void runCommands( IDatabaseConnection connection, List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement )
+            {
+                for( var ii = 0; ii < cmds.Count; ++ii )
+                {
+                    CancellationToken?.ThrowIfCancellationRequested();
+
+                    var cmd = cmds[ ii ];
+                    cmd.Execute( connection, this, onStatement );
+                    var value = 80 + ( 20.0 * ii / cmds.Count );
+                    Progress?.Report( value );
+                }
+            }
+
             try
             {
-                Connection.RunInTransaction( connection =>
+                if( useTransaction && ( cmds.Count > 1 ) )
                 {
-                    for( ii = 0; ii < cmds.Count; ++ii )
+                    Connection.RunInTransaction( connection =>
                     {
-                        CancellationToken?.ThrowIfCancellationRequested();
-
-                        var cmd = cmds[ ii ];
-                        cmd.Execute( connection, this, onStatement );
-                        var value = 80 + ( 20.0 * ii / cmds.Count );
-                        Progress?.Report( value );
-                    }
-                } );
+                        runCommands( connection, cmds, onStatement );
+                    } );
+                }
+                else
+                {
+                    runCommands( Connection!, cmds, onStatement );
+                }
             }
             catch( Exception )
             {
@@ -232,7 +243,7 @@ namespace Statistics2026.Utilities
             }
         }
 
-        public void ExecuteCommands( List<string> cmds )
+        public void ExecuteCommands( List<string> cmds, bool useTransaction = true )
         {
             List<SQLCmdDef> cmdDefs = [];
             foreach( var cmd in cmds )
@@ -241,12 +252,12 @@ namespace Statistics2026.Utilities
                 cmdDefs.Add( new SQLCmdDef( cmd ) );
             }
 
-            ExecuteCommands( cmdDefs );
+            ExecuteCommands( cmdDefs, null, useTransaction );
         }
 
         public void ExecuteCommand( string cmd )
         {
-            ExecuteCommand( new SQLCmdDef( cmd ) );
+            ExecuteCommand( new SQLCmdDef( cmd ), null, false );
         }
 
         private string GetDateTimeKindFormat( DateTimeKind kind )
