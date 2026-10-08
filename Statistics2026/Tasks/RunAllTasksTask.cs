@@ -135,7 +135,7 @@ namespace Statistics2026.ScheduledTasks
             return needToRun;
         }
 
-        public static Task RunAllTasks( object sender, EmbyInterfaces embyInterfaces, bool force, IProgress<double> progress, CancellationToken cancellationToken )
+        public static async Task RunAllTasks( object sender, EmbyInterfaces embyInterfaces, bool force, IProgress<double> progress, CancellationToken cancellationToken )
         {
             if( Plugin.Instance != null && Plugin.Instance.IsStatistics2026TaskRunning( sender.GetType() ) )
             {
@@ -145,10 +145,12 @@ namespace Statistics2026.ScheduledTasks
                 throw new ArgumentNullException( nameof( PluginConfiguration ) );
 
             var db = StatisticsDB.GetInstance( embyInterfaces );
-            db.Initialize( cancellationToken, progress, PluginConfiguration.resetPlayCount );
+            var schedTask = sender as IScheduledTask;
+            db.Initialize( schedTask, cancellationToken, progress, PluginConfiguration.resetPlayCount );
+            cancellationToken.ThrowIfCancellationRequested();
 
             if( !force && !AnalysisOutOfDate( db, embyInterfaces._logger ) )
-                return Task.CompletedTask;
+                return;
 
             var taskName = "Analyze All";
             embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
@@ -163,18 +165,15 @@ namespace Statistics2026.ScheduledTasks
             db.ClearLastUpdated( StatisticsDB.EAction.System );
 
             var overAllTimer = new AutoTimer( $"Adding All Data", embyInterfaces._logger, false );
-            var tasks = Plugin.Instance?.GetKnownTasks( false );
+            var tasks = Plugin.GetKnownTasks( false );
 
             for( var ii = 0; ii < tasks?.Count; ii++ )
             {
                 progress.Report( 100.0 * ii / ( 1.0 * tasks.Count ) );
                 var task = tasks[ ii ];
-                task.RunTime = launchSubTask( embyInterfaces, task, cancellationToken );
+                task.RunTime = await Plugin.launchSubTask( embyInterfaces, task, cancellationToken );
                 tasks[ ii ] = task;
             }
-
-            db.Initialize( cancellationToken, progress );
-            cancellationToken.ThrowIfCancellationRequested();
 
             var overall = overAllTimer.ElapsedMilliseconds();
             db.UpdateLastUpdated( StatisticsDB.EAction.System, overall );
@@ -204,41 +203,7 @@ namespace Statistics2026.ScheduledTasks
             Plugin.Instance?.AddDBState( EDBState.eFullyInitialized );
             Plugin.Instance?.SaveConfiguration();
             db.ResetCancellationToken();
-            return Task.CompletedTask;
-        }
-
-        private static long launchSubTask( EmbyInterfaces embyInterfaces, TaskDef task, CancellationToken cancellationToken )
-        {
-            long retVal = 0;
-            using( var timer = new AutoTimer( task.Description, embyInterfaces._logger ) )
-            {
-                var taskToRun = embyInterfaces._taskManager!.ScheduledTasks.FirstOrDefault( taskToRun => taskToRun.ScheduledTask.GetType() == task.TaskType );
-                if( taskToRun == null )
-                    throw new Exception( $"Task not found {task.TaskType?.Name}" );
-
-                var options = new TaskOptions() { HasManualInteraction = false };
-                embyInterfaces._taskManager.Execute( taskToRun, options ).ConfigureAwait( false ).GetAwaiter().GetResult();
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var taskResult = taskToRun.LastExecutionResult;
-                switch( taskResult.Status )
-                {
-                    case TaskCompletionStatus.Completed:
-                        break;
-                    case TaskCompletionStatus.Cancelled:
-                        _ = embyInterfaces._taskManager.CancelIfRunning<RunAllTasksTask>();
-                        break;
-                    case TaskCompletionStatus.Failed:
-                    case TaskCompletionStatus.Aborted:
-                    default:
-                        throw new Exception( $"{task.TaskType?.Name} failed to run successfully" );
-                }
-
-                retVal = timer.ElapsedMilliseconds();
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-
-            return retVal;
+            return;
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()
