@@ -52,7 +52,7 @@ namespace Statistics2026.Api
 
     public class SortByText
     {
-        public SortByText( string sortBy="", string text = "" )
+        public SortByText( string sortBy = "", string text = "" )
         {
             this.SortBy = sortBy;
             this.Text = text;
