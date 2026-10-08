@@ -161,7 +161,6 @@ namespace Statistics2026.ScheduledTasks
             Plugin.Instance?.UpdateConfiguration( PluginConfiguration );
 
             db.ClearLastUpdated( StatisticsDB.EAction.System );
-            UpdateLastAdded( db );
 
             var overAllTimer = new AutoTimer( $"Adding All Data", embyInterfaces._logger, false );
             var tasks = Plugin.Instance?.GetKnownTasks( false );
@@ -179,6 +178,7 @@ namespace Statistics2026.ScheduledTasks
 
             var overall = overAllTimer.ElapsedMilliseconds();
             db.UpdateLastUpdated( StatisticsDB.EAction.System, overall );
+            UpdateLastAdded( db );
 
             overAllTimer.Dispose();
             embyInterfaces._logger.Info( $"=======================================" );
