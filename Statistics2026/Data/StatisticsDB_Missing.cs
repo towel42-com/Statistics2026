@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -383,7 +384,7 @@ namespace Statistics2026.Data
 
                 if ( futureDate )
                 {
-                    curr.SearchLocation = new SortByText( "<FUTURE RELEASE>" );
+                    curr.SearchLocation = new SortByText( WebUtility.HtmlEncode( "<FUTURE RELEASE>" ) );
                     if( premiereDate != null )
                     {
                         var daysTo = ( premiereDate - DateTime.Today ).TotalDays;
