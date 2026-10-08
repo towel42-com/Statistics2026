@@ -6,7 +6,7 @@ namespace Statistics2026.Configuration
     public class SortEntry
     {
         public string TableId { get; set; } = string.Empty;
-        public int ColumnNum { get; set; } = 0;
+        public string ColumnName { get; set; } = string.Empty;
         public string AscDesc { get; set; } = string.Empty;
         public string ExtraFilter { get; set; } = string.Empty;
     }
@@ -33,6 +33,7 @@ namespace Statistics2026.Configuration
         public bool showAllResolutions { get; set; } = false;
         public bool reportOnMissingSpecials { get; set; } = false;
         public string searchLocation { get; set; } = string.Empty;
+        public int numDaysFuture { get; set; } = 0;
 
         public bool resetPlayCount { get; set; } = false;
         public bool resetDBState { get; set; } = false;
