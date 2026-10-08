@@ -1,30 +1,74 @@
-﻿using MediaBrowser.Common.Configuration;
+﻿using MediaBrowser.Common;
+using MediaBrowser.Common.Configuration;
+using MediaBrowser.Common.Net;
 using MediaBrowser.Common.Plugins;
+using MediaBrowser.Controller;
+using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Providers;
+using MediaBrowser.Controller.Security;
+using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.Drawing;
+using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
+using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Features;
-
+using Statistics2026.ScheduledTasks;
+using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Statistics2026
 {
     public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
-        public readonly ITaskManager _taskManager;
-        public readonly ILogger _logger;
+        private readonly EmbyInterfaces _embyInterfaces;
 
-        public Plugin( IApplicationPaths applicationPaths, IXmlSerializer xmlSerializer, ITaskManager taskManager, ILogManager logManager )
+        public Plugin(
+            IApplicationPaths applicationPaths,
+            IXmlSerializer xmlSerializer,
+            IFileSystem fileSystem,
+            ILibraryManager libraryManager,
+            ILogManager logManager,
+            IServerApplicationPaths serverApplicationPaths,
+            IUserDataManager userDataManager,
+            IUserManager userManager,
+            IApplicationHost appHost,
+            Statistics2026API apiService,
+            IJsonSerializer jsonSerializer,
+            IProviderManager providerManager,
+            IServerConfigurationManager configManager,
+            ITaskManager taskManager,
+            ISessionManager sessionManager,
+            IHttpClient httpClient,
+            IAuthenticationRepository authenticationRepository
+            )
             : base( applicationPaths, xmlSerializer )
         {
             Instance = this;
-            _taskManager = taskManager;
-            _logger = logManager.GetLogger( "Statistics2026 - Plugin" );
+            _embyInterfaces = new EmbyInterfaces( appHost )
+            {
+                _fileSystem = fileSystem,
+                _libraryManager = libraryManager,
+                _logManager = logManager,
+                _logger = logManager.GetLogger( "Statistics2026 - Plugin" ),
+                _serverApplicationPaths = serverApplicationPaths,
+                _userDataManager = userDataManager,
+                _userManager = userManager,
+                _appHost = appHost,
+                _apiService = apiService,
+                _jsonSerializer = jsonSerializer,
+                _providerManager = providerManager,
+                _configManager = configManager,
+                _taskManager = taskManager,
+            };
         }
 
         public IEnumerable<PluginPageInfo> GetPages()
@@ -156,5 +200,71 @@ namespace Statistics2026
         }
 
         public ImageFormat ThumbImageFormat => ImageFormat.Png;
+
+        public class Debouncer
+        {
+            public CancellationTokenSource? CancellationToken = null;
+            private readonly object _lock = new object();
+
+            public void RunLater( int ms, Func<CancellationToken, Task<bool>> func )
+            {
+                lock( _lock )
+                {
+                    // Cancel the previous scheduled execution
+                    CancellationToken?.Cancel();
+                    CancellationToken?.Dispose();
+
+                    // Create a new token for the current execution
+                    CancellationToken = new CancellationTokenSource();
+                    var token = CancellationToken.Token;
+
+                    // Start the delay and execution task
+                    Task.Run( async () =>
+                    {
+                        try
+                        {
+                            while( true )
+                            {
+                                // Wait for 5 seconds
+                                await Task.Delay( ms, token );
+
+                                // Execute the action if not canceled
+                                var runAgain = await func( token );
+                                if ( !runAgain )
+                                    break;
+                            }
+                        }
+                        catch( OperationCanceledException )
+                        {
+                            // Intentionally left blank: The task was canceled because a new call came in
+                        }
+                    }, token );
+                }
+            }
+        }
+
+        public override void UpdateConfiguration( BasePluginConfiguration configuration )
+        {
+            var prevNumDays = Configuration.numDaysFuture;
+            base.UpdateConfiguration( configuration );
+            if( configuration != null && ( Configuration.numDaysFuture != prevNumDays ) )
+            {
+                if( _embyInterfaces == null )
+                    return;
+
+                Debouncer debouncer = new Debouncer();
+                debouncer.RunLater( 5000, async ( cancellationToken ) =>
+                {
+                    if( IsStatistics2026TaskRunning() )
+                        return true;
+                    var task = launchSubTask( _embyInterfaces, typeof( AnalyzeMissingEpisodesTask ), cancellationToken );
+                    await task;
+                    task = launchSubTask( _embyInterfaces, typeof( AnalyzeMissingMoviesTask ), cancellationToken );
+                    await task;
+                    return false;
+                } );
+            }
+        }
+
     }
 }
