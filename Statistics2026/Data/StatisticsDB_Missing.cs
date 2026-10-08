@@ -2,9 +2,11 @@
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using ServiceStack;
+using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -96,14 +98,14 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug( $"Finished Analysis" );
         }
 
-        private bool InvalidDate( DateTime? dt )
+        private bool InvalidDate( DateTime? dt, bool ignoreConfig=false )
         {
             if( dt == null )
                 return true;
 
-            var numDaysToAdd = Plugin.Instance!.Configuration.numDaysFutureForMissing;
+            var numDaysToAdd = ignoreConfig ? 0 : Plugin.Instance!.Configuration.numDaysFutureForMissing;
             var maxDate = DateTime.Today.Date.AddDays( numDaysToAdd );
-            if( dt.Value.Date > DateTime.Today.Date )
+            if( dt.Value.Date > maxDate )
                 return true;
 
             if( dt == DateTime.MinValue )
@@ -286,6 +288,150 @@ namespace Statistics2026.Data
             retVal.AddLine( numMissing.ToString(), true );
             retVal.AddLine( subTitle, true );
             retVal.AddLine( numCollections.ToString(), true );
+            return retVal;
+        }
+
+        private List<MediaItemResponse> getMediaListResponseMissing( EWhichMediaList whichMedia )
+        {
+            var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
+
+            var sql = "SELECT " +
+                "  Missing.Title AS ListDisplayName" +
+                ", Missing.ReleaseDate"
+                ;
+            if( episodes )
+            {
+                sql += ", Series.Name";
+            }
+            else
+            {
+                sql += ", ''";
+            }
+
+            sql +=
+                ", Missing.PosterPath" +
+                ", Missing.SeasonNum" +
+                ", Missing.EpisodeNum" +
+                ", Missing.ParentId" +
+                " FROM " +
+                "   Missing ";
+
+            if( episodes )
+                sql += " LEFT JOIN Series ON Series.ItemId=Missing.ParentId ";
+
+            if( episodes )
+                sql += " WHERE Missing.IsEpisode ";
+            else
+                sql += " WHERE NOT Missing.IsEpisode ";
+
+            sql += " ORDER BY ListDisplayName ASC";
+
+            if( episodes )
+                sql += ", Missing.SeasonNum ASC, Missing.EpisodeNum ASC ";
+
+            var retVal = new List<MediaItemResponse>();
+            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            {
+                var row = statement.Current;
+                var premiereYear = DBHelper.ReadDateTime( row.GetString( 2 ) )?.Year ?? 0;
+                var premiereDate = DBHelper.ReadDateTime( row.GetString( 1 ) )?.Date ?? DateTime.MinValue;
+                var curr = new MediaItemResponse()
+                {
+                    DisplayName = new SortByText( CleanSortName( row.GetString( 0 ) ), row.GetString( 0 ) ),
+                    PremiereDate = premiereDate.ToShortDateString() ?? string.Empty,
+                    ResolutionDetail = string.Empty,
+                    Codec = string.Empty,
+                    DolbyVisionProfile = string.Empty,
+                };
+                var col = 2;
+                curr.ParentName = new SortByText( row.GetString( col++ ), string.Empty );
+                var posterPath = row.GetString( col++ );
+                var seasonNum = row.GetInt( col++ );
+                var episodeNum = row.GetInt( col++ );
+                var parentId = row.GetString( col++ );
+
+                var futureDate = InvalidDate( premiereDate, true );
+                if( posterPath != null && !posterPath.StartsWith( "/" ) )
+                {
+                    posterPath = "/" + posterPath;
+                    curr.ItemUrl = "https://image.tmdb.org/t/p/w185" + posterPath;
+                }
+
+                if( !futureDate && curr.ItemUrl != null && curr.ItemUrl != string.Empty )
+                {
+                    curr.DisplayName.Text = $"<a is=\"emby-linkbutton\" href=\"{curr.ItemUrl}\"><img loading=\"lazy\" src=\"{curr.ItemUrl}\" height=\"105px\"/>{curr.DisplayName.SortBy}</a>";
+                }
+
+                var searchKey = curr.DisplayName.SortBy;
+                if( episodes )
+                {
+                    searchKey = curr.ParentName.SortBy;
+                    var subKey = string.Empty;
+                    if( seasonNum != 0 )
+                        subKey += $"S{seasonNum:D2}";
+                    if( episodeNum != 0 )
+                        subKey += $"E{episodeNum:D2}";
+                    if( !string.IsNullOrEmpty( subKey ) )
+                        searchKey += " " + subKey;
+                }
+                else
+                {
+                    if( premiereYear != 0 )
+                        searchKey += " " + premiereYear;
+                    curr.ParentName = new SortByText( parentId );
+                }
+
+                if ( futureDate )
+                {
+                    curr.SearchLocation = new SortByText( "<FUTURE RELEASE>" );
+                    if( premiereDate != null )
+                    {
+                        var daysTo = ( premiereDate - DateTime.Today ).TotalDays;
+                        if( daysTo == 0 && premiereDate.Date != DateTime.Today.Date )
+                            daysTo = 1;
+                        var msg = $"Available in {daysTo} day";
+                        if( daysTo != 1 )
+                            msg += "s";
+                        curr.SearchLocation = new SortByText( msg );
+                    }
+                }
+                else if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
+                {
+                    var searchUrl = Plugin.Instance!.Configuration.searchLocation;
+                    if( !searchUrl.EndsWith( "?q=" ) )
+                        searchUrl += "?q=";
+                    searchUrl += searchKey;
+
+                    if( episodes )
+                        curr.SearchLocation.SortBy = $"{curr.ParentName.SortBy} - {searchKey}";
+                    else
+                        curr.SearchLocation.SortBy = searchKey;
+
+                    var displayText = $"Click to Search for '{searchKey}'";
+                    var searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {searchKey}\">{displayText}</a>";
+                    curr.SearchLocation.Text = searchLocation;
+                    curr.SearchLocation.SortBy = searchKey;
+                }
+
+                retVal.Add( curr );
+                return true;
+            } );
+
+            if( !episodes )
+            {
+                for( int ii = 0; ii < retVal.Count; ++ii )
+                {
+                    var curr = retVal[ ii ];
+                    var collections = GetCollectionName( curr.ParentName.Text );
+                    if( collections != null )
+                    {
+                        curr.ParentName = collections;
+                    }
+                    else
+                        curr.ParentName = new();
+                    retVal[ ii ] = curr;
+                }
+            }
             return retVal;
         }
 
