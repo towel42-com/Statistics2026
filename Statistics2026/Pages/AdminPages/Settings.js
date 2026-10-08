@@ -13,6 +13,7 @@
                 view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
                 view.querySelector("#numMostActive").value = config.numMostActiveUsers;
                 view.querySelector("#searchLocation").value = config.searchLocation;
+                view.querySelector("#numDaysFuture").value = config.numDaysFuture;
                 view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
                 view.querySelector("#numTiedToReport").value = config.numTiedToReport;
                 view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
@@ -103,6 +104,15 @@
                 }
             );
 
+            view.querySelector("#numDaysFuture").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.numDaysFuture = view.querySelector("#numDaysFuture").value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
             view.querySelector("#searchLocation").addEventListener("input",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -146,6 +156,11 @@
                     });
                 }
             );
+
+            view.querySelector("#numDaysFutureHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("How many days in the future should missing episodes be searche for (limited by published schedules.", "Number of Days in the Future to Search for Missing Episodes");
+                });
 
             view.querySelector("#searchLocationHelp").addEventListener("click",
                 function () {
