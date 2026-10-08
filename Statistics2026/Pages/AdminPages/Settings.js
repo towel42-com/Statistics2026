@@ -13,7 +13,7 @@
                 view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
                 view.querySelector("#numMostActive").value = config.numMostActiveUsers;
                 view.querySelector("#searchLocation").value = config.searchLocation;
-                view.querySelector("#numDaysFuture").value = config.numDaysFuture;
+                view.querySelector("#numDaysFutureForMissing").value = config.numDaysFutureForMissing;
                 view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
                 view.querySelector("#numTiedToReport").value = config.numTiedToReport;
                 view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
@@ -104,10 +104,10 @@
                 }
             );
 
-            view.querySelector("#numDaysFuture").addEventListener("input",
+            view.querySelector("#numDaysFutureForMissing").addEventListener("input",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.numDaysFuture = view.querySelector("#numDaysFuture").value;
+                        config.numDaysFutureForMissing = view.querySelector("#numDaysFutureForMissing").value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
@@ -157,9 +157,9 @@
                 }
             );
 
-            view.querySelector("#numDaysFutureHelp").addEventListener("click",
+            view.querySelector("#numDaysFutureForMissingHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("How many days in the future should missing episodes be searche for (limited by published schedules.", "Number of Days in the Future to Search for Missing Episodes");
+                    Helpers.showInfo("How many days in the future should missing episodes and movies be searched for (limited by published schedules).", "Number of Days in the Future to Search for Missing Videos");
                 });
 
             view.querySelector("#searchLocationHelp").addEventListener("click",

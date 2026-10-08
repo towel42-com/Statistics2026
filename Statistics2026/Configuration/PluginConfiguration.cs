@@ -33,7 +33,7 @@ namespace Statistics2026.Configuration
         public bool showAllResolutions { get; set; } = false;
         public bool reportOnMissingSpecials { get; set; } = false;
         public string searchLocation { get; set; } = string.Empty;
-        public int numDaysFuture { get; set; } = 0;
+        public int numDaysFutureForMissing { get; set; } = 0;
 
         public bool resetPlayCount { get; set; } = false;
         public bool resetDBState { get; set; } = false;
