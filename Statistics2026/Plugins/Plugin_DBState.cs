@@ -110,7 +110,7 @@ namespace Statistics2026
             if( Plugin.Instance == null )
                 throw new ArgumentNullException( "Plugin.Instance is null" );
 
-            _logger.Debug( $"Setting DBState to {state.ToPrettyString()}" );
+            _embyInterfaces._logger?.Debug( $"Setting DBState to {state.ToPrettyString()}" );
             Plugin.Instance.DBState = state;
             var config = Plugin.Instance.Configuration;
             config.dbStateOK = Plugin.Instance.DBState == EDBState.eFullyInitialized;
