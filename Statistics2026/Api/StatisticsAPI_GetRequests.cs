@@ -87,7 +87,7 @@ namespace Statistics2026.Api
 
         public object Get( GetMovieList request )
         {
-            var retVal = GetRequest( "GetEpisodeList", timer =>
+            var retVal = GetRequest( "GetMovieList", timer =>
             {
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
                 var showOnServer = request.showOnServer;
@@ -105,9 +105,9 @@ namespace Statistics2026.Api
                 if( showMissing )
                     whichMedia = whichMedia | EWhichMediaList.eMissing;
 
-                var episodes = db.getMediaListResponse( whichMedia );
+                var movies = db.getMediaListResponse( whichMedia );
 
-                return episodes ?? new object();
+                return movies ?? new object();
             } );
             return retVal;
         }
