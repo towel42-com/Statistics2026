@@ -16,6 +16,7 @@ using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -74,32 +75,63 @@ namespace Statistics2026.ScheduledTasks
 
         Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            return RunAllTasks( this, _embyInterfaces, progress, cancellationToken );
+            return RunAllTasks( this, _embyInterfaces, true, progress, cancellationToken );
         }
 
-        public static Task RunAllTasks( object sender, EmbyInterfaces embyInterfaces, IProgress<double> progress, CancellationToken cancellationToken )
+        public static bool AnalysisOutOfDate( EmbyInterfaces embyInterfaces, StatisticsDB db )
+        {
+            bool needToRun = false;
+
+            var lastMediaAddedAtAnalysis = db.GetLastUpdated( StatisticsDB.EAction.LastMediaAdded );
+            if( lastMediaAddedAtAnalysis == null || lastMediaAddedAtAnalysis.Value == DateTime.MinValue )
+            {
+                needToRun = true;
+            }
+
+            var lastMediaAddedToServer = db.GetLastMovieOrEpisodeAdded();
+            if( !needToRun && lastMediaAddedToServer != null && lastMediaAddedToServer!.DateCreated != DateTime.MinValue )
+            {
+                needToRun = lastMediaAddedAtAnalysis < lastMediaAddedToServer!.DateCreated.DateTime; // media was added since
+            }
+
+            if( !needToRun )
+            {
+                embyInterfaces._logger?.Info( "No media has been added since last run, not re-running Statistics Analysis" );
+            }
+            return needToRun;
+        }
+
+        public static Task RunAllTasks( object sender, EmbyInterfaces embyInterfaces, bool force, IProgress<double> progress, CancellationToken cancellationToken )
         {
             if( Plugin.Instance != null && Plugin.Instance.IsStatistics2026TaskRunning( sender.GetType() ) )
             {
                 throw new Exception( "Statistics 2026 task is running" );
             }
+            if( PluginConfiguration == null )
+                throw new ArgumentNullException( nameof( PluginConfiguration ) );
+
+            var db = StatisticsDB.GetInstance( embyInterfaces );
+            db.Initialize( cancellationToken, progress, PluginConfiguration.resetPlayCount );
+
+            if( !force && !AnalysisOutOfDate( embyInterfaces, db ) )
+                return Task.CompletedTask;
 
             var taskName = "Analyze All";
             embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
             // purely for progress reporting
             var now = DateTime.UtcNow;
-            if( PluginConfiguration == null )
-                throw new ArgumentNullException( nameof( PluginConfiguration ) );
 
             PluginConfiguration.LastUpdated = now.ToString( "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture );
             PluginConfiguration.Version = Plugin.Instance?.Version.ToString( 4 ) ?? "<UNKNOWN>";
             PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString( "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture );
             Plugin.Instance?.UpdateConfiguration( PluginConfiguration );
 
-            var db = StatisticsDB.GetInstance( embyInterfaces );
-            db.Initialize( cancellationToken, progress, PluginConfiguration.resetPlayCount );
-
             db.ClearLastUpdated( StatisticsDB.EAction.System );
+            var lastMediaAdded = db.GetLastMovieOrEpisodeAdded();
+            if( lastMediaAdded != null && lastMediaAdded!.DateCreated != DateTime.MinValue )
+            {
+                db.UpdateLastUpdated( StatisticsDB.EAction.LastMediaAdded, 0, lastMediaAdded.DateCreated.DateTime );
+            }
 
             var overAllTimer = new AutoTimer( $"Adding All Data", embyInterfaces._logger, false );
             var tasks = Plugin.Instance?.GetKnownTasks( false );
@@ -117,6 +149,7 @@ namespace Statistics2026.ScheduledTasks
 
             var overall = overAllTimer.ElapsedMilliseconds();
             db.UpdateLastUpdated( StatisticsDB.EAction.System, overall );
+
             overAllTimer.Dispose();
             embyInterfaces._logger.Info( $"=======================================" );
             embyInterfaces._logger.Info( $"Time to Add: {overall} ms" );

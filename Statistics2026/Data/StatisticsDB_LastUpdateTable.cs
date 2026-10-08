@@ -16,25 +16,16 @@ namespace Statistics2026.Data
             MissingMoviesAnalysis,
             SeriesAnalysis,
             UserAnalysis,
-            UserWatchDataAnalysis
+            UserWatchDataAnalysis,
+            LastMediaAdded
         }
 
-        public HtmlJsonResponse GetLastRunInfo( EAction action )
+        public DateTime? GetLastUpdated( EAction action )
         {
-            CheckIsValid( ECheckType.eReport );
-
             var sql = "SELECT LastUpdated FROM \n" +
                 "LastUpdateTable \n" +
                 $"WHERE Action = '{action.ToString()}'\n"
                 ;
-
-            var cmd = new SQLCmdDef( sql );
-                //,
-                //[
-                //    ("@Action", action.ToString())
-                //] );
-
-            const string notRun = "Not Run";
             DateTime? lastUpdated = DateTime.MinValue;
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
@@ -42,9 +33,17 @@ namespace Statistics2026.Data
                 lastUpdated = DBHelper.ReadDateTime( row.GetString( 0 ) );
                 return false;
             } );
+            return lastUpdated;
+        }
 
+        public HtmlJsonResponse GetLastRunInfo( EAction action )
+        {
+            CheckIsValid( ECheckType.eReport );
+
+            var lastUpdated = GetLastUpdated( action );
+            const string notRun = "Not Run";
             var lastUpdateText = notRun;
-            if( lastUpdated.HasValue && lastUpdated.Value != DateTime.MinValue )
+            if( lastUpdated != null && lastUpdated.HasValue && lastUpdated.Value != DateTime.MinValue )
             {
                 lastUpdateText = lastUpdated.Value.ToShortDateString() + " " + lastUpdated.Value.ToString( "HH:mm UTC" );
             }
@@ -54,6 +53,9 @@ namespace Statistics2026.Data
             {
                 case EAction.System:
                     titleText = "System Analysis";
+                    break;
+                case EAction.LastMediaAdded:
+                    titleText = "Last Media Added";
                     break;
                 case EAction.CollectionsAnalysis:
                     titleText = "Collection Analysis";
@@ -119,6 +121,11 @@ namespace Statistics2026.Data
 
         public void UpdateLastUpdated( EAction action, long runtimeMS )
         {
+            UpdateLastUpdated( action, runtimeMS, DateTime.UtcNow );
+        }
+
+        public void UpdateLastUpdated( EAction action, long runtimeMS, DateTime updateTime )
+        {
             CheckIsValid( ECheckType.eUpdate );
 
             var buildDate = BuildDateInfo.GetBuildDate();
@@ -153,7 +160,7 @@ namespace Statistics2026.Data
                 new( sql,
                         [
                             ("@Action", action.ToString()),
-                            ("@LastUpdated", _dbHelper.ToDateTimeParamValue( DateTime.UtcNow )),
+                            ("@LastUpdated", _dbHelper.ToDateTimeParamValue( updateTime )),
                             ("@RunTimeMS", runtimeMS),
                             ("@BuildDate", _dbHelper.ToDateTimeParamValue( buildDate )),
                             ("@Version", version)

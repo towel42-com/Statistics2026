@@ -1,6 +1,9 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Querying;
+using MediaBrowser.Model.Entities;
 using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
@@ -875,6 +878,28 @@ namespace Statistics2026.Data
                     return lhs.CompareTo( rhs );
                 } );
             return retVal;
+        }
+
+        public BaseItem? GetLastMovieOrEpisodeAdded()
+        {
+            var query = new InternalItemsQuery
+            {
+                IsFolder = false,
+                OrderBy = new[] { new ValueTuple<string, SortOrder>( ItemSortBy.DateCreated, SortOrder.Descending ) },
+                IsVirtualItem = false,
+                IncludeItemTypes = new[] { "Movie", "Episode" },
+                Recursive = true,
+                Limit = 50
+            };
+
+            var items = _embyInterfaces!._libraryManager!.GetItemList( query );
+            foreach( var item in items )
+            {
+                if( item.DateCreated.DateTime == DateTime.MinValue )
+                    continue;
+                return item;
+            }
+            return null;
         }
     }
 }
