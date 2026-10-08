@@ -301,7 +301,7 @@ namespace Statistics2026.Data
                 names.Add( row.GetString( 0 ) );
                 sortByNames.Add( row.GetString( 1 ) );
                 return true;
-            } );
+            }, false );
 
             if( names.Count == 0 || sortByNames.Count == 0 )
                 return null;

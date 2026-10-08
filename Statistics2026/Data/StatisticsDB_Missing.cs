@@ -379,7 +379,9 @@ namespace Statistics2026.Data
                 {
                     if( premiereYear != 0 )
                         searchKey += " " + premiereYear;
-                    curr.ParentName = new SortByText( parentId );
+
+                    var collections = GetCollectionName( parentId );
+                    curr.ParentName = collections ?? new();
                 }
 
                 if ( futureDate )
@@ -417,22 +419,6 @@ namespace Statistics2026.Data
                 retVal.Add( curr );
                 return true;
             } );
-
-            if( !episodes )
-            {
-                for( int ii = 0; ii < retVal.Count; ++ii )
-                {
-                    var curr = retVal[ ii ];
-                    var collections = GetCollectionName( curr.ParentName.Text );
-                    if( collections != null )
-                    {
-                        curr.ParentName = collections;
-                    }
-                    else
-                        curr.ParentName = new();
-                    retVal[ ii ] = curr;
-                }
-            }
             return retVal;
         }
 

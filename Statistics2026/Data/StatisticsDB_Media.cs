@@ -635,6 +635,24 @@ namespace Statistics2026.Data
             eMoviesMissing = eMovies | eMissing,
         };
 
+        public string ToString( EWhichMediaList mediaList )
+        {
+            List<string> retVal = [];
+            if( ( mediaList & EWhichMediaList.eEpisodes ) != 0 )
+                retVal.Add( "Episodes" );
+
+            if( ( mediaList & EWhichMediaList.eMovies ) != 0 )
+                retVal.Add( "Episodes" );
+
+            if( ( mediaList & EWhichMediaList.eOnServer ) != 0 )
+                retVal.Add( "OnServer" );
+
+            if( ( mediaList & EWhichMediaList.eMissing ) != 0 )
+                retVal.Add( "Missing" );
+
+            return string.Join( ", ", retVal );
+        }
+
         private List<MediaItemResponse> getMediaListResponseOnServer( EWhichMediaList whichMedia )
         {
             var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
@@ -689,6 +707,11 @@ namespace Statistics2026.Data
                 col++;
 
                 curr.ItemId = row.GetString( col++ );
+                if( !episodes )
+                {
+                    var collections = GetCollectionsForMovie( curr.ItemId );
+                    curr.ParentName = collections ?? new SortByText();
+                }
                 var itemUrl = row.GetString( col++ );
                 curr.ItemUrl = ItemImageUrl.ItemUrl( curr.ItemId, itemUrl, curr.DisplayName.SortBy );
 
