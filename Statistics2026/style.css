@@ -295,22 +295,56 @@ td.statCard-stats-numbersep:empty {
 /* ==========================================================================
    7. State Metrics (Context Colors)
    ========================================================================== */
-.progress-100 {
-    background-color: #5B990D;
+/* --- Green Pair --- */
+.progress-green {
+    background-color: #2ed991; /* Was lightGreen */
+    color: #111111;
 }
 
-.progress-80 {
-    background-color: #9DB269;
+.progress-darkGreen {
+    background-color: #5B990D; /* Was green */
+    color: #FFFFFF;
 }
 
-.progress-60 {
+/* --- Yellow Pair --- */
+.progress-yellow {
+    background-color: #FFEA3D; /* Was brightYellow */
+    color: #111111;
+}
+
+.progress-darkYellow {
+    background-color: #D6BC11; /* Was yellow */
+    color: #111111;
+}
+
+/* --- Orange Pair --- */
+.progress-orange {
     background-color: #F2A70D;
+    color: #111111;
 }
 
-.progress-40 {
-    background-color: #F2700D;
+.progress-darkOrange {
+    background-color: #B84D00;
 }
 
-.progress-20 {
+/* --- Red Pair --- */
+.progress-red {
     background-color: #B11A10;
+    color: #FFFFFF;
+}
+
+.progress-darkRed {
+    background-color: #4A0402;
+    color: #FFFFFF;
+}
+
+/* --- Blue Pair --- */
+.progress-blue {
+    background-color: #1F6AA5;
+    color: #FFFFFF;
+}
+
+.progress-darkBlue {
+    background-color: #164063;
+    color: #FFFFFF;
 }

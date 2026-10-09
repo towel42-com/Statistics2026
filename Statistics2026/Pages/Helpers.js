@@ -33,20 +33,52 @@ define(function () {
         };
     }
 
-
     function calculateProgressClass(value) {
         if (value == 0)
             return ``;
+        else if (value < 20)
+            return `progress-red`;
         else if (value < 40)
-            return `progress-20`;
+            return `progress-darkRed`;
         else if (value < 60)
-            return `progress-40`;
+            return `progress-orange`;
         else if (value < 80)
-            return `progress-60`;
+            return `progress-darkOrange`;
         else if (value < 100)
-            return `progress-80`;
+            return `progress-darkGreen`;
         else
-            return `progress-100`;
+            return `progress-green`;
+    };
+
+    function numDaysTo(date) {
+        const todayDT = new Date();
+        const today = new Date(todayDT.getFullYear(), todayDT.getMonth(), todayDT.getDate());
+        var numMS = today - date;
+        var msPerDay = 24 * 60 * 60 * 1000;
+
+        const numDays = Math.round(numMS / msPerDay);
+        return numDays;
+    }
+
+    function calculateMediaStatusClass(date) {
+        const numDays = numDaysTo(date);
+        
+        if (numDays < 0)
+            return `progress-darkYellow`;
+        if (numDays <= 3)
+            return `progress-green`;
+        else if (numDays < 7)
+            return `progress-darkGreen`;
+        else if (numDays < 14)
+            return `progress-yellow`;
+        else if (numDays < 28)
+            return `progress-orange`;
+        else if (numDays < 42)
+            return `progress-darkOrange`;
+        else if (numDays < 56)
+            return `progress-red`;
+        else
+            return `progress-darkRed`;
     };
 
     function getTVProgressRowData(info) {
@@ -133,8 +165,12 @@ define(function () {
         var retVal = "";
         retVal += "<td style='align='left' sort-value='" + info.DisplayName.SortBy + "'>" + info.DisplayName.Text + "</td>";
         retVal += "<td style='align='left' sort-value='" + info.ParentName.SortBy + "'>" + info.ParentName.Text + "</td>";
-        retVal += "<td style='align='right'>" + info.PremiereDate + "</td>";
+        let premiereDateClass = "";
+        if (showMissing && info.SearchLocation.Text != "" ) {
+            premiereDateClass = "class='" + calculateMediaStatusClass(new Date(info.PremiereDate)) + "'";
+        }
 
+        retVal += "<td style='align='right' sort-value='" + info.PremiereDate + "'" + premiereDateClass + ">" + info.PremiereDate + "</td>";
         if (showOnServer) {
             retVal += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
             retVal += "<td style='align='left'>" + info.Codec + "</td>";
@@ -314,7 +350,7 @@ define(function () {
             activeLoaders.get(baseId).abort();
             activeLoaders.delete(baseId);
         }
-        
+
         const abortController = new AbortController();
         const { signal } = abortController;
         activeLoaders.set(baseId, abortController);
@@ -358,14 +394,14 @@ define(function () {
 
             let minChunkSize = 50;
             let chunkSize = Math.min(minChunkSize, Math.trunc(resultData.length / 20));
-            if ( chunkSize == 0 )
+            if (chunkSize == 0)
                 chunkSize = minChunkSize;
 
             let currentIndex = 0;
             function renderNextChunk() {
                 if (signal.aborted) {
                     console.log(`Rendering loop for ${baseId} was interrupted.`);
-                    return; 
+                    return;
                 }
 
                 showLoadingFunc();
@@ -403,7 +439,7 @@ define(function () {
                         config.SortEntries.forEach(entry => {
                             if (entry.TableId == baseId) {
                                 var headers = thead.querySelectorAll('th');
-                                headers.forEach( (header, index) => {
+                                headers.forEach((header, index) => {
                                     if (header.getAttribute('data-column') == entry.ColumnName) {
                                         var dataType = header.getAttribute('data-type');
                                         sortTable(index, dataType, entry.TableId, showLoadingFunc, hideLoadingFunc, entry.AscDesc);
