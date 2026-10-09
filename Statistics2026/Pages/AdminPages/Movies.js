@@ -55,7 +55,7 @@
                 var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
                 var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
 
-                return Helpers.getMediaHeader("Collection Names", showOnServer, showMissing);
+                return Helpers.getMediaHeader("Collection", showOnServer, showMissing);
             }
 
             function getMediaRowData(info) {
