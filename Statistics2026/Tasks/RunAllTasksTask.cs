@@ -165,7 +165,7 @@ namespace Statistics2026.ScheduledTasks
                 return;
 
             var taskName = "Analyze All";
-            embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
+            embyInterfaces._logger!.Info( $"Starting Statistics 2026 {taskName} task" );
             // purely for progress reporting
             var now = DateTime.UtcNow;
 
@@ -210,7 +210,7 @@ namespace Statistics2026.ScheduledTasks
             }
 
             embyInterfaces._logger.Info( $"=======================================" );
-            embyInterfaces._logger.Info( $"Statistics 2026 : Finished Statistics 2026 {taskName} task" );
+            embyInterfaces._logger.Info( $"Finished Statistics 2026 {taskName} task" );
 
             Plugin.Instance?.AddDBState( EDBState.eFullyInitialized );
             Plugin.Instance?.SaveConfiguration();

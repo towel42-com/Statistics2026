@@ -76,7 +76,7 @@ namespace Statistics2026.ScheduledTasks
             }
 
             var taskName = "Analyze Series";
-            _embyInterfaces._logger!.Info( $"Statistics 2026 : Starting Statistics 2026 {taskName} task" );
+            _embyInterfaces._logger!.Info( $"Starting Statistics 2026 {taskName} task" );
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.SeriesAnalysis );
@@ -93,7 +93,7 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces._logger.Info( $"=======================================" );
             _embyInterfaces._logger.Info( $"         Series: {addSeries} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Statistics 2026 : Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces._logger.Info( $"Finished Statistics 2026 {taskName} task" );
 
             db.UpdateLastUpdated( StatisticsDB.EAction.SeriesAnalysis, addSeries );
 

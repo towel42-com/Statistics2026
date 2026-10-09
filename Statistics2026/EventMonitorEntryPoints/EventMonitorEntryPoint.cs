@@ -172,7 +172,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
             if( !Plugin.Instance.IsDBStateSet( EDBState.eSystemTablesCreated | EDBState.eUserTablesCreated | EDBState.eUserDataInitialized ) )
             {
-                _embyInterfaces!._logger!.Warn( "Databases have not been initialized" );
+                _embyInterfaces!._logger!.Warn( "Database state is invalid" );
                 return;
             }
 
