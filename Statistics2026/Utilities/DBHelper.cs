@@ -8,6 +8,7 @@ using ServiceStack;
 using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -86,8 +87,44 @@ namespace Statistics2026.Utilities
         public DBHelper( EmbyInterfaces embyInterfaces )
         {
             _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
-            var db_file_name = Path.Combine( _embyInterfaces!._configManager!.ApplicationPaths.DataPath, "Statistics2026.db" );
-            CreateConnection( db_file_name );
+            var oldFileName = Path.Combine( _embyInterfaces!._configManager!.ApplicationPaths.DataPath, "Statistics2026.db" );
+            var newFileName = Path.Combine( _embyInterfaces!._configManager!.ApplicationPaths.PluginConfigurationsPath, "Statistics2026.db" );
+
+            if( File.Exists( oldFileName ) )
+            {
+                try
+                {
+                    _embyInterfaces?._logger?.Info( "DB exists in old location, moving to plugin/config" );
+                    File.Move( oldFileName, newFileName );
+                    _embyInterfaces?._logger?.Info( "   Moved successfully" );
+                }
+                catch( IOException ex )
+                {
+                    // Handles scenarios like: file already exists at destination, or file is locked
+                    // Handles scenarios like: file already exists at destination, or file is locked
+                    _embyInterfaces?._logger?.Error( $"   Failed to be moved, removing and new db will be built - {ex.Message}" );
+                }
+                catch( UnauthorizedAccessException ex )
+                {
+                    _embyInterfaces?._logger?.Error( $"   Failed to be moved, removing and new db will be built - Check Permissions - {ex.Message}" );
+                }
+            }
+
+            if ( File.Exists( oldFileName ) ) // could not move, try deleting
+            {
+                try
+                {
+                    _embyInterfaces?._logger?.Info( "Deleting old DB file" );
+                    File.Delete( oldFileName );
+                    _embyInterfaces?._logger?.Info( "   Deleted successfully" );
+                }
+                catch( Exception ex )
+                {
+                    _embyInterfaces?._logger?.Error( $"   Failed to be delete - {ex.Message}" );
+                }
+            }
+
+            CreateConnection( newFileName );
         }
 
         public bool CheckIsValid( ECheckLevel checkLevel )
