@@ -99,7 +99,7 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug( $"Finished Analysis" );
         }
 
-        private bool InvalidDate( DateTime? dt, bool ignoreConfig=false )
+        private bool InvalidDate( DateTime? dt, bool ignoreConfig = false )
         {
             if( dt == null )
                 return true;
@@ -334,8 +334,9 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                var premiereYear = DBHelper.ReadDateTime( row.GetString( 2 ) )?.Year ?? 0;
                 var premiereDate = DBHelper.ReadDateTime( row.GetString( 1 ) )?.Date ?? DateTime.MinValue;
+                var premiereYear = premiereDate == DateTime.MinValue ? 0 : premiereDate.Year;
+
                 var curr = new MediaItemResponse()
                 {
                     DisplayName = new SortByText( CleanSortName( row.GetString( 0 ) ), row.GetString( 0 ) ),
@@ -351,6 +352,12 @@ namespace Statistics2026.Data
                 var episodeNum = row.GetInt( col++ );
                 var parentId = row.GetString( col++ );
 
+                if( !episodes )
+                {
+                    var collections = GetCollectionName( parentId );
+                    curr.ParentName = collections ?? new();
+                }
+
                 var futureDate = InvalidDate( premiereDate, true );
                 if( posterPath != null && !posterPath.StartsWith( "/" ) )
                 {
@@ -364,27 +371,24 @@ namespace Statistics2026.Data
                 }
 
                 var searchKey = curr.DisplayName.SortBy;
+                var subKey = string.Empty;
                 if( episodes )
                 {
                     searchKey = curr.ParentName.SortBy;
-                    var subKey = string.Empty;
                     if( seasonNum != 0 )
                         subKey += $"S{seasonNum:D2}";
                     if( episodeNum != 0 )
                         subKey += $"E{episodeNum:D2}";
-                    if( !string.IsNullOrEmpty( subKey ) )
-                        searchKey += " " + subKey;
                 }
                 else
                 {
                     if( premiereYear != 0 )
-                        searchKey += " " + premiereYear;
-
-                    var collections = GetCollectionName( parentId );
-                    curr.ParentName = collections ?? new();
+                    {
+                        subKey = $"{premiereYear}";
+                    }
                 }
 
-                if ( futureDate )
+                if( futureDate )
                 {
                     curr.SearchLocation = new SortByText( WebUtility.HtmlEncode( "<FUTURE RELEASE>" ) );
                     if( premiereDate != null )
@@ -405,15 +409,18 @@ namespace Statistics2026.Data
                         searchUrl += "?q=";
                     searchUrl += searchKey;
 
-                    if( episodes )
-                        curr.SearchLocation.SortBy = $"{curr.ParentName.SortBy} - {searchKey}";
-                    else
-                        curr.SearchLocation.SortBy = searchKey;
+                    if( !subKey.IsEmpty() )
+                        searchUrl += $" {subKey}";
 
-                    var displayText = $"Click to Search for '{searchKey}'";
-                    var searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {searchKey}\">{displayText}</a>";
+                    var sortBy = searchKey;
+                    if( !subKey.IsEmpty() )
+                        sortBy += $" - {subKey}";
+
+                    curr.SearchLocation.SortBy = sortBy;
+
+                    var displayText = $"Click to Search for '{sortBy}'";
+                    var searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {sortBy}\">{displayText}</a>";
                     curr.SearchLocation.Text = searchLocation;
-                    curr.SearchLocation.SortBy = searchKey;
                 }
 
                 retVal.Add( curr );
