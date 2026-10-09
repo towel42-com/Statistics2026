@@ -122,7 +122,7 @@ namespace Statistics2026.ScheduledTasks
                 var lastUserAddedToServer = db.GetLastAddedUser();
                 if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTime.MinValue )
                 {
-                    datesOfItemsAdded.Add( lastMediaAddedToServer!.DateCreated.DateTime );
+                    datesOfItemsAdded.Add( lastUserAddedToServer!.DateCreated.DateTime );
                 }
 
                 DateTime? latestDate = null;
