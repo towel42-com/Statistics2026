@@ -475,6 +475,20 @@ namespace Statistics2026.Utilities
                     tableNeedsData = columnMissing = true;
                 }
 
+                if( tableMissing )
+                {
+                    _embyInterfaces?._logger?.Info( $"Table '${tableName} does not exist." );
+                }
+
+                if( columnMissing )
+                {
+                    _embyInterfaces?._logger?.Info( $"Table '${tableName} is missing a column." );
+                }
+
+                if( tableNeedsData )
+                {
+                    _embyInterfaces?._logger?.Info( $"Table '${tableName} is missing data." );
+                }
                 aTableMissing = aTableMissing || tableMissing;
                 aColumnMissing = aColumnMissing || columnMissing;
                 aTableNeedsData = aTableNeedsData || tableNeedsData;
