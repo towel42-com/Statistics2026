@@ -159,7 +159,7 @@
 
             view.querySelector("#numDaysFutureForMissingHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("How many days in the future should missing episodes and movies be searched for (limited by published schedules).", "Number of Days in the Future to Search for Missing Videos");
+                    Helpers.showInfo("How many days in the future should Upcoming episodes and movies be searched for (limited by published schedules).", "Number of Days in the Future to Upcoming Videos");
                 });
 
             view.querySelector("#searchLocationHelp").addEventListener("click",
