@@ -110,22 +110,34 @@ namespace Statistics2026.ScheduledTasks
                 needToRun = true;
             }
 
-            DateTime? lastAdded = null;
             if( !needToRun )
             {
+                List<DateTime> datesOfItemsAdded = [];
+
                 var lastMediaAddedToServer = db.GetLastMovieOrEpisodeAdded();
                 if( lastMediaAddedToServer != null && lastMediaAddedToServer!.DateCreated != DateTime.MinValue )
                 {
-                    lastAdded = lastMediaAddedToServer.DateCreated.DateTime;
+                    datesOfItemsAdded.Add( lastMediaAddedToServer.DateCreated.DateTime );
                 }
                 var lastUserAddedToServer = db.GetLastAddedUser();
                 if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTime.MinValue )
                 {
-                    if( lastAdded > lastUserAddedToServer.DateCreated.DateTime )
-                        lastAdded = lastUserAddedToServer.DateCreated.DateTime;
+                    datesOfItemsAdded.Add( lastMediaAddedToServer!.DateCreated.DateTime );
                 }
 
-                needToRun = lastAnalysisAdded < lastAdded; // media or user was added since
+                DateTime? latestDate = null;
+                foreach( var date in datesOfItemsAdded )
+                {
+                    if( latestDate == null )
+                        latestDate = date;
+                    else
+                    {
+                        latestDate = ( date > latestDate ) ? date : latestDate.Value;
+                    }
+                }
+
+                if ( latestDate != null )
+                    needToRun = lastAnalysisAdded < latestDate;
             }
 
             if( !needToRun && logger != null)
