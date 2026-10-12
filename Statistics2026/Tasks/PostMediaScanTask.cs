@@ -68,9 +68,23 @@ namespace Statistics2026.ScheduledTasks
 
         private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
 
-        Task ILibraryPostScanTask.Run( IProgress<double> progress, CancellationToken cancellationToken )
+        async Task ILibraryPostScanTask.Run( IProgress<double> progress, CancellationToken cancellationToken )
         {
-            return RunAllTasksTask.RunAllTasks( this, _embyInterfaces, false, progress, cancellationToken );
+            if( _embyInterfaces == null || _embyInterfaces._taskManager == null )
+                return;
+
+            var db = StatisticsDB.GetInstance( _embyInterfaces );
+            db.Initialize( null, cancellationToken, progress, false );
+
+            if( !EmbyHelperFuncs.AnalysisOutOfDate( _embyInterfaces, db ) )
+                return;
+
+            var taskToRun = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskToRun => taskToRun.ScheduledTask.GetType() == typeof( RunAllTasksTask ) );
+            if( taskToRun == null )
+                throw new Exception( $"RunAllTasksTask not found Run" );
+            var options = new TaskOptions() { HasManualInteraction = false };
+            var taskRunner = _embyInterfaces._taskManager.Execute( taskToRun, options ).ConfigureAwait( false );
+            return;
         }
     }
 }
