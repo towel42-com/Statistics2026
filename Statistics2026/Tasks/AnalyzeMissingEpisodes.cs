@@ -96,7 +96,7 @@ namespace Statistics2026.ScheduledTasks
             cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"    Missing: {analyzeMissingEpisodes} ms" );
+            _embyInterfaces._logger.Info( $"    Missing Episodes: {analyzeMissingEpisodes} ms" );
             _embyInterfaces._logger.Info( $"=======================================" );
             _embyInterfaces._logger.Info( $"Finished Statistics 2026 {taskName} task" );
 
