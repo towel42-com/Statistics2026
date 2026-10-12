@@ -76,23 +76,20 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Include="$(SolutionDir)\TimeZoneNames\src\TimeZoneNames\**\*.cs"
-				 >
-
-			<Link>TimeZoneNames\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		<Compile Include="$(SolutionDir)\TimeZoneInfo\TimeZoneNames\src\TimeZoneNames\**\*.cs">
+			<Link>TimeZoneInfo\TimeZoneNames\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</Compile>
-		<EmbeddedResource Include="$(SolutionDir)\TimeZoneNames\src\TimeZoneNames\data.json.gz">
+		<EmbeddedResource Include="$(SolutionDir)\TimeZoneInfo\TimeZoneNames\src\TimeZoneNames\data.json.gz">
 			<LogicalName>TimeZoneNames.data.json.gz</LogicalName>
 		</EmbeddedResource>
 
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Include="$(SolutionDir)\TimeZoneConverter\src\TimeZoneConverter\**\*.cs"
-			>
-			<Link>TimeZoneConverter\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		<Compile Include="$(SolutionDir)\TimeZoneInfo\TimeZoneConverter\src\TimeZoneConverter\**\*.cs">
+			<Link>TimeZoneInfo\TimeZoneConverter\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</Compile>
-		<EmbeddedResource Include="$(SolutionDir)\TimeZoneConverter\src\TimeZoneConverter\Data\TimeZoneData.zip" >
+		<EmbeddedResource Include="$(SolutionDir)\TimeZoneInfo\TimeZoneConverter\src\TimeZoneConverter\Data\TimeZoneData.zip" >
 			<LogicalName>TimeZoneConverter.Data.TimeZoneData.zip</LogicalName>
 		</EmbeddedResource>
 	</ItemGroup>

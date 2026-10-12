@@ -1,6 +1,6 @@
 [submodule "TimeZoneNames"]
-	path = TimeZoneNames
+	path = TimeZoneInfo/TimeZoneNames
 	url = https://github.com/mattjohnsonpint/TimeZoneNames
 [submodule "TimeZoneConverter"]
-	path = TimeZoneConverter
+	path = TimeZoneInfo/TimeZoneConverter
 	url = https://github.com/mattjohnsonpint/TimeZoneConverter
