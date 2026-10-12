@@ -209,6 +209,24 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
+        public static string GetDisplayName( Video? video )       
+        {
+            if( video == null )
+                return string.Empty;
+
+            var retVal = video.Name;
+            var episode = video as Episode;
+            if( episode == null )
+                return video.Name;
+
+            var primName = episode.Name;
+            var secName = episode.SeriesName;
+            var season = video.ParentIndexNumber ?? -1;
+            var episodeNum = video.IndexNumber ?? -1;
+
+            return GetDisplayName( primName, secName, season, episodeNum );
+        }
+
         public static string GetDisplayName( string primaryName, string secondaryName, int season, int episode )
         {
             if( ( season >= 0 ) && ( episode >= 0 ) && !secondaryName.IsNullOrEmpty() )
