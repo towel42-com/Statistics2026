@@ -340,9 +340,8 @@ namespace Statistics2026.Utilities
             if( !needToRun )
             {
                 var latestItem = getLastItemOfConsequenceAdded( embyInterfaces );
-                //if ( latestItem != null && lastestItem.)
-                //if( latestDate != null )
-                //    needToRun = lastAnalysisAdded < latestDate;
+                if( latestItem != null && latestItem.DateCreated != DateTime.MinValue )
+                    needToRun = lastAnalysisAdded < latestItem.DateCreated.DateTime;
             }
 
             if( !needToRun )
