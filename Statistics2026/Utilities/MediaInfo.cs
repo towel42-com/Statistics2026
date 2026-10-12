@@ -219,8 +219,8 @@ namespace Statistics2026.Utilities
             if( episode == null )
                 return video.Name;
 
-            var primName = episode.Name;
-            var secName = episode.SeriesName;
+            var primName = episode.SeriesName;
+            var secName = episode.Name;
             var season = video.ParentIndexNumber ?? -1;
             var episodeNum = video.IndexNumber ?? -1;
 
