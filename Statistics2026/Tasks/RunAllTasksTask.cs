@@ -109,6 +109,10 @@ namespace Statistics2026.ScheduledTasks
             {
                 needToRun = true;
             }
+            else
+            {
+                logger?.Info( $"Last Analysis run: {lastAnalysisAdded}" );
+            }
 
             if( !needToRun )
             {
