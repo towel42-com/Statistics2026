@@ -14,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
+using TimeZoneNames;
 
 namespace Statistics2026.Utilities
 {
@@ -61,11 +62,11 @@ namespace Statistics2026.Utilities
             return ( kind == DateTimeKind.Utc ) ? _datetimeFormatUtc : _datetimeFormatLocal;
         }
 
-        public static DateTime? ReadDateTime( string dateText )
+        public static DateTimeOffset? ReadDateTime( string dateText )
         {
             try
             {
-                return DateTime.ParseExact(
+                return DateTimeOffset.ParseExact(
                     dateText,
                     _datetimeFormats,
                     DateTimeFormatInfo.InvariantInfo,
@@ -77,15 +78,14 @@ namespace Statistics2026.Utilities
             }
         }
 
-        public static string? ToDateTimeParamValue( DateTime? dateValue )
+        public static string? ToDateTimeParamValue( DateTimeOffset? dateValue )
         {
             if( dateValue == null )
                 return null;
 
-            var kind = DateTimeKind.Utc;
-            return dateValue.Value.Kind == DateTimeKind.Unspecified
-                ? DateTime.SpecifyKind( dateValue.Value, kind ).ToString( GetDateTimeKindFormat( kind ), CultureInfo.InvariantCulture )
-                : dateValue.Value.ToString( GetDateTimeKindFormat( dateValue.Value.Kind ), CultureInfo.InvariantCulture );
+            var tmp = dateValue.Value.DateTime.ToString( "o", CultureInfo.InvariantCulture );
+
+            return dateValue.Value.UtcDateTime.ToString( GetDateTimeKindFormat( DateTimeKind.Utc ) );
         }
 
         public static string StreamToString( Stream stream )
@@ -99,6 +99,22 @@ namespace Statistics2026.Utilities
             {
                 return reader.ReadToEnd();
             }
+        }
+
+        public static string ToTZShortString( this DateTimeOffset dto, bool local, bool dateOnly = false )
+        {
+            var tz = local ? TimeZoneInfo.Local : TimeZoneInfo.Utc;
+            var abbreviations = TZNames.GetAbbreviationsForTimeZone( tz.Id, "en" );
+
+            var isDaylight = tz.IsDaylightSavingTime( dto );
+            var tzAbbreviation = isDaylight ? abbreviations.Daylight : abbreviations.Standard;
+
+            var dt = local ? dto.LocalDateTime : dto.UtcDateTime;
+
+            var retVal = dt.ToShortDateString();
+            if ( !dateOnly )
+                retVal += " " + dt.ToString( "HH:mm" ) + $" {tzAbbreviation}";
+            return retVal;
         }
     }
 }

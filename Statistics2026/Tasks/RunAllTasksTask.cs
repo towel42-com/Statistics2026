@@ -100,11 +100,11 @@ namespace Statistics2026.ScheduledTasks
             var taskName = "Analyze All";
             embyInterfaces._logger!.Info( $"Starting Statistics 2026 {taskName} task" );
             // purely for progress reporting
-            var now = DateTime.UtcNow;
+            var now = DateTimeOffset.UtcNow;
 
-            PluginConfiguration.LastUpdated = now.ToString( "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture );
+            PluginConfiguration.LastUpdated = HelperFuncs.ToDateTimeParamValue( now )!;
             PluginConfiguration.Version = Plugin.Instance?.Version.ToString( 4 ) ?? "<UNKNOWN>";
-            PluginConfiguration.BuildDate = BuildDateInfo.GetBuildDate().ToString( "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture );
+            PluginConfiguration.BuildDate = HelperFuncs.ToDateTimeParamValue( BuildDateInfo.GetBuildDate() )!;
             Plugin.Instance?.UpdateConfiguration( PluginConfiguration );
 
             db.ClearLastUpdated( StatisticsDB.EAction.System );

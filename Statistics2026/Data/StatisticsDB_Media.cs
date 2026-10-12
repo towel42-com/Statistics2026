@@ -702,7 +702,7 @@ namespace Statistics2026.Data
                 var parentName = row.GetString( col++ );
                 var parentSortName = row.GetString( col++ );
                 curr.ParentName = new SortByText( parentName, parentSortName );
-                curr.PremiereDate = HelperFuncs.ReadDateTime( row.GetString( col++ ) )?.Date.ToShortDateString() ?? string.Empty;
+                curr.PremiereDate = HelperFuncs.ReadDateTime( row.GetString( col++ ) )?.ToTZShortString( true, true ) ?? string.Empty;
                 curr.ResolutionDetail = row.GetString( col++ );
                 curr.Codec = row.GetString( col++ );
                 curr.DolbyVisionProfile = row.GetString( col++ );

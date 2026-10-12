@@ -196,7 +196,7 @@ namespace Statistics2026.Utilities
                 var items = embyInterfaces._libraryManager.GetItemList( query );
                 foreach( var item in items )
                 {
-                    if( item.DateCreated.DateTime == DateTime.MinValue )
+                    if( item.DateCreated == DateTimeOffset.MinValue )
                         continue;
                     return item;
                 }
@@ -242,7 +242,7 @@ namespace Statistics2026.Utilities
                     if( user == null )
                         continue;
 
-                    if( user.DateCreated.DateTime == DateTime.MinValue )
+                    if( user.DateCreated == DateTimeOffset.MinValue )
                         continue;
 
                     return user;
@@ -255,20 +255,20 @@ namespace Statistics2026.Utilities
         public static void UpdateLastAdded( EmbyInterfaces? embyInterfaces, StatisticsDB db )
         {
             var lastMediaAdded = EmbyHelperFuncs.GetLastMovieOrEpisodeAdded( embyInterfaces );
-            DateTime? lastAdded = null;
-            if( lastMediaAdded != null && lastMediaAdded!.DateCreated != DateTime.MinValue )
+            DateTimeOffset? lastAdded = null;
+            if( lastMediaAdded != null && lastMediaAdded!.DateCreated != DateTimeOffset.MinValue )
             {
-                lastAdded = lastMediaAdded!.DateCreated.DateTime;
+                lastAdded = lastMediaAdded!.DateCreated;
             }
             var lastUserAdded = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
-            if( lastUserAdded != null && lastUserAdded!.DateCreated != DateTime.MinValue )
+            if( lastUserAdded != null && lastUserAdded!.DateCreated != DateTimeOffset.MinValue )
             {
                 if( lastAdded == null )
-                    lastAdded = lastUserAdded!.DateCreated.DateTime;
-                else if( lastAdded < lastUserAdded!.DateCreated.DateTime )
-                    lastAdded = lastUserAdded!.DateCreated.DateTime;
+                    lastAdded = lastUserAdded!.DateCreated;
+                else if( lastAdded < lastUserAdded!.DateCreated )
+                    lastAdded = lastUserAdded!.DateCreated;
             }
-            if( lastAdded != null && lastAdded != DateTime.MinValue )
+            if( lastAdded != null && lastAdded != DateTimeOffset.MinValue )
             {
                 db.UpdateLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded, 0, lastAdded.Value );
             }
@@ -285,7 +285,7 @@ namespace Statistics2026.Utilities
                 return rhs;
             }
 
-            if( lhs.DateCreated!.DateTime >= rhs.DateCreated!.DateTime )
+            if( lhs.DateCreated! >= rhs.DateCreated! )
                 return lhs;
             return rhs;
         }
@@ -297,21 +297,21 @@ namespace Statistics2026.Utilities
             // all items analyzed are tied to new episodes, movies or users
 
             var lastMovieAddedToServer = EmbyHelperFuncs.GetLastMovieAdded( embyInterfaces );
-            if( lastMovieAddedToServer != null && lastMovieAddedToServer!.DateCreated != DateTime.MinValue )
+            if( lastMovieAddedToServer != null && lastMovieAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
                 embyInterfaces?._logger?.Info( $"Last Movie added: {MediaInfo.GetDisplayName( lastMovieAddedToServer ) } on {lastMovieAddedToServer!.DateCreated}" );
                 latestItem = getLatestItem( latestItem, lastMovieAddedToServer );
             }
 
             var lastEpisodeAddedToServer = EmbyHelperFuncs.GetLastEpisodeAdded( embyInterfaces );
-            if( lastEpisodeAddedToServer != null && lastEpisodeAddedToServer!.DateCreated != DateTime.MinValue )
+            if( lastEpisodeAddedToServer != null && lastEpisodeAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
                 embyInterfaces?._logger?.Info( $"Last Episode added: {MediaInfo.GetDisplayName( lastEpisodeAddedToServer )} on {lastEpisodeAddedToServer!.DateCreated}" );
                 latestItem = getLatestItem( latestItem, lastEpisodeAddedToServer );
             }
 
             var lastUserAddedToServer = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
-            if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTime.MinValue )
+            if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
                 embyInterfaces?._logger?.Info( $"Last user added: {lastUserAddedToServer.Name} on {lastUserAddedToServer!.DateCreated}" );
                 latestItem = getLatestItem( latestItem, lastUserAddedToServer );
@@ -328,7 +328,7 @@ namespace Statistics2026.Utilities
             bool needToRun = false;
 
             var lastAnalysisAdded = db.GetLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded );
-            if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTime.MinValue )
+            if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTimeOffset.MinValue )
             {
                 embyInterfaces._logger?.Info( "Analysis has not been run yet, running Statistics Analysis" );
                 needToRun = true;
@@ -341,8 +341,8 @@ namespace Statistics2026.Utilities
             if( !needToRun )
             {
                 var latestItem = getLastItemOfConsequenceAdded( embyInterfaces );
-                if( latestItem != null && latestItem.DateCreated != DateTime.MinValue )
-                    needToRun = lastAnalysisAdded < latestItem.DateCreated.DateTime;
+                if( latestItem != null && latestItem.DateCreated != DateTimeOffset.MinValue )
+                    needToRun = lastAnalysisAdded < latestItem.DateCreated;
             }
 
             if( !needToRun )

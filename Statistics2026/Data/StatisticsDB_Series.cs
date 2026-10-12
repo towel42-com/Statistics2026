@@ -49,7 +49,7 @@ namespace Statistics2026.Data
             var libraryOptions = _embyInterfaces!._libraryManager!.GetLibraryOptions( series );
             var allEpisodes = _embyInterfaces!._providerManager!.GetAllEpisodes( series, libraryOptions, _dbHelper!.CancellationToken!.Value ).ConfigureAwait( false ).GetAwaiter().GetResult();
 
-            var episodes = allEpisodes.Where( e => !MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTime.Now ) ).Count();
+            var episodes = allEpisodes.Where( e => !MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTimeOffset.Now ) ).Count();
             var specials = allEpisodes.Where( e => MediaInfo.isTVSpecial( e ) ).Count();
 
             if( episodes == 0 && specials == 0 )// when providers are disabled
@@ -241,10 +241,10 @@ namespace Statistics2026.Data
                            ("@ItemId", series.Id.ToString()),
                            ("@Name", series.Name),
                            ("@SortName", series.SortName),
-                           ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( series.PremiereDate.HasValue ? series.PremiereDate.Value.DateTime : null )),
+                           ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( series.PremiereDate.HasValue ? series.PremiereDate.Value : null )),
                            ("@NumEpisodes", numEpisodes),
                            ("@NumSpecials", numSpecials),
-                           ("@DateAdded", HelperFuncs.ToDateTimeParamValue( series.DateCreated.DateTime )),
+                           ("@DateAdded", HelperFuncs.ToDateTimeParamValue( series.DateCreated )),
                            ("@ImageUrl", ItemImageUrl._ItemImageUrl(series)),
                            ("@FileSize", totalFileSize),
                            ("@RunTimeTicks", totalRuntime),
