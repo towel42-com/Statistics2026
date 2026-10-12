@@ -400,6 +400,7 @@ namespace Statistics2026.Data
                         if( daysTo != 1 )
                             msg += "s";
                         curr.SearchLocation = new SortByText( msg );
+                        curr.PremiereDate = premiereDate.ToString( "dddd" ) + $" {curr.PremiereDate}";
                     }
                 }
                 else if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
