@@ -393,7 +393,7 @@ namespace Statistics2026.Data
                     curr.SearchLocation = new SortByText( WebUtility.HtmlEncode( "<FUTURE RELEASE>" ) );
                     if( premiereDate != null )
                     {
-                        var daysTo = ( premiereDate - DateTimeOffset.Now ).TotalDays;
+                        var daysTo = Math.Ceiling( ( premiereDate - DateTimeOffset.Now ).TotalDays );
                         if( daysTo == 0 && premiereDate.Date != DateTimeOffset.Now.Date )
                             daysTo = 1;
                         var msg = $"Available in {daysTo} day";
