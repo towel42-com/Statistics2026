@@ -65,64 +65,6 @@ namespace Statistics2026.Api
 
         public IRequest? Request { get; set; } = null;
 
-        private IEnumerable<T>? GetItems<T>( User? user )
-        {
-            return DBHelper.GetUserItems<T>( user, _embyInterfaces._libraryManager! );
-        }
-
-        public static (IEnumerable<Video>? forUser, IEnumerable<Video>? forAll) GetAllEpisodesAndMovies( User? user, ILibraryManager? libManager, bool computeAll )
-        {
-            if( libManager == null )
-                return (null, null);
-
-            var forUser = ( user != null ) ? GetAllEpisodesAndMoviesForUser( user, libManager ) : null;
-
-            IEnumerable<Video>? all = null;
-            if( computeAll )
-            {
-                var allEpisodes = DBHelper.GetUserItems<Episode>( null, libManager ).OfType<Video>().ToList();
-                var allMovies = DBHelper.GetUserItems<Movie>( null, libManager ).OfType<Video>().ToList();
-                all = allEpisodes.Concat( allMovies );
-            }
-
-            return (forUser, all);
-        }
-
-        public static IEnumerable<Video> GetAllEpisodesAndMoviesForUser( User user, ILibraryManager? libManager )
-        {
-            if( libManager == null )
-                return Enumerable.Empty<Video>();
-            var episodesForUser = DBHelper.GetUserItems<Episode>( user, libManager ).OfType<Video>().ToList();
-            var moviesForUser = DBHelper.GetUserItems<Movie>( user, libManager ).OfType<Video>().ToList();
-            var forUser = episodesForUser.Concat( moviesForUser );
-
-            return forUser;
-        }
-
-        public static IEnumerable<BoxSet> GetAllBoxSets( User user, ILibraryManager libManager )
-        {
-            var boxSets = DBHelper.GetUserItems<BoxSet>( user, libManager ).OfType<BoxSet>().ToList();
-            return boxSets;
-        }
-
-        private List<MediaInfo>? GetVideos<T>( User? user ) where T : Video
-        {
-            List<MediaInfo> mediaInfos = [];
-            var items = GetItems<T>( user );
-            if( items == null )
-                return null;
-            foreach( var item in items )
-            {
-                var curr = new MediaInfo( item );
-                if( !curr.aOK )
-                    continue;
-
-                mediaInfos.Add( curr );
-            }
-
-            return mediaInfos;
-        }
-
         private User? GetUserByName( string userName )
         {
             if( _embyInterfaces == null )

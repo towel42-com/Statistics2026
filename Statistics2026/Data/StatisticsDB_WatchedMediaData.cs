@@ -447,7 +447,11 @@ namespace Statistics2026.Data
 
             var config = Statistics2026.Plugin.Instance!.Configuration;
 
-            var allVideosForUser = Statistics2026API.GetAllEpisodesAndMoviesForUser( user, _embyInterfaces!._libraryManager );
+            var allVideosForUser = EmbyHelperFuncs.GetAllEpisodesAndMovies( user, _embyInterfaces!._libraryManager );
+            if( allVideosForUser == null )
+            {
+                return [];
+            }
             //_tableList
             var sql =
                 $"INSERT INTO {userTableName} " +
@@ -520,7 +524,7 @@ namespace Statistics2026.Data
                             ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
                             ( "@IsPlayed", isPlayed),
                             ( "@PlayCount", playCount),
-                            ( "@LastPlayedDate", _dbHelper.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value.DateTime : null )),
+                            ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value.DateTime : null )),
                             ( "@SeriesId", mediaInfo.SeriesId),
                             ( "@RunTimeTicks", mediaInfo.RunTimeTicks )
                         ] ) );
@@ -922,7 +926,7 @@ namespace Statistics2026.Data
                 var row = statement.Current;
                 var name = row.GetString( 0 );
                 var date = row.GetString( 1 );
-                var lastPlayedDate = DBHelper.ReadDateTime( date );
+                var lastPlayedDate = HelperFuncs.ReadDateTime( date );
                 if ( lastPlayedDate == null )
                     lastPlayedDate = DateTime.MinValue;
                 retVal.Add( (name, lastPlayedDate.Value) );

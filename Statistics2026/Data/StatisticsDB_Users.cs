@@ -61,7 +61,7 @@ namespace Statistics2026.Data
             if( user == null && userList == null )
                 throw new ArgumentException( "Either user or allUsers must be provided." );
 
-            var (allVideosForUser, allVideos) = Statistics2026API.GetAllEpisodesAndMovies( user, _embyInterfaces!._libraryManager, true );
+            var (allVideosForUser, allVideos) = EmbyHelperFuncs.GetAllEpisodesAndMovies( user, _embyInterfaces!._libraryManager, true );
 
             long watchable = 0;
             long watched = 0;
@@ -245,36 +245,5 @@ namespace Statistics2026.Data
 
             return groupData;
         }
-
-        public User? GetLastAddedUser()
-        {
-            var query = new UserQuery
-            {
-                // You can optionally add filters here, such as:
-                // IsDisabled = false,
-                // IsHidden = false
-            };
-
-            var queryResult = _embyInterfaces?._userManager!.GetUserList( query ) ?? null;
-            if( queryResult != null )
-            {
-                // 3. Find the newest user by sorting their creation date
-                var users = queryResult
-                    .OrderByDescending( u => u.DateCreated );
-
-                foreach( var user in users )
-                {
-                    if( user == null )
-                        continue;
-
-                    if( user.DateCreated.DateTime == DateTime.MinValue )
-                        continue;
-
-                    return user;
-                }
-            }
-            return null;
-        }
-
     }
 }

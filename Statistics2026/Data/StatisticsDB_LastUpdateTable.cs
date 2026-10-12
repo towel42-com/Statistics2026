@@ -30,7 +30,7 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                lastUpdated = DBHelper.ReadDateTime( row.GetString( 0 ) );
+                lastUpdated = HelperFuncs.ReadDateTime( row.GetString( 0 ) );
                 return false;
             } );
             return lastUpdated;
@@ -160,9 +160,9 @@ namespace Statistics2026.Data
                 new( sql,
                         [
                             ("@Action", action.ToString()),
-                            ("@LastUpdated", _dbHelper.ToDateTimeParamValue( updateTime )),
+                            ("@LastUpdated", HelperFuncs.ToDateTimeParamValue( updateTime )),
                             ("@RunTimeMS", runtimeMS),
-                            ("@BuildDate", _dbHelper.ToDateTimeParamValue( buildDate )),
+                            ("@BuildDate", HelperFuncs.ToDateTimeParamValue( buildDate )),
                             ("@Version", version)
                         ] )
             ];

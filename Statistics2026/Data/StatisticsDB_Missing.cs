@@ -66,7 +66,7 @@ namespace Statistics2026.Data
 
             _embyInterfaces!._logger?.Debug( $"Starting Analysis" );
             progress.Report( 0 );
-            var collections = _dbHelper.GetLibraryItems<BoxSet>().ToList();
+            var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, _embyInterfaces?._libraryManager );
             collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
 
             progress.Report( 100 );
@@ -138,7 +138,7 @@ namespace Statistics2026.Data
 
                 var movieTmdbId = tmdbMovie.Id;
                 _embyInterfaces!._logger?.Debug( $"        Checking for movie {tmdbMovie.Title} for {collection.Name} on server" );
-                var embyMovie = _dbHelper.GetMovieByTmdbId( _embyInterfaces._libraryManager, movieTmdbId );
+                var embyMovie = EmbyHelperFuncs.GetMovieByTmdbId( _embyInterfaces._libraryManager, movieTmdbId );
 
                 if( embyMovie == null )
                 {
@@ -150,7 +150,7 @@ namespace Statistics2026.Data
                         ("@TmdbId", tmdbMovie.Id ),
                         ("@Title", tmdbMovie.Title ),
                         ("@OriginalTitle", tmdbMovie.OriginalTitle ),
-                        ("@ReleaseDate", _dbHelper.ToDateTimeParamValue( tmdbMovie.ReleaseDate() ) ),
+                        ("@ReleaseDate", HelperFuncs.ToDateTimeParamValue( tmdbMovie.ReleaseDate() ) ),
                         ("@Overview", tmdbMovie.Overview ),
                         ("@PosterPath", tmdbMovie.PosterPath ),
                         ("@ParentId", collection.Id.ToString() ),
@@ -170,7 +170,7 @@ namespace Statistics2026.Data
 
             _embyInterfaces!._logger?.Debug( $"Starting Analysis" );
             progress.Report( 0 );
-            var allSeries = _dbHelper.GetLibraryItems<Series>().Cast<Series>().ToList();
+            var allSeries = EmbyHelperFuncs.GetLibraryItems<Series>( null, _embyInterfaces?._libraryManager );
             allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             progress.Report( 100 );
 
@@ -223,7 +223,7 @@ namespace Statistics2026.Data
                 if( tmdbSeason.SeasonNumber == 0 && !Plugin.Instance!.Configuration.reportOnMissingSpecials )
                     continue;
 
-                var embySeason = _dbHelper.GetSeasonFromSeries( series, tmdbSeason.SeasonNumber );
+                var embySeason = EmbyHelperFuncs.GetSeasonFromSeries( series, tmdbSeason.SeasonNumber );
 
                 foreach( var tmdbEpisode in tmdbSeason.Episodes )
                 {
@@ -233,7 +233,7 @@ namespace Statistics2026.Data
                     var episodeTmdbId = tmdbEpisode.Id;
                     var episodeIdent = $"S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2}";
                     _embyInterfaces!._logger?.Debug( $"         Checking for episode {episodeIdent} for {series.Name} on server" );
-                    var embyEpisode = ( embySeason != null ) ? _dbHelper.GetEpisodeFromTmdbId( _embyInterfaces._libraryManager, embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber ) : null;
+                    var embyEpisode = ( embySeason != null ) ? EmbyHelperFuncs.GetEpisodeFromTmdbId( _embyInterfaces._libraryManager, embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber ) : null;
 
                     if( embyEpisode == null )
                     {
@@ -249,7 +249,7 @@ namespace Statistics2026.Data
                             ("@TmdbId", tmdbEpisode.Id ),
                             ("@Title", title ),
                             ("@OriginalTitle", string.Empty ),
-                            ("@ReleaseDate", _dbHelper.ToDateTimeParamValue( tmdbEpisode.AirDate() ) ),
+                            ("@ReleaseDate", HelperFuncs.ToDateTimeParamValue( tmdbEpisode.AirDate() ) ),
                             ("@Overview", tmdbEpisode.Overview ),
                             ("@PosterPath", tmdbEpisode.StillPath ),
                             ("@ParentId", series.Id.ToString() ),
@@ -334,7 +334,7 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                var premiereDate = DBHelper.ReadDateTime( row.GetString( 1 ) )?.Date ?? DateTime.MinValue;
+                var premiereDate = HelperFuncs.ReadDateTime( row.GetString( 1 ) )?.Date ?? DateTime.MinValue;
                 var premiereYear = premiereDate == DateTime.MinValue ? 0 : premiereDate.Year;
 
                 var curr = new MediaItemResponse()

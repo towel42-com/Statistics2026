@@ -23,7 +23,7 @@ namespace Statistics2026.Data
 
             _embyInterfaces!._logger?.Debug( $"Starting Collection Analysis" );
             progress.Report( 0 );
-            var collections = _dbHelper.GetLibraryItems<BoxSet>();
+            var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, _embyInterfaces?._libraryManager );
             progress.Report( 100 );
 
             double count = collections.Count();

@@ -228,7 +228,7 @@ namespace Statistics2026.Utilities
             {
                 using( var response = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ) )
                 {
-                    var text = DBHelper.StreamToString( response.Content );
+                    var text = HelperFuncs.StreamToString( response.Content );
                     //var seriesList = TmdbSeriesResponse.FromJson( text, _embyInterfaces._jsonSerializer );
                     var series = _embyInterfaces!._jsonSerializer!.DeserializeFromString<TmdbSeries>( text );
                     if( series == null )
@@ -308,7 +308,7 @@ namespace Statistics2026.Utilities
 
             using( var response = await _embyInterfaces._httpClient.Get( options ).ConfigureAwait( false ) )
             {
-                var text = DBHelper.StreamToString( response );
+                var text = HelperFuncs.StreamToString( response );
                 retVal = TmdbSeries.FromJson( retVal, text, _embyInterfaces._jsonSerializer );
                 return retVal;
             }
@@ -358,7 +358,7 @@ namespace Statistics2026.Utilities
             if( string.IsNullOrEmpty( ReleaseDateText ) )
                 return null;
 
-            return DBHelper.ReadDateTime( ReleaseDateText );
+            return HelperFuncs.ReadDateTime( ReleaseDateText );
         }
     }
 
@@ -474,7 +474,7 @@ namespace Statistics2026.Utilities
             if( string.IsNullOrEmpty( AirDateStr ) )
                 return null;
 
-            return DBHelper.ReadDateTime( AirDateStr );
+            return HelperFuncs.ReadDateTime( AirDateStr );
         }
     }
 
@@ -505,7 +505,7 @@ namespace Statistics2026.Utilities
             if( string.IsNullOrEmpty( AirDateStr ) )
                 return null;
 
-            return DBHelper.ReadDateTime( AirDateStr );
+            return HelperFuncs.ReadDateTime( AirDateStr );
         }
     }
 }

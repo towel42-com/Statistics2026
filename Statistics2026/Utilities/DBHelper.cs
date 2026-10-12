@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Threading;
 
 namespace Statistics2026.Utilities
@@ -36,43 +37,6 @@ namespace Statistics2026.Utilities
 
     public sealed class DBHelper
     {
-        private static readonly string[] _datetimeFormats = new string[] {
-            "THHmmssK",
-            "THHmmK",
-            "HH:mm:ss.FFFFFFFK",
-            "HH:mm:ssK",
-            "HH:mmK",
-            "yyyy-MM-dd HH:mm:ss.FFFFFFFK", /* NOTE: UTC default (5). */
-            "yyyy-MM-dd HH:mm:ssK",
-            "yyyy-MM-dd HH:mmK",
-            "yyyy-MM-ddTHH:mm:ss.FFFFFFFK",
-            "yyyy-MM-ddTHH:mmK",
-            "yyyy-MM-ddTHH:mm:ssK",
-            "yyyyMMddHHmmssK",
-            "yyyyMMddHHmmK",
-            "yyyyMMddTHHmmssFFFFFFFK",
-            "THHmmss",
-            "THHmm",
-            "HH:mm:ss.FFFFFFF",
-            "HH:mm:ss",
-            "HH:mm",
-            "yyyy-MM-dd HH:mm:ss.FFFFFFF", /* NOTE: Non-UTC default (19). */
-            "yyyy-MM-dd HH:mm:ss",
-            "yyyy-MM-dd HH:mm",
-            "yyyy-MM-ddTHH:mm:ss.FFFFFFF",
-            "yyyy-MM-ddTHH:mm",
-            "yyyy-MM-ddTHH:mm:ss",
-            "yyyyMMddHHmmss",
-            "yyyyMMddHHmm",
-            "yyyyMMddTHHmmssFFFFFFF",
-            "yyyy-MM-dd",
-            "yyyyMMdd",
-            "yy-MM-dd",
-            "o"
-        };
-        private static readonly string _datetimeFormatUtc = _datetimeFormats[ 5 ];
-        private static readonly string _datetimeFormatLocal = _datetimeFormats[ 19 ];
-
         private readonly EmbyInterfaces? _embyInterfaces;
 
         private IDatabaseConnection? Connection { get; set; } = null;
@@ -110,7 +74,7 @@ namespace Statistics2026.Utilities
                 }
             }
 
-            if ( File.Exists( oldFileName ) ) // could not move, try deleting
+            if( File.Exists( oldFileName ) ) // could not move, try deleting
             {
                 try
                 {
@@ -125,6 +89,17 @@ namespace Statistics2026.Utilities
             }
 
             CreateConnection( newFileName );
+        }
+
+
+        ~DBHelper()
+        {
+            _embyInterfaces?._logger?.Debug( "Statistics2026 : Cleaning up" );
+            if( Connection != null )
+            {
+                Connection.Close();
+                _embyInterfaces?._logger?.Debug( "Statistics2026 : DB Connection Closed" );
+            }
         }
 
         public bool CheckIsValid( ECheckLevel checkLevel )
@@ -172,16 +147,6 @@ namespace Statistics2026.Utilities
             }
 
             return retVal;
-        }
-
-        ~DBHelper()
-        {
-            _embyInterfaces?._logger?.Debug( "Statistics2026 : Cleaning up" );
-            if( Connection != null )
-            {
-                Connection.Close();
-                _embyInterfaces?._logger?.Debug( "Statistics2026 : DB Connection Closed" );
-            }
         }
 
         public bool TryBind<T>( IStatement statement, string name, T? value )
@@ -237,7 +202,7 @@ namespace Statistics2026.Utilities
             return true;
         }
 
-        public void ExecuteCommand( SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null, bool useTransaction=true )
+        public void ExecuteCommand( SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null, bool useTransaction = true )
         {
             List<SQLCmdDef> cmds = [ cmd ];
             ExecuteCommands( cmds, onStatement, useTransaction );
@@ -297,38 +262,6 @@ namespace Statistics2026.Utilities
             ExecuteCommand( new SQLCmdDef( cmd ), null, false );
         }
 
-        private string GetDateTimeKindFormat( DateTimeKind kind )
-        {
-            return ( kind == DateTimeKind.Utc ) ? _datetimeFormatUtc : _datetimeFormatLocal;
-        }
-
-        public static DateTime? ReadDateTime( string dateText )
-        {
-            try
-            {
-                return DateTime.ParseExact(
-                    dateText,
-                    _datetimeFormats,
-                    DateTimeFormatInfo.InvariantInfo,
-                    DateTimeStyles.None ).ToUniversalTime();
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        public string? ToDateTimeParamValue( DateTime? dateValue )
-        {
-            if( dateValue == null )
-                return null;
-
-            var kind = DateTimeKind.Utc;
-            return dateValue.Value.Kind == DateTimeKind.Unspecified
-                ? DateTime.SpecifyKind( dateValue.Value, kind ).ToString( GetDateTimeKindFormat( kind ), CultureInfo.InvariantCulture )
-                : dateValue.Value.ToString( GetDateTimeKindFormat( dateValue.Value.Kind ), CultureInfo.InvariantCulture );
-        }
-
         private void CreateConnection( string db_file )
         {
             _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
@@ -363,32 +296,6 @@ namespace Statistics2026.Utilities
 
             Connection = db;
             _embyInterfaces!._logger?.Debug( "ConnectionCreated : " + Connection.GetHashCode() );
-        }
-
-        public IEnumerable<T> GetLibraryItems<T>()
-        {
-            _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
-            return GetUserItems<T>( null, _embyInterfaces!._libraryManager );
-        }
-
-        public static IEnumerable<T> GetUserItems<T>( User? user, ILibraryManager? libManager )
-        {
-            if( libManager == null )
-                return Enumerable.Empty<T>();
-
-            var query = new InternalItemsQuery( user )
-            {
-                IncludeItemTypes = new[] { typeof( T ).Name },
-                Recursive = true,
-                IsVirtualItem = false,
-                DtoOptions = new DtoOptions( true )
-                {
-                    ImageTypes = new[] { ImageType.Thumb, ImageType.Thumbnail },
-                    EnableImages = true
-                }
-            };
-
-            return libManager.GetItemList( query ).OfType<T>();
         }
 
         public bool ColumnExists( string tableName, string columnName )
@@ -526,108 +433,6 @@ namespace Statistics2026.Utilities
             }
 
             return (columnMissing, tableNeedsData);
-        }
-
-        public static string StreamToString( Stream stream )
-        {
-            if( stream.CanSeek )
-            {
-                stream.Position = 0;
-            }
-
-            using( var reader = new StreamReader( stream ) )
-            {
-                return reader.ReadToEnd();
-            }
-        }
-
-        public Season? GetSeasonFromSeries( Series series, int seasonNum )
-        {
-            var result = series.GetItems( new InternalItemsQuery
-            {
-                IncludeItemTypes = new[] { nameof( Season ) },
-                Recursive = true
-            } );
-
-            var seasons = result.Items.Cast<Season>().ToList();
-            foreach( var season in seasons )
-            {
-                if( season.IndexNumber == seasonNum )
-                    return season;
-            }
-
-            return null;
-        }
-
-        public Movie? GetMovieByTmdbId( ILibraryManager? libraryManager, string tmdbId )
-        {
-            if( libraryManager == null )
-                return null;
-
-            var query = new InternalItemsQuery
-            {
-                // Target only Movie types to ensure accuracy
-                IncludeItemTypes = new[] { typeof( Movie ).Name },
-                // Look up by the formatted provider string
-                AnyProviderIdEquals = new[]
-                {
-                    new KeyValuePair<string, string>("Tmdb", tmdbId)
-                },
-                // Search across all libraries recursively
-                Recursive = true
-            };
-
-            // Execute query and grab the first match
-            var result = libraryManager.GetItemList( query );
-            if( result == null )
-                return null;
-
-            return result.FirstOrDefault() as Movie;
-        }
-
-        public Episode? GetEpisodeFromTmdbId( ILibraryManager? libraryManager, Season embySeason, string tmdbId, int episodeNum )
-        {
-            if( ( libraryManager == null ) || ( embySeason == null ) )
-                return null;
-
-            var query = new InternalItemsQuery
-            {
-                Parent = embySeason,
-                // Target only Movie types to ensure accuracy
-                IncludeItemTypes = new[] { typeof( Episode ).Name },
-                // Look up by the formatted provider string
-                AnyProviderIdEquals = new[]
-                {
-                    new KeyValuePair<string, string>("Tmdb", tmdbId)
-                },
-                // Search across all libraries recursively
-                Recursive = true
-            };
-
-            // Execute query and grab the first match
-            var result = libraryManager.GetItemList( query );
-            if( result != null && result.Count() != 0 )
-            {
-                var episode = result.FirstOrDefault() as Episode;
-                if( episode != null )
-                    return episode;
-            }
-
-            var queryResult = embySeason.GetItems( new InternalItemsQuery
-            {
-                IncludeItemTypes = new[] { nameof( Episode ) },
-                Recursive = true
-            } );
-
-            // Extract the episode numbers
-            var retVal = queryResult.Items
-                .Cast<Episode>()
-                .FirstOrDefault( ep =>
-                ep.IndexNumber == episodeNum ||
-                ( ep.IndexNumberEnd != null && ( ep.IndexNumber <= episodeNum ) && ( ep.IndexNumberEnd >= episodeNum ) ) )
-                ;
-
-            return retVal;
         }
     }
 }

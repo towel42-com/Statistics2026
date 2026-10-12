@@ -23,10 +23,13 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug( $"Starting Video Analysis" );
 
             _dbHelper!.Progress?.Report( 0 );
-            var videoList = _dbHelper.GetLibraryItems<Episode>().Cast<Video>().ToList();
-            _dbHelper!.Progress?.Report( 50 );
-            videoList.AddRange( _dbHelper.GetLibraryItems<Movie>().Cast<Video>().ToList() );
+            var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, _embyInterfaces?._libraryManager );
             _dbHelper!.Progress?.Report( 100 );
+
+            if( videoList == null )
+            {
+                return;
+            }
 
             double count = videoList.Count;
             var curr = 0.0;
@@ -187,8 +190,8 @@ namespace Statistics2026.Data
                 ("@RunTimeTicks", mediaInfo.RunTimeTicks),
                 ("@Rating", mediaInfo.Rating),
                 ("@TotalBitrate", mediaInfo.TotalBitrate),
-                ("@PremiereDate", _dbHelper.ToDateTimeParamValue( mediaInfo.PremiereDate ) ),
-                ("@DateAdded", _dbHelper.ToDateTimeParamValue( mediaInfo.DateAdded ) ),
+                ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( mediaInfo.PremiereDate ) ),
+                ("@DateAdded", HelperFuncs.ToDateTimeParamValue( mediaInfo.DateAdded ) ),
             ] ) );
 
             return sqlCmds;
@@ -699,7 +702,7 @@ namespace Statistics2026.Data
                 var parentName = row.GetString( col++ );
                 var parentSortName = row.GetString( col++ );
                 curr.ParentName = new SortByText( parentName, parentSortName );
-                curr.PremiereDate = DBHelper.ReadDateTime( row.GetString( col++ ) )?.Date.ToShortDateString() ?? string.Empty;
+                curr.PremiereDate = HelperFuncs.ReadDateTime( row.GetString( col++ ) )?.Date.ToShortDateString() ?? string.Empty;
                 curr.ResolutionDetail = row.GetString( col++ );
                 curr.Codec = row.GetString( col++ );
                 curr.DolbyVisionProfile = row.GetString( col++ );
@@ -772,28 +775,6 @@ namespace Statistics2026.Data
                     return lhs.CompareTo( rhs );
                 } );
             return retVal;
-        }
-
-        public BaseItem? GetLastMovieOrEpisodeAdded()
-        {
-            var query = new InternalItemsQuery
-            {
-                IsFolder = false,
-                OrderBy = new[] { new ValueTuple<string, SortOrder>( ItemSortBy.DateCreated, SortOrder.Descending ) },
-                IsVirtualItem = false,
-                IncludeItemTypes = new[] { "Movie", "Episode" },
-                Recursive = true,
-                Limit = 50
-            };
-
-            var items = _embyInterfaces!._libraryManager!.GetItemList( query );
-            foreach( var item in items )
-            {
-                if( item.DateCreated.DateTime == DateTime.MinValue )
-                    continue;
-                return item;
-            }
-            return null;
         }
     }
 }

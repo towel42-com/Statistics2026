@@ -2,6 +2,7 @@
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
@@ -78,81 +79,6 @@ namespace Statistics2026.ScheduledTasks
             return RunAllTasks( this, _embyInterfaces, true, progress, cancellationToken );
         }
 
-        private static void UpdateLastAdded( StatisticsDB db )
-        {
-            var lastMediaAdded = db.GetLastMovieOrEpisodeAdded();
-            DateTime? lastAdded = null;
-            if( lastMediaAdded != null && lastMediaAdded!.DateCreated != DateTime.MinValue )
-            {
-                lastAdded = lastMediaAdded!.DateCreated.DateTime;
-            }
-            var lastUserAdded = db.GetLastAddedUser();
-            if( lastUserAdded != null && lastUserAdded!.DateCreated != DateTime.MinValue )
-            {
-                if( lastAdded == null )
-                    lastAdded = lastUserAdded!.DateCreated.DateTime;
-                else if( lastAdded < lastUserAdded!.DateCreated.DateTime )
-                    lastAdded = lastUserAdded!.DateCreated.DateTime;
-            }
-            if( lastAdded != null && lastAdded != DateTime.MinValue )
-            {
-                db.UpdateLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded, 0, lastAdded.Value );
-            }
-        }
-
-        private static bool AnalysisOutOfDate( StatisticsDB db, ILogger? logger  )
-        {
-            bool needToRun = false;
-
-            var lastAnalysisAdded = db.GetLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded );
-            if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTime.MinValue )
-            {
-                needToRun = true;
-            }
-            else
-            {
-                logger?.Info( $"Last Analysis run: {lastAnalysisAdded}" );
-            }
-
-            if( !needToRun )
-            {
-                List<DateTime> datesOfItemsAdded = [];
-
-                var lastMediaAddedToServer = db.GetLastMovieOrEpisodeAdded();
-                if( lastMediaAddedToServer != null && lastMediaAddedToServer!.DateCreated != DateTime.MinValue )
-                {
-                    logger?.Info( $"Last video added: {lastMediaAddedToServer.Name} on {lastMediaAddedToServer!.DateCreated}" );
-                    datesOfItemsAdded.Add( lastMediaAddedToServer.DateCreated.DateTime );
-                }
-                var lastUserAddedToServer = db.GetLastAddedUser();
-                if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTime.MinValue )
-                {
-                    logger?.Info( $"Last user added: {lastUserAddedToServer.Name} on {lastUserAddedToServer!.DateCreated}" );
-                    datesOfItemsAdded.Add( lastUserAddedToServer!.DateCreated.DateTime );
-                }
-
-                DateTime? latestDate = null;
-                foreach( var date in datesOfItemsAdded )
-                {
-                    if( latestDate == null )
-                        latestDate = date;
-                    else
-                    {
-                        latestDate = ( date > latestDate ) ? date : latestDate.Value;
-                    }
-                }
-
-                if ( latestDate != null )
-                    needToRun = lastAnalysisAdded < latestDate;
-            }
-
-            if( !needToRun && logger != null)
-            {
-                logger.Info( "No media or users have been added since last run, not re-running Statistics Analysis" );
-            }
-            return needToRun;
-        }
-
         public static async Task RunAllTasks( object sender, EmbyInterfaces embyInterfaces, bool force, IProgress<double> progress, CancellationToken cancellationToken )
         {
             if( Plugin.Instance != null && Plugin.Instance.IsStatistics2026TaskRunning( sender.GetType() ) )
@@ -168,7 +94,7 @@ namespace Statistics2026.ScheduledTasks
             db.Initialize( schedTask, cancellationToken, progress, PluginConfiguration.resetPlayCount );
             cancellationToken.ThrowIfCancellationRequested();
 
-            if( !force && !AnalysisOutOfDate( db, embyInterfaces._logger ) )
+            if( !force && !EmbyHelperFuncs.AnalysisOutOfDate( embyInterfaces, db ) )
                 return;
 
             var taskName = "Analyze All";
@@ -196,7 +122,7 @@ namespace Statistics2026.ScheduledTasks
 
             var overall = overAllTimer.ElapsedMilliseconds();
             db.UpdateLastUpdated( StatisticsDB.EAction.System, overall );
-            UpdateLastAdded( db );
+            EmbyHelperFuncs.UpdateLastAdded( embyInterfaces, db );
 
             overAllTimer.Dispose();
             embyInterfaces._logger.Info( $"=======================================" );

@@ -17,7 +17,7 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug( $"Starting Video Analysis" );
 
             _dbHelper!.Progress?.Report( 0 );
-            var seriesList = _dbHelper.GetLibraryItems<Series>().Cast<Series>().ToList();
+            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, _embyInterfaces?._libraryManager );
             _dbHelper!.Progress?.Report( 100 );
 
             double count = seriesList.Count;
@@ -241,10 +241,10 @@ namespace Statistics2026.Data
                            ("@ItemId", series.Id.ToString()),
                            ("@Name", series.Name),
                            ("@SortName", series.SortName),
-                           ("@PremiereDate", _dbHelper.ToDateTimeParamValue( series.PremiereDate.HasValue ? series.PremiereDate.Value.DateTime : null )),
+                           ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( series.PremiereDate.HasValue ? series.PremiereDate.Value.DateTime : null )),
                            ("@NumEpisodes", numEpisodes),
                            ("@NumSpecials", numSpecials),
-                           ("@DateAdded", _dbHelper.ToDateTimeParamValue( series.DateCreated.DateTime )),
+                           ("@DateAdded", HelperFuncs.ToDateTimeParamValue( series.DateCreated.DateTime )),
                            ("@ImageUrl", ItemImageUrl._ItemImageUrl(series)),
                            ("@FileSize", totalFileSize),
                            ("@RunTimeTicks", totalRuntime),

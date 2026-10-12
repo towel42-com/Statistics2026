@@ -1,0 +1,356 @@
+﻿using MediaBrowser.Controller.Dto;
+using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
+using ServiceStack;
+using SQLitePCL.pretty;
+using Statistics2026.Data;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Runtime.Serialization;
+using System.Threading;
+using static Statistics2026.Data.StatisticsDB;
+
+namespace Statistics2026.Utilities
+{
+    public static class EmbyHelperFuncs
+    {
+        public static List<T> GetLibraryItems<T>( User? user, ILibraryManager? libManager, bool getImages = true )
+        {
+            if( libManager == null )
+                return [];
+
+            var query = new InternalItemsQuery( user )
+            {
+                IncludeItemTypes = new[] { typeof( T ).Name },
+                Recursive = true,
+                IsVirtualItem = false
+            };
+            if( getImages )
+            {
+                query.DtoOptions = new DtoOptions( true )
+                {
+                    ImageTypes = new[] { ImageType.Thumb, ImageType.Thumbnail },
+                    EnableImages = true
+                };
+            }
+
+
+            return libManager.GetItemList( query ).OfType<T>().Cast<T>().ToList();
+        }
+
+        public static List<Video>? GetAllEpisodesAndMovies( User? user, ILibraryManager? libManager )
+        {
+            if( libManager == null )
+                return null;
+
+            List<Video> retVal = [];
+
+            retVal.Concat( GetLibraryItems<Episode>( user, libManager ).Cast<Video>() );
+            retVal.Concat( GetLibraryItems<Movie>( user, libManager ).Cast<Video>() );
+
+            return retVal;
+        }
+
+        public static (List<Video>? forUser, List<Video>? forAll) GetAllEpisodesAndMovies( User? user, ILibraryManager? libManager, bool computeForNonUsers )
+        {
+            if( libManager == null )
+                return (null, null);
+
+            List<Video>? forUser = ( user != null ) ? GetAllEpisodesAndMovies( user, libManager ) : null;
+            List<Video>? all = computeForNonUsers ? GetAllEpisodesAndMovies( null, libManager ) : null;
+
+            return (forUser, all);
+        }
+
+        public static List<BoxSet> GetAllBoxSets( User user, ILibraryManager libManager )
+        {
+            var boxSets = GetLibraryItems<BoxSet>( user, libManager );
+            return boxSets;
+        }
+
+        public static Season? GetSeasonFromSeries( Series series, int seasonNum )
+        {
+            var result = series.GetItems( new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { nameof( Season ) },
+                Recursive = true
+            } );
+
+            var seasons = result.Items.Cast<Season>().ToList();
+            foreach( var season in seasons )
+            {
+                if( season.IndexNumber == seasonNum )
+                    return season;
+            }
+
+            return null;
+        }
+
+        public static Movie? GetMovieByTmdbId( ILibraryManager? libraryManager, string tmdbId )
+        {
+            if( libraryManager == null )
+                return null;
+
+            var query = new InternalItemsQuery
+            {
+                // Target only Movie types to ensure accuracy
+                IncludeItemTypes = new[] { typeof( Movie ).Name },
+                // Look up by the formatted provider string
+                AnyProviderIdEquals = new[]
+                {
+                    new KeyValuePair<string, string>("Tmdb", tmdbId)
+                },
+                // Search across all libraries recursively
+                Recursive = true
+            };
+
+            // Execute query and grab the first match
+            var result = libraryManager.GetItemList( query );
+            if( result == null )
+                return null;
+
+            return result.FirstOrDefault() as Movie;
+        }
+
+        public static Episode? GetEpisodeFromTmdbId( ILibraryManager? libraryManager, Season embySeason, string tmdbId, int episodeNum )
+        {
+            if( ( libraryManager == null ) || ( embySeason == null ) )
+                return null;
+
+            var query = new InternalItemsQuery
+            {
+                Parent = embySeason,
+                // Target only Movie types to ensure accuracy
+                IncludeItemTypes = new[] { typeof( Episode ).Name },
+                // Look up by the formatted provider string
+                AnyProviderIdEquals = new[]
+                {
+                    new KeyValuePair<string, string>("Tmdb", tmdbId)
+                },
+                // Search across all libraries recursively
+                Recursive = true
+            };
+
+            // Execute query and grab the first match
+            var result = libraryManager.GetItemList( query );
+            if( result != null && result.Count() != 0 )
+            {
+                var episode = result.FirstOrDefault() as Episode;
+                if( episode != null )
+                    return episode;
+            }
+
+            var queryResult = embySeason.GetItems( new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { nameof( Episode ) },
+                Recursive = true
+            } );
+
+            // Extract the episode numbers
+            var retVal = queryResult.Items
+                .Cast<Episode>()
+                .FirstOrDefault( ep =>
+                ep.IndexNumber == episodeNum ||
+                ( ep.IndexNumberEnd != null && ( ep.IndexNumber <= episodeNum ) && ( ep.IndexNumberEnd >= episodeNum ) ) )
+                ;
+
+            return retVal;
+        }
+
+        public static BaseItem? GetLastMovieOrEpisodeAdded( EmbyInterfaces? embyInterfaces, EWhichMediaList whichMedia = EWhichMediaList.eMovies | EWhichMediaList.eEpisodes )
+        {
+            if( embyInterfaces == null || embyInterfaces._libraryManager == null )
+                return null;
+
+            List<string> itemTypes = [];
+            if( ( ( whichMedia & EWhichMediaList.eMovies ) != 0 ) )
+            {
+                itemTypes.Add( "Movie" );
+            }
+            if( ( ( whichMedia & EWhichMediaList.eEpisodes ) != 0 ) )
+            {
+                itemTypes.Add( "Episode" );
+            }
+
+            var limit = 10;
+            while( true )
+            {
+                var query = new InternalItemsQuery
+                {
+                    IsFolder = false,
+                    OrderBy = new[] { new ValueTuple<string, SortOrder>( ItemSortBy.DateCreated, SortOrder.Descending ) },
+                    IsVirtualItem = false,
+                    IncludeItemTypes = itemTypes.ToArray(),
+                    Recursive = true,
+                    Limit = limit
+                };
+
+                var items = embyInterfaces._libraryManager.GetItemList( query );
+                foreach( var item in items )
+                {
+                    if( item.DateCreated.DateTime == DateTime.MinValue )
+                        continue;
+                    return item;
+                }
+                // no valid dates found double the limit;
+                if( items.Count() < limit )
+                    break;
+                limit *= 2;
+            }
+            return null;
+        }
+
+        public static BaseItem? GetLastMovieAdded( EmbyInterfaces? embyInterfaces )
+        {
+            return GetLastMovieOrEpisodeAdded( embyInterfaces, EWhichMediaList.eMovies );
+        }
+
+        public static BaseItem? GetLastEpisodeAdded( EmbyInterfaces? embyInterfaces )
+        {
+            return GetLastMovieOrEpisodeAdded( embyInterfaces, EWhichMediaList.eEpisodes );
+        }
+
+        public static User? GetLastAddedUser( EmbyInterfaces? embyInterfaces )
+        {
+            if( embyInterfaces == null || embyInterfaces._userManager == null )
+                return null;
+
+            var query = new UserQuery
+            {
+                // You can optionally add filters here, such as:
+                // IsDisabled = false,
+                // IsHidden = false
+            };
+
+            var queryResult = embyInterfaces._userManager.GetUserList( query ) ?? null;
+            if( queryResult != null )
+            {
+                // 3. Find the newest user by sorting their creation date
+                var users = queryResult
+                    .OrderByDescending( u => u.DateCreated );
+
+                foreach( var user in users )
+                {
+                    if( user == null )
+                        continue;
+
+                    if( user.DateCreated.DateTime == DateTime.MinValue )
+                        continue;
+
+                    return user;
+                }
+            }
+            return null;
+        }
+
+
+        public static void UpdateLastAdded( EmbyInterfaces? embyInterfaces, StatisticsDB db )
+        {
+            var lastMediaAdded = EmbyHelperFuncs.GetLastMovieOrEpisodeAdded( embyInterfaces );
+            DateTime? lastAdded = null;
+            if( lastMediaAdded != null && lastMediaAdded!.DateCreated != DateTime.MinValue )
+            {
+                lastAdded = lastMediaAdded!.DateCreated.DateTime;
+            }
+            var lastUserAdded = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
+            if( lastUserAdded != null && lastUserAdded!.DateCreated != DateTime.MinValue )
+            {
+                if( lastAdded == null )
+                    lastAdded = lastUserAdded!.DateCreated.DateTime;
+                else if( lastAdded < lastUserAdded!.DateCreated.DateTime )
+                    lastAdded = lastUserAdded!.DateCreated.DateTime;
+            }
+            if( lastAdded != null && lastAdded != DateTime.MinValue )
+            {
+                db.UpdateLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded, 0, lastAdded.Value );
+            }
+        }
+
+        public static BaseItem? getLatestItem( BaseItem? lhs, BaseItem? rhs )
+        {
+            if( rhs == null || ( rhs.DateCreated == null ) )
+            {
+                return lhs;
+            }
+            if( lhs == null || ( lhs.DateCreated == null ) )
+            {
+                return rhs;
+            }
+
+            if( lhs.DateCreated!.DateTime >= rhs.DateCreated!.DateTime )
+                return lhs;
+            return rhs;
+        }
+
+        public static BaseItem? getLastItemOfConsequenceAdded( EmbyInterfaces? embyInterfaces )
+        {
+            BaseItem? latestItem = null;
+
+            // all items analyzed are tied to new episodes, movies or users
+
+            var lastMovieAddedToServer = EmbyHelperFuncs.GetLastMovieAdded( embyInterfaces );
+            if( lastMovieAddedToServer != null && lastMovieAddedToServer!.DateCreated != DateTime.MinValue )
+            {
+                embyInterfaces?._logger?.Info( $"Last Movie added: {lastMovieAddedToServer.Name} on {lastMovieAddedToServer!.DateCreated}" );
+                latestItem = getLatestItem( latestItem, lastMovieAddedToServer );
+            }
+
+            var lastEpisodeAddedToServer = EmbyHelperFuncs.GetLastEpisodeAdded( embyInterfaces );
+            if( lastEpisodeAddedToServer != null && lastEpisodeAddedToServer!.DateCreated != DateTime.MinValue )
+            {
+                embyInterfaces?._logger?.Info( $"Last video added: {lastEpisodeAddedToServer.Name} on {lastEpisodeAddedToServer!.DateCreated}" );
+                latestItem = getLatestItem( latestItem, lastEpisodeAddedToServer );
+            }
+
+            var lastUserAddedToServer = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
+            if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTime.MinValue )
+            {
+                embyInterfaces?._logger?.Info( $"Last user added: {lastUserAddedToServer.Name} on {lastUserAddedToServer!.DateCreated}" );
+                latestItem = getLatestItem( latestItem, lastUserAddedToServer );
+            }
+
+            return latestItem;
+        }
+
+        public static bool AnalysisOutOfDate( EmbyInterfaces? embyInterfaces, StatisticsDB db )
+        {
+            if( embyInterfaces == null || embyInterfaces._logger == null )
+                return false;
+
+            bool needToRun = false;
+
+            var lastAnalysisAdded = db.GetLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded );
+            if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTime.MinValue )
+            {
+                needToRun = true;
+            }
+            else
+            {
+                embyInterfaces._logger?.Info( $"Last Analysis run: {lastAnalysisAdded}" );
+            }
+
+            if( !needToRun )
+            {
+                var latestItem = getLastItemOfConsequenceAdded( embyInterfaces );
+                //if ( latestItem != null && lastestItem.)
+                //if( latestDate != null )
+                //    needToRun = lastAnalysisAdded < latestDate;
+            }
+
+            if( !needToRun )
+            {
+                embyInterfaces._logger?.Info( "No media or users have been added since last run, not re-running Statistics Analysis" );
+            }
+            return needToRun;
+        }
+
+    }
+}
