@@ -117,11 +117,13 @@ namespace Statistics2026.ScheduledTasks
                 var lastMediaAddedToServer = db.GetLastMovieOrEpisodeAdded();
                 if( lastMediaAddedToServer != null && lastMediaAddedToServer!.DateCreated != DateTime.MinValue )
                 {
+                    logger?.Info( $"Last video added: {lastMediaAddedToServer.Name} on {lastMediaAddedToServer!.DateCreated}" );
                     datesOfItemsAdded.Add( lastMediaAddedToServer.DateCreated.DateTime );
                 }
                 var lastUserAddedToServer = db.GetLastAddedUser();
                 if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTime.MinValue )
                 {
+                    logger?.Info( $"Last user added: {lastUserAddedToServer.Name} on {lastUserAddedToServer!.DateCreated}" );
                     datesOfItemsAdded.Add( lastUserAddedToServer!.DateCreated.DateTime );
                 }
 
@@ -142,7 +144,7 @@ namespace Statistics2026.ScheduledTasks
 
             if( !needToRun && logger != null)
             {
-                logger.Info( "No media has been added since last run, not re-running Statistics Analysis" );
+                logger.Info( "No media or users have been added since last run, not re-running Statistics Analysis" );
             }
             return needToRun;
         }
