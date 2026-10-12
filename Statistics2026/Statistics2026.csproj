@@ -6,7 +6,7 @@
 		<FileVersion>1.0.0.8</FileVersion>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
-		<NoWarn>$(NoWarn);SYSLIB1030;CS0436</NoWarn>
+		<NoWarn>$(NoWarn);SYSLIB1030;CS0436;CS0618</NoWarn>
 		<TmdbApiKeyV3 Condition="'$(TmdbApiKeyV3)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV3>
 		<TmdbApiKeyV4 Condition="'$(TmdbApiKeyV4)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV4>
 	</PropertyGroup>
