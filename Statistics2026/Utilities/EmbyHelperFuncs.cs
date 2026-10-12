@@ -208,14 +208,14 @@ namespace Statistics2026.Utilities
             return null;
         }
 
-        public static BaseItem? GetLastMovieAdded( EmbyInterfaces? embyInterfaces )
+        public static Video? GetLastMovieAdded( EmbyInterfaces? embyInterfaces )
         {
-            return GetLastMovieOrEpisodeAdded( embyInterfaces, EWhichMediaList.eMovies );
+            return (Video?)GetLastMovieOrEpisodeAdded( embyInterfaces, EWhichMediaList.eMovies );
         }
 
-        public static BaseItem? GetLastEpisodeAdded( EmbyInterfaces? embyInterfaces )
+        public static Video? GetLastEpisodeAdded( EmbyInterfaces? embyInterfaces )
         {
-            return GetLastMovieOrEpisodeAdded( embyInterfaces, EWhichMediaList.eEpisodes );
+            return (Video?)GetLastMovieOrEpisodeAdded( embyInterfaces, EWhichMediaList.eEpisodes );
         }
 
         public static User? GetLastAddedUser( EmbyInterfaces? embyInterfaces )
@@ -299,14 +299,14 @@ namespace Statistics2026.Utilities
             var lastMovieAddedToServer = EmbyHelperFuncs.GetLastMovieAdded( embyInterfaces );
             if( lastMovieAddedToServer != null && lastMovieAddedToServer!.DateCreated != DateTime.MinValue )
             {
-                embyInterfaces?._logger?.Info( $"Last Movie added: {lastMovieAddedToServer.Name} on {lastMovieAddedToServer!.DateCreated}" );
+                embyInterfaces?._logger?.Info( $"Last Movie added: {MediaInfo.GetDisplayName( lastMovieAddedToServer ) } on {lastMovieAddedToServer!.DateCreated}" );
                 latestItem = getLatestItem( latestItem, lastMovieAddedToServer );
             }
 
             var lastEpisodeAddedToServer = EmbyHelperFuncs.GetLastEpisodeAdded( embyInterfaces );
             if( lastEpisodeAddedToServer != null && lastEpisodeAddedToServer!.DateCreated != DateTime.MinValue )
             {
-                embyInterfaces?._logger?.Info( $"Last video added: {lastEpisodeAddedToServer.Name} on {lastEpisodeAddedToServer!.DateCreated}" );
+                embyInterfaces?._logger?.Info( $"Last Episode added: {MediaInfo.GetDisplayName( lastEpisodeAddedToServer )} on {lastEpisodeAddedToServer!.DateCreated}" );
                 latestItem = getLatestItem( latestItem, lastEpisodeAddedToServer );
             }
 
@@ -330,6 +330,7 @@ namespace Statistics2026.Utilities
             var lastAnalysisAdded = db.GetLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded );
             if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTime.MinValue )
             {
+                embyInterfaces._logger?.Info( "Analysis has not been run yet, running Statistics Analysis" );
                 needToRun = true;
             }
             else
