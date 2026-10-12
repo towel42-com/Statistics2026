@@ -157,7 +157,8 @@ namespace Statistics2026.ScheduledTasks
         {
             if( Plugin.Instance != null && Plugin.Instance.IsStatistics2026TaskRunning( sender.GetType() ) )
             {
-                throw new Exception( "Statistics 2026 task is running" );
+                embyInterfaces?._logger?.Info( "Analysis is currently running" );
+                return;
             }
             if( PluginConfiguration == null )
                 throw new ArgumentNullException( nameof( PluginConfiguration ) );
