@@ -425,7 +425,7 @@ namespace Statistics2026.Data
             for( var ii = 0; ii < cmds.Count(); ++ii )
             {
                 var cmd = new SQLCmdDef( cmds[ ii ] );
-                cmd.Replace( "{sUserMediaTablePrefix}<USER_ID>", userTableName );
+                cmd.Replace( $"{sUserMediaTablePrefix}<USER_ID>", userTableName );
                 sqlCmds.Add( cmd );
             }
 

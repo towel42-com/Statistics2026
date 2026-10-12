@@ -162,7 +162,7 @@ namespace Statistics2026.Data
                 ){ DeprecatedTable = true },
             ];
 
-            _userMediaTemplate = new TableDef( $"{sUserMediaTablePrefix}< USER_ID>",
+            _userMediaTemplate = new TableDef( $"{sUserMediaTablePrefix}<USER_ID>",
                     [
                         new TableColDef( "UserId", "TEXT", false ), // user
                         new TableColDef( "ItemId", "TEXT", false, true ), // video item
