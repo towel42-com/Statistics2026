@@ -79,12 +79,13 @@ namespace Statistics2026.ScheduledTasks
             if( !EmbyHelperFuncs.AnalysisOutOfDate( _embyInterfaces, db ) )
                 return;
 
-            var taskToRun = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskToRun => taskToRun.ScheduledTask.GetType() == typeof( RunAllTasksTask ) );
-            if( taskToRun == null )
+            var taskWorkerToRun = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskWorkerToRun => taskWorkerToRun.ScheduledTask.GetType() == typeof( RunAllTasksTask ) );
+            if( taskWorkerToRun == null || taskWorkerToRun.ScheduledTask == null )
                 throw new Exception( $"RunAllTasksTask not found Run" );
+            var scheduledTask = taskWorkerToRun.ScheduledTask;
+
             var options = new TaskOptions() { HasManualInteraction = false };
-            var taskRunner = _embyInterfaces._taskManager.Execute( taskToRun, options ).ConfigureAwait( false );
-            return;
+            _embyInterfaces._taskManager.QueueScheduledTask( scheduledTask, options );
         }
     }
 }
