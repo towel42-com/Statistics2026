@@ -313,7 +313,7 @@ namespace Statistics2026.Utilities
             var lastUserAddedToServer = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
             if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
-                embyInterfaces?._logger?.Info( $"Last user added: {lastUserAddedToServer.Name} on {lastUserAddedToServer!.DateCreated}" );
+                embyInterfaces?._logger?.Info( $"Last User added: {lastUserAddedToServer.Name} on {lastUserAddedToServer!.DateCreated}" );
                 latestItem = getLatestItem( latestItem, lastUserAddedToServer );
             }
 

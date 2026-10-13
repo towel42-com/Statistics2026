@@ -409,6 +409,10 @@ namespace Statistics2026.Data
                     {
                         curr.PremiereDate = "Today" + " " + curr.PremiereDate;
                     }
+                    else if( premiereDate.LocalDateTime.Date == DateTimeOffset.Now.Date.AddDays( -1 ) )
+                    {
+                        curr.PremiereDate = "Yesterday" + " " + curr.PremiereDate;
+                    }
 
                     var searchUrl = Plugin.Instance!.Configuration.searchLocation;
                     if( !searchUrl.EndsWith( "?q=" ) )
