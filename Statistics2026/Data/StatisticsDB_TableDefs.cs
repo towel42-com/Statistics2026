@@ -69,6 +69,8 @@ namespace Statistics2026.Data
                         new TableColDef( "PremiereDate", "DATETIME", true ),
                         new TableColDef( "NumEpisodes", "INT", true ),
                         new TableColDef( "NumSpecials", "INT", true ),
+                        new TableColDef( "NumSeasons", "INT", true ),
+                        new TableColDef( "HasSpecials", "BOOLEAN", true ),
                         new TableColDef( "DateAdded", "DATETIME", true ),
                         new TableColDef( "ImageUrl", "TEXT", true ),
                         new TableColDef( "FileSize", "INT", true),
