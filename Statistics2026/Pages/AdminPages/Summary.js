@@ -20,7 +20,7 @@
                 view.querySelector(`#debugInfo`).style.display = 'none';
                 view.querySelector(`#playedUserMedia`).style.display = 'none';
                 view.querySelector(`#userWatchMediaIssues`).style.display = 'none';
-                view.querySelector(`#movieStats_multiCollectionMovies`).style.display = 'none'; 
+                view.querySelector(`#multiCollectionMovies`).style.display = 'none'; 
                 return;
             }
 
@@ -49,10 +49,10 @@
             view.querySelector(`#userWatchMediaIssues`).style.display = '';
             view.querySelector("#userWatchMediaIssues").innerHTML = (userWatchMediaIssues);
 
-            var movieStats_multiCollectionMovies = "";
-            movieStats_multiCollectionMovies += Helpers.getSummaryInfo(view, "multi_collection_movies", "", "");
+            var multiCollectionMovies = "";
+            multiCollectionMovies += Helpers.getSummaryInfo(view, "multi_collection_movies", "", "");
             view.querySelector(`#multiCollectionMovies`).style.display = '';
-            view.querySelector("#multiCollectionMovies").innerHTML = movieStats_multiCollectionMovies;
+            view.querySelector("#multiCollectionMovies").innerHTML = multiCollectionMovies;
         }
 
         function loadStats(view) {

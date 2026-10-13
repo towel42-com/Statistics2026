@@ -21,7 +21,18 @@
                 view.querySelector("#resetDBState").checked = config.resetDBState;
                 view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
                 view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
+
+                const savedFilters = config.SeriesNamesToIgnoreFromMissingEpisodes || [];
+                view.querySelector("#seriesFilterList").value = savedFilters.join('\n');
             });
+        }
+
+        function debounce(func, delay) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
         }
 
         return function (view, params) {
@@ -31,6 +42,53 @@
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Settings", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
+            });
+
+            function saveConfigData() {
+                // Visual indicator: show subtle amber text during network request
+                const autosaveStatus = view.querySelector('#autosaveStatus');
+                autosaveStatus.textContent = "Saving...";
+                autosaveStatus.style.color = "#ffb703";
+                autosaveStatus.style.opacity = "1";
+
+                const textarea = view.querySelector('#seriesFilterList');
+
+                const linesToSave = textarea.value
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                    config.SeriesNamesToIgnoreFromMissingEpisodes = linesToSave;
+
+                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config).then(function (result) {
+                        // Visual indicator: show green confirmation text
+                        autosaveStatus.textContent = "Saved";
+                        autosaveStatus.style.color = "#52b788";
+
+                        // Fade the "Saved" text away after 2 seconds
+                        setTimeout(() => {
+                            autosaveStatus.style.opacity = "0";
+                        }, 2000);
+
+                        Dashboard.processPluginConfigurationUpdateResult(result);
+                    });
+                });
+            }
+
+            const debouncedSave = debounce(saveConfigData, 1000);
+
+            view.querySelector('#seriesFilterList').addEventListener('input', function () {
+                const autosaveStatus = view.querySelector('#autosaveStatus');
+                autosaveStatus.textContent = "Unsaved Changes...";
+                autosaveStatus.style.color = "#e63946";
+                autosaveStatus.style.opacity = "1";
+
+                debouncedSave();
+            });
+
+            view.querySelector('#seriesFilterList').addEventListener('blur', function () {
+                saveConfigData();
             });
 
             view.addEventListener('viewhide', function (e) {
