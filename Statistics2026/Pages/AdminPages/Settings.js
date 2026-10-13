@@ -22,8 +22,8 @@
                 view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
                 view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
 
-                const savedFilters = config.SeriesNamesToIgnoreFromMissingEpisodes || [];
-                view.querySelector("#seriesFilterList").value = savedFilters.join('\n');
+                const savedFilters = config.CollectionNamesToIgnoreFromMissingEpisodes || [];
+                view.querySelector("#collectionFilterList").value = savedFilters.join('\n');
             });
         }
 
@@ -46,29 +46,29 @@
 
             function saveConfigData() {
                 // Visual indicator: show subtle amber text during network request
-                const autosaveStatus = view.querySelector('#autosaveStatus');
-                autosaveStatus.textContent = "Saving...";
-                autosaveStatus.style.color = "#ffb703";
-                autosaveStatus.style.opacity = "1";
+                const collectionAutosaveStatus = view.querySelector('#collectionAutosaveStatus');
+                collectionAutosaveStatus.textContent = "Saving...";
+                collectionAutosaveStatus.style.color = "#ffb703";
+                collectionAutosaveStatus.style.opacity = "1";
 
-                const textarea = view.querySelector('#seriesFilterList');
+                const filterList = view.querySelector('#collectionFilterList');
 
-                const linesToSave = textarea.value
+                const linesToSave = filterList.value
                     .split('\n')
                     .map(line => line.trim())
                     .filter(line => line.length > 0);
 
                 ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                    config.SeriesNamesToIgnoreFromMissingEpisodes = linesToSave;
+                    config.CollectionNamesToIgnoreFromMissingEpisodes = linesToSave;
 
                     ApiClient.updatePluginConfiguration(Helpers.pluginId, config).then(function (result) {
                         // Visual indicator: show green confirmation text
-                        autosaveStatus.textContent = "Saved";
-                        autosaveStatus.style.color = "#52b788";
+                        collectionAutosaveStatus.textContent = "Saved";
+                        collectionAutosaveStatus.style.color = "#52b788";
 
                         // Fade the "Saved" text away after 2 seconds
                         setTimeout(() => {
-                            autosaveStatus.style.opacity = "0";
+                            collectionAutosaveStatus.style.opacity = "0";
                         }, 2000);
 
                         Dashboard.processPluginConfigurationUpdateResult(result);
@@ -78,16 +78,16 @@
 
             const debouncedSave = debounce(saveConfigData, 1000);
 
-            view.querySelector('#seriesFilterList').addEventListener('input', function () {
-                const autosaveStatus = view.querySelector('#autosaveStatus');
-                autosaveStatus.textContent = "Unsaved Changes...";
-                autosaveStatus.style.color = "#e63946";
-                autosaveStatus.style.opacity = "1";
+            view.querySelector('#collectionFilterList').addEventListener('input', function () {
+                const collectionAutosaveStatus = view.querySelector('#collectionAutosaveStatus');
+                collectionAutosaveStatus.textContent = "Unsaved Changes...";
+                collectionAutosaveStatus.style.color = "#e63946";
+                collectionAutosaveStatus.style.opacity = "1";
 
                 debouncedSave();
             });
 
-            view.querySelector('#seriesFilterList').addEventListener('blur', function () {
+            view.querySelector('#collectionFilterList').addEventListener('blur', function () {
                 saveConfigData();
             });
 

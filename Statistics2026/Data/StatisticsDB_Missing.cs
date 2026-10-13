@@ -142,7 +142,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                sql += ", ''";
+                sql += ", Collections.Name";
             }
 
             sql +=
@@ -159,7 +159,10 @@ namespace Statistics2026.Data
                 sql += " WHERE Missing.IsEpisode ";
             }
             else
+            {
+                sql += " LEFT JOIN Collections ON Collections.ItemId=Missing.ParentId ";
                 sql += " WHERE NOT Missing.IsEpisode ";
+            }
 
             sql += " ORDER BY ListDisplayName ASC";
             if( episodes )

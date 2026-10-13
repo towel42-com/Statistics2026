@@ -15,8 +15,8 @@ namespace Statistics2026.Configuration
     {
         public bool Enabled { get; set; } = true;
         public string SeriesName { get; set; } = string.Empty;
-        public int PremiereYear { get; set} = 0;
-        public int IncludeSpecials { get; set; } = false;
+        public int PremiereYear { get; set; } = 0;
+        public bool IncludeSpecials { get; set; } = false;
         public int? MinSeason { get; set; } = null;
         public int? MaxSeason { get; set; } = null;
     }
