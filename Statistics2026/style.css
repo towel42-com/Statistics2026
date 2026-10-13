@@ -201,7 +201,31 @@ img {
     font-weight: 500;
     width: 100%;
     transition: background-color 0.15s ease, opacity 0.15s ease;
-    /* Optional Interaction Modifier Engine */
+    /* 🚀 UPDATED: Target the parent li directly and force it to left-align */
+    li & {
+        text-align: left !important;
+
+        div.statCard-stats-number,
+        div.statCard-stats-numbersep {
+            text-align: left !important;
+        }
+    }
+}
+
+/* 🚀 NEW RULE: Force the list items containing your classes to left-align */
+li:has(.statCard-stats-number),
+li:has(.statCard-stats-numbersep) {
+    display: list-item !important;
+    text-align: left !important;
+
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    justify-self: start !important;
+}
+
+/* Rest of your existing modifier logic... */
+.statCard-stats-number,
+.statCard-stats-numbersep {
     &.is-clickable {
         cursor: pointer;
 
@@ -225,11 +249,13 @@ img {
     }
     /* Rule B: Fallback to exact center layout if there are no trailing list item siblings */
     &:not(:has(table)):not(:has(> div:nth-child(2))) {
-        text-align: center !important;
-
-        div.statCard-stats-number,
-        div.statCard-stats-numbersep {
+        :not(li) > & {
             text-align: center !important;
+
+            div.statCard-stats-number,
+            div.statCard-stats-numbersep {
+                text-align: center !important;
+            }
         }
     }
 }
@@ -291,7 +317,6 @@ td.statCard-stats-numbersep:empty {
         font-size: 1rem;
     }
 }
-
 /* ==========================================================================
    7. State Metrics (Context Colors)
    ========================================================================== */
@@ -305,7 +330,6 @@ td.statCard-stats-numbersep:empty {
     background-color: #5B990D; /* Was green */
     color: #FFFFFF;
 }
-
 /* --- Yellow Pair --- */
 .progress-yellow {
     background-color: #FFEA3D; /* Was brightYellow */
@@ -316,7 +340,6 @@ td.statCard-stats-numbersep:empty {
     background-color: #D6BC11; /* Was yellow */
     color: #111111;
 }
-
 /* --- Orange Pair --- */
 .progress-orange {
     background-color: #F2A70D;
@@ -326,7 +349,6 @@ td.statCard-stats-numbersep:empty {
 .progress-darkOrange {
     background-color: #B84D00;
 }
-
 /* --- Red Pair --- */
 .progress-red {
     background-color: #B11A10;
@@ -337,7 +359,6 @@ td.statCard-stats-numbersep:empty {
     background-color: #4A0402;
     color: #FFFFFF;
 }
-
 /* --- Blue Pair --- */
 .progress-blue {
     background-color: #1F6AA5;
