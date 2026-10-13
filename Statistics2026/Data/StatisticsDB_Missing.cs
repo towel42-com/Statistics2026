@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -60,46 +61,32 @@ namespace Statistics2026.Data
                 ", EpisodeNum=@EpisodeNum"
                 ;
 
-        public async Task AnalyzeMissingMoviesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
+        private bool IsFilteredParent( string parentName, bool episodes )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            if( Plugin.Instance == null )
+                return false;
 
-            _embyInterfaces!._logger?.Debug( $"Starting Analysis" );
-            progress.Report( 0 );
-            var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, _embyInterfaces?._libraryManager );
-            collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
+            if( Plugin.Instance.Configuration == null )
+                return false;
 
-            progress.Report( 100 );
+            if( parentName.IsNullOrEmpty() )
+                return false;
 
-            var reader = new TmdbCollectionReader( _embyInterfaces, cancellationToken );
+            var regexes = episodes ? Plugin.Instance.Configuration.SeriesNamesToIgnoreFromMissingEpisodes : Plugin.Instance.Configuration.CollectionNamesToIgnoreFromMissingEpisodes;
 
-            double count = collections.Count();
-            var curr = 0.0;
-
-            progress.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>
+            foreach( var regexPattern in regexes )
             {
-                new( "DELETE FROM Missing WHERE NOT IsEpisode" )
-            };
+                var regex = new Regex( regexPattern, RegexOptions.IgnoreCase );
 
-            foreach( var collection in collections )
-            {
-                progress.Report( 80.0 * ( ++curr ) / count );
-                var cmds = await AnalyzeMissingMoviesInCollection( reader, collection, cancellationToken, progress ).ConfigureAwait( false );
-                sqlCmds.AddRange( cmds );
-                cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!._logger?.Debug( $"    Processed Collection ({curr} of {count}) - {collection.Name} items processed" );
+                if( regex.IsMatch( parentName ) )
+                {
+                    return true;
+                }
             }
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            progress.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            progress.Report( 100 );
-            _embyInterfaces!._logger?.Debug( $"Finished Analysis" );
+            return false;
         }
 
-        private bool InvalidDate( DateTimeOffset? dto, bool ignoreConfig = false )
+        private bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
         {
             if( dto == null )
                 return true;
@@ -113,157 +100,6 @@ namespace Statistics2026.Data
                 return true;
 
             return false;
-        }
-
-        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollection( TmdbCollectionReader reader, BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
-        {
-            _embyInterfaces!._logger?.Info( $"    Analyzing Collection '{collection.Name}' - checking for missing movies" );
-
-            var collectionTmbdId = collection.GetProviderId( MetadataProviders.Tmdb );
-            if( string.IsNullOrEmpty( collectionTmbdId ) )
-                return [];
-
-            var tmdbCollection = await reader.GetRemoteCollectionMembersAsyncViaCustom( collectionTmbdId, cancellationToken ).ConfigureAwait( false );
-            if( tmdbCollection == null )
-            {
-                _embyInterfaces._logger!.Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
-                return [];
-            }
-
-            List<SQLCmdDef> retVal = [];
-            foreach( var tmdbMovie in tmdbCollection.Movies )
-            {
-                if( InvalidDate( tmdbMovie.ReleaseDate() ) )
-                    continue;
-
-                var movieTmdbId = tmdbMovie.Id;
-                _embyInterfaces!._logger?.Debug( $"        Checking for movie {tmdbMovie.Title} for {collection.Name} on server" );
-                var embyMovie = EmbyHelperFuncs.GetMovieByTmdbId( _embyInterfaces._libraryManager, movieTmdbId );
-
-                if( embyMovie == null )
-                {
-                    _embyInterfaces!._logger?.Info( $"            {tmdbMovie.Title} is missing" );
-                    var key = $"{tmdbCollection.Id}-{tmdbMovie.Id}";
-                    retVal.Add( new SQLCmdDef( kSQLAddToMissing,
-                    [
-                        ("@Key", key ),
-                        ("@TmdbId", tmdbMovie.Id ),
-                        ("@Title", tmdbMovie.Title ),
-                        ("@OriginalTitle", tmdbMovie.OriginalTitle ),
-                        ("@ReleaseDate", HelperFuncs.ToDateTimeParamValue( tmdbMovie.ReleaseDate() ) ),
-                        ("@Overview", tmdbMovie.Overview ),
-                        ("@PosterPath", tmdbMovie.PosterPath ),
-                        ("@ParentId", collection.Id.ToString() ),
-                        ("@IsEpisode", false )
-                    ] ) );
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-
-            return retVal;
-        }
-
-        public async Task AnalyzeMissingEpisodesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
-        {
-            CheckIsValid( ECheckType.eUpdate );
-
-            _embyInterfaces!._logger?.Debug( $"Starting Analysis" );
-            progress.Report( 0 );
-            var allSeries = EmbyHelperFuncs.GetLibraryItems<Series>( null, _embyInterfaces?._libraryManager );
-            allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
-            progress.Report( 100 );
-
-            var reader = new TmdbCollectionReader( _embyInterfaces, cancellationToken );
-
-            double count = allSeries.Count();
-            var curr = 0.0;
-
-            progress.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>
-            {
-                new( "DELETE FROM Missing WHERE IsEpisode" )
-            };
-
-            foreach( var series in allSeries )
-            {
-                progress.Report( 80.0 * ( ++curr ) / count );
-                var cmds = await AnalyzeMissingEpisodes( reader, series, cancellationToken, progress );
-                sqlCmds.AddRange( cmds );
-                cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!._logger?.Debug( $"    Processed Collection ({curr} of {count}) - {series.Name} items processed" );
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            progress.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            progress.Report( 100 );
-            _embyInterfaces!._logger?.Debug( $"Finished Analysis" );
-        }
-
-        private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodes( TmdbCollectionReader reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
-        {
-            _embyInterfaces!._logger?.Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
-
-            var seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
-            if( string.IsNullOrEmpty( seriesTmbdId ) )
-                return [];
-
-            var tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId, cancellationToken ).ConfigureAwait( false );
-            if( tmdbSeries == null )
-            {
-                _embyInterfaces._logger!.Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
-                return [];
-            }
-
-            List<SQLCmdDef> retVal = [];
-            foreach( var tmdbSeason in tmdbSeries.Seasons )
-            {
-                if( tmdbSeason.SeasonNumber == 0 && !Plugin.Instance!.Configuration.reportOnMissingSpecials )
-                    continue;
-
-                var embySeason = EmbyHelperFuncs.GetSeasonFromSeries( series, tmdbSeason.SeasonNumber );
-
-                foreach( var tmdbEpisode in tmdbSeason.Episodes )
-                {
-                    if( InvalidDate( tmdbEpisode.AirDate() ) )
-                        continue;
-
-                    var episodeTmdbId = tmdbEpisode.Id;
-                    var episodeIdent = $"S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2}";
-                    _embyInterfaces!._logger?.Debug( $"         Checking for episode {episodeIdent} for {series.Name} on server" );
-                    var embyEpisode = ( embySeason != null ) ? EmbyHelperFuncs.GetEpisodeFromTmdbId( _embyInterfaces._libraryManager, embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber ) : null;
-
-                    if( embyEpisode == null )
-                    {
-                        _embyInterfaces!._logger?.Info( $"             {series.Name} - {episodeIdent} is missing" );
-
-                        var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
-                        //return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";
-
-                        var title = $"{tmdbSeries.Name} - S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2} - {tmdbEpisode.Name}";
-                        retVal.Add( new SQLCmdDef( kSQLAddToMissing,
-                        [
-                            ("@Key", key ),
-                            ("@TmdbId", tmdbEpisode.Id ),
-                            ("@Title", title ),
-                            ("@OriginalTitle", string.Empty ),
-                            ("@ReleaseDate", HelperFuncs.ToDateTimeParamValue( tmdbEpisode.AirDate() ) ),
-                            ("@Overview", tmdbEpisode.Overview ),
-                            ("@PosterPath", tmdbEpisode.StillPath ),
-                            ("@ParentId", series.Id.ToString() ),
-                            ("@IsEpisode", true ),
-                            ("@SeasonNum", tmdbSeason.SeasonNumber ),
-                            ("@EpisodeNum", tmdbEpisode.EpisodeNumber )
-                        ] ) );
-                    }
-
-                    cancellationToken.ThrowIfCancellationRequested();
-                }
-            }
-
-            return retVal;
         }
 
         private StatCard TotalMissingMedia( bool episodes )
@@ -318,15 +154,14 @@ namespace Statistics2026.Data
                 "   Missing ";
 
             if( episodes )
+            {
                 sql += " LEFT JOIN Series ON Series.ItemId=Missing.ParentId ";
-
-            if( episodes )
                 sql += " WHERE Missing.IsEpisode ";
+            }
             else
                 sql += " WHERE NOT Missing.IsEpisode ";
 
             sql += " ORDER BY ListDisplayName ASC";
-
             if( episodes )
                 sql += ", Missing.SeasonNum ASC, Missing.EpisodeNum ASC ";
 
@@ -334,6 +169,9 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
+                if( IsFilteredParent( row.GetString( 2 ), episodes ) )
+                    return true;
+
                 var premiereDate = HelperFuncs.ReadDateTime( row.GetString( 1 ) ) ?? DateTimeOffset.MinValue;
                 var premiereYear = premiereDate == DateTimeOffset.MinValue ? 0 : premiereDate.Year;
 
@@ -347,6 +185,7 @@ namespace Statistics2026.Data
                 };
                 var col = 2;
                 curr.ParentName = new SortByText( row.GetString( col++ ), string.Empty );
+
                 var posterPath = row.GetString( col++ );
                 var seasonNum = row.GetInt( col++ );
                 var episodeNum = row.GetInt( col++ );
@@ -358,7 +197,7 @@ namespace Statistics2026.Data
                     curr.ParentName = collections ?? new();
                 }
 
-                var futureDate = InvalidDate( premiereDate, true );
+                var futureDate = InvalidDateForMissingAnalysis( premiereDate, true );
                 if( posterPath != null && !posterPath.StartsWith( "/" ) )
                 {
                     posterPath = "/" + posterPath;
