@@ -1,14 +1,19 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
+using RestSharp;
 using ServiceStack;
+using ServiceStack.Text;
 using Statistics2026.Api;
+using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices.ComTypes;
+using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -72,15 +77,18 @@ namespace Statistics2026.Data
             if( parentName.IsNullOrEmpty() )
                 return false;
 
-            var regexes = episodes ? Plugin.Instance.Configuration.SeriesNamesToIgnoreFromMissingEpisodes : Plugin.Instance.Configuration.CollectionNamesToIgnoreFromMissingEpisodes;
-
-            foreach( var regexPattern in regexes )
+            if( !episodes )
             {
-                var regex = new Regex( regexPattern, RegexOptions.IgnoreCase );
+                var regexes = Plugin.Instance.Configuration.CollectionFiltersForMissingMovies;
 
-                if( regex.IsMatch( parentName ) )
+                foreach( var regexPattern in regexes )
                 {
-                    return true;
+                    var regex = new Regex( regexPattern, RegexOptions.IgnoreCase );
+
+                    if( regex.IsMatch( parentName ) )
+                    {
+                        return true;
+                    }
                 }
             }
             return false;
@@ -289,6 +297,68 @@ namespace Statistics2026.Data
         public StatCard TotalMissingEpisodes()
         {
             return TotalMissingMedia( true );
+        }
+
+        public void UpdateSeriesFilter()
+        {
+            if( ( Plugin.Instance == null ) || ( Plugin.Instance.Configuration == null ) )
+                return;
+
+            CheckIsValid( ECheckType.eReport );
+
+            var config = Plugin.Instance!.Configuration;
+
+            var currFilterMap = config.SeriesFiltersForMissingEpisodes.ToDictionary( p => $"{p.SortName}_{p.PremiereYear}" );
+
+            var sql = "SELECT " +
+                "  Name" +
+                ", SortName" +
+                ", PremiereDate" +
+                ", NumSeasons" +
+                ", HasSpecials" +
+                " FROM Series";
+
+            var cmd = new SQLCmdDef( sql );
+            _dbHelper.ExecuteCommand( cmd, statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+                var name = row.GetString( col++ );
+                var sortName = row.GetString( col++ );
+                var premiereDate = HelperFuncs.ReadDateTime( row.GetString( col++ ) );
+                var numSeasons = row.GetInt( col++ );
+                var hasSpecials = row.GetBoolean( col++ );
+
+                var key = $"{sortName}";
+                var premiereYear = 0;
+                if( premiereDate != null )
+                {
+                    premiereYear = premiereDate.Value.LocalDateTime.Year;
+                    key += "_" + premiereYear.ToString();
+                }
+
+                if ( !currFilterMap.ContainsKey( key ))
+                {
+                    var newFilter = new SeriesFilter()
+                    {
+                        Enabled = true,
+                        Name = name,
+                        SortName = sortName,
+                        PremiereYear = premiereYear,
+                        IncludeSpecials = false,
+                        MinSeason = -1,
+                        MaxSeason = -1,
+                        NumSeasons = numSeasons,
+                        HasSpecials = hasSpecials
+                    };
+                    currFilterMap[ key ] = newFilter;
+                }
+                return true;
+            } );
+
+            config.SeriesFiltersForMissingEpisodes = currFilterMap.Values.ToList();
+
+            Plugin.Instance?.UpdateConfiguration( config );
         }
     }
 }
