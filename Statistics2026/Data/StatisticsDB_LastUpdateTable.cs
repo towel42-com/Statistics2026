@@ -20,13 +20,13 @@ namespace Statistics2026.Data
             LastMediaOrUserAdded
         }
 
-        public DateTime? GetLastUpdated( EAction action )
+        public DateTimeOffset? GetLastUpdated( EAction action )
         {
             var sql = "SELECT LastUpdated FROM \n" +
                 "LastUpdateTable \n" +
                 $"WHERE Action = '{action.ToString()}'\n"
                 ;
-            DateTime? lastUpdated = DateTime.MinValue;
+            DateTimeOffset? lastUpdated = DateTimeOffset.MinValue;
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
@@ -43,9 +43,9 @@ namespace Statistics2026.Data
             var lastUpdated = GetLastUpdated( action );
             const string notRun = "Not Run";
             var lastUpdateText = notRun;
-            if( lastUpdated != null && lastUpdated.HasValue && lastUpdated.Value != DateTime.MinValue )
+            if( lastUpdated != null && lastUpdated.HasValue && lastUpdated.Value != DateTimeOffset.MinValue )
             {
-                lastUpdateText = lastUpdated.Value.ToShortDateString() + " " + lastUpdated.Value.ToString( "HH:mm UTC" );
+                lastUpdateText = lastUpdated.Value.ToTZShortString( true );
             }
 
             var titleText = string.Empty;
@@ -121,10 +121,10 @@ namespace Statistics2026.Data
 
         public void UpdateLastUpdated( EAction action, long runtimeMS )
         {
-            UpdateLastUpdated( action, runtimeMS, DateTime.UtcNow );
+            UpdateLastUpdated( action, runtimeMS, DateTimeOffset.UtcNow );
         }
 
-        public void UpdateLastUpdated( EAction action, long runtimeMS, DateTime updateTime )
+        public void UpdateLastUpdated( EAction action, long runtimeMS, DateTimeOffset updateTime )
         {
             CheckIsValid( ECheckType.eUpdate );
 

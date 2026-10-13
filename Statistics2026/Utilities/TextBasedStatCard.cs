@@ -95,7 +95,7 @@ namespace Statistics2026.Utilities
             var retVal = string.Empty;
             if( !rootListType.IsNullOrEmpty() )
             {
-                retVal += StatCardResponse._addToHtml( --depth, $"<{rootListType}>" );
+                retVal += StatCardResponse._addToHtml( depth++, $"<{rootListType}>" );
             }
 
             for( var ii = 0; ii < ValueLines.Count; ++ii )

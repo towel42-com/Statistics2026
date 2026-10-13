@@ -6,18 +6,18 @@ namespace Statistics2026.Utilities
 {
     public static class BuildDateInfo
     {
-        public static DateTime GetBuildDate()
+        public static DateTimeOffset GetBuildDate()
         {
             var attribute = Assembly.GetExecutingAssembly()
                 .GetCustomAttributes<AssemblyMetadataAttribute>()
                 .FirstOrDefault( a => a.Key == "BuildDate" );
 
-            if( attribute != null && DateTime.TryParse( attribute.Value, out DateTime buildDate ) )
+            if( attribute != null && DateTimeOffset.TryParse( attribute.Value, out DateTimeOffset buildDate ) )
             {
                 return buildDate;
             }
 
-            return DateTime.MinValue;
+            return DateTimeOffset.MinValue;
         }
     }
 }

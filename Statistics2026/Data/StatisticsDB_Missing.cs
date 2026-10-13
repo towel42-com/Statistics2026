@@ -99,17 +99,17 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug( $"Finished Analysis" );
         }
 
-        private bool InvalidDate( DateTime? dt, bool ignoreConfig = false )
+        private bool InvalidDate( DateTimeOffset? dto, bool ignoreConfig = false )
         {
-            if( dt == null )
+            if( dto == null )
                 return true;
 
             var numDaysToAdd = ignoreConfig ? 0 : Plugin.Instance!.Configuration.numDaysFutureForMissing;
-            var maxDate = DateTime.Today.Date.AddDays( numDaysToAdd );
-            if( dt.Value.Date > maxDate )
+            var maxDate = DateTimeOffset.Now.Date.AddDays( numDaysToAdd );
+            if( dto.Value.Date > maxDate )
                 return true;
 
-            if( dt == DateTime.MinValue )
+            if( dto == DateTimeOffset.MinValue )
                 return true;
 
             return false;
@@ -334,13 +334,13 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                var premiereDate = HelperFuncs.ReadDateTime( row.GetString( 1 ) )?.Date ?? DateTime.MinValue;
-                var premiereYear = premiereDate == DateTime.MinValue ? 0 : premiereDate.Year;
+                var premiereDate = HelperFuncs.ReadDateTime( row.GetString( 1 ) ) ?? DateTimeOffset.MinValue;
+                var premiereYear = premiereDate == DateTimeOffset.MinValue ? 0 : premiereDate.Year;
 
                 var curr = new MediaItemResponse()
                 {
                     DisplayName = new SortByText( CleanSortName( row.GetString( 0 ) ), row.GetString( 0 ) ),
-                    PremiereDate = premiereDate.ToShortDateString() ?? string.Empty,
+                    PremiereDate = premiereDate.ToTZShortString( true, true ) ?? string.Empty,
                     ResolutionDetail = string.Empty,
                     Codec = string.Empty,
                     DolbyVisionProfile = string.Empty,
@@ -393,17 +393,27 @@ namespace Statistics2026.Data
                     curr.SearchLocation = new SortByText( WebUtility.HtmlEncode( "<FUTURE RELEASE>" ) );
                     if( premiereDate != null )
                     {
-                        var daysTo = ( premiereDate - DateTime.Today ).TotalDays;
-                        if( daysTo == 0 && premiereDate.Date != DateTime.Today.Date )
+                        var daysTo = Math.Ceiling( ( premiereDate - DateTimeOffset.Now ).TotalDays );
+                        if( daysTo == 0 && premiereDate.Date != DateTimeOffset.Now.Date )
                             daysTo = 1;
                         var msg = $"Available in {daysTo} day";
                         if( daysTo != 1 )
                             msg += "s";
                         curr.SearchLocation = new SortByText( msg );
+                        curr.PremiereDate = premiereDate.ToString( "dddd" ) + $" {curr.PremiereDate}";
                     }
                 }
                 else if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
                 {
+                    if( premiereDate.LocalDateTime.Date == DateTimeOffset.Now.Date )
+                    {
+                        curr.PremiereDate = "Today" + " " + curr.PremiereDate;
+                    }
+                    else if( premiereDate.LocalDateTime.Date == DateTimeOffset.Now.Date.AddDays( -1 ) )
+                    {
+                        curr.PremiereDate = "Yesterday" + " " + curr.PremiereDate;
+                    }
+
                     var searchUrl = Plugin.Instance!.Configuration.searchLocation;
                     if( !searchUrl.EndsWith( "?q=" ) )
                         searchUrl += "?q=";

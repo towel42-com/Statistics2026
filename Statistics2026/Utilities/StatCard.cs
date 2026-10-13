@@ -358,7 +358,7 @@ namespace Statistics2026.Utilities
 
         private int addData( int depth, ref StatCardResponse retVal )
         {
-            var tableInfo = addData( depth );
+            var tableInfo = addData( depth+1 );
 
             if( !tableInfo.IsNullOrEmpty() )
             {

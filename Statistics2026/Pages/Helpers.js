@@ -64,7 +64,7 @@ define(function () {
         const numDays = numDaysTo(date);
         
         if (numDays < 0)
-            return `progress-darkYellow`;
+            return ``;
         if (numDays <= 3)
             return `progress-green`;
         else if (numDays < 7)

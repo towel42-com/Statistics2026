@@ -397,7 +397,7 @@ namespace Statistics2026.Utilities
                     if( VideoType == EVideoType.Movie )
                         title = Constants.FirstMovieAddition;
                     else if( VideoType == EVideoType.Series )
-                        title = Constants.LatestMovieAddition;
+                        title = Constants.FirstSeriesAddition;
                     else
                         title = Constants.FirstEpisodeAddition;
                 }
@@ -488,7 +488,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.LatestPremiereDate:
                 {
                     var premiereDate = HelperFuncs.ReadDateTime( sqlResultValue.GetString( index ) );
-                    value = premiereDate?.ToShortDateString() ?? string.Empty;
+                    value = premiereDate?.ToTZShortString( true, true ) ?? string.Empty;
                 }
 
                 break;
@@ -496,7 +496,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.LatestAdditionToServer:
                 {
                     var premiereDate = HelperFuncs.ReadDateTime( sqlResultValue.GetString( index ) );
-                    value = premiereDate?.ToShortDateString() ?? string.Empty;
+                    value = premiereDate?.ToTZShortString( true ) ?? string.Empty;
                 }
 
                 break;
@@ -561,10 +561,13 @@ namespace Statistics2026.Utilities
             return $" {starting} {number} {value}s {ending}";
         }
 
-        private string TimeSince( System.DateTime date )
+        private string TimeSince( System.DateTimeOffset? date )
         {
-            var yearDiff = DateTime.Now.Year - date.Year;
-            var monthDiff = DateTime.Now.Month - date.Month;
+            if( date == null )
+                return string.Empty;
+
+            var yearDiff = DateTimeOffset.UtcNow.Year - date.Value.UtcDateTime.Year;
+            var monthDiff = DateTimeOffset.UtcNow.Month - date.Value.UtcDateTime.Month;
 
             var numberOfTotalMonths = ( yearDiff * 12 ) + monthDiff;
             if( numberOfTotalMonths > 3 )
@@ -575,7 +578,7 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                var numberOfDays = DateTime.Now.DayOfYear - date.DayOfYear;
+                var numberOfDays = DateTimeOffset.Now.DayOfYear - date.Value.DayOfYear;
                 if( numberOfDays < 0 )
                     numberOfDays *= -1;
                 if( numberOfDays == 0 )

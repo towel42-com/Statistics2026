@@ -353,7 +353,7 @@ namespace Statistics2026.Utilities
         [DataMember( Name = "poster_path" )]
         public string PosterPath { get; set; } = string.Empty;
 
-        public DateTime? ReleaseDate()
+        public DateTimeOffset? ReleaseDate()
         {
             if( string.IsNullOrEmpty( ReleaseDateText ) )
                 return null;
@@ -469,7 +469,7 @@ namespace Statistics2026.Utilities
         public List<TmdbEpisode> Episodes { get; set; } = [];
 
         // Helper method for safely parsing the date string
-        public DateTime? AirDate()
+        public DateTimeOffset? AirDate()
         {
             if( string.IsNullOrEmpty( AirDateStr ) )
                 return null;
@@ -500,7 +500,7 @@ namespace Statistics2026.Utilities
         public int EpisodeNumber { get; set; } = 0;
 
         // Helper method for safely parsing the date string
-        public DateTime? AirDate()
+        public DateTimeOffset? AirDate()
         {
             if( string.IsNullOrEmpty( AirDateStr ) )
                 return null;

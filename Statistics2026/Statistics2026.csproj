@@ -1,51 +1,62 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <TargetFrameworks>netstandard2.0;</TargetFrameworks>
-        <Version>1.0.0.8</Version>
-        <AssemblyVersion>1.0.0.8</AssemblyVersion>
-        <FileVersion>1.0.0.8</FileVersion>
-        <LangVersion>latest</LangVersion>
-        <Nullable>enable</Nullable>
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0;</TargetFrameworks>
+		<Version>1.0.0.8</Version>
+		<AssemblyVersion>1.0.0.8</AssemblyVersion>
+		<FileVersion>1.0.0.8</FileVersion>
+		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
+		<NoWarn>$(NoWarn);SYSLIB1030;CS0436;CS0618</NoWarn>
 		<TmdbApiKeyV3 Condition="'$(TmdbApiKeyV3)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV3>
 		<TmdbApiKeyV4 Condition="'$(TmdbApiKeyV4)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV4>
 	</PropertyGroup>
-	
-    <PropertyGroup>
-        <OutputPath>build\$(Configuration)</OutputPath>
-        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    </PropertyGroup>
-    <PropertyGroup>
-        <InstallAndLaunchPath>$(SolutionDir)\\..\\EmbyPluginUtils\\InstallAndLaunch.bat</InstallAndLaunchPath>
-    </PropertyGroup>
 
-    <Target Name="PostBuild" AfterTargets="PostBuildEvent" DependsOnTargets="DetermineEmbyRoot">
-        <Exec Command="call $(InstallAndLaunchPath) -Build -TargetPath &quot;$(TargetPath)&quot; -EmbyRoot $(EmbyServerRoot)" />
-    </Target>
-    
-    <PropertyGroup>
-        <TargetLaunchDependsOn>$(TargetLaunchDependsOn);DetermineEmbyRoot</TargetLaunchDependsOn>
-    </PropertyGroup>
-    
-    <Target Name="DetermineEmbyRoot" BeforeTargets="BeforeBuild">
-        <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Default'">
-            <EmbyServerRoot>$(APPDATA)\Emby-Server</EmbyServerRoot>
-        </PropertyGroup>
-       
-        <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Small'">
-            <EmbyServerRoot>D:\Emby\minimal</EmbyServerRoot>
-        </PropertyGroup>
+	<ItemGroup>
+		<Using Include="System" />
+		<Using Include="System.IO" />
+		<Using Include="System.Collections" />
+		<Using Include="System.Collections.Generic" />
+		<Using Include="System.Threading" />
+		<Using Include="System.Threading.Tasks" />
+		<Using Include="System.Linq" />
+	</ItemGroup>
 
-        <PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Full'">
-            <EmbyServerRoot>D:\Emby\mediaplayer</EmbyServerRoot>
-        </PropertyGroup>
+	<PropertyGroup>
+		<OutputPath>build\$(Configuration)</OutputPath>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+	</PropertyGroup>
+	<PropertyGroup>
+		<InstallAndLaunchPath>$(SolutionDir)\\..\\EmbyPluginUtils\\InstallAndLaunch.bat</InstallAndLaunchPath>
+	</PropertyGroup>
 
-        <PropertyGroup Condition="'$(ActiveDebugProfile)' == ''">
-            <EmbyServerRoot>###Set Debug Profile###</EmbyServerRoot>
-        </PropertyGroup>
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" DependsOnTargets="DetermineEmbyRoot">
+		<Exec Command="call $(InstallAndLaunchPath) -Build -TargetPath &quot;$(TargetPath)&quot; -EmbyRoot $(EmbyServerRoot)" />
+	</Target>
 
-        <MakeDir Directories="$(MSBuildProjectDirectory)\.vs\$(ProjectName)\$(Configuration)" />
-        <WriteLinesToFile File="$(MSBuildProjectDirectory)/.vs/$(ProjectName)/$(Configuration)/embyroot.cache" Lines="$(EmbyServerRoot)" Overwrite="true" WriteOnlyWhenDifferent="true" />
-    </Target>
+	<PropertyGroup>
+		<TargetLaunchDependsOn>$(TargetLaunchDependsOn);DetermineEmbyRoot</TargetLaunchDependsOn>
+	</PropertyGroup>
+
+	<Target Name="DetermineEmbyRoot" BeforeTargets="BeforeBuild">
+		<PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Default'">
+			<EmbyServerRoot>$(APPDATA)\Emby-Server</EmbyServerRoot>
+		</PropertyGroup>
+
+		<PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Small'">
+			<EmbyServerRoot>D:\Emby\minimal</EmbyServerRoot>
+		</PropertyGroup>
+
+		<PropertyGroup Condition="'$(ActiveDebugProfile)' == 'Full'">
+			<EmbyServerRoot>D:\Emby\mediaplayer</EmbyServerRoot>
+		</PropertyGroup>
+
+		<PropertyGroup Condition="'$(ActiveDebugProfile)' == ''">
+			<EmbyServerRoot>###Set Debug Profile###</EmbyServerRoot>
+		</PropertyGroup>
+
+		<MakeDir Directories="$(MSBuildProjectDirectory)\.vs\$(ProjectName)\$(Configuration)" />
+		<WriteLinesToFile File="$(MSBuildProjectDirectory)/.vs/$(ProjectName)/$(Configuration)/embyroot.cache" Lines="$(EmbyServerRoot)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+	</Target>
 
 	<ItemGroup>
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
@@ -57,49 +68,78 @@
 			<_Parameter2>$(TmdbApiKeyV4)</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
-	
-    <ItemGroup>
-      <Compile Remove="build\**" />
-      <EmbeddedResource Remove="build\**" />
-      <None Remove="build\**" />
-    </ItemGroup>
 
-    <ItemGroup>
-        <EmbeddedResource Include="Pages\AdminPages\AdminHelpers.js" />
+	<ItemGroup>
+		<Compile Remove="build\**" />
+		<EmbeddedResource Remove="build\**" />
+		<None Remove="build\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="$(SolutionDir)\TimeZoneInfo\TimeZoneNames\src\TimeZoneNames\**\*.cs">
+			<Link>TimeZoneInfo\TimeZoneNames\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</Compile>
+		<EmbeddedResource Include="$(SolutionDir)\TimeZoneInfo\TimeZoneNames\src\TimeZoneNames\data.json.gz">
+			<LogicalName>TimeZoneNames.data.json.gz</LogicalName>
+			<Link>TimeZoneInfo\TimeZoneNames\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</EmbeddedResource>
+
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Include="$(SolutionDir)\TimeZoneInfo\TimeZoneConverter\src\TimeZoneConverter\**\*.cs">
+			<Link>TimeZoneInfo\TimeZoneConverter\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</Compile>
+		<EmbeddedResource Include="$(SolutionDir)\TimeZoneInfo\TimeZoneConverter\src\TimeZoneConverter\Data\TimeZoneData.zip" >
+			<LogicalName>TimeZoneConverter.Data.TimeZoneData.zip</LogicalName>
+			<Link>TimeZoneInfo\TimeZoneNames\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<PropertyGroup>
+		<!-- CS0122: Inaccessible protection level -->
+		<!-- CS0433: Type exists in both assemblies/files -->
+		<NoWarn>$(NoWarn);CS0122;CS0433</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="Pages\AdminPages\AdminHelpers.js" />
 
 		<EmbeddedResource Include="Pages\AdminPages\Episodes.html" />
-        <EmbeddedResource Include="Pages\AdminPages\Episodes.js" />
-        <EmbeddedResource Include="Pages\AdminPages\Movies.html" />
-        <EmbeddedResource Include="Pages\AdminPages\Movies.js" />
-        <EmbeddedResource Include="Pages\AdminPages\Settings.html" />
-        <EmbeddedResource Include="Pages\AdminPages\Settings.js" />
-        <EmbeddedResource Include="Pages\AdminPages\Summary.html" />
-        <EmbeddedResource Include="Pages\AdminPages\Summary.js" />
-        <EmbeddedResource Include="Pages\AdminPages\TVSeriesProgress.html" />
-        <EmbeddedResource Include="Pages\AdminPages\TVSeriesProgress.js" />
-        <EmbeddedResource Include="Pages\AdminPages\UserStats.html" />
-        <EmbeddedResource Include="Pages\AdminPages\UserStats.js" />
+		<EmbeddedResource Include="Pages\AdminPages\Episodes.js" />
+		<EmbeddedResource Include="Pages\AdminPages\Movies.html" />
+		<EmbeddedResource Include="Pages\AdminPages\Movies.js" />
+		<EmbeddedResource Include="Pages\AdminPages\Settings.html" />
+		<EmbeddedResource Include="Pages\AdminPages\Settings.js" />
+		<EmbeddedResource Include="Pages\AdminPages\Summary.html" />
+		<EmbeddedResource Include="Pages\AdminPages\Summary.js" />
+		<EmbeddedResource Include="Pages\AdminPages\TVSeriesProgress.html" />
+		<EmbeddedResource Include="Pages\AdminPages\TVSeriesProgress.js" />
+		<EmbeddedResource Include="Pages\AdminPages\UserStats.html" />
+		<EmbeddedResource Include="Pages\AdminPages\UserStats.js" />
 
-        <EmbeddedResource Include="Pages\UserPages\Helpers.js" />
-        <EmbeddedResource Include="Pages\UserPages\TVSeriesProgress.html" />
-        <EmbeddedResource Include="Pages\UserPages\TVSeriesProgress.js" />
-        <EmbeddedResource Include="Pages\UserPages\UserStats.html" />
-        <EmbeddedResource Include="Pages\UserPages\UserStats.js" />
+		<EmbeddedResource Include="Pages\UserPages\Helpers.js" />
+		<EmbeddedResource Include="Pages\UserPages\TVSeriesProgress.html" />
+		<EmbeddedResource Include="Pages\UserPages\TVSeriesProgress.js" />
+		<EmbeddedResource Include="Pages\UserPages\UserStats.html" />
+		<EmbeddedResource Include="Pages\UserPages\UserStats.js" />
 
 		<EmbeddedResource Include="Pages\Helpers.js" />
-		<EmbeddedResource Include="style.css" />
-        <EmbeddedResource Include="thumb.png" />
-    </ItemGroup>
-    <ItemGroup>
-        <PackageReference Include="Emby.ApiClient" Version="4.8.10" />
-        <PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90" />
-        <PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2" />
-        <PackageReference Include="System.Memory" Version="4.6.3" />
-    </ItemGroup>
-    <ItemGroup>
-        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-            <_Parameter1>BuildDate</_Parameter1>
-            <_Parameter2>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ssK"))</_Parameter2>
-        </AssemblyAttribute>
-    </ItemGroup>
+		<EmbeddedResource Include="Resources\style.css" />
+		<EmbeddedResource Include="Resources\thumb.png" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Emby.ApiClient" Version="4.8.10" />
+		<PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90" />
+		<PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2" />
+		<PackageReference Include="System.Memory" Version="4.6.3" />
+		<PackageReference Include="System.Text.Json" Version="8.0.5" />
+		<PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>BuildDate</_Parameter1>
+			<_Parameter2>$([System.DateTime]::UtcNow.ToString("yyyy-MM-dd HH:mm:ssK"))</_Parameter2>
+		</AssemblyAttribute>
+	</ItemGroup>
 </Project>

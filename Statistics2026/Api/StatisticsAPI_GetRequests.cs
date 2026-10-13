@@ -14,14 +14,14 @@ namespace Statistics2026.Api
         {
             using( var timer = new AutoTimer( $"Request: {requestName}", _embyInterfaces._logger ) )
             {
-                try
-                {
+                //try
+                //{
                     return requestFunc( timer );
-                }
-                catch( Exception )
-                {
-                    throw;
-                }
+                //}
+                //catch( Exception )
+                //{
+                //    throw;
+                //}
             }
         }
 

@@ -524,7 +524,7 @@ namespace Statistics2026.Data
                             ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
                             ( "@IsPlayed", isPlayed),
                             ( "@PlayCount", playCount),
-                            ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value.DateTime : null )),
+                            ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null )),
                             ( "@SeriesId", mediaInfo.SeriesId),
                             ( "@RunTimeTicks", mediaInfo.RunTimeTicks )
                         ] ) );
@@ -885,7 +885,7 @@ namespace Statistics2026.Data
             return TotalTime( user, episodesOnly, false );
         }
 
-        public List<(string name, DateTime lastPlayed)> LastSeenValues( User? user, bool movies )
+        public List<(string name, DateTimeOffset lastPlayed)> LastSeenValues( User? user, bool movies )
         {
             CheckIsValid( ECheckType.eReport );
 
@@ -920,7 +920,7 @@ namespace Statistics2026.Data
                 ( "@UserId", user.Id.ToString())
             ] );
 
-            var retVal = new List<(string genre, DateTime lastPlayed)>();
+            var retVal = new List<(string genre, DateTimeOffset lastPlayed)>();
             _dbHelper.ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
@@ -928,7 +928,7 @@ namespace Statistics2026.Data
                 var date = row.GetString( 1 );
                 var lastPlayedDate = HelperFuncs.ReadDateTime( date );
                 if ( lastPlayedDate == null )
-                    lastPlayedDate = DateTime.MinValue;
+                    lastPlayedDate = DateTimeOffset.MinValue;
                 retVal.Add( (name, lastPlayedDate.Value) );
                 return true;
             } );

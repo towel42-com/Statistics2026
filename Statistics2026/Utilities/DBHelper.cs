@@ -187,7 +187,10 @@ namespace Statistics2026.Utilities
                     bindParam.Bind( ba );
                     break;
                 case DateTime dt:
-                    bindParam.Bind( dt.ToString( "o", CultureInfo.InvariantCulture ) );
+                    bindParam.Bind( HelperFuncs.ToDateTimeParamValue( dt )! ); /*dt.ToString( "o", CultureInfo.InvariantCulture ) )*/
+                    break;
+                case DateTimeOffset dto:
+                    bindParam.Bind( HelperFuncs.ToDateTimeParamValue( dto )! );
                     break;
                 case bool b:
                     // store bool as integer 0/1

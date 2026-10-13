@@ -52,7 +52,7 @@ namespace Statistics2026.Utilities
             FileSize = video.Size;
             RunTimeTicks = video.RunTimeTicks ?? 0;
             if( video.PremiereDate.HasValue )
-                PremiereDate = video.PremiereDate.Value.DateTime;
+                PremiereDate = video.PremiereDate.Value;
 
             if( video is Episode episode )
             {
@@ -64,7 +64,7 @@ namespace Statistics2026.Utilities
                     SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series );
                     if( PremiereDate == null && episode.Series.PremiereDate.HasValue )
                     {
-                        PremiereDate = episode.Series.PremiereDate.Value.DateTime;
+                        PremiereDate = episode.Series.PremiereDate.Value;
                     }
                 }
             }
@@ -83,11 +83,11 @@ namespace Statistics2026.Utilities
                 }
                 if( curr != null && curr.PremiereDate != null )
                 {
-                    PremiereDate = curr.PremiereDate.Value.DateTime;
+                    PremiereDate = curr.PremiereDate.Value;
                 }
             }
             TotalBitrate = video.TotalBitrate;
-            DateAdded = video.DateCreated.DateTime;
+            DateAdded = video.DateCreated;
 
             aOK = !ItemId.IsNullOrEmpty() && ( RunTimeTicks != 0 );
         }
@@ -322,8 +322,8 @@ namespace Statistics2026.Utilities
         public long RunTimeTicks { get; set; } = 0;
         public double Rating { get; set; } = 0.0;
         public long TotalBitrate { get; set; } = 0;
-        public DateTime? PremiereDate { get; set; } = null;
-        public DateTime? DateAdded { get; set; } = null;
+        public DateTimeOffset? PremiereDate { get; set; } = null;
+        public DateTimeOffset? DateAdded { get; set; } = null;
         public bool aOK = false;
         private bool _disposed = false;
 
