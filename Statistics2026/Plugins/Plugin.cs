@@ -157,7 +157,7 @@ namespace Statistics2026
             {
                 new() {
                     Name = "style.css",
-                    EmbeddedResourcePath = GetType().Namespace + ".style.css"
+                    EmbeddedResourcePath = GetType().Namespace + ".Resources.style.css"
                 },
                 new() {
                     Name = "Helpers.js",
@@ -276,7 +276,7 @@ namespace Statistics2026
         public Stream GetThumbImage()
         {
             var type = GetType();
-            return type.Assembly.GetManifestResourceStream( type.Namespace + ".plugin.png" );
+            return type.Assembly.GetManifestResourceStream( type.Namespace + ".Resources.plugin.png" );
         }
 
         public ImageFormat ThumbImageFormat => ImageFormat.Png;

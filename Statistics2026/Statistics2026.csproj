@@ -81,6 +81,7 @@
 		</Compile>
 		<EmbeddedResource Include="$(SolutionDir)\TimeZoneInfo\TimeZoneNames\src\TimeZoneNames\data.json.gz">
 			<LogicalName>TimeZoneNames.data.json.gz</LogicalName>
+			<Link>TimeZoneInfo\TimeZoneNames\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</EmbeddedResource>
 
 	</ItemGroup>
@@ -91,6 +92,7 @@
 		</Compile>
 		<EmbeddedResource Include="$(SolutionDir)\TimeZoneInfo\TimeZoneConverter\src\TimeZoneConverter\Data\TimeZoneData.zip" >
 			<LogicalName>TimeZoneConverter.Data.TimeZoneData.zip</LogicalName>
+			<Link>TimeZoneInfo\TimeZoneNames\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</EmbeddedResource>
 	</ItemGroup>
 
@@ -123,8 +125,8 @@
 		<EmbeddedResource Include="Pages\UserPages\UserStats.js" />
 
 		<EmbeddedResource Include="Pages\Helpers.js" />
-		<EmbeddedResource Include="style.css" />
-		<EmbeddedResource Include="thumb.png" />
+		<EmbeddedResource Include="Resources\style.css" />
+		<EmbeddedResource Include="Resources\thumb.png" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Emby.ApiClient" Version="4.8.10" />
