@@ -12,7 +12,7 @@
         const filterId = 'episodeDisplay';
         const baseUrl = "Statistics2026/episode_list";
         const tabName = "Episodes";
-        const lastRunArray =  ["MediaAnalysis", "MissingEpisodesAnalysis"];
+        const lastRunArray = ["MediaAnalysis", "MissingEpisodesAnalysis"];
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
@@ -26,7 +26,7 @@
 
                 ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                     var found = false;
-                    config.SortEntries.forEach(entry => {
+                    config.TableSortEntries.forEach(entry => {
                         if (entry.TableId == baseId) {
                             if (entry.ExtraFilter != null && entry.ExtraFilter != "") {
                                 view.querySelector(`input[name="${filterId}"][value="${entry.ExtraFilter}"]`).checked = true;
@@ -98,12 +98,20 @@
                     view.setAttribute('data-initialized', 'false');
 
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.SortEntries.forEach(entry => {
+                        let found = false;
+                        config.TableSortEntries.forEach(entry => {
                             if (entry.TableId == baseId) {
                                 entry.ExtraFilter = radio.value;
-                                ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                                found = true;
                             }
                         });
+                        if (!found) {
+                            config.TableSortEntries.push({
+                                TableId: baseId,
+                                ExtraFilter: radio.value
+                            });
+                        }
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
 
                     loadTableData();

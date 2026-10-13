@@ -436,7 +436,7 @@ define(function () {
 
                     ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                         var found = false;
-                        config.SortEntries.forEach(entry => {
+                        config.TableSortEntries.forEach(entry => {
                             if (entry.TableId == baseId) {
                                 var headers = thead.querySelectorAll('th');
                                 headers.forEach((header, index) => {
@@ -576,7 +576,7 @@ define(function () {
             let columnName = table.querySelectorAll("th")[columnIndex].getAttribute('data-column');
 
             var found = false;
-            config.SortEntries.forEach(entry => {
+            config.TableSortEntries.forEach(entry => {
                 if (entry.TableId == baseId) {
                     entry.ColumnName = columnName;
                     entry.AscDesc = currentDirection;
@@ -585,7 +585,7 @@ define(function () {
             });
 
             if (!found) {
-                config.SortEntries.push({
+                config.TableSortEntries.push({
                     TableId: baseId,
                     ColumnName: columnName,
                     AscDesc: currentDirection
