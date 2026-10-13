@@ -62,7 +62,7 @@ define(function () {
 
     function calculateMediaStatusClass(date) {
         const numDays = numDaysTo(date);
-        
+
         if (numDays < 0)
             return ``;
         if (numDays <= 3)
@@ -166,7 +166,7 @@ define(function () {
         retVal += "<td style='align='left' sort-value='" + info.DisplayName.SortBy + "'>" + info.DisplayName.Text + "</td>";
         retVal += "<td style='align='left' sort-value='" + info.ParentName.SortBy + "'>" + info.ParentName.Text + "</td>";
         let premiereDateClass = "";
-        if (showMissing && info.SearchLocation.Text != "" ) {
+        if (showMissing) {
             premiereDateClass = "class='" + calculateMediaStatusClass(new Date(info.PremiereDate)) + "'";
         }
 
