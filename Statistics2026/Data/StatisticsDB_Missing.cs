@@ -405,6 +405,11 @@ namespace Statistics2026.Data
                 }
                 else if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
                 {
+                    if( premiereDate.LocalDateTime.Date == DateTimeOffset.Now.Date )
+                    {
+                        curr.PremiereDate = "Today" + " " + curr.PremiereDate;
+                    }
+
                     var searchUrl = Plugin.Instance!.Configuration.searchLocation;
                     if( !searchUrl.EndsWith( "?q=" ) )
                         searchUrl += "?q=";
