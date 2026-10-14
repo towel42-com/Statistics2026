@@ -477,8 +477,13 @@ namespace Statistics2026.Data
 
             foreach( var series in seriesList )
             {
-                var key = $"{series.SeriesId}";
+                var key = series.Id.ToString();
+                var oldKey = $"{series.SortName}";
                 int premiereYear = series.PremiereDate?.Year ?? -1;
+                if( premiereYear != -1 )
+                {
+                    oldKey += $"_{premiereYear}";
+                }
 
                 var (numSeasons, hasSpecials) = GetSeasonCount( series );
 
@@ -505,6 +510,11 @@ namespace Statistics2026.Data
                         changedFilterMap.Add( currFilter );
                         _embyInterfaces?._logger?.Debug( msg );
                     }
+                }
+                else if ( oldFilterMap.TryGetValue( oldKey, out var oldCurrFilter ) )
+                {
+                    oldCurrFilter.SeriesId = series.Id.ToString();
+                    changedFilterMap.Add( oldCurrFilter );
                 }
                 else
                 {
