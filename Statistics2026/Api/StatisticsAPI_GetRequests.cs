@@ -14,14 +14,14 @@ namespace Statistics2026.Api
         {
             using( var timer = new AutoTimer( $"Request: {requestName}", _embyInterfaces._logger ) )
             {
-                //try
-                //{
+                try
+                {
                     return requestFunc( timer );
-                //}
-                //catch( Exception )
-                //{
-                //    throw;
-                //}
+                }
+                catch( Exception )
+                {
+                    throw;
+                }
             }
         }
 
@@ -56,6 +56,17 @@ namespace Statistics2026.Api
                 var retVal = db.GetTVSeriesProgress( user );
                 return retVal;
             } );
+        }
+
+        public object Get( GetSeriesFilter request )
+        {
+            var retVal = GetRequest( "GetSeriesFilter", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                return db.GetSeriesFilter( true );
+            } );
+            return retVal;
         }
 
         public object Get( GetEpisodeList request )

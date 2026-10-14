@@ -22,11 +22,15 @@ namespace Statistics2026.Api
         public bool showMissing { get; set; } = false;
     }
 
-    // http://localhost:8096/emby/Statistics2026/tv_series_progress/{User}
-    [Route( "/Statistics2026/tv_series_progress/{User}", "GET", Summary = "Gets Codec Info for Movies" )]
+    [Route( "/Statistics2026/tv_series_progress/{User}", "GET", Summary = "Gets the tv series progress for the user" )]
     public class GetTVSeriesProgress : IReturn<List<GetTVSeriesProgressResponse>>
     {
         public string user { get; set; } = string.Empty;
+    }
+
+    [Route( "/Statistics2026/series_filter", "GET", Summary = "Gets Series Filter" )]
+    public class GetSeriesFilter : IReturn<List<SeriesFilterResponse>>
+    {
     }
 
 
