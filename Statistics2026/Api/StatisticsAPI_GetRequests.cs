@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Entities;
+﻿using Emby.Media.Common.Extensions;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Model.Services;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
@@ -65,6 +66,29 @@ namespace Statistics2026.Api
                 var db = StatisticsDB.GetInstance( _embyInterfaces );
 
                 return db.GetSeriesFilter( true );
+            } );
+            return retVal;
+        }
+
+        public object Post( SetSeriesFilter request )
+        {
+            var retVal = GetRequest( "SetSeriesFilter", timer =>
+            {
+                var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                var seriesFilter = new SeriesFilterResponse()
+                {
+                    SeriesId = request.series_id,
+                    TrackSeries = request.track_series,
+                    TrackSpecials = request.track_specials,
+                    MinSeason = request.min_season,
+                    MaxSeason = request.max_season
+                };
+
+                if( seriesFilter.SeriesId.IsNullOrEmpty() )
+                    return new object();
+
+                return db.SaveSeriesFilter( seriesFilter, true );
             } );
             return retVal;
         }

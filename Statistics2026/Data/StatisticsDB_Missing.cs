@@ -68,7 +68,7 @@ namespace Statistics2026.Data
                 ", EpisodeNum=@EpisodeNum"
                 ;
 
-        private bool IsFilteredParent( string parentName, bool episodes )
+        private bool IsFilteredCollection( string collectionName )
         {
             if( Plugin.Instance == null )
                 return false;
@@ -76,24 +76,85 @@ namespace Statistics2026.Data
             if( Plugin.Instance.Configuration == null )
                 return false;
 
-            if( parentName.IsNullOrEmpty() )
+            if( collectionName.IsNullOrEmpty() )
                 return false;
 
-            if( !episodes )
+            var regexes = Plugin.Instance.Configuration.CollectionFiltersForMissingMovies;
+
+            foreach( var regexPattern in regexes )
             {
-                var regexes = Plugin.Instance.Configuration.CollectionFiltersForMissingMovies;
+                var regex = new Regex( regexPattern, RegexOptions.IgnoreCase );
 
-                foreach( var regexPattern in regexes )
+                if( regex.IsMatch( collectionName ) )
                 {
-                    var regex = new Regex( regexPattern, RegexOptions.IgnoreCase );
-
-                    if( regex.IsMatch( parentName ) )
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
             return false;
+        }
+
+        private bool IsFilteredSeries( string seriesId, int seasonNum )
+        {
+            if( Plugin.Instance == null )
+                return false;
+
+            if( Plugin.Instance.Configuration == null )
+                return false;
+
+            if( seriesId.IsNullOrEmpty() )
+                return false;
+
+            var sql = "SELECT " +
+            "    TrackSeries" +
+            "  , TrackSpecials" +
+            "  , MinSeason" +
+            "  , MaxSeason" +
+            " FROM SeriesFilterList " +
+            " WHERE SeriesId=@SeriesId";
+
+            var cmd = new SQLCmdDef( sql,
+                     [
+                        ("@SeriesId", seriesId ),
+                         ] );
+
+            var isSpecial = ( seasonNum == 0 );
+            bool filtered = false;
+            _dbHelper.ExecuteCommand( cmd, statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+                var trackSeries = row.GetBoolean( col++ );
+                if( !trackSeries )
+                {
+                    filtered = true;
+                    return false;
+                }
+
+                var trackSpecials = row.GetBoolean( col++ );
+                if( isSpecial && !trackSpecials )
+                {
+                    filtered = true;
+                    return false;
+                }
+
+                var minSeason = row.GetInt( col++ );
+                if( ( minSeason > 0 ) && ( seasonNum < minSeason ) )
+                {
+                    filtered = true;
+                    return false;
+                }
+
+                var maxSeason = row.GetInt( col++ );
+                if( ( maxSeason > 0 ) && ( seasonNum > maxSeason ) )
+                {
+                    filtered = true;
+                    return false;
+                }
+
+                filtered = false;
+                return true;
+            } );
+            return filtered;
         }
 
         private bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
@@ -182,7 +243,7 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                if( IsFilteredParent( row.GetString( 2 ), episodes ) )
+                if( !episodes && IsFilteredCollection( row.GetString( 2 ) ) )
                     return true;
 
                 var premiereDate = HelperFuncs.ReadDateTime( row.GetString( 1 ) ) ?? DateTimeOffset.MinValue;
@@ -203,6 +264,9 @@ namespace Statistics2026.Data
                 var seasonNum = row.GetInt( col++ );
                 var episodeNum = row.GetInt( col++ );
                 var parentId = row.GetString( col++ );
+
+                if( episodes && IsFilteredSeries( parentId, seasonNum ) )
+                    return true;
 
                 if( !episodes )
                 {
@@ -352,7 +416,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private SQLCmdDef SaveSeriesFilter( SeriesFilterResponse seriesFilter )
+        public SQLCmdDef SaveSeriesFilter( SeriesFilterResponse seriesFilter, bool andExecute )
         {
             var sql = "INSERT INTO SeriesFilterList" +
                 "(" +
@@ -388,18 +452,24 @@ namespace Statistics2026.Data
                             ("@MaxSeason", seriesFilter.MaxSeason ),
                         ] );
 
+            if( andExecute )
+            {
+                _dbHelper.ExecuteCommand( cmd );
+            }
             return cmd;
         }
 
-        public List<SQLCmdDef> UpdateSeriesFilter( bool nested=false )
+        public List<SQLCmdDef> UpdateSeriesFilter( bool nested = false )
         {
-            if ( !nested )
+            if( !nested )
                 CheckIsValid( ECheckType.eUpdate );
 
             if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
                 throw new ArgumentNullException( "_embyInterfaces or libraryManager is null" );
 
-            var currFilterMap = GetSeriesFilter( false ).ToDictionary( p => p.key() );
+            var oldFilterMap = GetSeriesFilter( false ).ToDictionary( p => p.key() );
+
+            var currFilterMap = GetSeriesFilter( false ).ToDictionary( p => p.SeriesId );
 
             var changedFilterMap = new List<SeriesFilterResponse>();
 
@@ -407,12 +477,8 @@ namespace Statistics2026.Data
 
             foreach( var series in seriesList )
             {
-                var key = $"{series.SortName}";
+                var key = $"{series.SeriesId}";
                 int premiereYear = series.PremiereDate?.Year ?? -1;
-                if( premiereYear != -1 )
-                {
-                    key += $"_{premiereYear}";
-                }
 
                 var (numSeasons, hasSpecials) = GetSeasonCount( series );
 
@@ -464,7 +530,7 @@ namespace Statistics2026.Data
             List<SQLCmdDef> sqlCmds = [];
             foreach( var entry in changedFilterMap )
             {
-                sqlCmds.Add( SaveSeriesFilter( entry ) );
+                sqlCmds.Add( SaveSeriesFilter( entry, false ) );
             }
             return sqlCmds;
         }

@@ -423,7 +423,7 @@ define(function () {
 
                     const tr = document.createElement('tr');
                     tr.style.backgroundColor = row_bg_col;
-                    tr.innerHTML = getRowDataFunc(info, index);
+                    tr.innerHTML = getRowDataFunc(info, index, tr);
                     fragment.appendChild(tr);
                 }
 
