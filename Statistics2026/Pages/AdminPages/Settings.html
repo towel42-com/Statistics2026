@@ -49,6 +49,23 @@
                 </label>
             </div>
 
+            <div class="sectionTitle" style="margin-top: 2em; margin-bottom: 0.5em;">Series Filter</div>
+            <p class="fieldDescription" style="margin-top: 0; margin-bottom: 1.5em;">
+                Set the seasons to track missing episodes.  Uncheck to no longer track.  Set the minimum and/or maximum season to track.
+            </p>
+
+            <!--<div class="paperList" style="border-radius: 4px; background: rgba(0,0,0,0.2); padding: 10px;">-->
+                <div style="max-height: 400px; overflow-y: auto; overflow-x: auto;">
+                    <div id="seriesFilter_status">Loading Filters...</div>
+                    <!--<table class="sortable-table-styled" id="seriesFilter_table" style="width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed;">-->
+                    <table class="sortable-table-styled" id="seriesFilter_table" cellpadding="6" style="width: 95%; padding-bottom:250px;">
+                        <!--<thead id="seriesFilter_head" style="position: sticky; top: 0; background: var(--theme-card-background, rgb(34,25,38)); z-index: 1; border-bottom: 2px solid rgba(255,255,255,0.1);">-->
+                        <thead id="seriesFilter_head" style="position: sticky; top: 0; z-index: 2;">
+                        <tbody id="seriesFilter_body"></tbody>
+                    </table>
+                </div>
+            <!--</div>-->
+
             <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
 
                 <label for="collectionFilterList" style="margin-bottom: 8px; text-align: center; width: 100%;">

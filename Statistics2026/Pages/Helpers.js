@@ -358,8 +358,10 @@ define(function () {
         var url = ApiClient.getUrl(apiEndpoint);
 
         var load_status = view.querySelector('#' + baseId + '_status');
-        load_status.style.display = '';
-        load_status.innerHTML = "Loading Data...";
+        if (load_status !== undefined && load_status != null) {
+            load_status.style.display = '';
+            load_status.innerHTML = "Loading Data...";
+        }
 
         showLoadingFunc();
         try {
@@ -408,7 +410,9 @@ define(function () {
                 const endIndex = Math.min(currentIndex + chunkSize, resultData.length);
                 const fragment = document.createDocumentFragment();
 
-                load_status.innerHTML = `Loading Data... ${currentIndex} of ${resultData.length}`;
+                if (load_status !== undefined && load_status != null) {
+                    load_status.innerHTML = `Loading Data... ${currentIndex} of ${resultData.length}`;
+                }
                 for (var index = currentIndex; index < endIndex; ++index) {
                     var info = resultData[index];
 
@@ -419,7 +423,7 @@ define(function () {
 
                     const tr = document.createElement('tr');
                     tr.style.backgroundColor = row_bg_col;
-                    tr.innerHTML = getRowDataFunc(info);
+                    tr.innerHTML = getRowDataFunc(info, index);
                     fragment.appendChild(tr);
                 }
 
@@ -454,7 +458,9 @@ define(function () {
                         }
                     });
 
-                    load_status.style.display = 'none';
+                    if (load_status !== undefined && load_status != null) {
+                        load_status.style.display = 'none';
+                    }
                     hideLoadingFunc();
                 }
             }
@@ -534,8 +540,10 @@ define(function () {
         showLoadingFunc();
 
         var load_status = document.querySelector('#' + baseId + '_status');
-        load_status.innerHTML = "Sorting Data...";
-        load_status.style.display = '';
+        if (load_status !== undefined && load_status != null) {
+            load_status.innerHTML = "Sorting Data...";
+            load_status.style.display = '';
+        }
 
         await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
 
@@ -606,10 +614,10 @@ define(function () {
                     cellB = rowB.children[columnIndex].textContent;
                 cellB = cellB.trim();
 
-                if (cellA == '' && cellB != '') {
+                if ((dataType != 'checkbox') && cellA == '' && cellB != '') {
                     return currentDirection === 'asc' ? -1 : 1;
                 }
-                if (cellB == '') {
+                if ((dataType != 'checkbox') && cellB == '') {
                     return currentDirection === 'asc' ? 1 : -1;
                 }
 
@@ -631,6 +639,14 @@ define(function () {
                     const numB = matchB ? +matchB.groups.percent : 0;
 
                     diff = currentDirection === 'asc' ? numA - numB : numB - numA;
+                } else if (dataType == 'checkbox') {
+                    const inputA = rowA.children[columnIndex].querySelector('input');
+                    const inputB = rowB.children[columnIndex].querySelector('input');
+
+                    const valA = inputA ? (inputA.checked ? 1 : 0) : 0;
+                    const valB = inputB ? (inputB.checked ? 1 : 0) : 0;
+
+                    diff = currentDirection === 'asc' ? valA - valB : valB - valA;
                 } else { //if (dataType == 'string') {
                     // Text comparison using localeCompare for proper alphabetical ordering
                     diff = currentDirection === 'asc'
@@ -642,7 +658,9 @@ define(function () {
 
             tbody.innerHTML = "";
             rows.forEach(row => tbody.appendChild(row));
-            load_status.style.display = 'none';
+            if (load_status !== undefined && load_status != null) {
+                load_status.style.display = 'none';
+            }
             hideLoadingFunc();
         }, 10);
     }

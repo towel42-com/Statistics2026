@@ -22,9 +22,61 @@
                 view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
                 view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
 
-                const savedFilters = config.CollectionNamesToIgnoreFromMissingEpisodes || [];
-                view.querySelector("#collectionFilterList").value = savedFilters.join('\n');
+                const collectionFilters = config.CollectionNamesToIgnoreFromMissingEpisodes || [];
+                view.querySelector("#collectionFilterList").value = collectionFilters.join('\n');
             });
+        }
+
+        function getSeriesFilterHeader() {
+            var cellBgStyle = "background: rgb(82, 181, 75) !important; color: #fff !important;";
+
+            var retVal =
+                `<thead id="seriesFilter_head">
+                    <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); height: 40px; user-select: none;">
+                        <th class="info_cell_heading" data-sort="TrackSeries" data-type="checkbox" style="${cellBgStyle} width: 15%; padding: 8px; white-space: nowrap; cursor: pointer;">Track Series? <span class=\"sort-icon\"></span></th>
+                        <th class="info_cell_heading" data-sort="TrackSpecials" data-type="checkbox" style="${cellBgStyle} width: 15%; padding: 8px; white-space: nowrap;">Track Specials? <span class=\"sort-icon\"></span></th>
+                        <th class="info_cell_heading" data-sort="Name" data-type="string" style="${cellBgStyle} padding: 8px; white-space: nowrap; cursor: pointer;">Series Name (Year) <span class=\"sort-icon\"></span></th>
+                        <th class="info_cell_heading" style="${cellBgStyle} width: 15%; padding: 8px; white-space: nowrap;">Min Season</th>
+                        <th class="info_cell_heading" style="${cellBgStyle} width: 15%; padding: 8px; white-space: nowrap;">Max Season</th>
+                    </tr>
+                </thead>
+                `;
+            return retVal;
+        }
+
+        function getSeriesFilterRowData(item, index) {
+            const chkTrackId = 'chkTrack_' + index;
+            const chkSpecialsId = 'chkSpecials_' + index;
+
+            const nameKey = `${item.PremiereYear || ''}_${item.SortName}`
+            const trackSeriesLabel = item.TrackSeries ? 'Yes' : 'No';
+            const trackSpecialsLabel = item.TrackSpecials ? 'Yes' : 'No';
+
+            var retVal = `
+                    <td style="padding: 8px; vertical-align: middle;">
+                        <label class="emby-checkbox-label">
+                            <input id="${chkTrackId}" is="emby-checkbox" type="checkbox" class="grid-enabled" ${item.TrackSeries ? 'checked' : ''} />
+                            <span class="checkboxLabel textLabel_${index}_trackseries">${trackSeriesLabel}</span>
+                        </label>
+
+                    <td style="padding: 8px; vertical-align: middle;">
+                        <label class="emby-checkbox-label">
+                            <input id="${chkSpecialsId}" is="emby-checkbox" type="checkbox" class="grid-specials" ${item.TrackSpecials ? 'checked' : ''} />
+                            <span class="checkboxLabel textLabel_${index}_trackspecials">${trackSpecialsLabel}</span>
+                        </label>
+                    </td>
+                    <td style="padding: 8px; vertical-align: middle; font-weight: 500;" sort-value='${nameKey}'>
+                        ${item.Name} <span style="opacity: 0.6; font-size: 0.9em; margin-left: 4px;">(${item.PremiereYear || ''})</span>
+                    </td>
+                    <td style="padding: 8px; vertical-align: middle;">
+                        <input is="emby-input" type="number" class="grid-min" min="1" max="${item.NumSeasons}" value="${item.MinSeason !== -1 ? item.MinSeason : ''}" style="width: 100%; margin: 0;" placeholder="Min Season"/>
+                    </td>
+                    <td style="padding: 8px; vertical-align: middle;">
+                        <input is="emby-input" type="number" class="grid-max" min="1" max="${item.NumSeasons}" value="${item.MaxSeason !== -1 ? item.MaxSeason : ''}" style="width: 100%; margin: 0;" placeholder="Max Season"/>
+                    </td>
+                `;
+
+            return retVal;
         }
 
         function debounce(func, delay) {
@@ -36,12 +88,20 @@
         }
 
         return function (view, params) {
-            loadPage(view, params);
+            function loadSeriesFilterTable() {
+                const baseId = 'seriesFilter';
+                const baseUrl = "Statistics2026/series_filter";
+
+                Helpers.loadTableData(view, baseId, baseUrl, getSeriesFilterHeader, getSeriesFilterRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+            }
 
             // init code here
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Settings", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
+
+                loadPage(view, params);
+                loadSeriesFilterTable();
             });
 
             function saveConfigData() {
@@ -188,7 +248,7 @@
                     });
                 }
             );
-            
+
             view.querySelector("#numTiedToReport").addEventListener("input",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
