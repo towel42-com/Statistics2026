@@ -98,8 +98,6 @@ namespace Statistics2026.ScheduledTasks
 
             db.UpdateLastUpdated( StatisticsDB.EAction.SeriesAnalysis, addSeries );
 
-            db.UpdateSeriesFilter();
-
             db.ResetCancellationToken();
             return Task.CompletedTask;
         }
