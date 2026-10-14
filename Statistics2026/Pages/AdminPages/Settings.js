@@ -28,18 +28,18 @@
         }
 
         function getSeriesFilterHeader() {
-            var cellBgStyle = "background: rgb(82, 181, 75) !important; color: #fff !important;";
+            // var cellBgStyle = "background: rgb(82, 181, 75) !important; color: #fff !important;";
 
+                // <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); height: 40px; user-select: none;">
             var retVal =
-                `<thead id="seriesFilter_head">
-                    <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); height: 40px; user-select: none;">
-                        <th class="info_cell_heading" data-sort="TrackSeries" data-type="checkbox" style="${cellBgStyle} width: 15%; padding: 8px; white-space: nowrap; cursor: pointer;">Track Series? <span class=\"sort-icon\"></span></th>
-                        <th class="info_cell_heading" data-sort="TrackSpecials" data-type="checkbox" style="${cellBgStyle} width: 15%; padding: 8px; white-space: nowrap;">Track Specials? <span class=\"sort-icon\"></span></th>
-                        <th class="info_cell_heading" data-sort="Name" data-type="string" style="${cellBgStyle} padding: 8px; white-space: nowrap; cursor: pointer;">Series Name (Year) <span class=\"sort-icon\"></span></th>
-                        <th class="info_cell_heading" style="${cellBgStyle} width: 15%; padding: 8px; white-space: nowrap;">Min Season</th>
-                        <th class="info_cell_heading" style="${cellBgStyle} width: 15%; padding: 8px; white-space: nowrap;">Max Season</th>
-                    </tr>
-                </thead>
+                `
+                <tr style="text-align: left;">
+                    <th data-column="TrackSeries"   data-type="checkbox" class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap; cursor: pointer;">Track Series? <span class=\"sort-icon\"></span></th>
+                    <th data-column="TrackSpecials" data-type="checkbox" class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Track Specials? <span class=\"sort-icon\"></span></th>
+                    <th data-column="SeriesName"    data-type="string"   class="info_cell_heading" style="padding: 8px; white-space: nowrap; cursor: pointer;">Series Name (Year) <span class=\"sort-icon\"></span></th>
+                    <th data-column="MinSeason"                          class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Min Season</th>
+                    <th data-column="MaxSeason"                          class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Max Season</th>
+                </tr>
                 `;
             return retVal;
         }
@@ -99,6 +99,7 @@
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Settings", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
+                Helpers.injectSortableTableStyle(document);
 
                 loadPage(view, params);
                 loadSeriesFilterTable();
