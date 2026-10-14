@@ -11,26 +11,9 @@ namespace Statistics2026.Configuration
         public string ExtraFilter { get; set; } = string.Empty;
     }
 
-    public class SeriesFilter
-    {
-        public bool Enabled { get; set; } = false;
-        public string Name { get; set; } = string.Empty;
-        public string SortName { get; set; } = string.Empty;
-        public int PremiereYear { get; set; } = 0;
-        public bool IncludeSpecials { get; set; } = false;
-        public int MinSeason { get; set; } = -1;
-        public int MaxSeason { get; set; } = -1;
-
-        public bool HasSpecials { get; set; } = false;
-        public int NumSeasons { get; set; } = 0;
-    }
-
     public class PluginConfiguration : BasePluginConfiguration
     {
-        public PluginConfiguration()
-        {
-
-        }
+        public PluginConfiguration() { }
 
         public string BuildDate { get; set; } = string.Empty;
         public string LastUpdated { get; set; } = string.Empty;
@@ -50,9 +33,8 @@ namespace Statistics2026.Configuration
         public string searchLocation { get; set; } = string.Empty;
         public int numDaysFutureForMissing { get; set; } = 0;
 
-        // a list of regular expressions, if the series (or Collection) name matches, the episode (or movie) is NOT listed as missing
-        // note, the db is correct just what is shown is changed
-        public List<SeriesFilter> SeriesFiltersForMissingEpisodes{ get; set; } = [];
+        // a list of regular expressions, if the Collection name matches, the movie is NOT listed as missing
+        // note, the db is complete just what is shown is changed
         public List<string> CollectionFiltersForMissingMovies { get; set; } = [];
 
         public bool resetPlayCount { get; set; } = false;

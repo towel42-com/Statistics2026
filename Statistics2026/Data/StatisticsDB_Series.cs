@@ -27,6 +27,7 @@ namespace Statistics2026.Data
 
             _dbHelper!.Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
+            sqlCmds.AddRange( UpdateSeriesFilter() );
 
             foreach( var series in seriesList )
             {
