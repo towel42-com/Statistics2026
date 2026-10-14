@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Configuration;
+﻿using MediaBrowser.Controller.Channels;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
@@ -461,13 +462,43 @@ namespace Statistics2026.Data
 
         public List<SQLCmdDef> UpdateSeriesFilter( bool nested = false )
         {
+            bool filterChanged( ref string msg, ref SeriesFilterResponse lhs, int numSeasons, bool hasSpecials )
+            {
+                bool retVal = false;
+                if( lhs.HasSpecials != hasSpecials )
+                {
+                    msg += $" - HasSpecials : old: {lhs.HasSpecials} new: {hasSpecials}";
+                    lhs.HasSpecials = lhs.HasSpecials || hasSpecials;
+                    retVal = true;
+                }
+                var newNumSeasons = ( numSeasons > lhs.NumSeasons ) ? numSeasons : lhs.NumSeasons;
+                if( newNumSeasons != lhs.NumSeasons )
+                {
+                    msg += $" - NumSeasons : old: {lhs.NumSeasons} new: {newNumSeasons}";
+                    lhs.NumSeasons = newNumSeasons;
+                    retVal = true;
+                }
+                return retVal;
+            }
+
             if( !nested )
                 CheckIsValid( ECheckType.eUpdate );
 
             if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
                 throw new ArgumentNullException( "_embyInterfaces or libraryManager is null" );
 
-            var oldFilterMap = GetSeriesFilter( false ).ToDictionary( p => p.key() );
+            var seriesFilterList = GetSeriesFilter( false );
+            Dictionary<string, List<SeriesFilterResponse>> oldFilterMap = [];
+            foreach( var series in seriesFilterList )
+            {
+                var key = series.key();
+                if ( !oldFilterMap.TryGetValue( key, out var list ) )
+                {
+                    list = [];
+                    oldFilterMap[ key ] = list;
+                }
+                list.Add( series );
+            }
 
             var currFilterMap = GetSeriesFilter( false ).ToDictionary( p => p.SeriesId );
 
@@ -490,20 +521,7 @@ namespace Statistics2026.Data
                 if( currFilterMap.TryGetValue( key, out var currFilter ) )
                 {
                     var msg = $"Updating filter for Series: {series.Name}";
-                    var changed = false;
-                    if( currFilter.HasSpecials != hasSpecials )
-                    {
-                        msg += $" - HasSpecials : old: {currFilter.HasSpecials} new: {hasSpecials}";
-                        currFilter.HasSpecials = currFilter.HasSpecials || hasSpecials;
-                        changed = true;
-                    }
-                    var newNumSeasons = ( numSeasons > currFilter.NumSeasons ) ? numSeasons : currFilter.NumSeasons;
-                    if( newNumSeasons != currFilter.NumSeasons )
-                    {
-                        msg += $" - NumSeasons : old: {currFilter.NumSeasons} new: {newNumSeasons}";
-                        currFilter.NumSeasons = newNumSeasons;
-                        changed = true;
-                    }
+                    var changed = filterChanged( ref msg, ref currFilter, numSeasons, hasSpecials ); 
                     if( changed )
                     {
                         currFilterMap[ key ] = currFilter;
@@ -511,10 +529,53 @@ namespace Statistics2026.Data
                         _embyInterfaces?._logger?.Debug( msg );
                     }
                 }
-                else if ( oldFilterMap.TryGetValue( oldKey, out var oldCurrFilter ) )
+                else if ( oldFilterMap.TryGetValue( oldKey, out var oldFilterList ) )
                 {
-                    oldCurrFilter.SeriesId = series.Id.ToString();
-                    changedFilterMap.Add( oldCurrFilter );
+                    bool found = false;
+                    SeriesFilterResponse? reference = null;
+                    foreach( var tmp in oldFilterList )
+                    {
+                        reference = reference ?? tmp;
+
+                        if ( series.Id.ToString() == tmp.SeriesId )
+                        {
+                            var msg = $"Updating filter for Series: {series.Name}";
+                            var changed = filterChanged( ref msg, ref currFilter, numSeasons, hasSpecials );
+                            if( changed )
+                            {
+                                currFilterMap[ key ] = currFilter;
+                                changedFilterMap.Add( currFilter );
+                                _embyInterfaces?._logger?.Debug( msg );
+                            }
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if( !found )
+                    {
+                        var newFilter = new SeriesFilterResponse()
+                        {
+                            SeriesId = series.Id.ToString(),
+                            TrackSeries = true,
+                            TrackSpecials = false,
+                            Name = series.Name,
+                            SortName = series.SortName,
+                            PremiereYear = premiereYear,
+                            MinSeason = -1,
+                            MaxSeason = -1,
+                            HasSpecials = hasSpecials,
+                            NumSeasons = numSeasons,
+                        };
+                        if( reference != null )
+                        {
+                            newFilter.TrackSeries = reference.TrackSeries;
+                            newFilter.TrackSpecials = reference.TrackSpecials;
+                            newFilter.MinSeason = reference.MinSeason;
+                            newFilter.MaxSeason = reference.MaxSeason;
+                        }
+                        changedFilterMap.Add( newFilter );
+                    }
                 }
                 else
                 {
