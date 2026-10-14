@@ -69,6 +69,8 @@ namespace Statistics2026.Data
                         new TableColDef( "PremiereDate", "DATETIME", true ),
                         new TableColDef( "NumEpisodes", "INT", true ),
                         new TableColDef( "NumSpecials", "INT", true ),
+                        new TableColDef( "NumSeasons", "INT", true ),
+                        new TableColDef( "HasSpecials", "BOOLEAN", true ),
                         new TableColDef( "DateAdded", "DATETIME", true ),
                         new TableColDef( "ImageUrl", "TEXT", true ),
                         new TableColDef( "FileSize", "INT", true),
@@ -78,6 +80,18 @@ namespace Statistics2026.Data
                         new TableColDef( "AverageBitrate", "INT", true ),
                     ]
                 ),
+                new TableDef("SeriesFilterList",
+                    [
+                        new TableColDef( "SeriesId", "TEXT", false, true ),
+                        new TableColDef( "TrackSeries", "BOOLEAN", true ),
+                        new TableColDef( "TrackSpecials", "BOOLEAN", true ),
+                        new TableColDef( "MinSeason", "INT", true ),
+                        new TableColDef( "MaxSeason", "INT", true ),
+                    ]
+                )
+                {
+                    ValidationRequiresData = false,
+                },
 
                 new TableDef("Users",
                     [
@@ -170,9 +184,9 @@ namespace Statistics2026.Data
                         new TableColDef( "IsPlayed", "BOOLEAN", true ),
                         new TableColDef( "PlayCount", "INT", true ),
                         new TableColDef( "LastPlayedDate", "DATETIME", true ),
-                        new TableColDef( "StartTickPos", "INT", true){DeprecatedColumn= true},
-                        new TableColDef( "EndTickPos", "INT", true ){DeprecatedColumn= true},
-                        new TableColDef( "TotalTicksPlayed", "INT", true ){FormerColumnName="TotalTicks"},
+                        new TableColDef( "StartTickPos", "INT", true) { DeprecatedColumn = true},
+                        new TableColDef( "EndTickPos", "INT", true ) { DeprecatedColumn = true},
+                        new TableColDef( "TotalTicksPlayed", "INT", true ) { FormerColumnName = "TotalTicks"},
                         new TableColDef( "IsEpisode", "BOOLEAN", true ),
                         new TableColDef( "NumEpisodes", "INT", true ), // for multi episode media
                         new TableColDef( "IsTVSpecial", "BOOLEAN", true ),

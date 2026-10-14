@@ -21,16 +21,201 @@
                 view.querySelector("#resetDBState").checked = config.resetDBState;
                 view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
                 view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
+
+                const collectionFilters = config.CollectionNamesToIgnoreFromMissingEpisodes || [];
+                view.querySelector("#collectionFilterList").value = collectionFilters.join('\n');
             });
         }
 
+        function getSeriesFilterHeader() {
+            // var cellBgStyle = "background: rgb(82, 181, 75) !important; color: #fff !important;";
+
+                // <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); height: 40px; user-select: none;">
+            var retVal =
+                `
+                <tr style="text-align: left;">
+                    <th data-column="TrackSeries"   data-type="checkbox" class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap; cursor: pointer;">Track Series? <span class=\"sort-icon\"></span></th>
+                    <th data-column="TrackSpecials" data-type="checkbox" class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Track Specials? <span class=\"sort-icon\"></span></th>
+                    <th data-column="SeriesName"    data-type="string"   class="info_cell_heading" style="padding: 8px; white-space: nowrap; cursor: pointer;">Series Name (Year) <span class=\"sort-icon\"></span></th>
+                    <th data-column="MinSeason"                          class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Min Season</th>
+                    <th data-column="MaxSeason"                          class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Max Season</th>
+                </tr>
+                `;
+            return retVal;
+        }
+
+        function getSeriesFilterRowData(item, index, tr) {
+            const chkTrackId = 'chkTrack_' + index;
+            const chkSpecialsId = 'chkSpecials_' + index;
+
+            const nameKey = `${item.PremiereYear || ''}_${item.SortName}`
+            const trackSeriesLabel = item.TrackSeries ? 'Yes' : 'No';
+            const trackSpecialsLabel = item.TrackSpecials ? 'Yes' : 'No';
+
+            tr._seriesFilterItem = item;
+            tr.setAttribute('data-index', index);
+
+            var retVal = `
+                    <td style="padding: 8px; vertical-align: middle;">
+                        <label class="emby-checkbox-label">
+                            <input id="${chkTrackId}" is="emby-checkbox" type="checkbox" class="seriesfilter-trackseries" ${item.TrackSeries ? 'checked' : ''} />
+                            <span class="checkboxLabel textLabel_${index}_trackseries">${trackSeriesLabel}</span>
+                        </label>
+
+                    <td style="padding: 8px; vertical-align: middle;">
+                        <label class="emby-checkbox-label">
+                            <input id="${chkSpecialsId}" is="emby-checkbox" type="checkbox" class="seriesfilter-trackspecials" ${item.TrackSpecials ? 'checked' : ''} />
+                            <span class="checkboxLabel textLabel_${index}_trackspecials">${trackSpecialsLabel}</span>
+                        </label>
+                    </td>
+                    <td style="padding: 8px; vertical-align: middle; font-weight: 500;" sort-value='${nameKey}'>
+                        ${item.Name} <span style="opacity: 0.6; font-size: 0.9em; margin-left: 4px;">(${item.PremiereYear || ''})</span>
+                    </td>
+                    <td style="padding: 8px; vertical-align: middle;">
+                        <input is="emby-input" type="number" class="seriesfilter-minseason" min="1" max="${item.NumSeasons}" value="${item.MinSeason !== -1 ? item.MinSeason : ''}" style="width: 100%; margin: 0;" placeholder="Min Season"/>
+                    </td>
+                    <td style="padding: 8px; vertical-align: middle;">
+                        <input is="emby-input" type="number" class="seriesfilter-maxseason" min="1" max="${item.NumSeasons}" value="${item.MaxSeason !== -1 ? item.MaxSeason : ''}" style="width: 100%; margin: 0;" placeholder="Max Season"/>
+                    </td>
+                `;
+
+            return retVal;
+        }
+
+        function debounce(func, delay) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
         return function (view, params) {
-            loadPage(view, params);
+            function loadSeriesFilterTable() {
+                const baseId = 'seriesFilter';
+                const baseUrl = "Statistics2026/series_filters";
+
+                Helpers.loadTableData(view, baseId, baseUrl, getSeriesFilterHeader, getSeriesFilterRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+            }
 
             // init code here
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Settings", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
+                Helpers.injectSortableTableStyle(document);
+
+                loadPage(view, params);
+                loadSeriesFilterTable();
+            });
+
+            function saveSeriesFilterItem(filterItem) {
+                const baseUrl = ApiClient.getUrl(`Statistics2026/set_series_filter`);
+
+                const params = {
+                    series_id: filterItem.SeriesId || '',
+                    track_series: !!filterItem.TrackSeries,
+                    track_specials: !!filterItem.TrackSpecials,
+                    min_season: filterItem.MinSeason !== null && filterItem.MinSeason !== undefined ? filterItem.MinSeason : -1,
+                    max_season: filterItem.MaxSeason !== null && filterItem.MaxSeason !== undefined ? filterItem.MaxSeason : -1,
+                };
+
+                const queryString = new URLSearchParams(params).toString();
+                const finalUrl = `${baseUrl}?${queryString}`
+
+                ApiClient.ajax({
+                    type: 'POST', // or 'GET'
+                    url: finalUrl,
+                    dataType:'text'
+                }).then(function () {
+                    // SUCCESS: Request parsed completely and processed by your entry point!
+                    console.log(`Successfully updated configuration for Series ID: ${filterItem.SeriesId}`);
+                }).catch(function (error) {
+                    // Triggers instantly if the response fails or hits an error code (404, 500, etc.)
+                    console.error("Plugin endpoint failed:", error);
+                });
+            }
+
+            function saveConfigData() {
+                // Visual indicator: show subtle amber text during network request
+                const collectionAutosaveStatus = view.querySelector('#collectionAutosaveStatus');
+                collectionAutosaveStatus.textContent = "Saving...";
+                collectionAutosaveStatus.style.color = "#ffb703";
+                collectionAutosaveStatus.style.opacity = "1";
+
+                const filterList = view.querySelector('#collectionFilterList');
+
+                const linesToSave = filterList.value
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+
+                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                    config.CollectionNamesToIgnoreFromMissingEpisodes = linesToSave;
+
+                    ApiClient.updatePluginConfiguration(Helpers.pluginId, config).then(function (result) {
+                        // Visual indicator: show green confirmation text
+                        collectionAutosaveStatus.textContent = "Saved";
+                        collectionAutosaveStatus.style.color = "#52b788";
+
+                        // Fade the "Saved" text away after 2 seconds
+                        setTimeout(() => {
+                            collectionAutosaveStatus.style.opacity = "0";
+                        }, 2000);
+
+                        Dashboard.processPluginConfigurationUpdateResult(result);
+                    });
+                });
+            }
+
+            const debouncedSave = debounce(saveConfigData, 1000);
+
+            view.querySelector('#collectionFilterList').addEventListener('input', function () {
+                const collectionAutosaveStatus = view.querySelector('#collectionAutosaveStatus');
+                collectionAutosaveStatus.textContent = "Unsaved Changes...";
+                collectionAutosaveStatus.style.color = "#e63946";
+                collectionAutosaveStatus.style.opacity = "1";
+
+                debouncedSave();
+            });
+
+            view.querySelector('#collectionFilterList').addEventListener('blur', function () {
+                saveConfigData();
+            });
+
+            // Handle saving instantly when a checkbox column is clicked or checked
+            view.querySelector('#seriesFilter_body').addEventListener('change', function (e) {
+                const row = e.target.closest('tr');
+                if (!row || !row._seriesFilterItem)
+                    return;
+
+                const index = parseInt(row.getAttribute('data-index'), 10);
+
+                if (e.target.classList.contains('seriesfilter-trackseries')) {
+                    row._seriesFilterItem.TrackSeries = e.target.checked;
+
+                    const lbl = row.querySelector(`.textLabel_${index}_trackseries`);
+                    if (lbl)
+                        lbl.textContent = e.target.checked ? 'Yes' : 'No';
+                }
+
+                if (e.target.classList.contains('seriesfilter-trackspecials')) {
+                    row._seriesFilterItem.TrackSpecials = e.target.checked;
+                    const lbl = row.querySelector(`.textLabel_${index}_trackspecials`);
+                    if (lbl)
+                        lbl.textContent = e.target.checked ? 'Yes' : 'No';
+                }
+
+                if (e.target.classList.contains('seriesfilter-minseason')) {
+                    const val = e.target.value;
+                    row._seriesFilterItem.MinSeason = val === '' ? -1 : parseInt(val, 10);
+                }
+
+                if (e.target.classList.contains('seriesfilter-maxseason')) {
+                    const val = e.target.value;
+                    row._seriesFilterItem.MaxSeason = val === '' ? -1 : parseInt(val, 10);
+                }
+
+                saveSeriesFilterItem(row._seriesFilterItem);
             });
 
             view.addEventListener('viewhide', function (e) {
@@ -130,7 +315,7 @@
                     });
                 }
             );
-            
+
             view.querySelector("#numTiedToReport").addEventListener("input",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {

@@ -13,10 +13,7 @@ namespace Statistics2026.Configuration
 
     public class PluginConfiguration : BasePluginConfiguration
     {
-        public PluginConfiguration()
-        {
-
-        }
+        public PluginConfiguration() { }
 
         public string BuildDate { get; set; } = string.Empty;
         public string LastUpdated { get; set; } = string.Empty;
@@ -31,9 +28,14 @@ namespace Statistics2026.Configuration
 
         public bool showUnknownDVProfiles { get; set; } = false;
         public bool showAllResolutions { get; set; } = false;
+
         public bool reportOnMissingSpecials { get; set; } = false;
         public string searchLocation { get; set; } = string.Empty;
         public int numDaysFutureForMissing { get; set; } = 0;
+
+        // a list of regular expressions, if the Collection name matches, the movie is NOT listed as missing
+        // note, the db is complete just what is shown is changed
+        public List<string> CollectionFiltersForMissingMovies { get; set; } = [];
 
         public bool resetPlayCount { get; set; } = false;
         public bool resetDBState { get; set; } = false;
@@ -41,7 +43,7 @@ namespace Statistics2026.Configuration
 
         public bool dbStateOK { get; set; } = false;
 
-        public List<SortEntry> SortEntries { get; set; } = [];
+        public List<SortEntry> TableSortEntries { get; set; } = [];
     }
 }
 

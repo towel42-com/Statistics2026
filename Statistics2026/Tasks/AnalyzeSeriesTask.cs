@@ -11,6 +11,7 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
+using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
@@ -84,7 +85,7 @@ namespace Statistics2026.ScheduledTasks
             long addSeries = 0;
             using( var timer = new AutoTimer( $"Adding All Series", _embyInterfaces._logger ) )
             {
-                db.AddAllSeriesTaskImpl();
+                db.AddAllSeriesTaskImpl().GetAwaiter().GetResult();
                 addSeries = timer.ElapsedMilliseconds();
             }
 

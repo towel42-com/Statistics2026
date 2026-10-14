@@ -369,3 +369,9 @@ td.statCard-stats-numbersep:empty {
     background-color: #164063;
     color: #FFFFFF;
 }
+
+.pluginConfigurationPage .inputContainer,
+.pluginConfigurationPage .textareaContainer {
+    padding-left: 20px; /* Adjust this value to increase/decrease the indent */
+    box-sizing: border-box;
+}

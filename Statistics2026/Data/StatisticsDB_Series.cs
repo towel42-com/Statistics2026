@@ -1,5 +1,7 @@
-﻿using MediaBrowser.Controller.Entities;
+﻿using MediaBrowser.Controller.Dto;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
@@ -10,7 +12,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public void AddAllSeriesTaskImpl()
+        public async Task AddAllSeriesTaskImpl()
         {
             CheckIsValid( ECheckType.eUpdate );
 
@@ -25,11 +27,13 @@ namespace Statistics2026.Data
 
             _dbHelper!.Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
+            sqlCmds.AddRange( UpdateSeriesFilter() );
 
             foreach( var series in seriesList )
             {
                 _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-                sqlCmds.AddRange( AddSeries( series ) );
+                var cmds = await AddSeries( series );
+                sqlCmds.AddRange( cmds );
                 _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
 
                 _embyInterfaces!._logger?.Debug( $"    Processed Series ({curr} of {count}) - {series.Name}" );
@@ -42,12 +46,12 @@ namespace Statistics2026.Data
             _embyInterfaces!._logger?.Debug( $"Finished Video Analysis" );
         }
 
-        private (int episodes, int specials) GetCountForSeries( Series series )
+        private async Task<(int episodes, int specials)> GetCountForSeries( Series series )
         {
             CheckIsValid( ECheckType.eUpdate );
 
             var libraryOptions = _embyInterfaces!._libraryManager!.GetLibraryOptions( series );
-            var allEpisodes = _embyInterfaces!._providerManager!.GetAllEpisodes( series, libraryOptions, _dbHelper!.CancellationToken!.Value ).ConfigureAwait( false ).GetAwaiter().GetResult();
+            var allEpisodes = await _embyInterfaces!._providerManager!.GetAllEpisodes( series, libraryOptions, _dbHelper!.CancellationToken!.Value ).ConfigureAwait( false );
 
             var episodes = allEpisodes.Where( e => !MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTimeOffset.Now ) ).Count();
             var specials = allEpisodes.Where( e => MediaInfo.isTVSpecial( e ) ).Count();
@@ -125,7 +129,38 @@ namespace Statistics2026.Data
             return (episodes, specials);
         }
 
-        private List<SQLCmdDef> AddSeries( Series series )
+        public (int numSeasons, bool hasSpecials) GetSeasonCount( Series series )
+        {
+            if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
+                throw new ArgumentNullException( "_embyInterfaces or libraryManager is null" );
+
+            var query = new InternalItemsQuery
+            {
+                Parent = series,
+                IncludeItemTypes = new[] { nameof( Season ) },
+                // DtoOptions(true) speeds up the DB query by skipping unneeded data fields
+                DtoOptions = new DtoOptions( true )
+            };
+
+            var seasons = _embyInterfaces._libraryManager.GetItemList( query );
+            var numSeasons = seasons.Count();
+            bool hasSpecials = false;
+            foreach( var season in seasons )
+            {
+                if( season.IndexNumber == 0 )
+                {
+                    hasSpecials = true;
+                    break;
+                }
+            }
+            if( hasSpecials )
+            {
+                numSeasons--;
+            }
+            return (numSeasons, hasSpecials);
+        }
+
+        private async Task<List<SQLCmdDef>> AddSeries( Series series )
         {
             CheckIsValid( ECheckType.eUpdate );
 
@@ -173,77 +208,74 @@ namespace Statistics2026.Data
                 } );
 
             var seriesStatus = series.Status?.ToString() ?? string.Empty;
+            var (numSeasons, hasSpecials) = GetSeasonCount( series );
 
-            cmd = new SQLCmdDef( "SELECT COUNT(*) FROM Series where ItemId=@ItemId", [ ("@ItemId", series.Id.ToString()) ] );
-            var exists = false;
-            _dbHelper.ExecuteCommand( cmd, statement =>
-            {
-                var row = statement.Current;
-                exists = row.GetInt( 0 ) > 0;
-                return false;
-            } );
-
-            var (numEpisodes, numSpecials) = GetCountForSeries( series );
-            sql = string.Empty;
+            var (numEpisodes, numSpecials) = await GetCountForSeries( series );
             List<(string name, object? value)>? paramsList = null;
-            if( !exists )
-            {
-                sql = "INSERT INTO Series " +
-                "(" +
-                    "  ItemId" +
-                    ", Name" +
-                    ", SortName" +
-                    ", PremiereDate" +
-                    ", NumEpisodes" +
-                    ", NumSpecials" +
-                    ", DateAdded" +
-                    ", ImageUrl" +
-                    ", FileSize" +
-                    ", RunTimeTicks" +
-                    ", Rating" +
-                    ", Status" +
-                    ", AverageBitrate" +
-                ")" +
-                " VALUES " +
-                "(" +
-                    "  @ItemId" +
-                    ", @Name" +
-                    ", @SortName" +
-                    ", @PremiereDate" +
-                    ", @NumEpisodes" +
-                    ", @NumSpecials" +
-                    ", @DateAdded" +
-                    ", @ImageUrl" +
-                    ", @FileSize" +
-                    ", @RunTimeTicks" +
-                    ", @Rating" +
-                    ", @Status" +
-                    ", @AverageBitrate" +
-                ")" +
-                " ON CONFLICT(ItemId) " +
-                " DO UPDATE " +
-                " SET " +
-                    "  Name=@Name" +
-                    ", SortName=@SortName" +
-                    ", PremiereDate=@PremiereDate" +
-                    ", NumEpisodes=@NumEpisodes" +
-                    ", NumSpecials=@NumSpecials" +
-                    ", DateAdded=@DateAdded" +
-                    ", ImageUrl=@ImageUrl" +
-                    ", FileSize=@FileSize" +
-                    ", RunTimeTicks=@RunTimeTicks" +
-                    ", Rating=@Rating" +
-                    ", Status=@Status" +
-                    ", AverageBitrate=@AverageBitrate";
+            sql = "INSERT INTO Series " +
+            "(" +
+                "  ItemId" +
+                ", Name" +
+                ", SortName" +
+                ", PremiereDate" +
+                ", NumEpisodes" +
+                ", NumSpecials" +
+                ", NumSeasons" +
+                ", HasSpecials" +
+                ", DateAdded" +
+                ", ImageUrl" +
+                ", FileSize" +
+                ", RunTimeTicks" +
+                ", Rating" +
+                ", Status" +
+                ", AverageBitrate" +
+            ")" +
+            " VALUES " +
+            "(" +
+                "  @ItemId" +
+                ", @Name" +
+                ", @SortName" +
+                ", @PremiereDate" +
+                ", @NumEpisodes" +
+                ", @NumSpecials" +
+                ", @NumSeasons" +
+                ", @HasSpecials" +
+                ", @DateAdded" +
+                ", @ImageUrl" +
+                ", @FileSize" +
+                ", @RunTimeTicks" +
+                ", @Rating" +
+                ", @Status" +
+                ", @AverageBitrate" +
+            ")" +
+            " ON CONFLICT(ItemId) " +
+            " DO UPDATE " +
+            " SET " +
+                "  Name=@Name" +
+                ", SortName=@SortName" +
+                ", PremiereDate=@PremiereDate" +
+                ", NumEpisodes=@NumEpisodes" +
+                ", NumSpecials=@NumSpecials" +
+                ", NumSeasons=@NumSeasons" +
+                ", HasSpecials=@HasSpecials" +
+                ", DateAdded=@DateAdded" +
+                ", ImageUrl=@ImageUrl" +
+                ", FileSize=@FileSize" +
+                ", RunTimeTicks=@RunTimeTicks" +
+                ", Rating=@Rating" +
+                ", Status=@Status" +
+                ", AverageBitrate=@AverageBitrate";
 
-                paramsList =
-                       [
-                           ("@ItemId", series.Id.ToString()),
+            paramsList =
+                   [
+                       ("@ItemId", series.Id.ToString()),
                            ("@Name", series.Name),
                            ("@SortName", series.SortName),
                            ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( series.PremiereDate.HasValue ? series.PremiereDate.Value : null )),
                            ("@NumEpisodes", numEpisodes),
                            ("@NumSpecials", numSpecials),
+                           ("@NumSeasons", numSeasons),
+                           ("@HasSpecials", hasSpecials),
                            ("@DateAdded", HelperFuncs.ToDateTimeParamValue( series.DateCreated )),
                            ("@ImageUrl", ItemImageUrl._ItemImageUrl(series)),
                            ("@FileSize", totalFileSize),
@@ -252,30 +284,7 @@ namespace Statistics2026.Data
                            ("@Status", seriesStatus),
                            ("@AverageBitrate", averageBitrate),
                        ];
-            }
-            else
-            {
-                sql = "UPDATE Series " +
-                    "  SET " +
-                    "  NumEpisodes=NumEpisodes+@NumEpisodes" +
-                    ", NumSpecials=NumSpecials+@NumSpecials" +
-                    ", FileSize=FileSize+@FileSize" +
-                    ", RunTimeTicks=RunTimeTicks+@RunTimeTicks " +
-                    ", Rating=@Rating " +
-                    ", Status=@Status " +
-                    "WHERE ItemId=@ItemId";
 
-                paramsList =
-                       [
-                           ("@ItemId", series.Id.ToString()),
-                           ("@NumEpisodes", numEpisodes),
-                           ("@NumSpecials", numSpecials),
-                           ("@FileSize", totalFileSize),
-                           ("@RunTimeTicks", totalRuntime),
-                           ("@Rating", averageRating),
-                           ("@Status", seriesStatus),
-                       ];
-            }
 
             sqlCmds.Add( new SQLCmdDef( sql, paramsList ) );
 

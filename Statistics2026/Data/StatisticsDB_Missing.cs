@@ -1,16 +1,25 @@
-﻿using MediaBrowser.Controller.Entities;
+﻿using MediaBrowser.Controller.Channels;
+using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
+using RestSharp;
 using ServiceStack;
+using ServiceStack.Text;
 using Statistics2026.Api;
+using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices.ComTypes;
+using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using static ServiceStack.Diagnostics;
 
 namespace Statistics2026.Data
 {
@@ -60,46 +69,96 @@ namespace Statistics2026.Data
                 ", EpisodeNum=@EpisodeNum"
                 ;
 
-        public async Task AnalyzeMissingMoviesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
+        private bool IsFilteredCollection( string collectionName )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            if( Plugin.Instance == null )
+                return false;
 
-            _embyInterfaces!._logger?.Debug( $"Starting Analysis" );
-            progress.Report( 0 );
-            var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, _embyInterfaces?._libraryManager );
-            collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
+            if( Plugin.Instance.Configuration == null )
+                return false;
 
-            progress.Report( 100 );
+            if( collectionName.IsNullOrEmpty() )
+                return false;
 
-            var reader = new TmdbCollectionReader( _embyInterfaces, cancellationToken );
+            var regexes = Plugin.Instance.Configuration.CollectionFiltersForMissingMovies;
 
-            double count = collections.Count();
-            var curr = 0.0;
-
-            progress.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>
+            foreach( var regexPattern in regexes )
             {
-                new( "DELETE FROM Missing WHERE NOT IsEpisode" )
-            };
+                var regex = new Regex( regexPattern, RegexOptions.IgnoreCase );
 
-            foreach( var collection in collections )
-            {
-                progress.Report( 80.0 * ( ++curr ) / count );
-                var cmds = await AnalyzeMissingMoviesInCollection( reader, collection, cancellationToken, progress ).ConfigureAwait( false );
-                sqlCmds.AddRange( cmds );
-                cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!._logger?.Debug( $"    Processed Collection ({curr} of {count}) - {collection.Name} items processed" );
+                if( regex.IsMatch( collectionName ) )
+                {
+                    return true;
+                }
             }
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            progress.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            progress.Report( 100 );
-            _embyInterfaces!._logger?.Debug( $"Finished Analysis" );
+            return false;
         }
 
-        private bool InvalidDate( DateTimeOffset? dto, bool ignoreConfig = false )
+        private bool IsFilteredSeries( string seriesId, int seasonNum )
+        {
+            if( Plugin.Instance == null )
+                return false;
+
+            if( Plugin.Instance.Configuration == null )
+                return false;
+
+            if( seriesId.IsNullOrEmpty() )
+                return false;
+
+            var sql = "SELECT " +
+            "    TrackSeries" +
+            "  , TrackSpecials" +
+            "  , MinSeason" +
+            "  , MaxSeason" +
+            " FROM SeriesFilterList " +
+            " WHERE SeriesId=@SeriesId";
+
+            var cmd = new SQLCmdDef( sql,
+                     [
+                        ("@SeriesId", seriesId ),
+                         ] );
+
+            var isSpecial = ( seasonNum == 0 );
+            bool filtered = false;
+            _dbHelper.ExecuteCommand( cmd, statement =>
+            {
+                var row = statement.Current;
+                var col = 0;
+                var trackSeries = row.GetBoolean( col++ );
+                if( !trackSeries )
+                {
+                    filtered = true;
+                    return false;
+                }
+
+                var trackSpecials = row.GetBoolean( col++ );
+                if( isSpecial && !trackSpecials )
+                {
+                    filtered = true;
+                    return false;
+                }
+
+                var minSeason = row.GetInt( col++ );
+                if( ( minSeason > 0 ) && ( seasonNum < minSeason ) )
+                {
+                    filtered = true;
+                    return false;
+                }
+
+                var maxSeason = row.GetInt( col++ );
+                if( ( maxSeason > 0 ) && ( seasonNum > maxSeason ) )
+                {
+                    filtered = true;
+                    return false;
+                }
+
+                filtered = false;
+                return true;
+            } );
+            return filtered;
+        }
+
+        private bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
         {
             if( dto == null )
                 return true;
@@ -113,157 +172,6 @@ namespace Statistics2026.Data
                 return true;
 
             return false;
-        }
-
-        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollection( TmdbCollectionReader reader, BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
-        {
-            _embyInterfaces!._logger?.Info( $"    Analyzing Collection '{collection.Name}' - checking for missing movies" );
-
-            var collectionTmbdId = collection.GetProviderId( MetadataProviders.Tmdb );
-            if( string.IsNullOrEmpty( collectionTmbdId ) )
-                return [];
-
-            var tmdbCollection = await reader.GetRemoteCollectionMembersAsyncViaCustom( collectionTmbdId, cancellationToken ).ConfigureAwait( false );
-            if( tmdbCollection == null )
-            {
-                _embyInterfaces._logger!.Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
-                return [];
-            }
-
-            List<SQLCmdDef> retVal = [];
-            foreach( var tmdbMovie in tmdbCollection.Movies )
-            {
-                if( InvalidDate( tmdbMovie.ReleaseDate() ) )
-                    continue;
-
-                var movieTmdbId = tmdbMovie.Id;
-                _embyInterfaces!._logger?.Debug( $"        Checking for movie {tmdbMovie.Title} for {collection.Name} on server" );
-                var embyMovie = EmbyHelperFuncs.GetMovieByTmdbId( _embyInterfaces._libraryManager, movieTmdbId );
-
-                if( embyMovie == null )
-                {
-                    _embyInterfaces!._logger?.Info( $"            {tmdbMovie.Title} is missing" );
-                    var key = $"{tmdbCollection.Id}-{tmdbMovie.Id}";
-                    retVal.Add( new SQLCmdDef( kSQLAddToMissing,
-                    [
-                        ("@Key", key ),
-                        ("@TmdbId", tmdbMovie.Id ),
-                        ("@Title", tmdbMovie.Title ),
-                        ("@OriginalTitle", tmdbMovie.OriginalTitle ),
-                        ("@ReleaseDate", HelperFuncs.ToDateTimeParamValue( tmdbMovie.ReleaseDate() ) ),
-                        ("@Overview", tmdbMovie.Overview ),
-                        ("@PosterPath", tmdbMovie.PosterPath ),
-                        ("@ParentId", collection.Id.ToString() ),
-                        ("@IsEpisode", false )
-                    ] ) );
-                }
-
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-
-            return retVal;
-        }
-
-        public async Task AnalyzeMissingEpisodesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
-        {
-            CheckIsValid( ECheckType.eUpdate );
-
-            _embyInterfaces!._logger?.Debug( $"Starting Analysis" );
-            progress.Report( 0 );
-            var allSeries = EmbyHelperFuncs.GetLibraryItems<Series>( null, _embyInterfaces?._libraryManager );
-            allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
-            progress.Report( 100 );
-
-            var reader = new TmdbCollectionReader( _embyInterfaces, cancellationToken );
-
-            double count = allSeries.Count();
-            var curr = 0.0;
-
-            progress.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>
-            {
-                new( "DELETE FROM Missing WHERE IsEpisode" )
-            };
-
-            foreach( var series in allSeries )
-            {
-                progress.Report( 80.0 * ( ++curr ) / count );
-                var cmds = await AnalyzeMissingEpisodes( reader, series, cancellationToken, progress );
-                sqlCmds.AddRange( cmds );
-                cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!._logger?.Debug( $"    Processed Collection ({curr} of {count}) - {series.Name} items processed" );
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            progress.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            progress.Report( 100 );
-            _embyInterfaces!._logger?.Debug( $"Finished Analysis" );
-        }
-
-        private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodes( TmdbCollectionReader reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
-        {
-            _embyInterfaces!._logger?.Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
-
-            var seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
-            if( string.IsNullOrEmpty( seriesTmbdId ) )
-                return [];
-
-            var tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId, cancellationToken ).ConfigureAwait( false );
-            if( tmdbSeries == null )
-            {
-                _embyInterfaces._logger!.Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
-                return [];
-            }
-
-            List<SQLCmdDef> retVal = [];
-            foreach( var tmdbSeason in tmdbSeries.Seasons )
-            {
-                if( tmdbSeason.SeasonNumber == 0 && !Plugin.Instance!.Configuration.reportOnMissingSpecials )
-                    continue;
-
-                var embySeason = EmbyHelperFuncs.GetSeasonFromSeries( series, tmdbSeason.SeasonNumber );
-
-                foreach( var tmdbEpisode in tmdbSeason.Episodes )
-                {
-                    if( InvalidDate( tmdbEpisode.AirDate() ) )
-                        continue;
-
-                    var episodeTmdbId = tmdbEpisode.Id;
-                    var episodeIdent = $"S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2}";
-                    _embyInterfaces!._logger?.Debug( $"         Checking for episode {episodeIdent} for {series.Name} on server" );
-                    var embyEpisode = ( embySeason != null ) ? EmbyHelperFuncs.GetEpisodeFromTmdbId( _embyInterfaces._libraryManager, embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber ) : null;
-
-                    if( embyEpisode == null )
-                    {
-                        _embyInterfaces!._logger?.Info( $"             {series.Name} - {episodeIdent} is missing" );
-
-                        var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
-                        //return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";
-
-                        var title = $"{tmdbSeries.Name} - S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2} - {tmdbEpisode.Name}";
-                        retVal.Add( new SQLCmdDef( kSQLAddToMissing,
-                        [
-                            ("@Key", key ),
-                            ("@TmdbId", tmdbEpisode.Id ),
-                            ("@Title", title ),
-                            ("@OriginalTitle", string.Empty ),
-                            ("@ReleaseDate", HelperFuncs.ToDateTimeParamValue( tmdbEpisode.AirDate() ) ),
-                            ("@Overview", tmdbEpisode.Overview ),
-                            ("@PosterPath", tmdbEpisode.StillPath ),
-                            ("@ParentId", series.Id.ToString() ),
-                            ("@IsEpisode", true ),
-                            ("@SeasonNum", tmdbSeason.SeasonNumber ),
-                            ("@EpisodeNum", tmdbEpisode.EpisodeNumber )
-                        ] ) );
-                    }
-
-                    cancellationToken.ThrowIfCancellationRequested();
-                }
-            }
-
-            return retVal;
         }
 
         private StatCard TotalMissingMedia( bool episodes )
@@ -306,7 +214,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                sql += ", ''";
+                sql += ", Collections.Name";
             }
 
             sql +=
@@ -318,15 +226,17 @@ namespace Statistics2026.Data
                 "   Missing ";
 
             if( episodes )
+            {
                 sql += " LEFT JOIN Series ON Series.ItemId=Missing.ParentId ";
-
-            if( episodes )
                 sql += " WHERE Missing.IsEpisode ";
+            }
             else
+            {
+                sql += " LEFT JOIN Collections ON Collections.ItemId=Missing.ParentId ";
                 sql += " WHERE NOT Missing.IsEpisode ";
+            }
 
             sql += " ORDER BY ListDisplayName ASC";
-
             if( episodes )
                 sql += ", Missing.SeasonNum ASC, Missing.EpisodeNum ASC ";
 
@@ -334,6 +244,9 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
+                if( !episodes && IsFilteredCollection( row.GetString( 2 ) ) )
+                    return true;
+
                 var premiereDate = HelperFuncs.ReadDateTime( row.GetString( 1 ) ) ?? DateTimeOffset.MinValue;
                 var premiereYear = premiereDate == DateTimeOffset.MinValue ? 0 : premiereDate.Year;
 
@@ -347,10 +260,14 @@ namespace Statistics2026.Data
                 };
                 var col = 2;
                 curr.ParentName = new SortByText( row.GetString( col++ ), string.Empty );
+
                 var posterPath = row.GetString( col++ );
                 var seasonNum = row.GetInt( col++ );
                 var episodeNum = row.GetInt( col++ );
                 var parentId = row.GetString( col++ );
+
+                if( episodes && IsFilteredSeries( parentId, seasonNum ) )
+                    return true;
 
                 if( !episodes )
                 {
@@ -358,7 +275,7 @@ namespace Statistics2026.Data
                     curr.ParentName = collections ?? new();
                 }
 
-                var futureDate = InvalidDate( premiereDate, true );
+                var futureDate = InvalidDateForMissingAnalysis( premiereDate, true );
                 if( posterPath != null && !posterPath.StartsWith( "/" ) )
                 {
                     posterPath = "/" + posterPath;
@@ -447,6 +364,246 @@ namespace Statistics2026.Data
         public StatCard TotalMissingEpisodes()
         {
             return TotalMissingMedia( true );
+        }
+
+        public List<SeriesFilterResponse> GetSeriesFilter( bool updateIfEmpty )
+        {
+            CheckIsValid( ECheckType.eReport );
+
+            var sql = "SELECT" +
+                "  SeriesFilterList.SeriesId" +
+                ", SeriesFilterList.TrackSeries" +
+                ", SeriesFilterList.TrackSpecials" +
+                ", Series.Name" +
+                ", Series.SortName" +
+                ", Series.PremiereDate" +
+                ", SeriesFilterList.MinSeason" +
+                ", SeriesFilterList.MaxSeason" +
+                ", Series.HasSpecials" +
+                ", Series.NumSeasons" +
+                " FROM SeriesFilterList" +
+                " JOIN Series ON Series.ItemId=SeriesFilterList.SeriesId";
+
+            List<SeriesFilterResponse> retVal = [];
+            bool found = false;
+            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            {
+                found = true;
+                var row = statement.Current;
+
+                var col = 0;
+                var currFilter = new SeriesFilterResponse()
+                {
+                    SeriesId = row.GetString( col++ ),
+                    TrackSeries = row.GetBoolean( col++ ),
+                    TrackSpecials = row.GetBoolean( col++ ),
+                    Name = row.GetString( col++ ),
+                    SortName = row.GetString( col++ ),
+                    PremiereYear = HelperFuncs.ReadDateTime( row.GetString( col++ ) )?.Year ?? -1,
+                    MinSeason = row.GetInt( col++ ),
+                    MaxSeason = row.GetInt( col++ ),
+                    HasSpecials = row.GetBoolean( col++ ),
+                    NumSeasons = row.GetInt( col++ )
+                };
+                retVal.Add( currFilter );
+                return true;
+            } );
+            if( !found && updateIfEmpty )
+            {
+                var cmds = UpdateSeriesFilter( true );
+                _dbHelper.ExecuteCommands( cmds );
+                return GetSeriesFilter( false );
+            }
+            return retVal;
+        }
+
+        public SQLCmdDef SaveSeriesFilter( SeriesFilterResponse seriesFilter, bool andExecute )
+        {
+            var sql = "INSERT INTO SeriesFilterList" +
+                "(" +
+                "    SeriesId" +
+                "  , TrackSeries" +
+                "  , TrackSpecials" +
+                "  , MinSeason" +
+                "  , MaxSeason" +
+                ")" +
+                " VALUES " +
+                "(" +
+                "  @SeriesId" +
+                ", @TrackSeries" +
+                ", @TrackSpecials" +
+                ", @MinSeason" +
+                ", @MaxSeason" +
+                ")" +
+                " ON CONFLICT(SeriesId) " +
+                " DO UPDATE" +
+                " SET" +
+                "  TrackSeries=@TrackSeries" +
+                ", TrackSpecials=@TrackSpecials" +
+                ", MinSeason=@MinSeason" +
+                ", MaxSeason=@MaxSeason"
+                ;
+
+            var cmd = new SQLCmdDef( sql,
+                         [
+                            ("@SeriesId", seriesFilter.SeriesId ),
+                            ("@TrackSeries", seriesFilter.TrackSeries ),
+                            ("@TrackSpecials", seriesFilter.TrackSpecials ),
+                            ("@MinSeason", seriesFilter.MinSeason ),
+                            ("@MaxSeason", seriesFilter.MaxSeason ),
+                        ] );
+
+            if( andExecute )
+            {
+                _dbHelper.ExecuteCommand( cmd );
+            }
+            return cmd;
+        }
+
+        public List<SQLCmdDef> UpdateSeriesFilter( bool nested = false )
+        {
+            bool filterChanged( ref string msg, ref SeriesFilterResponse lhs, int numSeasons, bool hasSpecials )
+            {
+                bool retVal = false;
+                if( lhs.HasSpecials != hasSpecials )
+                {
+                    msg += $" - HasSpecials : old: {lhs.HasSpecials} new: {hasSpecials}";
+                    lhs.HasSpecials = lhs.HasSpecials || hasSpecials;
+                    retVal = true;
+                }
+                var newNumSeasons = ( numSeasons > lhs.NumSeasons ) ? numSeasons : lhs.NumSeasons;
+                if( newNumSeasons != lhs.NumSeasons )
+                {
+                    msg += $" - NumSeasons : old: {lhs.NumSeasons} new: {newNumSeasons}";
+                    lhs.NumSeasons = newNumSeasons;
+                    retVal = true;
+                }
+                return retVal;
+            }
+
+            if( !nested )
+                CheckIsValid( ECheckType.eUpdate );
+
+            if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
+                throw new ArgumentNullException( "_embyInterfaces or libraryManager is null" );
+
+            var seriesFilterList = GetSeriesFilter( false );
+            Dictionary<string, List<SeriesFilterResponse>> oldFilterMap = [];
+            foreach( var series in seriesFilterList )
+            {
+                var key = series.key();
+                if ( !oldFilterMap.TryGetValue( key, out var list ) )
+                {
+                    list = [];
+                    oldFilterMap[ key ] = list;
+                }
+                list.Add( series );
+            }
+
+            var currFilterMap = GetSeriesFilter( false ).ToDictionary( p => p.SeriesId );
+
+            var changedFilterMap = new List<SeriesFilterResponse>();
+
+            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, _embyInterfaces?._libraryManager );
+
+            foreach( var series in seriesList )
+            {
+                var key = series.Id.ToString();
+                var oldKey = $"{series.SortName}";
+                int premiereYear = series.PremiereDate?.Year ?? -1;
+                if( premiereYear != -1 )
+                {
+                    oldKey += $"_{premiereYear}";
+                }
+
+                var (numSeasons, hasSpecials) = GetSeasonCount( series );
+
+                if( currFilterMap.TryGetValue( key, out var currFilter ) )
+                {
+                    var msg = $"Updating filter for Series: {series.Name}";
+                    var changed = filterChanged( ref msg, ref currFilter, numSeasons, hasSpecials ); 
+                    if( changed )
+                    {
+                        currFilterMap[ key ] = currFilter;
+                        changedFilterMap.Add( currFilter );
+                        _embyInterfaces?._logger?.Debug( msg );
+                    }
+                }
+                else if ( oldFilterMap.TryGetValue( oldKey, out var oldFilterList ) )
+                {
+                    bool found = false;
+                    SeriesFilterResponse? reference = null;
+                    foreach( var tmp in oldFilterList )
+                    {
+                        reference = reference ?? tmp;
+
+                        if ( series.Id.ToString() == tmp.SeriesId )
+                        {
+                            var msg = $"Updating filter for Series: {series.Name}";
+                            var changed = filterChanged( ref msg, ref currFilter, numSeasons, hasSpecials );
+                            if( changed )
+                            {
+                                currFilterMap[ key ] = currFilter;
+                                changedFilterMap.Add( currFilter );
+                                _embyInterfaces?._logger?.Debug( msg );
+                            }
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if( !found )
+                    {
+                        var newFilter = new SeriesFilterResponse()
+                        {
+                            SeriesId = series.Id.ToString(),
+                            TrackSeries = true,
+                            TrackSpecials = false,
+                            Name = series.Name,
+                            SortName = series.SortName,
+                            PremiereYear = premiereYear,
+                            MinSeason = -1,
+                            MaxSeason = -1,
+                            HasSpecials = hasSpecials,
+                            NumSeasons = numSeasons,
+                        };
+                        if( reference != null )
+                        {
+                            newFilter.TrackSeries = reference.TrackSeries;
+                            newFilter.TrackSpecials = reference.TrackSpecials;
+                            newFilter.MinSeason = reference.MinSeason;
+                            newFilter.MaxSeason = reference.MaxSeason;
+                        }
+                        changedFilterMap.Add( newFilter );
+                    }
+                }
+                else
+                {
+                    var newFilter = new SeriesFilterResponse()
+                    {
+                        SeriesId = series.Id.ToString(),
+                        TrackSeries = true,
+                        Name = series.Name,
+                        SortName = series.SortName,
+                        PremiereYear = premiereYear,
+                        TrackSpecials = false,
+                        MinSeason = -1,
+                        MaxSeason = -1,
+                        HasSpecials = hasSpecials,
+                        NumSeasons = numSeasons,
+                    };
+                    currFilterMap[ key ] = newFilter;
+                    _embyInterfaces?._logger?.Debug( $"Adding default filter for Series: {series.Name} - HasSpecials: {hasSpecials} - NumSeasons: {numSeasons}" );
+                    changedFilterMap.Add( newFilter );
+                }
+            }
+
+            List<SQLCmdDef> sqlCmds = [];
+            foreach( var entry in changedFilterMap )
+            {
+                sqlCmds.Add( SaveSeriesFilter( entry, false ) );
+            }
+            return sqlCmds;
         }
     }
 }

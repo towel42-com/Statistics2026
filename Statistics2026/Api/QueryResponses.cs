@@ -1,6 +1,7 @@
 ﻿using ServiceStack;
 using Statistics2026.Configuration;
 using Statistics2026.Utilities;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Statistics2026.Api
 {
@@ -8,6 +9,33 @@ namespace Statistics2026.Api
     {
         public string html { get; set; } = string.Empty;
     }
+
+    public class SeriesFilterResponse
+    {
+        public string SeriesId { get; set; } = string.Empty;
+        public bool TrackSeries { get; set; } = false;
+        public bool TrackSpecials { get; set; } = false;
+
+        public string Name { get; set; } = string.Empty;
+        public string SortName { get; set; } = string.Empty;
+        public int PremiereYear { get; set; } = -1;
+        public int MinSeason { get; set; } = -1;
+        public int MaxSeason { get; set; } = -1;
+
+        public bool HasSpecials { get; set; } = false;
+        public int NumSeasons { get; set; } = 0;
+
+        public string key()
+        {
+            var retVal = SortName;
+            if( PremiereYear > 0 )
+            {
+                retVal += "_" + PremiereYear.ToString();
+            }
+            return retVal;
+        }
+    }
+
 
     public class GetDatabaseStatusReponse
     {

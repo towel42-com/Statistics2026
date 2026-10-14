@@ -22,13 +22,28 @@ namespace Statistics2026.Api
         public bool showMissing { get; set; } = false;
     }
 
-    // http://localhost:8096/emby/Statistics2026/tv_series_progress/{User}
-    [Route( "/Statistics2026/tv_series_progress/{User}", "GET", Summary = "Gets Codec Info for Movies" )]
+    [Route( "/Statistics2026/tv_series_progress/{User}", "GET", Summary = "Gets the tv series progress for the user" )]
     public class GetTVSeriesProgress : IReturn<List<GetTVSeriesProgressResponse>>
     {
         public string user { get; set; } = string.Empty;
     }
 
+    [Route( "/Statistics2026/series_filters", "GET", Summary = "Gets Series Filter" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetSeriesFilter : IReturn<List<SeriesFilterResponse>>
+    {
+    }
+
+    [Route( "/Statistics2026/set_series_filter", "POST", Summary = "Sets a Series Filter" )]
+    [Authenticated( Roles = "admin" )]
+    public class SetSeriesFilter : IReturn<object>
+    {
+        public string series_id { get; set; } = string.Empty;
+        public bool track_series{ get; set; } = false;
+        public bool track_specials { get; set; } = false;
+        public int min_season { get; set; } = -1;
+        public int max_season { get; set; } = -1;
+    }
 
     [Route( "/Statistics2026/last_run/{WhichRun}", "GET", Summary = "Returns the last time the analysis for run was finished" )]
     [Authenticated( Roles = "admin" )]
