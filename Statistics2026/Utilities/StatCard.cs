@@ -37,7 +37,7 @@ namespace Statistics2026.Utilities
 
         public string ToString( bool embedded, int columnNum )
         {
-            var retVal = "<th";
+            var retVal = $"<th class=\"statCard-stats-title\"";
             if( embedded && ( columnNum == 1 ) )
             {
                 retVal += ">";
@@ -176,7 +176,7 @@ namespace Statistics2026.Utilities
             var retVal = string.Empty;
             if( alignment != EAlignment.eUnset )
             {
-                retVal = $"style=\"text-align: {AlignmentText( alignment )}; white-space: nowrap;\"";
+                retVal = $"style=\"text-align: {AlignmentText( alignment )} !important; white-space: nowrap;\"";
             }
             else
             {
@@ -363,7 +363,7 @@ namespace Statistics2026.Utilities
             if( !tableInfo.IsNullOrEmpty() )
             {
                 var divId = DivId( "statTable" );
-                var divData = $"id=\"{divId}\" class=\"{statCardClass( false )}\"";
+                var divData = $"id=\"{divId}\" class=\"{statCardClass( true )}\"";
                 if( IsClickableTable() )
                     divData += " data-is-clickable=\"true\"";
 

@@ -84,33 +84,17 @@ namespace Statistics2026.Utilities
 
         public override string GetDataString( int depth )
         {
-            if( ListType != EListType.eUnordered && ListType != EListType.eNumbered && ListType != EListType.eTextOnly )
+            if( ListType != EListType.eTextOnly )
             {
-                throw new Exception( "GetDataStringUnordered called for non-Unordered and non-Numbered list type" );
+                throw new Exception( "GetDataString called for non text only list type" );
             }
 
-            var style = ( ListType == EListType.eTextOnly ) ? string.Empty : GetStyleString( EAlignment.eLeft );
-
-            var rootListType = ( ListType == EListType.eUnordered ) ? "ul" : ( ListType == EListType.eNumbered ) ? "ol" : string.Empty;
             var retVal = string.Empty;
-            if( !rootListType.IsNullOrEmpty() )
-            {
-                retVal += StatCardResponse._addToHtml( depth++, $"<{rootListType}>" );
-            }
 
             for( var ii = 0; ii < ValueLines.Count; ++ii )
             {
-                var html = getDataHtmlForItem( ValueLines[ ii ], style );
-                if( !rootListType.IsNullOrEmpty() )
-                {
-                    html = $"<li>{html}</li>";
-                }
+                var html = getDataHtmlForItem( ValueLines[ ii ], string.Empty );
                 retVal += StatCardResponse._addToHtml( depth, html );
-            }
-
-            if( !rootListType.IsNullOrEmpty() )
-            {
-                retVal += StatCardResponse._addToHtml( --depth, $"</{rootListType}>" );
             }
 
             return retVal;
