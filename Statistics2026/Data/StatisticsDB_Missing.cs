@@ -299,7 +299,7 @@ namespace Statistics2026.Data
                 }
                 else
                 {
-                    if( premiereYear != 0 )
+                    if( premiereYear > 0 )
                     {
                         subKey = $"{premiereYear}";
                     }
