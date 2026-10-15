@@ -6,6 +6,188 @@
     function (mainTabsManager, AdminHelpers, Helpers) {
         'use strict';
 
+        function getEmbyColorValue(variableName) {
+            const computedStyles = window.getComputedStyle(document.body);
+            let value = computedStyles.getPropertyValue(variableName).trim();
+            if (value) {
+                return value;
+            }
+
+            // Extract baseline components if values rely on Emby's modern HSL split structure
+            let h = computedStyles.getPropertyValue(`${variableName}-hue`).trim();
+            let s = computedStyles.getPropertyValue(`${variableName}-saturation`).trim();
+            let l = computedStyles.getPropertyValue(`${variableName}-lightness`).trim();
+            let a = computedStyles.getPropertyValue(`${variableName}-alpha`).trim();
+            if (variableName == "--button-background-blur") {
+                h = computedStyles.getPropertyValue(`--button-background-hue`).trim();
+                s = computedStyles.getPropertyValue(`--button-background-saturation`).trim();
+            }
+            else if (variableName == "--focus-text-color") {
+                //    color: hsla(var(--theme-text-color-hue),var(--theme-text-color-saturation),var(--focus-text-color-lightness),var(--theme-text-color-alpha))
+                h = computedStyles.getPropertyValue(`--theme-text-color-hue`).trim();
+                s = computedStyles.getPropertyValue(`--theme-text-color-saturation`).trim();
+                l = computedStyles.getPropertyValue(`--focus-text-color-lightness`).trim();
+                a = computedStyles.getPropertyValue(`--theme-text-color-alpha`).trim();
+            }
+            else if (variableName == "--theme-secondary-text-color") {
+                h = computedStyles.getPropertyValue(`--theme-text-color-hue`).trim();
+                s = computedStyles.getPropertyValue(`--theme-text-color-saturation`).trim();
+                l = computedStyles.getPropertyValue(`--theme-text-color-lightness`).trim();
+                a = computedStyles.getPropertyValue(`--theme-secondary-text-color-alpha`).trim();
+            }
+
+            // Format percentage suffixes cleanly for standard CSS consumption
+            if (s && !s.includes('%')) {
+                s = `${s}%`;
+            }
+
+            if (l && !l.includes('%')) {
+                l = `${l}%`;
+            }
+
+            if (!a && variableName.endsWith("-lightended")) {
+                a = "60%";
+            }
+
+            if (h && s && l && a) {
+                return `hsla(${h} ${s} ${l} ${a})`;
+            }
+
+            if (h && s && l && !a) {
+                return `hsl(${h} ${s} ${l})`;
+            }
+
+            return "undefined";
+        }
+
+        function getSwatchCard(variableName) {
+            const swatchCard = document.createElement("div");
+            var swatchCardCss = "display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 16px; padding: 10px; border: 1px solid var(--line-background); border-radius: 4px; background-color: var(--theme-background-accent); min-width: max-content; box-sizing: border-box;";
+
+            swatchCard.style.cssText = swatchCardCss;
+
+            const leftLayoutBlock = document.createElement("div");
+            leftLayoutBlock.style.cssText = "display: flex; align-items: center; gap: 12px; width: max-content; min-width: max-content; flex-shrink: 0; ";
+
+            const embyColor = getEmbyColorValue(variableName);
+
+            const colorBlock = document.createElement("div");
+            colorBlock.style.cssText = `width: 32px; height: 32px; border-radius: 4px; border: 1px solid var(--line-background); background-color: ${embyColor}; flex-shrink: 0;`;
+
+            const labelText = document.createElement("code");
+            labelText.style.cssText = "display: flex; align-items: center; justify-content: space-between; width: max-content; gap: 8px; flex-shrink: 0;";
+
+            const varNameSpan = document.createElement("span");
+            const varNameTextCss = "color: var(--text-normal); font-size: 0.85rem; font-family: monospace; white-space: nowrap; min-width: max-content; flex-shrink: 0;";
+            varNameSpan.style.cssText = varNameTextCss;
+            varNameSpan.textContent = variableName;
+
+            const embyColorCss = "color: var(--theme-primary-color); font-size: 0.85rem; font-family: monospace; white-space: nowrap; min-width: max-content; font-weight: bold; text-align: right; margin-left: auto; flex-shrink: 0;";
+
+            const embyColorSpan = document.createElement("span");
+            embyColorSpan.style.cssText = embyColorCss;
+            embyColorSpan.textContent = embyColor;
+
+            labelText.appendChild(varNameSpan);
+            labelText.appendChild(embyColorSpan);
+
+            leftLayoutBlock.appendChild(colorBlock);
+            leftLayoutBlock.appendChild(labelText);
+
+            swatchCard.appendChild(leftLayoutBlock);
+
+            return swatchCard;
+        }
+
+        function stripSuffixFromList(str, suffixes) {
+            for (const suffix of suffixes) {
+                if (str.endsWith(suffix)) {
+                    return str.slice(0, -suffix.length);
+                }
+            }
+            return str;
+        }
+
+        function getAllVariablesFromCSSProperties(properties) {
+            let variables = [];
+
+            for (let i = 0; i < properties.length; i++) {
+                let propName = properties[i];
+                if (propName.toLowerCase().includes("error")) {
+                    let xyz = 0;
+                }
+
+                if (propName.startsWith('--')) {
+                    if (propName.endsWith('-width')
+                        || propName.endsWith('-top')
+                        || propName.endsWith('-left')
+                        || propName.endsWith('-right')
+                        || propName.endsWith('-bottom')
+                        || propName.endsWith('-cards')
+                        || propName.endsWith('-filter')
+                        || propName.endsWith('-position')
+                        || propName.endsWith('-cards')
+                        || propName.endsWith('-size-adjust')
+                        || propName.endsWith('-cards')
+                        || propName.endsWith('-size')
+                        || propName.endsWith('-opacity')
+                        || propName.endsWith('--focus-blur-background-lightness')
+                        || propName.startsWith("--local")
+                    ) {
+                        continue;
+                    }
+
+                    propName = stripSuffixFromList(propName, ["-hue", "-saturation", "-lightness", "-alpha"]);
+                    variables.push(propName);
+                }
+            }
+
+            variables = [...new Set(variables)];
+            return variables;
+        }
+
+        function getAllStyleVariables(view) {
+            const windowStyles = window.getComputedStyle(document.documentElement);
+
+            let variables = getAllVariablesFromCSSProperties(windowStyles);
+
+            variables.sort((lhs, rhs) => {
+                const lhsValue = getEmbyColorValue(lhs);
+                const rhsValue = getEmbyColorValue(rhs);
+
+                const isLHSUndefined = (lhsValue == "undefined");
+                const isRHSUndefined = (rhsValue == "undefined");
+                if (isLHSUndefined == isRHSUndefined)
+                    return lhs.localeCompare(rhs);
+
+                if (isLHSUndefined) {
+                    return 1;
+                }
+                if (isRHSUndefined) {
+                    return -1;
+                }
+                return 0;
+            });
+
+            return variables;
+        }
+
+
+        function loadColorPanel(view, params) {
+            // Query specifically within the active view context fragment
+            const gridContainer = view.querySelector("#embyColorGrid");
+
+            // Protect against empty queries or duplicate execution rendering loops
+            if (gridContainer && gridContainer.children.length === 0) {
+                const embyVariables = getAllStyleVariables(view);
+                embyVariables.forEach(variableName => {
+                    const swatchCard = getSwatchCard(variableName);
+                    gridContainer.appendChild(swatchCard);
+                });
+            }
+        }
+
+
         function loadPage(view, params) {
             ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                 view.querySelector("#hasConnectUserID").checked = config.hasConnectUserID;
@@ -24,13 +206,13 @@
 
                 const collectionFilters = config.CollectionNamesToIgnoreFromMissingEpisodes || [];
                 view.querySelector("#collectionFilterList").value = collectionFilters.join('\n');
+
+                loadColorPanel(view, params);
+                view.querySelector(`#embyColorGridPanel`).style.display = 'none';
             });
         }
 
         function getSeriesFilterHeader() {
-            // var cellBgStyle = "background: rgb(82, 181, 75) !important; color: #fff !important;";
-
-                // <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); height: 40px; user-select: none;">
             var retVal =
                 `
                 <tr style="text-align: left;">
@@ -102,7 +284,6 @@
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Settings", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
-                Helpers.injectSortableTableStyle(document);
 
                 loadPage(view, params);
                 loadSeriesFilterTable();
@@ -125,7 +306,7 @@
                 ApiClient.ajax({
                     type: 'POST', // or 'GET'
                     url: finalUrl,
-                    dataType:'text'
+                    dataType: 'text'
                 }).then(function () {
                     // SUCCESS: Request parsed completely and processed by your entry point!
                     console.log(`Successfully updated configuration for Series ID: ${filterItem.SeriesId}`);

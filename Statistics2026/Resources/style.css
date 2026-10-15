@@ -1,4 +1,21 @@
-﻿/* ==========================================================================
+/* ==========================================================================
+   0. Global Plugin Configuration & Core Color Controls
+   ========================================================================== */
+:root, .pluginConfigurationPage {
+    --local-theme-primary-color: hsl(var(--theme-primary-color-hue),var(--theme-primary-color-saturation),var(--theme-primary-color-lightness));
+    --local-theme-background-accent: var(--theme-accent-text-color-darkbg);
+    --local-text-normal: hsla(var(--theme-text-color-hue),var(--theme-text-color-saturation),var(--theme-text-color-lightness));
+    --local-text-muted: hsla(var(--theme-text-color-hue),var(--theme-text-color-saturation),calc(var(--theme-text-color-lightness)-10%));
+    --local-statcard-text: white;
+    --local-item-selection: hsla(var(--input-background-hue),var(--input-background-saturation),var(--input-background-lightness),var(--button-background-alpha));
+    --local-background: hsl(var(--background-hue),var(--background-saturation),var(--background-lightness));
+    --local-green: var(--local-theme-primary-color, #2ed991);
+    --local-yellow: #eab308;
+    --local-orange: #F2A70D;
+    --local-red: red;
+}
+
+/* ==========================================================================
    1. Base & Reset Components
    ========================================================================== */
 img {
@@ -11,7 +28,7 @@ img {
 .statRow {
     display: flex;
     flex-wrap: wrap;
-    gap: 1.5rem; /* Native spacing between columns */
+    gap: 1.5rem;
     margin-inline: auto;
     margin-bottom: 20px;
     width: 100%;
@@ -25,59 +42,59 @@ img {
 .statCard-compact {
     display: flex;
     flex-direction: column;
+}
 
-    .statCard-content {
+    .statCard-compact .statCard-content {
         min-height: 105px;
-        flex-direction: column; /* Stacks text elements vertically */
-        justify-content: center; /* Centers text vertically */
-        align-items: center; /* Centers text horizontally */
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
         text-align: center;
     }
-        /* Target all inner wrapper div blocks to align text content perfectly */
-        .statCard-content div {
+
+        .statCard-compact .statCard-content div {
             width: 100%;
             text-align: center;
         }
 
-    .statCard-stats-title,
-    .statCard-stats-number,
-    .statCard-stats-numbersep {
+    .statCard-compact .statCard-stats-title,
+    .statCard-compact .statCard-stats-number,
+    .statCard-compact .statCard-stats-numbersep {
         text-align: center;
         width: 100%;
     }
-}
 
 /* Variant B: For complex data grids / tables */
 .statCard-detailed {
     display: flex;
     flex-direction: column;
+}
 
-    .statCard-content {
+    .statCard-detailed .statCard-content {
         min-height: 250px;
     }
 
-    .statCard-stats-number,
-    .statCard-stats-numbersep {
+    .statCard-detailed .statCard-stats-number,
+    .statCard-detailed .statCard-stats-numbersep {
         text-align: left;
     }
-    /* Tabular alignment logic */
-    table th {
+
+    .statCard-detailed table th {
         text-align: center;
     }
 
-    table td {
+    .statCard-detailed table td {
         text-align: right;
+    }
 
-        &:nth-child(1),
-        &:nth-child(2) {
+        .statCard-detailed table td:nth-child(1),
+        .statCard-detailed table td:nth-child(2) {
             text-align: left;
         }
-    }
-    /* Mid-size responsive scalability */
-    @media screen and (max-width: 1120px) {
-        .statCard-content {
-            min-height: 210px;
-        }
+
+@media screen and (max-width: 1120px) {
+    .statCard-detailed .statCard-content {
+        min-height: 210px;
     }
 }
 
@@ -85,49 +102,50 @@ img {
    4. Card Base Component Elements
    ========================================================================== */
 .statCard {
-    background-color: rgb(34, 25, 38);
-    border-radius: 2px;
-    box-shadow: 0 2px 2px 0 rgba(0, 0, 0, .14), 0 1px 5px 0 rgba(0, 0, 0, .12), 0 3px 1px -2px rgba(0, 0, 0, .2);
+    background-color: var(--local-theme-background-accent);
+    border-radius: var(--card-border-radius, 4px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     height: 100%;
     width: 100%;
     display: flex;
+}
 
-    .statCard-content {
+    .statCard .statCard-content {
         display: flex;
         flex-wrap: nowrap;
         position: relative;
         overflow: hidden;
-        width: 100%; /* Forces content area to fill up the whole background wrapper */
+        width: 100%;
         box-sizing: border-box;
-        padding: 10px;
-        background-color: rgb(82, 181, 75);
-        color: #fff !important;
+        padding: 14px;
+        background-color: var(--local-theme-primary-color);
+        color: var(--local-statcard-text) !important;
+    }
 
-        img {
+        .statCard .statCard-content img {
             padding-right: 10px;
         }
 
-        div {
+        .statCard .statCard-content div {
             margin: 0;
             color: inherit;
         }
 
-        .infoBlock {
+        .statCard .statCard-content .infoBlock {
             position: absolute;
-            right: 5px;
-            top: 5px;
+            right: 8px;
+            top: 8px;
             cursor: pointer;
+            color: var(--local-statcard-text);
         }
-        /* Flex structural adjustments for link components */
-        &:has(a) {
+
+        .statCard .statCard-content:has(a) {
             flex-direction: row;
             flex-wrap: nowrap;
             flex-shrink: 0;
             justify-content: flex-start;
             align-items: center;
         }
-    }
-}
 
 /* ==========================================================================
    5. Interactive Table Rules (Collapsible Detail Engine)
@@ -135,55 +153,55 @@ img {
 .clickable-row {
     cursor: pointer;
     transition: background-color 0.15s ease;
-
-    &:hover {
-        background-color: rgba(255, 255, 255, 0.15);
-    }
 }
+
+    .clickable-row:hover {
+        background-color: var(--local-item-selection);
+    }
 
 .chevron {
     position: relative;
-    padding-left: 24px !important; /* Reserve exact clear space for indicator block */
+    padding-left: 24px !important;
+}
 
-    &::before {
+    .chevron::before {
         content: "▶";
         position: absolute;
         left: 6px;
         top: 50%;
         transform: translateY(-50%);
         font-size: 0.7rem;
-        color: rgba(255, 255, 255, 0.8) !important; /* Force highly visible color matching your text */
+        color: var(--local-statcard-text) !important;
         transition: transform 0.2s ease;
     }
-}
 
-/* Toggle state engines */
 .open {
-    background-color: rgba(0, 0, 0, 0.2); /* Gives the opened header an active background state */
-
-    .chevron::before {
-        transform: translateY(-50%) rotate(90deg); /* Smoothly rotates indicator downwards */
-    }
+    background-color: rgba(128, 128, 128, 0.08);
 }
+
+    .open .chevron::before {
+        transform: translateY(-50%) rotate(90deg);
+    }
 
 .detail-row {
-    display: none !important; /* Force override structural table layouts */
-    background-color: rgba(0, 0, 0, 0.25);
+    display: none !important;
+    background-color: rgba(128, 128, 128, 0.04);
+}
 
-    &.show {
+    .detail-row.show {
         display: table-row !important;
     }
 
-    .detail-content {
+    .detail-row .detail-content {
         padding: 12px;
         font-size: 0.95rem;
-        text-align: left; /* Overrides default td right-alignment */
-        /* Ensure nested child table elements maintain readable spacing */
-        table td {
+        text-align: left;
+    }
+
+        .detail-row .detail-content table td {
             padding: 8px 12px;
         }
-    }
-}
+
 /* ==========================================================================
    6. Typography Rules
    ========================================================================== */
@@ -192,120 +210,120 @@ img {
     font-size: 1rem;
     padding-bottom: 5px;
     text-align: center;
+    font-weight: bold;
     white-space: nowrap;
+    color: var(--local-statcard-text);
 }
 
 .statCard-stats-number,
 .statCard-stats-numbersep {
     font-size: 1.2rem;
-    font-weight: 500;
+    font-weight: normal;
     width: 100%;
     transition: background-color 0.15s ease, opacity 0.15s ease;
-    /* 🚀 UPDATED: Target the parent li directly and force it to left-align */
-    li & {
-        text-align: left !important;
-
-        div.statCard-stats-number,
-        div.statCard-stats-numbersep {
-            text-align: left !important;
-        }
-    }
 }
 
-/* 🚀 NEW RULE: Force the list items containing your classes to left-align */
+li .statCard-stats-number,
+li .statCard-stats-numbersep {
+    text-align: left !important;
+}
+
+    li .statCard-stats-number div.statCard-stats-number,
+    li .statCard-stats-number div.statCard-stats-numbersep,
+    li .statCard-stats-numbersep div.statCard-stats-number,
+    li .statCard-stats-numbersep div.statCard-stats-numbersep {
+        text-align: left !important;
+    }
+
 li:has(.statCard-stats-number),
 li:has(.statCard-stats-numbersep) {
     display: list-item !important;
     text-align: left !important;
-
     justify-content: flex-start !important;
     align-items: flex-start !important;
     justify-self: start !important;
 }
 
-/* Rest of your existing modifier logic... */
-.statCard-stats-number,
-.statCard-stats-numbersep {
-    &.is-clickable {
-        cursor: pointer;
+.statCard-stats-number.is-clickable,
+.statCard-stats-numbersep.is-clickable {
+    cursor: pointer;
+}
 
-        &:hover {
-            background-color: rgba(255, 255, 255, 0.12);
-            opacity: 0.95;
-        }
+    .statCard-stats-number.is-clickable:hover,
+    .statCard-stats-numbersep.is-clickable:hover {
+        background-color: var(--local-item-selection);
+        opacity: 0.95;
     }
 
-    table {
-        width: 100%;
-    }
-    /* Rule A: If this container element contains multiple sub-entries, align them left */
-    &:has(> div:nth-child(2)) {
+.statCard-stats-number table,
+.statCard-stats-numbersep table {
+    width: 100%;
+}
+
+.statCard-stats-number:has(> div:nth-child(2)),
+.statCard-stats-numbersep:has(> div:nth-child(2)) {
+    text-align: left !important;
+}
+
+    .statCard-stats-number:has(> div:nth-child(2)) div.statCard-stats-number,
+    .statCard-stats-number:has(> div:nth-child(2)) div.statCard-stats-numbersep,
+    .statCard-stats-numbersep:has(> div:nth-child(2)) div.statCard-stats-number,
+    .statCard-stats-numbersep:has(> div:nth-child(2)) div.statCard-stats-numbersep {
         text-align: left !important;
-
-        div.statCard-stats-number,
-        div.statCard-stats-numbersep {
-            text-align: left !important;
-        }
     }
-    /* Rule B: Fallback to exact center layout if there are no trailing list item siblings */
-    &:not(:has(table)):not(:has(> div:nth-child(2))) {
-        :not(li) > & {
-            text-align: center !important;
 
-            div.statCard-stats-number,
-            div.statCard-stats-numbersep {
-                text-align: center !important;
-            }
-        }
-    }
+.statCard-stats-number:not(:has(table)):not(:has(> div:nth-child(2))),
+.statCard-stats-numbersep:not(:has(table)):not(:has(> div:nth-child(2))) {
+    text-align: center !important;
 }
 
-/* Table border rules */
-.statCard-stats-numbersep {
-    td {
+:not(li) > .statCard-stats-number:not(:has(table)):not(:has(> div:nth-child(2))) div.statCard-stats-number,
+:not(li) > .statCard-stats-number:not(:has(table)):not(:has(> div:nth-child(2))) div.statCard-stats-numbersep,
+:not(li) > .statCard-stats-numbersep:not(:has(table)):not(:has(> div:nth-child(2))) div.statCard-stats-number,
+:not(li) > .statCard-stats-numbersep:not(:has(table)):not(:has(> div:nth-child(2))) div.statCard-stats-numbersep {
+    text-align: center !important;
+}
+
+.statCard-stats-numbersep td {
+    min-width: 120px;
+    border-bottom: 1px solid var(--line-background);
+}
+
+    .statCard-stats-numbersep td:not(:last-child) {
+        border-right: 1px solid var(--line-background);
+    }
+
+    .statCard-stats-numbersep td.override-red {
+        color: var(--local-red, #ff3b30) !important;
+    }
+
+    .statCard-stats-numbersep td:empty {
+        border-right: none !important;
+        border-bottom: none;
         min-width: 120px;
-        border-bottom: 1px solid #ccc;
-
-        &:not(:last-child) {
-            border-right: 1px solid #ccc;
-        }
-
-        &.override-red {
-            color: red !important;
-        }
-
-        &:empty {
-            border-right: none !important; /* !important ensures it overrides the :not(:last-child) rule */
-            border-bottom: none;
-            min-width: 120px;
-        }
     }
+
+.statCard-stats-numbersep th {
+    min-width: 120px;
+    border-bottom: 1px solid var(--line-background);
+    text-align: center;
 }
 
-.statCard-stats-numbersep {
-    th {
+    .statCard-stats-numbersep th:not(:last-child):not(:has(+ th:empty)) {
+        border-right: 1px solid var(--line-background);
+    }
+
+    .statCard-stats-numbersep th:empty {
+        border-right: none !important;
+        border-bottom: none;
         min-width: 120px;
-        border-bottom: 1px solid #ccc;
-        text-align: center;
-
-        &:not(:last-child):not(:has(+ th:empty)) {
-            border-right: 1px solid #ccc;
-        }
-
-        &:empty {
-            border-right: none !important; /* !important ensures it overrides the :not(:last-child) rule */
-            border-bottom: none;
-            min-width: 120px;
-        }
     }
-}
 
 th.statCard-stats-numbersep:empty,
 td.statCard-stats-numbersep:empty {
     border-right: none;
     border-bottom: none;
 }
-
 
 @media screen and (max-width: 680px) {
     .statCard-stats-title {
@@ -317,61 +335,160 @@ td.statCard-stats-numbersep:empty {
         font-size: 1rem;
     }
 }
+
 /* ==========================================================================
-   7. State Metrics (Context Colors)
+   7. State Metrics (Context Colors Calculated via Top Root Panel Variables)
    ========================================================================== */
-/* --- Green Pair --- */
 .progress-green {
-    background-color: #2ed991; /* Was lightGreen */
-    color: #111111;
+    background-color: var(--local-green);
+    color: #FFFFFF;
 }
 
 .progress-darkGreen {
-    background-color: #5B990D; /* Was green */
+    background-color: #5B990D;
+    background-color: color-mix(in srgb, var(--local-green) 90%, black);
     color: #FFFFFF;
 }
-/* --- Yellow Pair --- */
+
 .progress-yellow {
-    background-color: #FFEA3D; /* Was brightYellow */
+    background-color: var(--local-yellow);
     color: #111111;
 }
 
 .progress-darkYellow {
-    background-color: #D6BC11; /* Was yellow */
-    color: #111111;
+    background-color: #a16207;
+    background-color: color-mix(in srgb, var(--local-yellow) 80%, black);
+    color: #FFFFFF;
 }
-/* --- Orange Pair --- */
+
 .progress-orange {
-    background-color: #F2A70D;
+    background-color: var(--local-orange);
     color: #111111;
 }
 
 .progress-darkOrange {
     background-color: #B84D00;
+    background-color: color-mix(in srgb, var(--local-orange) 80%, black);
+    color: #FFFFFF;
 }
-/* --- Red Pair --- */
+
 .progress-red {
-    background-color: #B11A10;
+    background-color: var(--local-red);
     color: #FFFFFF;
 }
 
 .progress-darkRed {
-    background-color: #4A0402;
-    color: #FFFFFF;
-}
-/* --- Blue Pair --- */
-.progress-blue {
-    background-color: #1F6AA5;
-    color: #FFFFFF;
-}
-
-.progress-darkBlue {
-    background-color: #164063;
+    background-color: color-mix(in srgb, var(--local-red) 80%, black);
     color: #FFFFFF;
 }
 
 .pluginConfigurationPage .inputContainer,
 .pluginConfigurationPage .textareaContainer {
-    padding-left: 20px; /* Adjust this value to increase/decrease the indent */
+    padding-left: 20px;
     box-sizing: border-box;
 }
+
+/* ==========================================================================
+   8. Clickable cell & Tooltips
+   ========================================================================== */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted var(--local-text-normal);
+}
+
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        background-color: var(--local-theme-background-accent);
+        color: var(--local-text-normal);
+        border: 1px solid var(--line-background);
+        border-radius: 4px;
+        padding: 6px 10px;
+        position: absolute;
+        z-index: 10;
+    }
+
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+    }
+
+.info_cell {
+    white-space: nowrap;
+    padding-left: 45px;
+    padding-right: 20px;
+    font-size: smaller;
+    color: var(--local-text-normal);
+}
+
+.info_cell_heading {
+    background: var(--local-theme-background-accent) !important;
+    color: var(--local-text-muted) !important;
+    white-space: nowrap;
+    padding-left: 20px;
+    padding-right: 20px;
+    font-size: smaller;
+}
+
+/* ==========================================================================
+   9. Emby Table Scrolling Viewports
+   ========================================================================== */
+.sortable-table-styled-scrollbox {
+    width: 100%;
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: auto;
+    margin: 0 auto;
+    border: 1px solid var(--line-background);
+    border-radius: var(--card-border-radius, 4px);
+    background-color: var(--local-background);
+}
+
+.sortable-table-styled {
+    width: 100%;
+    border-collapse: separate;
+}
+
+    .sortable-table-styled th {
+        cursor: pointer;
+        background-color: var(--local-theme-background-accent);
+        color: var(--local-text-muted);
+        font-weight: 500;
+        padding: 12px 10px;
+        user-select: none;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        border-bottom: 1px solid var(--line-background);
+    }
+
+    .sortable-table-styled td {
+        padding: 12px 10px;
+        border-bottom: 1px solid var(--line-background);
+        color: var(--local-text-normal);
+    }
+
+    .sortable-table-styled tbody tr:nth-child(even) {
+        background-color: rgba(128, 128, 128, 0.04);
+    }
+
+    .sortable-table-styled tbody tr:hover {
+        background-color: var(--local-item-selection);
+    }
+
+    .sortable-table-styled th .sort-icon::after {
+        content: " ↕";
+        opacity: 0.3;
+        margin-left: 6px;
+    }
+
+    .sortable-table-styled th.asc .sort-icon::after {
+        content: " ↑";
+        opacity: 1;
+        color: var(--local-theme-primary-color);
+    }
+
+    .sortable-table-styled th.desc .sort-icon::after {
+        content: " ↓";
+        opacity: 1;
+        color: var(--local-theme-primary-color);
+    }

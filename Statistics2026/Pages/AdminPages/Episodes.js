@@ -18,7 +18,6 @@
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex(tabName, AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
-                Helpers.injectSortableTableStyle(document);
 
                 if (view.getAttribute('data-initialized') === 'true') {
                     return; // Exit and prevent reload

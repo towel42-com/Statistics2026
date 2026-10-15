@@ -34,6 +34,7 @@ define(function () {
     }
 
     function calculateProgressClass(value) {
+        value = Math.round(value);
         if (value == 0)
             return ``;
         else if (value < 20)
@@ -284,48 +285,6 @@ define(function () {
             }
         }
         return -1;
-    }
-
-    function sortableTableStyle() {
-        var retVal = '.tooltip {position: relative;display: inline-block;border-bottom: 1px dotted black;} ' +
-            '.tooltip .tooltiptext {visibility: hidden; background-color: black; color: #fff; border-radius: 6px; padding: 5px 0; position: absolute;z-index: 1;} ' +
-            '.tooltip:hover .tooltiptext {visibility: visible;} ' +
-            '.info_cell {white-space: nowrap; padding-left:45px; padding-right:20px; font-size:smaller;}' +
-            '.info_cell_heading {white-space: nowrap; padding-left:20px; padding-right:20px;font-size:smaller;}' +
-            '.sortable-table-styled - styled {' +
-            '   width: 100 %;' +
-            '   border-collapse: collapse;' +
-            '} ' +
-            '.sortable-table-styled th {' +
-            '    cursor: pointer;' +
-            '    background - color: #f2f2f2;' +
-            '    padding: 10px;' +
-            '    user - select: none;' +
-            '}' +
-            '.sortable-table-styled td {' +
-            '   padding: 10px;' +
-            '   border - bottom: 1px solid #ddd;' +
-            '}' +
-            '.sortable-table-styled th .sort-icon::after {' +
-            '    content: " ↕";' +
-            '    opacity: 0.4;' +
-            '}' +
-            '.sortable-table-styled th.asc .sort-icon::after {' +
-            '    content: " ↑";' +
-            '    opacity: 1;' +
-            '}' +
-            '.sortable-table-styled th.desc .sort-icon::after {' +
-            '    content: " ↓";' +
-            '    opacity: 1;' +
-            '}';
-        return retVal;
-    }
-
-    function injectSortableTableStyle(document) {
-        var style = document.createElement('style');
-        style.innerHTML = sortableTableStyle();
-        var ref = document.querySelector('script');
-        ref.parentNode.insertBefore(style, ref);
     }
 
     const STYLE_ID = 'statistics2026-stylesheet';
@@ -727,7 +686,6 @@ define(function () {
         getLastRunInfo,
         getTabIndex,
         initCollapsibleTable,
-        injectSortableTableStyle,
         injectStyleSheet,
         loadTableData,
         loadUsers,
