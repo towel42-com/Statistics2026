@@ -2,6 +2,7 @@
 using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
+using static ServiceStack.Diagnostics;
 
 namespace Statistics2026.Utilities
 {
@@ -39,6 +40,21 @@ namespace Statistics2026.Utilities
         public void Replace( string from, string to )
         {
             Statement = Statement.Replace( from, to );
+        }
+
+        public object? GetParamValue( string paramName )
+        {
+            if ( Parameters == null )
+                return string.Empty;
+
+            foreach( var param in Parameters )
+            {
+                if( param.name == "@Key" )
+                {
+                    return param.value ?? null;
+                }
+            }
+            return null;
         }
 
         private void _Execute( IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement )
