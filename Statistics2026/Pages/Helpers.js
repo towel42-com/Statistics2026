@@ -167,7 +167,7 @@ define(function () {
         retVal += "<td style='align='left' sort-value='" + info.DisplayName.SortBy + "'>" + info.DisplayName.Text + "</td>";
         retVal += "<td style='align='left' sort-value='" + info.ParentName.SortBy + "'>" + info.ParentName.Text + "</td>";
         let premiereDateClass = "";
-        if (showMissing) {
+        if (showMissing && info.SearchLocation.Text != "") {
             premiereDateClass = "class='" + calculateMediaStatusClass(new Date(info.PremiereDate)) + "'";
         }
 
