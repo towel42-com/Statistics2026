@@ -189,6 +189,7 @@
 
 
         function loadPage(view, params) {
+            view.querySelector(`#embyColorGridPanel`).style.display = 'none';
             ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                 view.querySelector("#hasConnectUserID").checked = config.hasConnectUserID;
                 view.querySelector("#showUnknownDVProfiles").checked = config.showUnknownDVProfiles;
@@ -208,7 +209,6 @@
                 view.querySelector("#collectionFilterList").value = collectionFilters.join('\n');
 
                 loadColorPanel(view, params);
-                view.querySelector(`#embyColorGridPanel`).style.display = 'none';
             });
         }
 
@@ -237,6 +237,9 @@
             tr._seriesFilterItem = item;
             tr.setAttribute('data-index', index);
 
+            let yearString = ``;
+            if (item.PremiereYear && (item.PremiereYear > 0))
+                yearString = `(${item.PremiereYear})`
             var retVal = `
                     <td style="padding: 8px; vertical-align: middle;">
                         <label class="emby-checkbox-label">
@@ -251,7 +254,7 @@
                         </label>
                     </td>
                     <td style="padding: 8px; vertical-align: middle; font-weight: 500;" sort-value='${nameKey}'>
-                        ${item.Name} <span style="opacity: 0.6; font-size: 0.9em; margin-left: 4px;">(${item.PremiereYear || ''})</span>
+                        ${item.Name} <span style="opacity: 0.6; font-size: 0.9em; margin-left: 4px;">${yearString}</span>
                     </td>
                     <td style="padding: 8px; vertical-align: middle;">
                         <input is="emby-input" type="number" class="seriesfilter-minseason" min="1" max="${item.NumSeasons}" value="${item.MinSeason !== -1 ? item.MinSeason : ''}" style="width: 100%; margin: 0;" placeholder="Min Season"/>
