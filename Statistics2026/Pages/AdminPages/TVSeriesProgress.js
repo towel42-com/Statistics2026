@@ -10,7 +10,6 @@
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
-                Helpers.injectSortableTableStyle(document);
 
                 Helpers.getLastRunInfo(view, ["UserWatchDataAnalysis"], "lastRunInfo");
                 Helpers.loadUsers(view, `#selectUser_tvprogress`, loadData);

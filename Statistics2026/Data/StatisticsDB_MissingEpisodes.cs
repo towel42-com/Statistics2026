@@ -16,7 +16,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-         public async Task AnalyzeMissingEpisodesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task AnalyzeMissingEpisodesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
         {
             CheckIsValid( ECheckType.eUpdate );
 
@@ -32,19 +32,34 @@ namespace Statistics2026.Data
             var curr = 0.0;
 
             progress.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>
-            {
-                new( "DELETE FROM Missing WHERE IsEpisode" )
-            };
+            List<SQLCmdDef> sqlCmds = [];
 
+            string paramString = string.Empty;
+            List<object> paramList = [];
             foreach( var series in allSeries )
             {
                 progress.Report( 80.0 * ( ++curr ) / count );
-                var cmds = await AnalyzeMissingEpisodes( reader, series, cancellationToken, progress );
-                sqlCmds.AddRange( cmds );
+                try
+                {
+                    var cmds = await AnalyzeMissingEpisodes( reader, series, cancellationToken, progress );
+                    foreach( var cmd in cmds )
+                    {
+                        var paramValue = cmd.GetParamValue( "@Key" );
+                        if( paramValue != null )
+                        {
+                            paramList.Add( paramValue );
+                        }
+                    }
+                    sqlCmds.AddRange( cmds );
+                }
+                catch( Exception )
+                {
+                }
                 cancellationToken.ThrowIfCancellationRequested();
                 _embyInterfaces!._logger?.Debug( $"    Processed Collection ({curr} of {count}) - {series.Name} items processed" );
             }
+
+            sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND Key IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -62,7 +77,18 @@ namespace Statistics2026.Data
             if( string.IsNullOrEmpty( seriesTmbdId ) )
                 return [];
 
-            var tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId, cancellationToken ).ConfigureAwait( false );
+            TmdbSeries? tmdbSeries = null;
+            try
+            {
+                tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId, cancellationToken ).ConfigureAwait( false );
+            }
+            catch( Exception ex )
+            {
+                _embyInterfaces._logger!.Error( $"Problem connecting to TMDB - {series.Name} - {seriesTmbdId}" );
+                _embyInterfaces!._logger?.Error( ex.ToString() );
+                throw ex;
+            }
+
             if( tmdbSeries == null )
             {
                 _embyInterfaces._logger!.Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );

@@ -194,9 +194,9 @@ namespace Statistics2026.Data
 
             var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eCompact );
 
-            retVal.AddLine( numMissing.ToString(), true );
+            retVal.AddLine( numMissing.ToString(), false );
             retVal.AddLine( subTitle, true );
-            retVal.AddLine( numCollections.ToString(), true );
+            retVal.AddLine( numCollections.ToString(), false );
             return retVal;
         }
 

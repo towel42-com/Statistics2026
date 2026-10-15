@@ -30,7 +30,7 @@ namespace Statistics2026.Data
 
             var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eCompact );
             var value = GetSingleValueFromSQL( sql, parameters, formatter );
-            retVal.AddLine( value, true );
+            retVal.AddLine( value, false );
             return retVal;
         }
 

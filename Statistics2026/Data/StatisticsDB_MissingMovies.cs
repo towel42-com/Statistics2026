@@ -33,19 +33,34 @@ namespace Statistics2026.Data
             var curr = 0.0;
 
             progress.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>
-            {
-                new( "DELETE FROM Missing WHERE NOT IsEpisode" )
-            };
+            List<SQLCmdDef> sqlCmds = [];
 
+            List<object> paramList = [];
             foreach( var collection in collections )
             {
                 progress.Report( 80.0 * ( ++curr ) / count );
-                var cmds = await AnalyzeMissingMoviesInCollection( reader, collection, cancellationToken, progress ).ConfigureAwait( false );
-                sqlCmds.AddRange( cmds );
+                try
+                {
+                    var cmds = await AnalyzeMissingMoviesInCollection( reader, collection, cancellationToken, progress ).ConfigureAwait( false );
+                    foreach( var cmd in cmds )
+                    {
+                        var paramValue = cmd.GetParamValue( "@Key" );
+                        if( paramValue != null )
+                        {
+                            paramList.Add( paramValue.ToString() );
+                        }
+                    }
+                    sqlCmds.AddRange( cmds );
+                }
+                catch( Exception )
+                {
+                }
                 cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!._logger?.Debug( $"    Processed Collection ({curr} of {count}) - {collection.Name} items processed" );
+                _embyInterfaces!._logger?.Info( $"    Processed Collection ({curr} of {count}) - {collection.Name}" );
+
             }
+
+            sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND Key IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
 
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -63,7 +78,19 @@ namespace Statistics2026.Data
             if( string.IsNullOrEmpty( collectionTmbdId ) )
                 return [];
 
-            var tmdbCollection = await reader.GetRemoteCollectionMembersAsyncViaCustom( collectionTmbdId, cancellationToken ).ConfigureAwait( false );
+            TmdbCollection? tmdbCollection = null;
+
+            try
+            {
+                tmdbCollection = await reader.GetRemoteCollectionMembersAsync( collectionTmbdId, cancellationToken ).ConfigureAwait( false );
+            }
+            catch( Exception ex )
+            {
+                _embyInterfaces._logger!.Error( $"Problem connecting to TMDB - {collection.Name} - {collectionTmbdId}" );
+                _embyInterfaces!._logger?.Error( ex.ToString() );
+                throw ex;
+            }
+
             if( tmdbCollection == null )
             {
                 _embyInterfaces._logger!.Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );

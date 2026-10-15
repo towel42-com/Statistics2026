@@ -3,6 +3,12 @@
      data-controller="__plugin/Settings.js">
     <div data-role="content">
         <div class="content-primary" style="padding-top:2px;">
+
+            <div id="embyColorGridPanel" class="emby-color-tester-panel" style="margin: 20px auto; width: 95%; min-width:max-content; padding: 15px; border: 1px solid var(--line-background); border-radius: var(--card-border-radius, 4px); background-color: var(--background-default); font-family: sans-serif;">
+                <h3 style="color: var(--text-normal); margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid var(--line-background); padding-bottom: 10px;">Emby Native CSS Color Variables</h3>
+                <div id="embyColorGrid" style="display: list; gap: 12px; width: 100%;"></div>
+            </div>
+
             <h2 style="margin-top: 0px;margin-bottom: 0px;">Analysis Settings</h2>
 
             <h3 style="margin-top: 10px;">System Settings</h3>
@@ -54,17 +60,13 @@
                 Set the seasons to track missing episodes.  Uncheck to no longer track.  Set the minimum and/or maximum season to track.
             </p>
 
-            <!--<div class="paperList" style="border-radius: 4px; background: rgba(0,0,0,0.2); padding: 10px;">-->
-                <div style="max-height: 400px; overflow-y: auto; overflow-x: auto;">
-                    <div id="seriesFilter_status">Loading Filters...</div>
-                    <!--<table class="sortable-table-styled" id="seriesFilter_table" style="width: 100%; border-collapse: collapse; text-align: left; table-layout: fixed;">-->
-                    <table class="sortable-table-styled" id="seriesFilter_table" cellpadding="6" style="width: 95%; padding-bottom:250px;">
-                        <!--<thead id="seriesFilter_head" style="position: sticky; top: 0; background: var(--theme-card-background, rgb(34,25,38)); z-index: 1; border-bottom: 2px solid rgba(255,255,255,0.1);">-->
-                        <thead id="seriesFilter_head" style="position: sticky; top: 0; z-index: 2;">
-                        <tbody id="seriesFilter_body"></tbody>
-                    </table>
-                </div>
-            <!--</div>-->
+            <div id="seriesFilter_status">Loading Filters...</div>
+            <div class="sortable-table-styled-scrollbox">
+                <table class="sortable-table-styled" id="seriesFilter_table">
+                    <thead id="seriesFilter_head"></thead>
+                    <tbody id="seriesFilter_body"></tbody>
+                </table>
+            </div>
 
             <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
 

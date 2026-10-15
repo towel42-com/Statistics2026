@@ -19,15 +19,14 @@ namespace Statistics2026.Utilities
         public string ToString( int depth = 0, int numColumns = 0, StatCard.EAlignment keyColAlignment = StatCard.EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null, bool showCategory = true, Func<int, string, List<string>>? classesForValueFunc = null )
         {
             var rowText = "<tr ";
-            var classes = string.Empty;
+            List<string> classArray = [];
+            classArray.Add( "statCard-stats-number" ); 
             if( isClickable )
             {
-                List<string> classArray = [];
                 classArray.Add( "clickable-row" );
-                classes = string.Join( " ", classArray );
             }
 
-            rowText += $"class=\"{string.Join( " ", classes )}\" ";
+            rowText += $"class=\"{string.Join( " ", classArray )}\" ";
             rowText += $"{StatCard.GetStyleString()}>";
 
             var retVal = StatCardResponse._addToHtml( depth++, rowText );
@@ -60,16 +59,16 @@ namespace Statistics2026.Utilities
                         colSpan = $"colSpan=\"{numColumns}\"";
                     }
 
-                    classes = string.Empty;
+                    var classes = string.Empty;
                     if( classesForValueFunc != null )
                     {
-                        var classArray = classesForValueFunc( ii, Values[ ii ].ToString() );
+                        classArray = classesForValueFunc( ii, Values[ ii ].ToString() );
+                        classArray.Add( "statCard-stats-number" );
                         if( classArray.Count != 0 )
                         {
                             classes = $"class=\"{string.Join( " ", classArray )}\"";
                         }
                     }
-
                     retVal += StatCardResponse._addToHtml( depth, $"<td {classes} {colSpan} {GetStyleString( ii, columnAlignment )}>{td}</td>" );
                 }
             }

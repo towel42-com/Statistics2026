@@ -344,7 +344,7 @@ namespace Statistics2026.Data
             if( totalTicks != 0 )
             {
                 var rt = new RunTime( totalTicks );
-                retVal.AddLine( DBHelper.FormatTicks( totalTicks ), true );
+                retVal.AddLine( DBHelper.FormatTicks( totalTicks ), false );
             }
 
             return retVal;
@@ -412,13 +412,13 @@ namespace Statistics2026.Data
             retVal.AddLine( titleSeries, true );
             var sqlSeries = $"SELECT {seriesColumn} FROM {seriesFrom}";
             var value = GetSingleValueFromSQL( sqlSeries, paramList );
-            retVal.AddLine( value, true );
+            retVal.AddLine( value, false );
 
             if( user == null )
             {
                 value = GetSingleValueFromSQL( "SELECT SUM(RunTimeTicks) FROM MEDIA WHERE IsEpisode" );
                 value = DBHelper.FormatTicks( value.ToInt64() );
-                retVal.AddLine( value, true );
+                retVal.AddLine( value, false );
             }
 
             return retVal;

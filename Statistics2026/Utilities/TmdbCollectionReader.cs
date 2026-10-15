@@ -25,7 +25,14 @@ namespace Statistics2026.Utilities
 
             CheckIsValid();
 
-            login( cancellationToken );
+            try
+            {
+                login( cancellationToken ).GetAwaiter().GetResult();
+            }
+            catch( Exception ex )
+            {
+                throw ex;
+            }
         }
 
         private bool CheckIsValid( bool throwOnInvalid = true )
@@ -82,7 +89,7 @@ namespace Statistics2026.Utilities
             return true;
         }
 
-        private void login( CancellationToken? cancellationToken = null )
+        private async Task login( CancellationToken? cancellationToken = null )
         {
             var builder = new UriBuilder
             {
@@ -101,10 +108,17 @@ namespace Statistics2026.Utilities
                 CacheMode = CacheMode.None
             };
 
-            _ = _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false );
+            try
+            {
+                _ = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false );
+            }
+            catch( Exception ex )
+            {
+                throw ex;
+            }
         }
 
-        public async Task<TmdbCollection?> GetRemoteCollectionMembersAsyncViaCustom( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
+        public async Task<TmdbCollection?> GetRemoteCollectionMembersAsync( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
         {
             if( string.IsNullOrEmpty( tmdbId ) )
                 return null;
@@ -134,64 +148,11 @@ namespace Statistics2026.Utilities
                 CacheMode = CacheMode.None
             };
 
-            try
+            using( var response = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ) )
             {
-                using( var response = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ) )
-                {
-                    var collections = _embyInterfaces!._jsonSerializer!.DeserializeFromStream<TmdbCollection>( response.Content );
-                    return collections ?? null;
-                }
+                var collections = _embyInterfaces!._jsonSerializer!.DeserializeFromStream<TmdbCollection>( response.Content );
+                return collections ?? null;
             }
-            catch
-            {
-                return null;
-            }
-        }
-
-        public async Task<TmdbCollection?> GetRemoteCollectionMembersAsyncViaProviders( string tmdbId, long internalEmbyId, CancellationToken? cancellationToken = null, string language = "en-US" )
-        {
-            if( string.IsNullOrEmpty( tmdbId ) )
-                return null;
-
-            if( !CheckIsValid( false ) )
-                return null;
-
-            var languageCode = string.IsNullOrEmpty( language ) ? "en" : language.Split( '-' )[ 0 ];
-            var countryCode = ( !string.IsNullOrEmpty( language ) && language.Split( '-' ).Length > 1 ) ? language.Split( '-' )[ 1 ] : "US";
-            var boxSetLookupInfo = new BoxSetInfo
-            {
-                Name = "Collection",
-                MetadataLanguage = languageCode,
-                MetadataCountryCode = countryCode
-            };
-            boxSetLookupInfo.ProviderIds[ "TmdbCollection" ] = tmdbId;
-            var searchQuery = new RemoteSearchQuery<BoxSetInfo>
-            {
-                SearchInfo = boxSetLookupInfo,
-                ItemId = internalEmbyId,
-                IncludeDisabledProviders = true,
-                Providers = new[] { "TheMovieDb" }
-            };
-
-            var cancelToken = cancellationToken ?? CancellationToken.None;
-
-            try
-            {
-                IEnumerable<RemoteSearchResult> results = await _embyInterfaces!._providerManager!.GetRemoteSearchResults<BoxSet, BoxSetInfo>( searchQuery, null, cancelToken ).ConfigureAwait( false );
-
-                foreach( var result in results )
-                {
-                    foreach( var providerId in result.ProviderIds )
-                    {
-                        _embyInterfaces!._logger!.Info( "   -> External Provider: {0}, ID: {1}", providerId.Key, providerId.Value );
-                    }
-                }
-            }
-            catch( Exception ex )
-            {
-                _embyInterfaces!._logger!.Warn( "Failed to discover remote BoxSet results", ex );
-            }
-            return null;
         }
 
         public async Task<TmdbSeries?> GetRemoteSeriesAsync( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
@@ -224,43 +185,36 @@ namespace Statistics2026.Utilities
                 CacheLength = System.TimeSpan.FromDays( 1 ),
                 CacheMode = CacheMode.None
             };
-            try
+            using( var response = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ) )
             {
-                using( var response = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ) )
+                var text = HelperFuncs.StreamToString( response.Content );
+                //var seriesList = TmdbSeriesResponse.FromJson( text, _embyInterfaces._jsonSerializer );
+                var series = _embyInterfaces!._jsonSerializer!.DeserializeFromString<TmdbSeries>( text );
+                if( series == null )
+                    return retVal;
+                if( series.Seasons != null && series.Seasons.Count > 0 )
                 {
-                    var text = HelperFuncs.StreamToString( response.Content );
-                    //var seriesList = TmdbSeriesResponse.FromJson( text, _embyInterfaces._jsonSerializer );
-                    var series = _embyInterfaces!._jsonSerializer!.DeserializeFromString<TmdbSeries>( text );
-                    if( series == null )
-                        return retVal;
-                    if( series.Seasons != null && series.Seasons.Count > 0 )
+                    List<TmdbSeason> seasons = [];
+                    foreach( var season in series.Seasons )
                     {
-                        List<TmdbSeason> seasons = [];
-                        foreach( var season in series.Seasons )
-                        {
-                            if( season == null )
-                                continue;
-                            seasons.Add( season );
-                            if( seasons.Count == 20 )
-                            {
-                                retVal = await GetRemoteEpisodesAsync( retVal, seasons, tmdbId, cancellationToken ).ConfigureAwait( false );
-                                seasons.Clear();
-                            }
-                        }
-
-                        if( seasons.Count > 0 )
+                        if( season == null )
+                            continue;
+                        seasons.Add( season );
+                        if( seasons.Count == 20 )
                         {
                             retVal = await GetRemoteEpisodesAsync( retVal, seasons, tmdbId, cancellationToken ).ConfigureAwait( false );
+                            seasons.Clear();
                         }
                     }
 
-                    return retVal;
+                    if( seasons.Count > 0 )
+                    {
+                        retVal = await GetRemoteEpisodesAsync( retVal, seasons, tmdbId, cancellationToken ).ConfigureAwait( false );
+                    }
                 }
+
             }
-            catch
-            {
-                return null;
-            }
+            return retVal;
         }
 
         public async Task<TmdbSeries?> GetRemoteEpisodesAsync( TmdbSeries? retVal, List<TmdbSeason> seasons, string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
