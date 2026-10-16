@@ -53,7 +53,7 @@ namespace Statistics2026.ScheduledTasks
                 _fileSystem = fileSystem,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - RunAllTasksTask" ),
+                _logger = logManager.GetLogger( "Statistics2026 - PostMediaScanTask" ),
                 _serverApplicationPaths = serverApplicationPaths,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
