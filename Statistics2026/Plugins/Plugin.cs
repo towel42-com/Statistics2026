@@ -276,7 +276,7 @@ namespace Statistics2026
         public Stream GetThumbImage()
         {
             var type = GetType();
-            return type.Assembly.GetManifestResourceStream( type.Namespace + ".Resources.plugin.png" );
+            return type.Assembly.GetManifestResourceStream( type.Namespace + ".Resources.thumb.png" );
         }
 
         public ImageFormat ThumbImageFormat => ImageFormat.Png;
