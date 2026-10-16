@@ -326,6 +326,7 @@ namespace Statistics2026.Utilities
                 return (false, false);
 
             var logger = embyInterfaces._logManager?.GetLogger( "Statistics2026 - OOD Analysis" ) ?? null;
+            embyInterfaces._logger = logger;
 
             bool runFullAnalysis = false;
             var lastAnalysisAdded = db.GetLastUpdated( EAction.LastMediaOrUserAdded );
@@ -400,7 +401,7 @@ namespace Statistics2026.Utilities
                 }
                 else 
                 {
-                    logger?.Info( "Missing Analysis already been run today." );
+                    logger?.Info( "Missing Analysis has already been run today." );
                     runMissingAnalysis = true;
                 }
             }
