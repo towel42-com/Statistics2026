@@ -57,7 +57,7 @@ namespace Statistics2026.Data
                     hadError = true;
                 }
                 cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!._logger?.Debug( $"    Processed Collection ({curr} of {count}) - {series.Name} items processed" );
+                _embyInterfaces!._logger?.Info( $"    Processed Series ({curr} of {count}) - {series.Name}" );
             }
 
             if ( hadError )
