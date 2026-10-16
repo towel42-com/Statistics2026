@@ -35,35 +35,23 @@ namespace Statistics2026.Data
             List<SQLCmdDef> sqlCmds = [];
 
             List<object> paramList = [];
-            bool hadError = false;
             foreach( var series in allSeries )
             {
                 progress.Report( 80.0 * ( ++curr ) / count );
                 try
                 {
                     var cmds = await AnalyzeMissingEpisodes( reader, series, cancellationToken, progress );
-                    foreach( var cmd in cmds )
-                    {
-                        var paramValue = cmd.GetParamValue( "@Key" );
-                        if( paramValue != null )
-                        {
-                            paramList.Add( paramValue );
-                        }
-                    }
+                    paramList.Add( series.Id.ToString() );
                     sqlCmds.AddRange( cmds );
                 }
                 catch( Exception )
                 {
-                    hadError = true;
                 }
                 cancellationToken.ThrowIfCancellationRequested();
                 _embyInterfaces!._logger?.Info( $"    Processed Series ({curr} of {count}) - {series.Name}" );
             }
 
-            if ( hadError )
-                sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND Key IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
-            else
-                sqlCmds.Insert( 0, new SQLCmdDef( "DELETE FROM Missing WHERE IsEpisode" ) );
+            sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
 
             cancellationToken.ThrowIfCancellationRequested();
 
