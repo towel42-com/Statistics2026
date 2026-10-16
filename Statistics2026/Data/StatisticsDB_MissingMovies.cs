@@ -36,6 +36,7 @@ namespace Statistics2026.Data
             List<SQLCmdDef> sqlCmds = [];
 
             List<object> paramList = [];
+            bool hadError = false;
             foreach( var collection in collections )
             {
                 progress.Report( 80.0 * ( ++curr ) / count );
@@ -54,13 +55,17 @@ namespace Statistics2026.Data
                 }
                 catch( Exception )
                 {
+                    hadError = true;
                 }
                 cancellationToken.ThrowIfCancellationRequested();
                 _embyInterfaces!._logger?.Info( $"    Processed Collection ({curr} of {count}) - {collection.Name}" );
 
             }
 
-            sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND Key IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
+            if( hadError )
+                sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND Key IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
+            else
+                sqlCmds.Insert( 0, new SQLCmdDef( "DELETE FROM Missing WHERE IsEpisode" ) );
 
             cancellationToken.ThrowIfCancellationRequested();
 
