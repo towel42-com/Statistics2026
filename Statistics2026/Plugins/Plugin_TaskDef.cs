@@ -37,14 +37,14 @@ namespace Statistics2026
         public bool IsStatistics2026TaskRunning( MediaBrowser.Model.Tasks.IScheduledTask? runningTask )
         {
             if ( runningTask != null )
-                return IsStatistics2026TaskRunning( [ typeof( RunAllTasksTask ), runningTask.GetType() ] );
+                return IsStatistics2026TaskRunning( [ typeof( RunAllTasksTask ), typeof( PostMediaScanTask ), runningTask.GetType() ] );
             else
                 return IsStatistics2026TaskRunning( [] );
         }
 
         public bool IsStatistics2026TaskRunning( System.Type okIfRunning )
         {
-            return IsStatistics2026TaskRunning( [ typeof( RunAllTasksTask ), okIfRunning ] );
+            return IsStatistics2026TaskRunning( [ typeof( RunAllTasksTask ), typeof( PostMediaScanTask ), okIfRunning ] );
         }
 
         public bool IsStatistics2026TaskRunning( List<System.Type> okIfRunning )
