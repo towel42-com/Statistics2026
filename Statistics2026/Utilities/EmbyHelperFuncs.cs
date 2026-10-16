@@ -299,7 +299,7 @@ namespace Statistics2026.Utilities
             var lastMovieAddedToServer = EmbyHelperFuncs.GetLastMovieAdded( embyInterfaces );
             if( lastMovieAddedToServer != null && lastMovieAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
-                embyInterfaces?._logger?.Info( $"Last Movie added: {MediaInfo.GetDisplayName( lastMovieAddedToServer ) } on {lastMovieAddedToServer!.DateCreated}" );
+                embyInterfaces?._logger?.Info( $"Last Movie added: {MediaInfo.GetDisplayName( lastMovieAddedToServer )} on {lastMovieAddedToServer!.DateCreated}" );
                 latestItem = getLatestItem( latestItem, lastMovieAddedToServer );
             }
 
@@ -320,36 +320,89 @@ namespace Statistics2026.Utilities
             return latestItem;
         }
 
-        public static bool AnalysisOutOfDate( EmbyInterfaces? embyInterfaces, StatisticsDB db )
+        public static (bool runFullAnalysis, bool runMissingAnalysis) AnalysisOutOfDate( EmbyInterfaces? embyInterfaces, StatisticsDB db )
         {
             if( embyInterfaces == null || embyInterfaces._logger == null )
-                return false;
+                return (false, false);
 
-            bool needToRun = false;
-
-            var lastAnalysisAdded = db.GetLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded );
+            bool runFullAnalysis = false;
+            var lastAnalysisAdded = db.GetLastUpdated( EAction.LastMediaOrUserAdded );
             if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTimeOffset.MinValue )
             {
-                embyInterfaces._logger?.Info( "Analysis has not been run yet, running Statistics Analysis" );
-                needToRun = true;
+                embyInterfaces._logger?.Info( "Analysis has not been run yet" );
+                runFullAnalysis = true;
             }
             else
             {
                 embyInterfaces._logger?.Info( $"Last Analysis run: {lastAnalysisAdded}" );
             }
 
-            if( !needToRun )
+            if( !runFullAnalysis )
             {
                 var latestItem = getLastItemOfConsequenceAdded( embyInterfaces );
                 if( latestItem != null && latestItem.DateCreated != DateTimeOffset.MinValue )
-                    needToRun = lastAnalysisAdded < latestItem.DateCreated;
+                    runFullAnalysis = lastAnalysisAdded < latestItem.DateCreated;
             }
 
-            if( !needToRun )
+            if( !runFullAnalysis )
             {
-                embyInterfaces._logger?.Info( "No media or users have been added since last run, not re-running Statistics Analysis" );
+                embyInterfaces._logger?.Info( "No media or users have been added since last run, not re-running Complete Statistical Analysis" );
             }
-            return needToRun;
+            else
+            {
+                return (runFullAnalysis, runFullAnalysis);
+            }
+
+            bool runMissingAnalysis = false;
+
+            DateTimeOffset? lastMissingAnalysis = null;
+            var lastMissingEpisodeAnalysis = db.GetLastUpdated( EAction.MissingEpisodesAnalysis );
+            if( lastMissingEpisodeAnalysis == null || lastMissingEpisodeAnalysis.Value == DateTimeOffset.MinValue )
+            {
+                runMissingAnalysis = true;
+                embyInterfaces._logger?.Info( "Missing Episode Analysis has not been run yet" );
+            }
+            else
+            {
+                lastMissingAnalysis = lastMissingEpisodeAnalysis;
+                embyInterfaces._logger?.Info( $"Last Missing Episode Analysis run: {lastMissingEpisodeAnalysis}" );
+            }
+
+            var lastMissingMovieAnalysis = db.GetLastUpdated( EAction.MissingMoviesAnalysis );
+            if( lastMissingMovieAnalysis == null || lastMissingMovieAnalysis.Value == DateTimeOffset.MinValue )
+            {
+                runMissingAnalysis = true;
+                embyInterfaces._logger?.Info( "Missing Movie Analysis has not been run yet" );
+            }
+            else
+            {
+                embyInterfaces._logger?.Info( $"Last Missing Movie Analysis run: {lastMissingMovieAnalysis}" );
+                if( lastMissingAnalysis == null )
+                    lastMissingAnalysis = lastMissingMovieAnalysis;
+                else if( lastMissingMovieAnalysis < lastMissingAnalysis.Value )
+                {
+                    lastMissingAnalysis = lastMissingMovieAnalysis;
+                }
+            }
+
+            if( !runMissingAnalysis )
+            {
+                if( lastMissingAnalysis == null || lastMissingAnalysis == DateTimeOffset.MinValue )
+                {
+                    runMissingAnalysis = true;
+                }
+                else if( lastMissingAnalysis.Value.UtcDateTime.Date != DateTimeOffset.UtcNow.Date )
+                {
+                    embyInterfaces._logger?.Info( "Missing Analysis has not been run today." );
+                    runMissingAnalysis = true;
+                }
+            }
+            else
+            {
+                runMissingAnalysis = true;
+            }
+
+            return (runFullAnalysis, runMissingAnalysis);
         }
 
     }

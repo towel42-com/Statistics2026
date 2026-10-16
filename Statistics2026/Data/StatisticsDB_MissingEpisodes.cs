@@ -34,7 +34,6 @@ namespace Statistics2026.Data
             progress.Report( 0 );
             List<SQLCmdDef> sqlCmds = [];
 
-            string paramString = string.Empty;
             List<object> paramList = [];
             bool hadError = false;
             foreach( var series in allSeries )

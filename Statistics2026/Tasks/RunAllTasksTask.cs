@@ -94,7 +94,7 @@ namespace Statistics2026.ScheduledTasks
             db.Initialize( schedTask, cancellationToken, progress, PluginConfiguration.resetPlayCount );
             cancellationToken.ThrowIfCancellationRequested();
 
-            if( !force && !EmbyHelperFuncs.AnalysisOutOfDate( embyInterfaces, db ) )
+            if( !force && !EmbyHelperFuncs.AnalysisOutOfDate( embyInterfaces, db ).runFullAnalysis )
                 return;
 
             var taskName = "Analyze All";

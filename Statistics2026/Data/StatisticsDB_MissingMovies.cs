@@ -65,7 +65,7 @@ namespace Statistics2026.Data
             if( hadError )
                 sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND Key IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
             else
-                sqlCmds.Insert( 0, new SQLCmdDef( "DELETE FROM Missing WHERE IsEpisode" ) );
+                sqlCmds.Insert( 0, new SQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode" ) );
 
             cancellationToken.ThrowIfCancellationRequested();
 
