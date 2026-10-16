@@ -105,6 +105,7 @@ namespace Statistics2026.Api
         public SortByText ServerLocation { get; set; } = new();
         public SortByText SearchLocation { get; set; } = new();
         public SortByText ParentName { get; set; } = new();
+        public string ParentUrl { get; set; } = string.Empty;
 
         public string ItemUrl { get; set; } = string.Empty;
         public string ItemId { get; set; } = string.Empty;

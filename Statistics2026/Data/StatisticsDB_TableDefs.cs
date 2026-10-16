@@ -124,7 +124,8 @@ namespace Statistics2026.Data
                             new TableColDef( "ItemId", "TEXT", false, true),
                             new TableColDef( "TmdbId", "TEXT", true ),
                             new TableColDef( "Name", "TEXT", false ),
-                            new TableColDef( "SortName", "TEXT", false )
+                            new TableColDef( "SortName", "TEXT", false ),
+                            new TableColDef( "ImageUrl", "TEXT", false ),
                     ]
                 ),
                 new TableDef("CollectionMembership",

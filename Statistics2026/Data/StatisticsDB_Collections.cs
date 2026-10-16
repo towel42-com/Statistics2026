@@ -1,5 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
@@ -134,6 +135,7 @@ namespace Statistics2026.Data
                     ", TmdbId" +
                     ", Name" +
                     ", SortName" +
+                    ", ImageUrl" +
                 ")" +
                 " VALUES " +
                 "(" +
@@ -141,13 +143,15 @@ namespace Statistics2026.Data
                 ", @TmdbId" +
                 ", @Name" +
                 ", @SortName" +
+                ", @ImageUrl" +
                 ")" +
                 " ON CONFLICT(ItemId) " +
                 " DO UPDATE " +
                 " SET " +
                     "  Name=@Name" +
                     ", SortName=@SortName" +
-                    ", TmdbId=@TmdbId"
+                    ", TmdbId=@TmdbId" +
+                    ", ImageUrl=@ImageUrl"
                     ;
 
             var tmdbId = collection.GetProviderId( MetadataProviders.Tmdb );
@@ -162,6 +166,7 @@ namespace Statistics2026.Data
                     ("@TmdbId", tmdbId),
                     ("@Name", collection.Name),
                     ("@SortName", collection.SortName),
+                    ("@ImageUrl", ItemImageUrl._ItemImageUrl(collection)),
                 ] ) );
             _embyInterfaces!._logger?.Debug( $"    AddCollection - Successfully Added Collection" );
 
@@ -273,12 +278,14 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public SortByText? GetCollectionsForMovie( string movieId )
+        public SortByText? GetCollectionsForMovie( string movieId, bool includeImage )
         {
             CheckIsValid( ECheckType.eReport );
             var sql = "SELECT " +
                 "  Collections.Name" +
                 ", Collections.SortName" +
+                ", Collections.ItemId" +
+                ", Collections.ImageUrl" +
                 " FROM CollectionMembership" +
                 " LEFT JOIN Collections" +
                 "    ON Collections.Itemid=CollectionMembership.CollectionId" +
@@ -294,17 +301,40 @@ namespace Statistics2026.Data
 
             List<string> names = [];
             List<string> sortByNames = [];
+            List<string> images = [];
 
             _dbHelper.ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
-                names.Add( row.GetString( 0 ) );
-                sortByNames.Add( row.GetString( 1 ) );
+                var col = 0;
+                var name = row.GetString( col++ );
+                var sortBy = row.GetString( col++ );
+                names.Add( name );
+                sortByNames.Add( sortBy );
+                if( includeImage )
+                {
+                    var collectionId = row.GetString( col++ );
+                    var collectionUrl = row.GetString( col++ );
+                    images.Add( ItemImageUrl.ItemUrl( collectionId, collectionUrl, name ) );
+                }
                 return true;
             }, false );
 
             if( names.Count == 0 || sortByNames.Count == 0 )
                 return null;
+
+            if( includeImage )
+            {
+                if( images.Count != names.Count )
+                    return null;
+                for( int ii = 0; ii < names.Count; ++ii )
+                {
+                    if( images[ ii ] != null && images[ ii ] != String.Empty )
+                    {
+                        names[ ii ] = images[ ii ];
+                    }
+                }
+            }
 
             var retVal = new SortByText( string.Join( ", ", names ), string.Join( ", ", sortByNames ) );
             return retVal;

@@ -186,7 +186,7 @@ namespace Statistics2026.Data
                 ("@Genres", string.Join(",", mediaInfo.Genres)),
                 ("@ServerLocation", mediaInfo.ServerLocation),
                 ("@FileSize", mediaInfo.FileSize),
-                ("@ImageUrl",  mediaInfo.ImageUrl ??  string.Empty ),
+                ("@ImageUrl",  mediaInfo.ImageUrl ?? string.Empty ),
                 ("@RunTimeTicks", mediaInfo.RunTimeTicks),
                 ("@Rating", mediaInfo.Rating),
                 ("@TotalBitrate", mediaInfo.TotalBitrate),
@@ -680,7 +680,12 @@ namespace Statistics2026.Data
                 ", DolbyVisionProfile" +
                 ", ServerLocation" +
                 ", Media.ItemId" +
-                ", Media.ImageUrl" +
+                ", Media.ImageUrl";
+            if( episodes )
+                sql += ", Series.ItemId, Series.ImageUrl";
+            else
+                sql += ", Collections.ItemId, Collections.ImageUrl";
+            sql +=
                 " FROM " +
                 "   Media ";
 
@@ -712,16 +717,27 @@ namespace Statistics2026.Data
                 curr.ItemId = row.GetString( col++ );
                 if( !episodes )
                 {
-                    var collections = GetCollectionsForMovie( curr.ItemId );
+                    var collections = GetCollectionsForMovie( curr.ItemId, true );
                     curr.ParentName = collections ?? new SortByText();
                 }
                 var itemUrl = row.GetString( col++ );
-                curr.ItemUrl = ItemImageUrl.ItemUrl( curr.ItemId, itemUrl, curr.DisplayName.SortBy );
+                curr.ItemUrl = ItemImageUrl.ItemUrl( curr.ItemId, itemUrl, curr.DisplayName.Text );
 
                 if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
                     curr.DisplayName.Text = curr.ItemUrl;
                 else
                     curr.DisplayName.Text = curr.DisplayName.SortBy;
+
+                var parentId = row.GetString( col++ );
+                var parentUrl = row.GetString( col++ );
+                curr.ParentUrl = ItemImageUrl.ItemUrl( parentId, parentUrl, curr.ParentName.Text );
+                if( episodes ) // collections are done in the GetCollectionsForMovie
+                {
+                    if( curr.ParentUrl != null && curr.ParentUrl != string.Empty )
+                    {
+                        curr.ParentName.Text = curr.ParentUrl;
+                    }
+                }
 
                 if( curr.Codec != "hevc" && curr.Codec != "av1" )
                     curr.DolbyVisionProfile = string.Empty;
@@ -729,20 +745,6 @@ namespace Statistics2026.Data
                 retVal.Add( curr );
                 return true;
             } );
-
-            if( !episodes )
-            {
-                for( int ii = 0; ii < retVal.Count; ++ii )
-                {
-                    var curr = retVal[ ii ];
-                    var collections = GetCollectionsForMovie( curr.ItemId );
-                    if( collections == null )
-                        continue;
-
-                    curr.ParentName = collections;
-                    retVal[ ii ] = curr;
-                }
-            }
 
             return retVal;
         }

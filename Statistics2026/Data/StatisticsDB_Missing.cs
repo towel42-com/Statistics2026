@@ -210,11 +210,15 @@ namespace Statistics2026.Data
                 ;
             if( episodes )
             {
-                sql += ", Series.Name";
+                sql +=
+                    ", Series.Name" +
+                    ", Series.ImageUrl";
             }
             else
             {
-                sql += ", Collections.Name";
+                sql +=
+                    ", Collections.Name" +
+                    ", Collections.ImageUrl";
             }
 
             sql +=
@@ -260,11 +264,19 @@ namespace Statistics2026.Data
                 };
                 var col = 2;
                 curr.ParentName = new SortByText( row.GetString( col++ ), string.Empty );
+                var parentUrl = row.GetString( col++ );
+
 
                 var posterPath = row.GetString( col++ );
                 var seasonNum = row.GetInt( col++ );
                 var episodeNum = row.GetInt( col++ );
                 var parentId = row.GetString( col++ );
+
+                curr.ParentUrl = ItemImageUrl.ItemUrl( parentId, parentUrl, curr.ParentName.Text );
+                if( curr.ParentUrl != null && curr.ParentUrl != string.Empty )
+                {
+                    curr.ParentName.Text = curr.ParentUrl;
+                }
 
                 if( episodes && IsFilteredSeries( parentId, seasonNum ) )
                     return true;
@@ -492,7 +504,7 @@ namespace Statistics2026.Data
             foreach( var series in seriesFilterList )
             {
                 var key = series.key();
-                if ( !oldFilterMap.TryGetValue( key, out var list ) )
+                if( !oldFilterMap.TryGetValue( key, out var list ) )
                 {
                     list = [];
                     oldFilterMap[ key ] = list;
@@ -521,7 +533,7 @@ namespace Statistics2026.Data
                 if( currFilterMap.TryGetValue( key, out var currFilter ) )
                 {
                     var msg = $"Updating filter for Series: {series.Name}";
-                    var changed = filterChanged( ref msg, ref currFilter, numSeasons, hasSpecials ); 
+                    var changed = filterChanged( ref msg, ref currFilter, numSeasons, hasSpecials );
                     if( changed )
                     {
                         currFilterMap[ key ] = currFilter;
@@ -529,7 +541,7 @@ namespace Statistics2026.Data
                         _embyInterfaces?._logger?.Debug( msg );
                     }
                 }
-                else if ( oldFilterMap.TryGetValue( oldKey, out var oldFilterList ) )
+                else if( oldFilterMap.TryGetValue( oldKey, out var oldFilterList ) )
                 {
                     bool found = false;
                     SeriesFilterResponse? reference = null;
@@ -537,7 +549,7 @@ namespace Statistics2026.Data
                     {
                         reference = reference ?? tmp;
 
-                        if ( series.Id.ToString() == tmp.SeriesId )
+                        if( series.Id.ToString() == tmp.SeriesId )
                         {
                             var msg = $"Updating filter for Series: {series.Name}";
                             var changed = filterChanged( ref msg, ref currFilter, numSeasons, hasSpecials );
