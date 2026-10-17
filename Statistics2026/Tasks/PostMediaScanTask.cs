@@ -80,32 +80,28 @@ namespace Statistics2026.ScheduledTasks
 
             if( !runFullAnalysis && runMissingAnalysis )
             {
-                var taskWorkerToRun = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskWorkerToRun => taskWorkerToRun.ScheduledTask.GetType() == typeof( AnalyzeMissingEpisodesTask ) );
-                if( taskWorkerToRun == null || taskWorkerToRun.ScheduledTask == null )
+                var taskWorker = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskWorker => taskWorker.ScheduledTask.GetType() == typeof( AnalyzeMissingEpisodesTask ) );
+                if( taskWorker == null || taskWorker.ScheduledTask == null )
                     throw new Exception( $"AnalyzeMissingEpisodesTask not found Run" );
-                var scheduledTask = taskWorkerToRun.ScheduledTask;
 
                 var options = new TaskOptions() { HasManualInteraction = false };
-                _embyInterfaces._taskManager.QueueScheduledTask( scheduledTask, options );
-
-                taskWorkerToRun = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskWorkerToRun => taskWorkerToRun.ScheduledTask.GetType() == typeof( AnalyzeMissingMoviesTask ) );
-                if( taskWorkerToRun == null || taskWorkerToRun.ScheduledTask == null )
+                await _embyInterfaces._taskManager.Execute( taskWorker, options );
+                
+                taskWorker = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskWorker => taskWorker.ScheduledTask.GetType() == typeof( AnalyzeMissingMoviesTask ) );
+                if( taskWorker == null || taskWorker.ScheduledTask == null )
                     throw new Exception( $"AnalyzeMissingEpisodesTask not found Run" );
 
-                scheduledTask = taskWorkerToRun.ScheduledTask;
-
                 options = new TaskOptions() { HasManualInteraction = false };
-                _embyInterfaces._taskManager.QueueScheduledTask( scheduledTask, options );
+                await _embyInterfaces._taskManager.Execute( taskWorker, options );
             }
             else if ( runFullAnalysis )
             {
-                var taskWorkerToRun = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskWorkerToRun => taskWorkerToRun.ScheduledTask.GetType() == typeof( RunAllTasksTask ) );
-                if( taskWorkerToRun == null || taskWorkerToRun.ScheduledTask == null )
+                var taskWorker = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskWorker => taskWorker.ScheduledTask.GetType() == typeof( RunAllTasksTask ) );
+                if( taskWorker == null || taskWorker.ScheduledTask == null )
                     throw new Exception( $"RunAllTasksTask not found Run" );
-                var scheduledTask = taskWorkerToRun.ScheduledTask;
 
                 var options = new TaskOptions() { HasManualInteraction = false };
-                _embyInterfaces._taskManager.QueueScheduledTask( scheduledTask, options );
+                await _embyInterfaces._taskManager.Execute( taskWorker, options );
             }
         }
     }
