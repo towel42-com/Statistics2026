@@ -151,10 +151,10 @@ namespace Statistics2026.EventMonitorEntryPoints
         {
             CheckIsValid();
 
-            if( Plugin.Instance == null )
+            if( Plugin.Instance == null || _embyInterfaces == null )
                 return;
 
-            if( Plugin.Instance.IsStatistics2026TaskRunning() )
+            if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, false ) )
             {
                 _embyInterfaces!._logger!.Warn( "Task is running" );
                 return;

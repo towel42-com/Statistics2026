@@ -81,7 +81,7 @@ namespace Statistics2026.ScheduledTasks
 
         public static async Task RunAllTasks( object sender, EmbyInterfaces embyInterfaces, bool force, IProgress<double> progress, CancellationToken cancellationToken )
         {
-            if( Plugin.Instance != null && Plugin.Instance.IsStatistics2026TaskRunning( sender.GetType() ) )
+            if( TaskDef.IsStatistics2026TaskRunning( embyInterfaces, sender.GetType(), false ) )
             {
                 embyInterfaces?._logger?.Info( "Analysis is currently running" );
                 return;
@@ -110,13 +110,13 @@ namespace Statistics2026.ScheduledTasks
             db.ClearLastUpdated( StatisticsDB.EAction.System );
 
             var overAllTimer = new AutoTimer( $"Adding All Data", embyInterfaces._logger, false );
-            var tasks = Plugin.GetKnownTasks( false );
+            var tasks = TaskDef.GetKnownTasks( false );
 
             for( var ii = 0; ii < tasks?.Count; ii++ )
             {
                 progress.Report( 100.0 * ii / ( 1.0 * tasks.Count ) );
                 var task = tasks[ ii ];
-                task.RunTime = await Plugin.launchSubTask( embyInterfaces, task, cancellationToken );
+                task.Result = await TaskDef.ExecuteSubTask( embyInterfaces, task, cancellationToken, true );
                 tasks[ ii ] = task;
             }
 
@@ -138,7 +138,7 @@ namespace Statistics2026.ScheduledTasks
 
                 foreach( var task in tasks )
                 {
-                    embyInterfaces._logger.Info( $"{task.Description.PadLeft( maxLen )}: {task.RunTime} ms" );
+                    embyInterfaces._logger.Info( $"{task.Description.PadLeft( maxLen )}: {task.RunTimeMS} ms" );
                 }
             }
 

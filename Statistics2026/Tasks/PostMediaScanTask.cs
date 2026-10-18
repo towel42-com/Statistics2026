@@ -70,7 +70,7 @@ namespace Statistics2026.ScheduledTasks
 
         async Task ILibraryPostScanTask.Run( IProgress<double> progress, CancellationToken cancellationToken )
         {
-            if( _embyInterfaces == null || _embyInterfaces._taskManager == null )
+            if( _embyInterfaces == null || TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
                 return;
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
@@ -78,31 +78,17 @@ namespace Statistics2026.ScheduledTasks
 
             var (runFullAnalysis, runMissingAnalysis) = EmbyHelperFuncs.AnalysisOutOfDate( _embyInterfaces, db );
 
+            List<Type> tasks = [];
             if( !runFullAnalysis && runMissingAnalysis )
             {
-                var taskWorker = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskWorker => taskWorker.ScheduledTask.GetType() == typeof( AnalyzeMissingEpisodesTask ) );
-                if( taskWorker == null || taskWorker.ScheduledTask == null )
-                    throw new Exception( $"AnalyzeMissingEpisodesTask not found Run" );
-
-                var options = new TaskOptions() { HasManualInteraction = false };
-                await _embyInterfaces._taskManager.Execute( taskWorker, options );
-                
-                taskWorker = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskWorker => taskWorker.ScheduledTask.GetType() == typeof( AnalyzeMissingMoviesTask ) );
-                if( taskWorker == null || taskWorker.ScheduledTask == null )
-                    throw new Exception( $"AnalyzeMissingEpisodesTask not found Run" );
-
-                options = new TaskOptions() { HasManualInteraction = false };
-                await _embyInterfaces._taskManager.Execute( taskWorker, options );
+                tasks.AddRange( [ typeof( AnalyzeMissingEpisodesTask ), typeof( AnalyzeMissingMoviesTask ) ] );
             }
-            else if ( runFullAnalysis )
+            else if( runFullAnalysis )
             {
-                var taskWorker = _embyInterfaces._taskManager.ScheduledTasks.FirstOrDefault( taskWorker => taskWorker.ScheduledTask.GetType() == typeof( RunAllTasksTask ) );
-                if( taskWorker == null || taskWorker.ScheduledTask == null )
-                    throw new Exception( $"RunAllTasksTask not found Run" );
-
-                var options = new TaskOptions() { HasManualInteraction = false };
-                await _embyInterfaces._taskManager.Execute( taskWorker, options );
+                tasks.Add( typeof( RunAllTasksTask ) );
             }
+
+            await TaskDef.ExecuteSubTasks( _embyInterfaces, tasks, cancellationToken, false );
         }
     }
 }

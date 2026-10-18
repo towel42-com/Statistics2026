@@ -73,7 +73,7 @@ namespace Statistics2026.Data
             if( Statistics2026.Plugin.Instance == null )
                 throw new ArgumentNullException( "Statistics2026.Plugin.Instance" );
 
-            if( Statistics2026.Plugin.Instance.Configuration == null )
+            if( Statistics2026.Plugin.Instance.Configuration == null || _embyInterfaces == null )
                 throw new ArgumentNullException( "Statistics2026.Plugin.Instance.Configuration" );
 
             if( checkType == ECheckType.eInit )
@@ -83,7 +83,7 @@ namespace Statistics2026.Data
             else if( checkType == ECheckType.eUpdate )
                 _ = _dbHelper.CheckIsValid( ECheckLevel.eAllWithThrow );
 
-            if( ( checkType != ECheckType.eInit ) && ( checkType != ECheckType.eReport ) && Plugin.Instance != null && Plugin.Instance.IsStatistics2026TaskRunning( _currentTask ) )
+            if( ( checkType != ECheckType.eInit ) && ( checkType != ECheckType.eReport ) && TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, _currentTask, true ) )
             {
                 throw new Exception( "Statistics 2026 task is running" );
             }
