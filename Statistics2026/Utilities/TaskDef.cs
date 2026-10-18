@@ -87,6 +87,9 @@ namespace Statistics2026.Utilities
 
                 foreach( var currTask in knownTasks )
                 {
+                    if( currTask == null )
+                        continue;
+
                     var okToBeRunning = false;
                     foreach( var okTask in okIfRunning )
                     {
@@ -115,15 +118,18 @@ namespace Statistics2026.Utilities
             var tasks = GetKnownTasks( true );
             foreach( var task in tasks )
             {
+                if( task == null )
+                    continue;
+
                 if( task.TaskType == taskType )
                     return task;
             }
             return null;
         }
 
-        public static List<TaskDef> GetKnownTasks( bool includeRunAll )
+        public static List<TaskDef?> GetKnownTasks( bool includeRunAll )
         {
-            var tasks = new List<TaskDef>
+            var tasks = new List<TaskDef?>
             {
                 new($"Analyzing Users", typeof(AnalyzeUsersTask)),
                 new($"Analyzing Media", typeof(AnalyzeMediaTask)),
