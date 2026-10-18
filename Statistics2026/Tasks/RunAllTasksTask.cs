@@ -116,8 +116,11 @@ namespace Statistics2026.ScheduledTasks
             {
                 progress.Report( 100.0 * ii / ( 1.0 * tasks.Count ) );
                 var task = tasks[ ii ];
-                task.Result = await TaskDef.ExecuteSubTask( embyInterfaces, task, cancellationToken, true );
-                tasks[ ii ] = task;
+                if( task != null )
+                {
+                    task.Result = await TaskDef.ExecuteSubTask( embyInterfaces, task, cancellationToken, true );
+                    tasks[ ii ] = task;
+                }
             }
 
             var overall = overAllTimer.ElapsedMilliseconds();
@@ -132,12 +135,17 @@ namespace Statistics2026.ScheduledTasks
                 var maxLen = 0;
                 foreach( var task in tasks )
                 {
+                    if( task == null )
+                        continue;
+
                     if( task.Description.Length > maxLen )
                         maxLen = task.Description.Length;
                 }
 
                 foreach( var task in tasks )
                 {
+                    if( task == null )
+                        continue;
                     embyInterfaces._logger.Info( $"{task.Description.PadLeft( maxLen )}: {task.RunTimeMS} ms" );
                 }
             }
