@@ -272,12 +272,6 @@ namespace Statistics2026.Data
                 var episodeNum = row.GetInt( col++ );
                 var parentId = row.GetString( col++ );
 
-                curr.ParentUrl = ItemImageUrl.ItemUrl( parentId, parentUrl, curr.ParentName.Text );
-                if( curr.ParentUrl != null && curr.ParentUrl != string.Empty )
-                {
-                    curr.ParentName.Text = curr.ParentUrl;
-                }
-
                 if( episodes && IsFilteredSeries( parentId, seasonNum ) )
                     return true;
 
@@ -285,6 +279,12 @@ namespace Statistics2026.Data
                 {
                     var collections = GetCollectionName( parentId );
                     curr.ParentName = collections ?? new();
+                }
+
+                curr.ParentUrl = ItemImageUrl.ItemUrl( parentId, parentUrl, curr.ParentName.Text );
+                if( curr.ParentUrl != null && curr.ParentUrl != string.Empty )
+                {
+                    curr.ParentName.Text = curr.ParentUrl;
                 }
 
                 var futureDate = InvalidDateForMissingAnalysis( premiereDate, true );
