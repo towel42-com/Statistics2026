@@ -54,10 +54,10 @@ namespace Statistics2026.Utilities
             if( video.PremiereDate.HasValue )
                 PremiereDate = video.PremiereDate.Value;
 
+            ImageUrl = ItemImageUrl._ItemImageUrl( video );
             if( video is Episode episode )
             {
                 ListDisplayName = GetDisplayName( PrimaryName, secondaryName, Season, Episode );
-                ImageUrl = ItemImageUrl._ItemImageUrl( episode );
                 if( episode.Series != null )
                 {
                     SortName = episode.Series.SortName + " - " + episode.SortName;
@@ -70,7 +70,6 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                ImageUrl = ItemImageUrl._ItemImageUrl( video );
                 ListDisplayName = PrimaryName;
             }
 
