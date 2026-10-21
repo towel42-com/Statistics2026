@@ -31,20 +31,38 @@ namespace Statistics2026.Utilities
             return item == null ? string.Empty : _ItemImageUrl( item, imageType, maxWidth, quality, imageIndex );
         }
 
+        private static Cache<(string itemId, ImageType imageType, int maxWidth, int quality, int index), string> sIdToUrlMap = [];
+        
         public static string _ItemImageUrl( BaseItem item, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
             if( item == null )
                 return string.Empty;
 
-            if( !item.HasImage( imageType, imageIndex ) )
-                return string.Empty;
+            var key = (item.Id.ToString(), imageType, maxWidth, quality, imageIndex);
+            if( sIdToUrlMap.MaxCapacity != 1000 )
+            {
+                sIdToUrlMap.MaxCapacity = 1000;
+            }
+            if( sIdToUrlMap.TryGetValue( key, out var url ) )
+            {
+                return url;
+            }
 
+            if( !item.HasImage( imageType, imageIndex ) )
+            {
+                sIdToUrlMap.Add( key, string.Empty );
+                return string.Empty;
+            }
             var imageInfo = item.GetImageInfo( imageType, imageIndex );
             if( imageInfo == null )
+            {
+                sIdToUrlMap.Add( key, string.Empty );
                 return string.Empty;
+            }
 
             var imageTag = imageInfo?.DateModified.Ticks.ToString();
             var retVal = $"/emby/Items/{item.Id}/Images/{imageType}?maxWidth={maxWidth}&quality={quality}&tag={imageTag}";
+            sIdToUrlMap.Add( key, retVal );
             return retVal;
         }
 
@@ -57,5 +75,6 @@ namespace Statistics2026.Utilities
 
             return $"<a is=\"emby-linkbutton\" href=\"/item?id={itemId}&serverId={serverId}\"><img loading=\"lazy\" src=\"{itemUrl}\" height=\"{height}\"/>{text}</a>";
         }
+
     }
 }
