@@ -80,88 +80,88 @@ namespace Statistics2026.Data
             }
 
             var sql =
-                "INSERT INTO Media " +
-                "(" +
-                    "  ItemId" +
-                    ", PrimaryName" +
-                    ", SortName" +
-                    ", SecondaryName" +
-                    ", StartYear" +
-                    ", IsEpisode" +
-                    ", IsTVSpecial" +
-                    ", SeriesId" +
-                    ", Season" +
-                    ", Episode" +
-                    ", NumEpisodes" +
-                    ", ResolutionBase" +
-                    ", ResolutionDetail" +
-                    ", Codec" +
-                    ", DolbyVisionProfile" +
-                    ", StudioNames " +
-                    ", Genres " +
-                    ", ServerLocation" +
-                    ", FileSize" +
-                    ", ImageUrl" +
-                    ", RunTimeTicks" +
-                    ", Rating" +
-                    ", TotalBitrate" +
-                    ", PremiereDate" +
-                    ", DateAdded" +
-                ")" +
-                " VALUES " +
-                "(" +
-                    "  @ItemId" +
-                    ", @PrimaryName" +
-                    ", @SortName" +
-                    ", @SecondaryName" +
-                    ", @StartYear" +
-                    ", @IsEpisode" +
-                    ", @IsTVSpecial" +
-                    ", @SeriesId" +
-                    ", @Season" +
-                    ", @Episode" +
-                    ", @NumEpisodes" +
-                    ", @ResolutionBase" +
-                    ", @ResolutionDetail" +
-                    ", @Codec" +
-                    ", @DolbyVisionProfile" +
-                    ", @StudioNames " +
-                    ", @Genres " +
-                    ", @ServerLocation" +
-                    ", @FileSize" +
-                    ", @ImageUrl" +
-                    ", @RunTimeTicks" +
-                    ", @Rating" +
-                    ", @TotalBitrate" +
-                    ", @PremiereDate" +
-                    ", @DateAdded" +
-               ")" +
-                " ON CONFLICT(ItemId) " +
-                " DO UPDATE " +
-                " SET " +
-                    "  PrimaryName=@PrimaryName" +
-                    ", SortName=@SortName" +
-                    ", SecondaryName=@SecondaryName" +
-                    ", StartYear=@StartYear" +
-                    ", IsEpisode=@IsEpisode" +
-                    ", IsTVSpecial=@IsTVSpecial" +
-                    ", SeriesId=@SeriesId" +
-                    ", Season=@Season" +
-                    ", Episode=@Episode" +
-                    ", NumEpisodes=@NumEpisodes" +
-                    ", ResolutionBase=@ResolutionBase" +
-                    ", ResolutionDetail=@ResolutionDetail" +
-                    ", Codec=@Codec" +
-                    ", DolbyVisionProfile=@DolbyVisionProfile" +
-                    ", StudioNames =@StudioNames " +
-                    ", Genres =@Genres " +
-                    ", ServerLocation=@ServerLocation" +
-                    ", FileSize=@FileSize" +
-                    ", ImageUrl=@ImageUrl" +
-                    ", RunTimeTicks=@RunTimeTicks" +
-                    ", Rating=@Rating" +
-                    ", TotalBitrate=@TotalBitrate" +
-                    ", PremiereDate=@PremiereDate" +
+                "INSERT INTO Media \n" +
+                "(\n" +
+                    "  ItemId\n" +
+                    ", PrimaryName\n" +
+                    ", SortName\n" +
+                    ", SecondaryName\n" +
+                    ", StartYear\n" +
+                    ", IsEpisode\n" +
+                    ", IsTVSpecial\n" +
+                    ", SeriesId\n" +
+                    ", Season\n" +
+                    ", Episode\n" +
+                    ", NumEpisodes\n" +
+                    ", ResolutionBase\n" +
+                    ", ResolutionDetail\n" +
+                    ", Codec\n" +
+                    ", DolbyVisionProfile\n" +
+                    ", StudioNames \n" +
+                    ", Genres \n" +
+                    ", ServerLocation\n" +
+                    ", FileSize\n" +
+                    ", ImageUrl\n" +
+                    ", RunTimeTicks\n" +
+                    ", Rating\n" +
+                    ", TotalBitrate\n" +
+                    ", PremiereDate\n" +
+                    ", DateAdded\n" +
+                ")\n" +
+                " VALUES \n" +
+                "(\n" +
+                    "  @ItemId\n" +
+                    ", @PrimaryName\n" +
+                    ", @SortName\n" +
+                    ", @SecondaryName\n" +
+                    ", @StartYear\n" +
+                    ", @IsEpisode\n" +
+                    ", @IsTVSpecial\n" +
+                    ", @SeriesId\n" +
+                    ", @Season\n" +
+                    ", @Episode\n" +
+                    ", @NumEpisodes\n" +
+                    ", @ResolutionBase\n" +
+                    ", @ResolutionDetail\n" +
+                    ", @Codec\n" +
+                    ", @DolbyVisionProfile\n" +
+                    ", @StudioNames \n" +
+                    ", @Genres \n" +
+                    ", @ServerLocation\n" +
+                    ", @FileSize\n" +
+                    ", @ImageUrl\n" +
+                    ", @RunTimeTicks\n" +
+                    ", @Rating\n" +
+                    ", @TotalBitrate\n" +
+                    ", @PremiereDate\n" +
+                    ", @DateAdded\n" +
+               ")\n" +
+                " ON CONFLICT(ItemId) \n" +
+                " DO UPDATE \n" +
+                " SET \n" +
+                    "  PrimaryName=@PrimaryName\n" +
+                    ", SortName=@SortName\n" +
+                    ", SecondaryName=@SecondaryName\n" +
+                    ", StartYear=@StartYear\n" +
+                    ", IsEpisode=@IsEpisode\n" +
+                    ", IsTVSpecial=@IsTVSpecial\n" +
+                    ", SeriesId=@SeriesId\n" +
+                    ", Season=@Season\n" +
+                    ", Episode=@Episode\n" +
+                    ", NumEpisodes=@NumEpisodes\n" +
+                    ", ResolutionBase=@ResolutionBase\n" +
+                    ", ResolutionDetail=@ResolutionDetail\n" +
+                    ", Codec=@Codec\n" +
+                    ", DolbyVisionProfile=@DolbyVisionProfile\n" +
+                    ", StudioNames =@StudioNames \n" +
+                    ", Genres =@Genres \n" +
+                    ", ServerLocation=@ServerLocation\n" +
+                    ", FileSize=@FileSize\n" +
+                    ", ImageUrl=@ImageUrl\n" +
+                    ", RunTimeTicks=@RunTimeTicks\n" +
+                    ", Rating=@Rating\n" +
+                    ", TotalBitrate=@TotalBitrate\n" +
+                    ", PremiereDate=@PremiereDate\n" +
                     ", DateAdded=@DateAdded"
                     ;
 
@@ -213,12 +213,12 @@ namespace Statistics2026.Data
             }
 
             var sql =
-                "SELECT " +
-                "ResolutionBase as Resolution, " +
-                "sum(IsEpisode) AS Episodes, " +
-                "sum(NOT IsEpisode) AS Movies " +
-                "FROM Media " +
-                "GROUP BY Resolution " +
+                "SELECT \n" +
+                "ResolutionBase as Resolution, \n" +
+                "sum(IsEpisode) AS Episodes, \n" +
+                "sum(NOT IsEpisode) AS Movies \n" +
+                "FROM Media \n" +
+                "GROUP BY Resolution \n" +
                 "ORDER BY Resolution ASC"
                 ;
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
@@ -240,12 +240,12 @@ namespace Statistics2026.Data
 
             var retVal = new TableBasedStatCard( Constants.MediaCodecs, Constants.HelpMediaCodecs, [ "Movies", "Episodes" ] );
             var sql =
-                "SELECT " +
-                "Codec as Codec, " +
-                "sum(IsEpisode) AS Episodes, " +
-                "sum(NOT IsEpisode) AS Movies " +
-                "FROM Media " +
-                "GROUP BY Codec " +
+                "SELECT \n" +
+                "Codec as Codec, \n" +
+                "sum(IsEpisode) AS Episodes, \n" +
+                "sum(NOT IsEpisode) AS Movies \n" +
+                "FROM Media \n" +
+                "GROUP BY Codec \n" +
                 "ORDER BY Codec ASC"
                 ;
 
@@ -267,16 +267,16 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckType.eReport );
 
             var sql =
-                "SELECT " +
-                "DolbyVisionProfile as DVProfile, " +
-                "sum(IsEpisode) AS Episodes, " +
-                "sum(NOT IsEpisode) AS Movies " +
+                "SELECT \n" +
+                "DolbyVisionProfile as DVProfile, \n" +
+                "sum(IsEpisode) AS Episodes, \n" +
+                "sum(NOT IsEpisode) AS Movies \n" +
                 "FROM Media ";
 
             if( !Plugin.Instance!.Configuration.showUnknownDVProfiles )
                 sql += $"WHERE DolbyVisionProfile NOT IN ({string.Join( ",", Constants.UnknownDolbyProfiles.Select( p => $"'{p}'" ) )}) ";
 
-            sql += "GROUP BY DolbyVisionProfile " +
+            sql += "GROUP BY DolbyVisionProfile \n" +
                    "ORDER BY DolbyVisionProfile ASC"
                    ;
 
@@ -661,43 +661,63 @@ namespace Statistics2026.Data
             var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
 
             var retVal = new List<MediaItemResponse>();
-            var sql = "SELECT ";
+            var sql = string.Empty;
+
             if( episodes )
             {
-                sql += "  Media.PrimaryName || ' - S' || printf( '%02d', Media.Season ) || 'E' || printf('%02d', Media.Episode) || ' - ' || Media.SecondaryName AS ListDisplayName";
-                sql += ", Series.Name";
-                sql += ", Series.SortName";
+                sql = " SELECT \n" +
+                    "  Media.PrimaryName || ' - S' || printf( '%02d', Media.Season ) || 'E' || printf('%02d', Media.Episode) || ' - ' || Media.SecondaryName AS ListDisplayName\n" +
+                    ", Series.Name\n" +
+                    ", Series.SortName\n" +
+                    ", Media.PremiereDate\n" +
+                    ", ResolutionDetail\n" +
+                    ", Codec\n" +
+                    ", DolbyVisionProfile\n" +
+                    ", ServerLocation\n" +
+                    ", Media.ItemId\n" +
+                    ", Media.ImageUrl\n" +
+                    ", Series.ItemId\n" +
+                    ", Series.ImageUrl\n" +
+                " FROM \n" +
+                "   Media \n" +
+                "   LEFT JOIN Series ON Series.ItemId=Media.SeriesId\n" +
+                " WHERE Media.IsEpisode \n" +
+                " ORDER BY Media.SortName ASC, Media.Season ASC, Media.Episode ASC ";
             }
             else
             {
-                sql += "  Media.PrimaryName AS ListDisplayName, '', ''";
+                sql =
+                    "WITH MovieCollections AS (\n" +
+                    "   SELECT \n" +
+                    "         Media.PrimaryName AS MovieName\n" +
+                    "       , Collections.Name AS CollectionName\n" +
+                    "       , Collections.SortName AS CollectionsSortName\n" +
+                    "       , Media.PremiereDate AS MoviePremiereDate\n" +
+                    "       , Media.ResolutionDetail\n" +
+                    "       , Media.Codec\n" +
+                    "       , Media.DolbyVisionProfile\n" +
+                    "       , Media.ServerLocation\n" +
+                    "       , Media.ItemId\n" +
+                    "       , Media.ImageUrl AS MovieImageUrl\n" +
+                    "       , CollectionMembership.CollectionId\n" +
+                    "       , Collections.ImageUrl As CollectionImageUrl\n" +
+                    "       , ROW_NUMBER() OVER (\n" +
+                    "             PARTITION BY Media.ItemId            \n" +
+                    "             ORDER BY Collections.ImageUrl DESC\n" +
+                    "         ) AS RowNumber\n" +
+                    "   FROM Media\n" +
+                    "   FULL OUTER JOIN CollectionMembership ON Media.ItemId=CollectionMembership.ItemId\n" +
+                    "   FULL OUTER JOIN Collections ON CollectionMembership.CollectionId=Collections.ItemId\n" +
+                    "   WHERE NOT Media.IsEpisode \n" +
+                    ")\n" +
+                    "SELECT * \n" +
+                    "FROM \n" +
+                    "    MovieCollections \n" +
+                    "WHERE\n" +
+                    "    RowNumber=1"
+                    ;
             }
 
-            sql +=
-                ", Media.PremiereDate" +
-                ", ResolutionDetail" +
-                ", Codec" +
-                ", DolbyVisionProfile" +
-                ", ServerLocation" +
-                ", Media.ItemId" +
-                ", Media.ImageUrl";
-            if( episodes )
-                sql += ", Series.ItemId, Series.ImageUrl";
-            else
-                sql += ", Collections.ItemId, Collections.ImageUrl";
-            sql +=
-                " FROM " +
-                "   Media ";
-
-            if( episodes )
-                sql += " LEFT JOIN Series ON Series.ItemId=Media.SeriesId";
-
-            if( episodes )
-                sql += " WHERE IsEpisode ";
-            else
-                sql += " WHERE NOT IsEpisode ";
-
-            sql += " ORDER BY Media.SortName ASC, Media.Season ASC, Media.Episode ASC ";
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
@@ -715,11 +735,6 @@ namespace Statistics2026.Data
                 col++;
 
                 curr.ItemId = row.GetString( col++ );
-                if( !episodes )
-                {
-                    var collections = GetCollectionsForMovie( curr.ItemId, true );
-                    curr.ParentName = collections ?? new SortByText();
-                }
                 var itemUrl = row.GetString( col++ );
                 curr.ItemUrl = ItemImageUrl.ItemUrl( curr.ItemId, itemUrl, curr.DisplayName.Text );
 
@@ -731,12 +746,9 @@ namespace Statistics2026.Data
                 var parentId = row.GetString( col++ );
                 var parentUrl = row.GetString( col++ );
                 curr.ParentUrl = ItemImageUrl.ItemUrl( parentId, parentUrl, curr.ParentName.Text );
-                if( episodes ) // collections are done in the GetCollectionsForMovie
+                if( curr.ParentUrl != null && curr.ParentUrl != string.Empty )
                 {
-                    if( curr.ParentUrl != null && curr.ParentUrl != string.Empty )
-                    {
-                        curr.ParentName.Text = curr.ParentUrl;
-                    }
+                    curr.ParentName.Text = curr.ParentUrl;
                 }
 
                 if( curr.Codec != "hevc" && curr.Codec != "av1" )
