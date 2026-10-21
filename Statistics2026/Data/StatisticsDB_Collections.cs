@@ -189,8 +189,10 @@ namespace Statistics2026.Data
             var sql = "SELECT  "
                 + "  Media.SortName "
                 + ", Media.ItemId "
+                + ", Media.ImageUrl "
                 + ", Collections.Name "
                 + ", Collections.SortName "
+                + ", Collections.ImageUrl "
                 + ", CollectionMembership.CollectionId  "
                 + "FROM "
                 + " CollectionMembership "
@@ -211,8 +213,6 @@ namespace Statistics2026.Data
                 ListType = EListType.eUnordered
             };
 
-            Dictionary<string, string> urlMap = [];
-
             var sqlCmd = new SQLCmdDef( sql );
             _dbHelper.ExecuteCommand( sqlCmd, statement =>
             {
@@ -221,21 +221,11 @@ namespace Statistics2026.Data
 
                 var itemSortName = row.GetString( col++ );
                 var itemId = row.GetString( col++ );
+                var itemImageUrl = row.GetString( col++ );
                 var collectionName = row.GetString( col++ );
                 var collectionSortName = row.GetString( col++ );
+                var collectionImageUrl = row.GetString( col++ ); ;
                 var collectionId = row.GetString( col++ );
-
-                if( !urlMap.TryGetValue( itemId, out string itemImageUrl ) )
-                {
-                    itemImageUrl = ItemImageUrl._ItemImageUrl( itemId, _embyInterfaces!._libraryManager );
-                    urlMap.Add( itemId, itemImageUrl );
-                }
-
-                if( !urlMap.TryGetValue( collectionId, out string collectionImageUrl ) )
-                {
-                    collectionImageUrl = ItemImageUrl._ItemImageUrl( collectionId, _embyInterfaces!._libraryManager );
-                    urlMap.Add( collectionId, collectionImageUrl );
-                }
 
                 retVal.AddLine( (itemSortName, itemId, itemImageUrl, false), (collectionSortName, collectionId, collectionImageUrl, false) );
 
