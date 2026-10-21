@@ -53,8 +53,8 @@ namespace Statistics2026.Utilities
 
             List<Video> retVal = [];
 
-            retVal.Concat( GetLibraryItems<Episode>( user, libManager ).Cast<Video>() );
-            retVal.Concat( GetLibraryItems<Movie>( user, libManager ).Cast<Video>() );
+            retVal.AddRange( GetLibraryItems<Episode>( user, libManager ).Cast<Video>() );
+            retVal.AddRange( GetLibraryItems<Movie>( user, libManager ).Cast<Video>() );
 
             return retVal;
         }
