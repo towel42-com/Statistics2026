@@ -2,6 +2,7 @@
 using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json.Nodes;
 
 namespace Statistics2026.Api
 {
@@ -107,7 +108,73 @@ namespace Statistics2026.Api
         public SortByText ParentName { get; set; } = new();
         public string ParentUrl { get; set; } = string.Empty;
 
-        public string ItemUrl { get; set; } = string.Empty;
+        public string ItemUrl
+        {
+            get;
+            set
+            {
+                field = value ?? string.Empty;
+                if( value != null && value != string.Empty )
+                    DisplayName.Text = value;
+                else
+                    DisplayName.Text = DisplayName.SortBy;
+            }
+        } = string.Empty;
         public string ItemId { get; set; } = string.Empty;
+
+        public void setParentInfo( string parentJson )
+        {
+            ParentUrl = string.Empty;
+            ParentName = new();
+            try
+            {
+                var jsonNode = JsonNode.Parse( parentJson );
+
+                var parentArray = jsonNode?.AsArray();
+                if( parentArray == null )
+                    return;
+
+                List<SortByText> sortByTexts = [];
+                List<(string id, string url)> urls = [];
+                foreach( var parentNode in parentArray )
+                {
+                    if( parentNode == null )
+                        continue;
+
+                    var name = parentNode[ "name" ]?.GetValue<string>() ?? string.Empty;
+                    var sortName = parentNode[ "sort_name" ]?.GetValue<string>() ?? string.Empty;
+                    var id = parentNode[ "id" ]?.GetValue<string>() ?? string.Empty;
+                    var url = parentNode[ "url" ]?.GetValue<string>() ?? string.Empty;
+                    if( name.IsNullOrEmpty() || sortName.IsNullOrEmpty() ||  id.IsNullOrEmpty() || url.IsNullOrEmpty() )
+                        continue;
+
+                    if( ParentName.SortBy != string.Empty )
+                        ParentName.SortBy += ", ";
+                    ParentName.SortBy += sortName;
+
+                    var currParentUrl = ItemImageUrl.ItemUrl( id, url, name );
+                    if( currParentUrl != null && currParentUrl != string.Empty )
+                    {
+                        if( ParentUrl != string.Empty )
+                            ParentUrl += "\n";
+                        ParentUrl += currParentUrl;
+                        if( !ParentName.Text.IsEmpty() )
+                            ParentName.Text += "\n";
+                        ParentName.Text += currParentUrl;
+                    }
+                    else
+                    {
+
+                        if( ParentName.Text != string.Empty )
+                            ParentName.Text += ", ";
+                        ParentName.Text += name;
+                    }
+                }
+
+            }
+            catch( Exception )
+            {
+            }
+        }
     }
 }
