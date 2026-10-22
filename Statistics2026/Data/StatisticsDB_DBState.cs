@@ -74,7 +74,7 @@ namespace Statistics2026.Data
                 return;
             }
 
-            var tableNames = allUserMediaTables();
+            var tableNames = allUserMediaTables( false );
             var missing = new List<List<object>>();
             _dbHelper.ValidateTables( tableNames,
                 tableName =>
