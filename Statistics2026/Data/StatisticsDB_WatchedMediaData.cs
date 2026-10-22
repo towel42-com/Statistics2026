@@ -168,7 +168,7 @@ namespace Statistics2026.Data
             if( _userMediaTemplate == null )
                 return retVal;
 
-            var tables = allUserMediaTables();
+            var tables = allUserMediaTables( false );
 
             foreach( var table in tables )
                 retVal.AddRange( DropTableCmds( table ) );
@@ -176,9 +176,22 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public List<string> allUserMediaTables()
+        public List<string> allUserMediaTables( bool existingOnly = true )
         {
-            return allTables( (regex: $"{sUserMediaTablePrefix}%", like: true) );
+            if ( existingOnly )
+                return allTables( (regex: $"{sUserMediaTablePrefix}%", like: true) );
+            else
+            {
+                var users = _embyInterfaces?._userManager?.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+
+                HashSet<string> tableNameSet = [];
+                foreach( var user in users ?? [] )
+                {
+                    var tableName = getUserTableName( user );
+                    tableNameSet.Add( tableName );
+                }
+                return tableNameSet.ToList();
+            }
         }
 
         public User? getUserForTableName( string tableName )
