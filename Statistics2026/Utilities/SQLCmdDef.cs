@@ -17,6 +17,30 @@ namespace Statistics2026.Utilities
             return !Parameters.IsNullOrEmpty();
         }
 
+        public SQLCmdDef( string from, List<string> columns, List<string>? joins, List<string>? whereClauses, List<string>? groupByClauses, List<string>? orderBy, List<(string name, object? value)>? parameters = null, bool failureAllowed = false )
+        {
+            var lines = new List<string>() { "SELECT" };
+            lines.AddRange( joinWithComma( columns ) );
+            lines.Add( $"FROM {from}" );
+            if( joins != null )
+            {
+                lines.AddRange( joins.Select( join => "    " + join ) );
+            }
+
+            if( whereClauses != null )
+            {
+                lines.Add( $"WHERE" );
+                lines.AddRange( whereClauses.Select( ( clause, index ) => $"    {( index == 0 ? "   " : "AND" )} ( " + clause + " )" ) );
+            }
+
+            lines.AddRange( joinWithComma( groupByClauses, "GROUP BY" ) );
+            lines.AddRange( joinWithComma( orderBy, "ORDER BY" ) );
+
+            Statement = string.Join( "\n", lines );
+            Parameters = parameters ?? [];
+            FailureAllowed = failureAllowed;
+        }
+
         public SQLCmdDef( string sql, bool failureAllowed = false )
         {
             Statement = sql;
@@ -44,7 +68,7 @@ namespace Statistics2026.Utilities
 
         public object? GetParamValue( string paramName )
         {
-            if ( Parameters == null )
+            if( Parameters == null )
                 return string.Empty;
 
             foreach( var param in Parameters )
@@ -100,6 +124,32 @@ namespace Statistics2026.Utilities
             {
                 _Execute( connection, dbHelper, onStatement );
             }
+        }
+
+        private List<string> joinWithComma( List<string>? values, string? prefix = null )
+        {
+            List<string> retVal = [];
+            if( values == null )
+                return retVal;
+
+            if( prefix != null )
+            {
+                retVal.Add( prefix );
+            }
+
+            for( int ii = 0; ii < values.Count; ++ii )
+            {
+                var currLines = values[ ii ].Split( '\n' ).ToList();
+                for( var jj = 1; jj < currLines.Count; ++jj )
+                {
+                    var line = currLines[ jj ];
+                    line = "    " + line;
+                    currLines[ jj ] = line;
+                }
+                values[ ii ] = string.Join( "\n", currLines );
+            }
+            retVal.AddRange( values.Select( ( value, index ) => $"    {( index == 0 ? " " : "," )} {value}" ) );
+            return retVal;
         }
     }
 }

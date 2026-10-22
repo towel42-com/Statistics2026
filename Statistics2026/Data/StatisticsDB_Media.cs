@@ -663,74 +663,67 @@ namespace Statistics2026.Data
             var retVal = new List<MediaItemResponse>();
             var sql = string.Empty;
 
+            var parentTableName = episodes ? "Series" : "Collections";
+            List<string> columns = [];
+            columns.Add( episodes ? "Media.PrimaryName || ' - S' || printf( '%02d', Media.Season ) || 'E' || printf('%02d', Media.Episode) || ' - ' || Media.SecondaryName" : "Media.PrimaryName" );
+            columns.Add( "Media.PremiereDate" );
+            columns.Add( "Media.ResolutionDetail" );
+            columns.Add( "Media.Codec" );
+            columns.Add( "Media.DolbyVisionProfile" );
+            columns.Add( "Media.ServerLocation" );
+            columns.Add( "Media.ItemId" );
+            columns.Add( "Media.ImageUrl" );
+            columns.Add(
+                $"'[' || \n" +
+                $"   GROUP_CONCAT( \n" +
+                $"                json_object(  'id',        {parentTableName}.ItemId\n" +
+                $"                            , 'name',      {parentTableName}.Name\n" +
+                $"                            , 'sort_name', {parentTableName}.SortName\n" +
+                $"                            , 'url',       {parentTableName}.ImageUrl\n" +
+                $"                           )\n" +
+                $"   )\n" +
+                "|| ']' AS ParentInfo"
+                );
+
+            var from = "Media";
+            var joins = new List<string>();
             if( episodes )
             {
-                sql = " SELECT \n" +
-                    "  Media.PrimaryName || ' - S' || printf( '%02d', Media.Season ) || 'E' || printf('%02d', Media.Episode) || ' - ' || Media.SecondaryName AS ListDisplayName\n" +
-                    ", Series.Name\n" +
-                    ", Series.SortName\n" +
-                    ", Media.PremiereDate\n" +
-                    ", ResolutionDetail\n" +
-                    ", Codec\n" +
-                    ", DolbyVisionProfile\n" +
-                    ", ServerLocation\n" +
-                    ", Media.ItemId\n" +
-                    ", Media.ImageUrl\n" +
-                    ", Series.ItemId\n" +
-                    ", Series.ImageUrl\n" +
-                " FROM \n" +
-                "   Media \n" +
-                "   LEFT JOIN Series ON Series.ItemId=Media.SeriesId\n" +
-                " WHERE Media.IsEpisode \n" +
-                " ORDER BY Media.SortName ASC, Media.Season ASC, Media.Episode ASC ";
+                joins.Add( "FULL OUTER JOIN Series ON Series.ItemId = Media.SeriesId" );
             }
             else
             {
-                sql =
-                    "WITH MovieCollections AS (\n" +
-                    "   SELECT \n" +
-                    "         Media.PrimaryName AS MovieName\n" +
-                    "       , Collections.Name AS CollectionName\n" +
-                    "       , Collections.SortName AS CollectionsSortName\n" +
-                    "       , Media.PremiereDate AS MoviePremiereDate\n" +
-                    "       , Media.ResolutionDetail\n" +
-                    "       , Media.Codec\n" +
-                    "       , Media.DolbyVisionProfile\n" +
-                    "       , Media.ServerLocation\n" +
-                    "       , Media.ItemId\n" +
-                    "       , Media.ImageUrl AS MovieImageUrl\n" +
-                    "       , CollectionMembership.CollectionId\n" +
-                    "       , Collections.ImageUrl As CollectionImageUrl\n" +
-                    "       , ROW_NUMBER() OVER (\n" +
-                    "             PARTITION BY Media.ItemId            \n" +
-                    "             ORDER BY Collections.ImageUrl DESC\n" +
-                    "         ) AS RowNumber\n" +
-                    "   FROM Media\n" +
-                    "   FULL OUTER JOIN CollectionMembership ON Media.ItemId=CollectionMembership.ItemId\n" +
-                    "   FULL OUTER JOIN Collections ON CollectionMembership.CollectionId=Collections.ItemId\n" +
-                    "   WHERE NOT Media.IsEpisode \n" +
-                    ")\n" +
-                    "SELECT * \n" +
-                    "FROM \n" +
-                    "    MovieCollections \n" +
-                    "WHERE\n" +
-                    "    RowNumber=1"
-                    ;
+                joins.Add( "FULL OUTER JOIN CollectionMembership ON Media.ItemId = CollectionMembership.ItemId" );
+                joins.Add( "FULL OUTER JOIN Collections ON CollectionMembership.CollectionId = Collections.ItemId" );
             }
 
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            List<string> whereClauses = [];
+            if( episodes )
+            {
+                whereClauses.Add( "Media.IsEpisode" );
+                whereClauses.Add( "NOT Media.IsTVSpecial" );
+            }
+            else
+            {
+                whereClauses.Add( "NOT Media.IsEpisode" );
+            }
+
+            var groupByClauses = new List<string>() { "Media.ItemId" };
+
+            var orderBy = new List<string>() { "Media.SortName ASC", "Media.Season ASC", "Media.Episode ASC" };
+            _dbHelper.ExecuteCommand(
+                new SQLCmdDef( from, columns, joins, whereClauses, groupByClauses, orderBy ), statement =>
             {
                 var row = statement.Current;
                 var col = 0;
                 var curr = new MediaItemResponse();
                 curr.DisplayName = new SortByText( CleanSortName( row.GetString( col++ ) ), string.Empty );
-                var parentName = row.GetString( col++ );
-                var parentSortName = row.GetString( col++ );
-                curr.ParentName = new SortByText( parentName, parentSortName );
                 curr.PremiereDate = HelperFuncs.ReadDateTime( row.GetString( col++ ) )?.ToTZShortString( true, true ) ?? string.Empty;
                 curr.ResolutionDetail = row.GetString( col++ );
                 curr.Codec = row.GetString( col++ );
                 curr.DolbyVisionProfile = row.GetString( col++ );
+                if( curr.Codec != "hevc" && curr.Codec != "av1" )
+                    curr.DolbyVisionProfile = string.Empty;
                 curr.ServerLocation = new SortByText( row.GetString( col ), row.GetString( col ) );
                 col++;
 
@@ -738,21 +731,8 @@ namespace Statistics2026.Data
                 var itemUrl = row.GetString( col++ );
                 curr.ItemUrl = ItemImageUrl.ItemUrl( curr.ItemId, itemUrl, curr.DisplayName.Text );
 
-                if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
-                    curr.DisplayName.Text = curr.ItemUrl;
-                else
-                    curr.DisplayName.Text = curr.DisplayName.SortBy;
-
-                var parentId = row.GetString( col++ );
-                var parentUrl = row.GetString( col++ );
-                curr.ParentUrl = ItemImageUrl.ItemUrl( parentId, parentUrl, curr.ParentName.Text );
-                if( curr.ParentUrl != null && curr.ParentUrl != string.Empty )
-                {
-                    curr.ParentName.Text = curr.ParentUrl;
-                }
-
-                if( curr.Codec != "hevc" && curr.Codec != "av1" )
-                    curr.DolbyVisionProfile = string.Empty;
+                var parentInfo = row.GetString( col++ );
+                curr.setParentInfo( parentInfo );
 
                 retVal.Add( curr );
                 return true;
