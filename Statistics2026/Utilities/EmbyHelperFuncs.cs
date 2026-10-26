@@ -299,23 +299,38 @@ namespace Statistics2026.Utilities
             var lastMovieAddedToServer = EmbyHelperFuncs.GetLastMovieAdded( embyInterfaces );
             if( lastMovieAddedToServer != null && lastMovieAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
-                embyInterfaces?._logger?.Info( $"Last Movie added: {MediaInfo.GetDisplayName( lastMovieAddedToServer )} on {lastMovieAddedToServer!.DateCreated}" );
+                embyInterfaces?._logger?.Info( $"Last Movie added: '{MediaInfo.GetDisplayName( lastMovieAddedToServer )}' on '{lastMovieAddedToServer!.DateCreated.LocalDateTime}'" );
                 latestItem = getLatestItem( latestItem, lastMovieAddedToServer );
             }
 
             var lastEpisodeAddedToServer = EmbyHelperFuncs.GetLastEpisodeAdded( embyInterfaces );
             if( lastEpisodeAddedToServer != null && lastEpisodeAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
-                embyInterfaces?._logger?.Info( $"Last Episode added: {MediaInfo.GetDisplayName( lastEpisodeAddedToServer )} on {lastEpisodeAddedToServer!.DateCreated}" );
+                embyInterfaces?._logger?.Info( $"Last Episode added: '{MediaInfo.GetDisplayName( lastEpisodeAddedToServer )}' on '{lastEpisodeAddedToServer!.DateCreated.LocalDateTime}'" );
                 latestItem = getLatestItem( latestItem, lastEpisodeAddedToServer );
             }
 
             var lastUserAddedToServer = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
             if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
-                embyInterfaces?._logger?.Info( $"Last User added: {lastUserAddedToServer.Name} on {lastUserAddedToServer!.DateCreated}" );
+                embyInterfaces?._logger?.Info( $"Last User added: '{lastUserAddedToServer.Name}' on '{lastUserAddedToServer!.DateCreated.LocalDateTime}'" );
                 latestItem = getLatestItem( latestItem, lastUserAddedToServer );
             }
+
+            var name = string.Empty;
+            var dateCreated = latestItem?.DateCreated;
+
+            if( latestItem != null && ( latestItem is Video ) )
+                name = MediaInfo.GetDisplayName( latestItem as Video );
+            else if( latestItem != null )
+                name = latestItem.Name;
+            else
+                name = "<No Item Found>";
+
+            var msg = $"Last Item Added: '{name}'";
+            if ( dateCreated != null )
+                msg += $" on '{dateCreated?.LocalDateTime}'";
+            embyInterfaces?._logger?.Info( msg );
 
             return latestItem;
         }
@@ -328,6 +343,8 @@ namespace Statistics2026.Utilities
             var logger = embyInterfaces._logManager?.GetLogger( "Statistics2026 - OOD Analysis" ) ?? null;
             embyInterfaces._logger = logger;
 
+            logger?.Info( $"Starting OOD Analysis" );
+
             bool runFullAnalysis = false;
             var lastAnalysisAdded = db.GetLastUpdated( EAction.LastMediaOrUserAdded );
             if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTimeOffset.MinValue )
@@ -337,7 +354,7 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                logger?.Info( $"Last Analysis run: {lastAnalysisAdded}" );
+                logger?.Info( $"Last Analysis run: {lastAnalysisAdded.Value.LocalDateTime}" );
             }
 
             if( !runFullAnalysis )
@@ -368,7 +385,7 @@ namespace Statistics2026.Utilities
             else
             {
                 lastMissingAnalysis = lastMissingEpisodeAnalysis;
-                logger?.Info( $"Last Missing Episode Analysis run: {lastMissingEpisodeAnalysis}" );
+                logger?.Info( $"Last Missing Episode Analysis run: {lastMissingEpisodeAnalysis.Value.LocalDateTime}" );
             }
 
             var lastMissingMovieAnalysis = db.GetLastUpdated( EAction.MissingMoviesAnalysis );
@@ -379,10 +396,10 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                logger?.Info( $"Last Missing Movie Analysis run: {lastMissingMovieAnalysis}" );
+                logger?.Info( $"Last Missing Movie Analysis run: {lastMissingMovieAnalysis.Value.LocalDateTime}" );
                 if( lastMissingAnalysis == null )
                     lastMissingAnalysis = lastMissingMovieAnalysis;
-                else if( lastMissingMovieAnalysis < lastMissingAnalysis.Value )
+                else if( lastMissingMovieAnalysis > lastMissingAnalysis.Value )
                 {
                     lastMissingAnalysis = lastMissingMovieAnalysis;
                 }
@@ -399,15 +416,11 @@ namespace Statistics2026.Utilities
                     logger?.Info( "Missing Analysis has not been run today." );
                     runMissingAnalysis = true;
                 }
-                else 
+                else
                 {
-                    logger?.Info( "Missing Analysis has already been run today." );
-                    runMissingAnalysis = true;
+                    logger?.Info( "Missing Analysis has already been run since new items added." );
+                    runMissingAnalysis = false;
                 }
-            }
-            else
-            {
-                runMissingAnalysis = true;
             }
 
             return (runFullAnalysis, runMissingAnalysis);
