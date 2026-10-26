@@ -68,15 +68,18 @@ namespace Statistics2026.ScheduledTasks
 
         private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
 
-        async Task ILibraryPostScanTask.Run( IProgress<double> progress, CancellationToken cancellationToken )
+        Task ILibraryPostScanTask.Run( IProgress<double> progress, CancellationToken cancellationToken )
         {
             if( _embyInterfaces == null || TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
-                return;
+                return Task.CompletedTask;
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( null, cancellationToken, progress, false );
 
+            var currLogger = _embyInterfaces._logger;
             var (runFullAnalysis, runMissingAnalysis) = EmbyHelperFuncs.AnalysisOutOfDate( _embyInterfaces, db );
+            _embyInterfaces._logger = currLogger;
+            _embyInterfaces._logger?.Info( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis}");
 
             List<Type> tasks = [];
             if( !runFullAnalysis && runMissingAnalysis )
@@ -88,7 +91,8 @@ namespace Statistics2026.ScheduledTasks
                 tasks.Add( typeof( RunAllTasksTask ) );
             }
 
-            await TaskDef.ExecuteSubTasks( _embyInterfaces, tasks, cancellationToken, false );
+            _ = TaskDef.ExecuteSubTasks( _embyInterfaces, tasks, cancellationToken, false );
+            return Task.CompletedTask;
         }
     }
 }
