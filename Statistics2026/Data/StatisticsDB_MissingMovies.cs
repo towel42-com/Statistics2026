@@ -114,7 +114,8 @@ namespace Statistics2026.Data
                         ("@Overview", tmdbMovie.Overview ),
                         ("@PosterPath", tmdbMovie.PosterPath ),
                         ("@ParentId", collection.Id.ToString() ),
-                        ("@IsEpisode", false )
+                        ("@IsEpisode", false ),
+                        ("@StudioNames", tmdbMovie.StudioNames() )
                     ] ) );
                 }
 

@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
@@ -9,6 +10,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -125,7 +127,8 @@ namespace Statistics2026.Data
                             ("@ParentId", series.Id.ToString() ),
                             ("@IsEpisode", true ),
                             ("@SeasonNum", tmdbSeason.SeasonNumber ),
-                            ("@EpisodeNum", tmdbEpisode.EpisodeNumber )
+                            ("@EpisodeNum", tmdbEpisode.EpisodeNumber ),
+                            ("@StudioNames", JsonSerializer.Serialize(series.Studios))
                         ] ) );
                     }
 

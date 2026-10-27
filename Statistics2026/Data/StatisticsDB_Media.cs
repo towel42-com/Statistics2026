@@ -2,14 +2,16 @@
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
 using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 namespace Statistics2026.Data
@@ -37,8 +39,9 @@ namespace Statistics2026.Data
             _dbHelper!.Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
             var existing = new Dictionary<string, bool>();
-
+            List<object> paramList = [];
             sqlCmds.Add( new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ) );
+
             foreach( var video in videoList )
             {
                 if( video == null )
@@ -49,6 +52,8 @@ namespace Statistics2026.Data
                 if( existing.ContainsKey( video.Id.ToString() ) )
                     continue;
                 existing.Add( video.Id.ToString(), true );
+                paramList.Add( video.Id.ToString() );
+
 
                 using( var mediaInfo = new MediaInfo( video ) )
                 {
@@ -63,6 +68,7 @@ namespace Statistics2026.Data
             }
 
             _dbHelper!.Progress?.Report( 80 );
+            sqlCmds.Insert( 1, DBHelper.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
             _dbHelper.ExecuteCommands( sqlCmds );
             _dbHelper!.Progress?.Report( 100 );
             _embyInterfaces!._logger?.Debug( $"Finished Video Analysis" );
@@ -153,8 +159,8 @@ namespace Statistics2026.Data
                     ", ResolutionDetail=@ResolutionDetail\n" +
                     ", Codec=@Codec\n" +
                     ", DolbyVisionProfile=@DolbyVisionProfile\n" +
-                    ", StudioNames =@StudioNames \n" +
-                    ", Genres =@Genres \n" +
+                    ", StudioNames=@StudioNames \n" +
+                    ", Genres=@Genres \n" +
                     ", ServerLocation=@ServerLocation\n" +
                     ", FileSize=@FileSize\n" +
                     ", ImageUrl=@ImageUrl\n" +
@@ -182,8 +188,8 @@ namespace Statistics2026.Data
                 ("@ResolutionDetail", mediaInfo.ResolutionDetail),
                 ("@Codec", mediaInfo.Codec),
                 ("@DolbyVisionProfile", mediaInfo.DolbyVisionProfile),
-                ("@StudioNames", string.Join(",", mediaInfo.StudioNames)),
-                ("@Genres", string.Join(",", mediaInfo.Genres)),
+                ("@StudioNames", JsonSerializer.Serialize(mediaInfo.StudioNames)),
+                ("@Genres", JsonSerializer.Serialize(mediaInfo.Genres)),
                 ("@ServerLocation", mediaInfo.ServerLocation),
                 ("@FileSize", mediaInfo.FileSize),
                 ("@ImageUrl",  mediaInfo.ImageUrl ?? string.Empty ),
@@ -440,8 +446,7 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                var currStudios = row.GetString( 0 )?.Split( ',' ) ?? Array.Empty<string>();
-                ;
+                var currStudios = HelperFuncs.JsonToStringArray( row.GetString( 0 ) );
                 studios.UnionWith( currStudios );
                 return true;
             } );
@@ -571,7 +576,7 @@ namespace Statistics2026.Data
             _dbHelper.ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
-                var genres = row.GetString( 0 )?.Split( ',' ) ?? Array.Empty<string>();
+                var genres = HelperFuncs.JsonToStringArray( row.GetString( 0 ) );
                 foreach( var genre in genres )
                 {
                     if( !genreMap.ContainsKey( genre ) )
@@ -667,6 +672,7 @@ namespace Statistics2026.Data
             List<string> columns = [];
             columns.Add( episodes ? "Media.PrimaryName || ' - S' || printf( '%02d', Media.Season ) || 'E' || printf('%02d', Media.Episode) || ' - ' || Media.SecondaryName" : "Media.PrimaryName" );
             columns.Add( "Media.PremiereDate" );
+            columns.Add( "Media.StudioNames" );
             columns.Add( "Media.ResolutionDetail" );
             columns.Add( "Media.Codec" );
             columns.Add( "Media.DolbyVisionProfile" );
@@ -719,6 +725,7 @@ namespace Statistics2026.Data
                 var curr = new MediaItemResponse();
                 curr.DisplayName = new SortByText( CleanSortName( row.GetString( col++ ) ), string.Empty );
                 curr.PremiereDate = HelperFuncs.ReadDateTime( row.GetString( col++ ) )?.ToTZShortString( true, true ) ?? string.Empty;
+                curr.StudioNames = new SortByText( HelperFuncs.JsonToStringArray( row.GetString( col++ ) ).Join( ", " ) );
                 curr.ResolutionDetail = row.GetString( col++ );
                 curr.Codec = row.GetString( col++ );
                 curr.DolbyVisionProfile = row.GetString( col++ );
