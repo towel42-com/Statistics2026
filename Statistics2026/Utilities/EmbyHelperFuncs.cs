@@ -328,7 +328,7 @@ namespace Statistics2026.Utilities
                 name = "<No Item Found>";
 
             var msg = $"Last Item Added: '{name}'";
-            if ( dateCreated != null )
+            if( dateCreated != null )
                 msg += $" on '{dateCreated?.LocalDateTime}'";
             embyInterfaces?._logger?.Info( msg );
 
@@ -409,16 +409,17 @@ namespace Statistics2026.Utilities
             {
                 if( lastMissingAnalysis == null || lastMissingAnalysis == DateTimeOffset.MinValue )
                 {
+                    logger?.Info( "Missing Analysis has not been run, running missing analysis." );
                     runMissingAnalysis = true;
                 }
                 else if( lastMissingAnalysis.Value.UtcDateTime.Date != DateTimeOffset.UtcNow.Date )
                 {
-                    logger?.Info( "Missing Analysis has not been run today." );
+                    logger?.Info( "Missing Analysis has not been run today, running missing analysis." );
                     runMissingAnalysis = true;
                 }
                 else
                 {
-                    logger?.Info( "Missing Analysis has already been run since new items added." );
+                    logger?.Info( "Missing Analysis has already been run since new items added, not running missing analysis." );
                     runMissingAnalysis = false;
                 }
             }
