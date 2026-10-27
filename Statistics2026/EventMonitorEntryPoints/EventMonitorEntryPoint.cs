@@ -75,8 +75,6 @@ namespace Statistics2026.EventMonitorEntryPoints
         {
             if( _embyInterfaces == null )
                 throw new ArgumentNullException( "_embyInterfaces" );
-            if( _embyInterfaces._sessionManager == null )
-                throw new ArgumentNullException( "_sessionManager" );
         }
 
         public void Run()
