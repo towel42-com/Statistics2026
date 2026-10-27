@@ -19,97 +19,12 @@ using Statistics2026.Configuration;
 using Statistics2026.Features;
 using Statistics2026.ScheduledTasks;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;
-
-namespace System.Diagnostics.CodeAnalysis
-{
-    [AttributeUsage( AttributeTargets.Parameter, Inherited = false )]
-    internal sealed class MaybeNullWhenAttribute : Attribute
-    {
-        public MaybeNullWhenAttribute( bool returnValue ) => ReturnValue = returnValue;
-
-        public bool ReturnValue { get; }
-    }
-}
-namespace System.Linq
-{
-    internal static class LinqExtensions
-    {
-        // Polyfill for the missing .ToHashSet() from the previous step
-        public static HashSet<TSource> ToHashSet<TSource>( this IEnumerable<TSource> source, IEqualityComparer<TSource>? comparer = null )
-        {
-            if( source == null )
-                throw new ArgumentNullException( nameof( source ) );
-            return new HashSet<TSource>( source, comparer );
-        }
-
-        // Polyfill for the missing .Order() required by TZConvert.cs
-        public static IOrderedEnumerable<TSource> Order<TSource>( this IEnumerable<TSource> source )
-        {
-            if( source == null )
-                throw new ArgumentNullException( nameof( source ) );
-            return source.OrderBy( x => x );
-        }
-
-        // Overload tracking with a custom comparer if the library needs it
-        public static IOrderedEnumerable<TSource> Order<TSource>( this IEnumerable<TSource> source, IEqualityComparer<TSource> comparer )
-        {
-            if( source == null )
-                throw new ArgumentNullException( nameof( source ) );
-            return source.OrderBy( x => x );
-        }
-    }
-}
-
-namespace System
-{
-    // Keeping it internal keeps it completely invisible outside your specific plugin binary
-    internal static class OperatingSystem
-    {
-        public static bool IsWindows() => RuntimeInformation.IsOSPlatform( OSPlatform.Windows );
-
-        public static bool IsMacOS() => RuntimeInformation.IsOSPlatform( OSPlatform.OSX );
-
-        public static bool IsLinux() => RuntimeInformation.IsOSPlatform( OSPlatform.Linux );
-    }
-
-    internal readonly struct Index : IEquatable<Index>
-    {
-        private readonly int _value;
-        public Index( int value, bool fromEnd = false ) => _value = fromEnd ? ( ~value ) : value;
-        public int Value => _value < 0 ? ~_value : _value;
-        public bool IsFromEnd => _value < 0;
-        public int GetOffset( int length ) => IsFromEnd ? ( _value + length + 1 ) : _value;
-        public bool Equals( Index other ) => _value == other._value;
-        public override bool Equals( object obj ) => obj is Index other && Equals( other );
-        public override int GetHashCode() => _value;
-        public static implicit operator Index( int value ) => new Index( value );
-    }
-
-    internal readonly struct Range : IEquatable<Range>
-    {
-        public Index Start { get; }
-        public Index End { get; }
-        public Range( Index start, Index end ) { Start = start; End = end; }
-        public static Range StartAt( Index start ) => new Range( start, new Index( 0, true ) );
-        public static Range EndAt( Index end ) => new Range( new Index( 0 ), end );
-        public static Range All => new Range( new Index( 0 ), new Index( 0, true ) );
-        public bool Equals( Range other ) => Start.Equals( other.Start ) && End.Equals( other.End );
-        public override bool Equals( object obj ) => obj is Range other && Equals( other );
-        public override int GetHashCode() => HashCode.Combine( Start, End );
-    }
-}
 
 namespace Statistics2026
 {
     public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
-        private readonly EmbyInterfaces _embyInterfaces;
+        public readonly EmbyInterfaces _embyInterfaces;
 
         public Plugin(
             IApplicationPaths applicationPaths,
@@ -133,21 +48,26 @@ namespace Statistics2026
             : base( applicationPaths, xmlSerializer )
         {
             Instance = this;
-            _embyInterfaces = new EmbyInterfaces( appHost )
+            Instance.ServerId = appHost.SystemId;
+
+            _embyInterfaces = new EmbyInterfaces()
             {
+                _logger = logManager.GetLogger( "Statistics2026 - Plugin" ),
+                _appHost = appHost,
+                _authenticationRepository = authenticationRepository,
                 _fileSystem = fileSystem,
+                _httpClient = httpClient,
+                _jsonSerializer = jsonSerializer,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - Plugin" ),
+                _providerManager = providerManager,
                 _serverApplicationPaths = serverApplicationPaths,
+                _configManager = configManager,
+                _sessionManager = sessionManager,
+                _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _appHost = appHost,
-                _apiService = apiService,
-                _jsonSerializer = jsonSerializer,
-                _providerManager = providerManager,
-                _configManager = configManager,
-                _taskManager = taskManager,
+                _apiService = apiService
             };
         }
 
