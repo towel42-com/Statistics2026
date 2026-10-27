@@ -8,18 +8,19 @@ using System.Linq;
 
 namespace Statistics2026.Utilities
 {
-    public class MediaInfo : IDisposable
+    public class MediaInfo : IAsyncDisposable
     {
         public MediaInfo() { }
-        public MediaInfo( Video video )
+        public static async Task<MediaInfo> CreateAsync( Video video )
         {
-            aOK = false;
+            var retVal = new MediaInfo();
+            retVal.aOK = false;
             var (primaryName, secondaryName, descName) = GetDescName( video );
 
             var mediaStream = video.GetMediaStreams().FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
             if( !mediaStream?.Width.HasValue ?? true )
             {
-                return;
+                return retVal;
             }
 
             var resolutionBase = GetMediaResolution( mediaStream, false );
@@ -27,53 +28,54 @@ namespace Statistics2026.Utilities
             var codec = mediaStream?.Codec ?? "Unknown";
             var dvProfile = GetDolbyVisionProfile( mediaStream );
 
-            ItemId = video.Id.ToString();
-            IsEpisode = video is Episode;
-            IsTVSpecial = isTVSpecial( video );
-            NumEpisodes = numEpisodes( video );
-            SeriesId = seriesId( video );
-            DescriptiveName = descName;
-            PrimaryName = primaryName;
-            SortName = video.SortName;
-            SecondaryName = secondaryName;
+            retVal.ItemId = video.Id.ToString();
+            retVal.IsEpisode = video is Episode;
+            retVal.IsTVSpecial = isTVSpecial( video );
+            retVal.NumEpisodes = numEpisodes( video );
+            retVal.SeriesId = seriesId( video );
+            retVal.DescriptiveName = descName;
+            retVal.PrimaryName = primaryName;
+            retVal.SortName = video.SortName;
+            retVal.SecondaryName = secondaryName;
 
-            StartYear = video.ProductionYear?.ToString() ?? "Unknown";
-            Season = video.ParentIndexNumber ?? -1;
-            Episode = video.IndexNumber ?? -1;
-            ResolutionDetail = resolutionDetail;
-            ResolutionBase = resolutionBase;
-            Codec = codec;
-            DolbyVisionProfile = dvProfile;
-            StudioNames = studioNames( video );
-            Genres = genres( video );
-            Rating = communityRating( video );
+            retVal.StartYear = video.ProductionYear?.ToString() ?? "Unknown";
+            retVal.Season = video.ParentIndexNumber ?? -1;
+            retVal.Episode = video.IndexNumber ?? -1;
+            retVal.ResolutionDetail = resolutionDetail;
+            retVal.ResolutionBase = resolutionBase;
+            retVal.Codec = codec;
+            retVal.DolbyVisionProfile = dvProfile;
+            retVal.StudioNames = studioNames( video );
+            retVal.Genres = genres( video );
+            retVal.StreamingServices = await streamingServices( video );
+            retVal.Rating = communityRating( video );
 
-            ServerLocation = video.Path ?? "Unknown";
-            FileSize = video.Size;
-            RunTimeTicks = video.RunTimeTicks ?? 0;
+            retVal.ServerLocation = video.Path ?? "Unknown";
+            retVal.FileSize = video.Size;
+            retVal.RunTimeTicks = video.RunTimeTicks ?? 0;
             if( video.PremiereDate.HasValue )
-                PremiereDate = video.PremiereDate.Value;
+                retVal.PremiereDate = video.PremiereDate.Value;
 
-            ImageUrl = ItemImageUrl._ItemImageUrl( video );
+            retVal.ImageUrl = ItemImageUrl._ItemImageUrl( video );
             if( video is Episode episode )
             {
-                ListDisplayName = GetDisplayName( PrimaryName, secondaryName, Season, Episode );
+                retVal.ListDisplayName = GetDisplayName( retVal.PrimaryName, secondaryName, retVal.Season, retVal.Episode );
                 if( episode.Series != null )
                 {
-                    SortName = episode.Series.SortName + " - " + episode.SortName;
-                    SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series );
-                    if( PremiereDate == null && episode.Series.PremiereDate.HasValue )
+                    retVal.SortName = episode.Series.SortName + " - " + episode.SortName;
+                    retVal.SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series );
+                    if( retVal.PremiereDate == null && episode.Series.PremiereDate.HasValue )
                     {
-                        PremiereDate = episode.Series.PremiereDate.Value;
+                        retVal.PremiereDate = episode.Series.PremiereDate.Value;
                     }
                 }
             }
             else
             {
-                ListDisplayName = PrimaryName;
+                retVal.ListDisplayName = retVal.PrimaryName;
             }
 
-            if ( PremiereDate == null )
+            if ( retVal.PremiereDate == null )
             {
                 BaseItem curr = video;
                 while( curr != null && curr.PremiereDate == null )
@@ -82,33 +84,26 @@ namespace Statistics2026.Utilities
                 }
                 if( curr != null && curr.PremiereDate != null )
                 {
-                    PremiereDate = curr.PremiereDate.Value;
+                    retVal.PremiereDate = curr.PremiereDate.Value;
                 }
             }
-            TotalBitrate = video.TotalBitrate;
-            DateAdded = video.DateCreated;
+            retVal.TotalBitrate = video.TotalBitrate;
+            retVal.DateAdded = video.DateCreated;
 
-            aOK = !ItemId.IsNullOrEmpty() && ( RunTimeTicks != 0 );
+            retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
+            return retVal;
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            Dispose( true );
+            if( !_disposed )
+            {
+                await Task.Delay( 5 ).ConfigureAwait( false );
+                _disposed = true;
+            }
             GC.SuppressFinalize( this );
         }
-
-        protected virtual void Dispose( bool disposing )
-        {
-            if( _disposed )
-                return;
-            _disposed = true;
-        }
-
-        ~MediaInfo()
-        {
-            Dispose( false );
-        }
-
+        
         public static string[] studioNames( Video video )
         {
             var retVal = video.Studios;
@@ -137,6 +132,12 @@ namespace Statistics2026.Utilities
             }
 
             return retVal;
+        }
+
+        public static async Task<List<TmdbStreamingProvider>> streamingServices( Video video )
+        {
+            var tmdbService = new TmdbCollectionReader();
+            return await tmdbService.GetStreamingServicesAsync( video );
         }
 
         public static double communityRating( Video video )
@@ -251,7 +252,7 @@ namespace Statistics2026.Utilities
             return (primaryName, secondaryName, descName);
         }
 
-        private string GetMediaResolution( MediaStream? typeInfo, bool includeDetails )
+        private static string GetMediaResolution( MediaStream? typeInfo, bool includeDetails )
         {
             if( typeInfo == null || typeInfo.Width == null )
                 return Constants.NoResolution;
@@ -276,7 +277,7 @@ namespace Statistics2026.Utilities
             return Constants.SD + details;
         }
 
-        private string GetDolbyVisionProfile( MediaStream? mediaStream )
+        private static string GetDolbyVisionProfile( MediaStream? mediaStream )
         {
             if( mediaStream == null )
                 return Constants.MissingVideoStream;
@@ -315,6 +316,7 @@ namespace Statistics2026.Utilities
         public string DolbyVisionProfile { get; set; } = string.Empty;
         public string[] StudioNames { get; set; } = { };
         public string[] Genres { get; set; } = { };
+        public List<TmdbStreamingProvider> StreamingServices { get; set; } = [];
         public string ServerLocation { get; set; } = string.Empty;
         public long FileSize { get; set; } = 0;
         public string? ImageUrl { get; set; } = null;

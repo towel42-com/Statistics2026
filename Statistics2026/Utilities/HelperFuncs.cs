@@ -144,5 +144,43 @@ namespace Statistics2026.Utilities
                 return json.Split( ',' ).ToList();
             }
         }
+
+        public static async Task<string> GetServerCountryCodeAsync( System.Net.Http.HttpClient httpClient )
+        {
+            // Provide a default fallback region code in case the network request is rate-limited or fails
+            const string fallbackCountryCode = "US";
+
+            if( httpClient == null )
+            {
+                return fallbackCountryCode;
+            }
+
+            try
+            {
+                // Appending /country/ directly to the URI allows the API to return the raw text code string instantly
+                string rawResponse = await httpClient.GetStringAsync( "https://ipapi.co" ).ConfigureAwait( false );
+
+                if( !string.IsNullOrWhiteSpace( rawResponse ) )
+                {
+                    string cleanCode = rawResponse.Trim().ToUpperInvariant();
+
+                    // Basic structural validation ensuring it matches an ISO alpha-2 string profile length
+                    if( cleanCode.Length == 2 )
+                    {
+                        return cleanCode;
+                    }
+                }
+            }
+            catch( System.Net.Http.HttpRequestException )
+            {
+                // Log your connection error details here if your framework provides a logger
+            }
+            catch( System.Exception )
+            {
+                // Safe-guard against unexpected stream issues or parsing mutations
+            }
+
+            return fallbackCountryCode;
+        }
     }
 }
