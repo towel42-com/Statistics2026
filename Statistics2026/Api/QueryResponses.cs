@@ -103,6 +103,7 @@ namespace Statistics2026.Api
         public string Codec { get; set; } = string.Empty;
         public string DolbyVisionProfile { get; set; } = string.Empty;
 
+        public SortByText StudioNames { get; set; } = new();
         public SortByText ServerLocation { get; set; } = new();
         public SortByText SearchLocation { get; set; } = new();
         public SortByText ParentName { get; set; } = new();

@@ -83,22 +83,23 @@ define(function () {
     };
 
     function getTVProgressRowData(info) {
-        var retVal = "";
-        retVal += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Name + " (" + info.PremiereYear + ")</td>";
-        retVal += "<td class='center " + calculateProgressClass(info.Episodes.Percent) + "' style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.Episodes.String + "</td>";
-        retVal += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.ScoreStr + "/10</td>";
-        retVal += "<td style='vertical-align: middle; white-space: nowrap;' align='left'>" + info.SeriesStatus + "</td>";
+        var retVal = `
+        <td style="vertical-align: middle; white-space: nowrap; align=left>"${info.Name} (${info.PremiereYear})</td>
+        <td class="center ${calculateProgressClass(info.Episodes.Percent)}" style="vertical-align: middle; white-space: nowrap; align=left>"${info.Episodes.String}</td>
+        <td style="vertical-align: middle; white-space: nowrap; align=left">${info.ScoreStr}/10</td>
+        <td style="vertical-align: middle; white-space: nowrap; align=left">${info.SeriesStatus}</td>
+        `;
         return retVal;
     }
 
     function getTVProgressHeader() {
-        var retVal = "";
-        retVal += "<tr style=\"text-align: left; white-space: nowrap;\">";
-        retVal += "    <th data-column=\"Name\" data-type=\"string\" class=\"info_cell_heading\">TV Series (Premiere Year)<span class=\"sort-icon\"></span></th>";
-        retVal += "    <th data-column=\"EpisodeProgess\" data-type=\"progress\" class=\"info_cell_heading\" style=\"white-space: nowrap;\">Progress<span class=\"sort-icon\"></span><span class=\"infoBlock\" id=\"episodesInfo\"><i class=\"md-icon\">info</i></span></th>";
-        retVal += "    <th data-column=\"Score\" data-type=\"number\" class=\"info_cell_heading\">Score<span class=\"sort-icon\"></span></th>";
-        retVal += "    <th data-column=\"Status\" data-type=\"string\" class=\"info_cell_heading\">Series Status<span class=\"sort-icon\"></span></th>";
-        retVal += "</tr>";
+        var retVal = `
+            <tr style="text-align: left; white-space: nowrap;">
+                <th data-column="Name" data-type="string" class="info_cell_heading">TV Series (Premiere Year)<span class="sort-icon"></span></th>
+                <th data-column="EpisodeProgess" data-type="progress" class="info_cell_heading" style="white-space: nowrap;">Progress<span class="sort-icon"></span><span class="infoBlock" id="episodesInfo"><i class="md-icon">info</i></span></th>
+                <th data-column="Score" data-type="number" class="info_cell_heading">Score<span class="sort-icon"></span></th>
+                <th data-column="Status" data-type="string" class="info_cell_heading">Series Status<span class="sort-icon"></span></th>
+            </tr>`;
         return retVal;
     }
 
@@ -163,45 +164,56 @@ define(function () {
     }
 
     function getMediaRowData(info, showOnServer, showMissing) {
-        var retVal = "";
-        retVal += "<td style='align='left' sort-value='" + info.DisplayName.SortBy + "'>" + info.DisplayName.Text + "</td>";
-        retVal += "<td style='align='left' sort-value='" + info.ParentName.SortBy + "'>" + info.ParentName.Text + "</td>";
+        var retVal = `
+        <td style="align=left" sort-value="${info.DisplayName.SortBy}">${info.DisplayName.Text}</td>
+        <td style="align=left" sort-value="${info.ParentName.SortBy}">${info.ParentName.Text}</td>
+        `;
         let premiereDateClass = "";
         if (showMissing && info.SearchLocation.Text != "") {
-            premiereDateClass = "class='" + calculateMediaStatusClass(new Date(info.PremiereDate)) + "'";
+            premiereDateClass = `class='${calculateMediaStatusClass(new Date(info.PremiereDate))}'`;
         }
 
-        retVal += "<td style='align='right' sort-value='" + info.PremiereDate + "'" + premiereDateClass + ">" + info.PremiereDate + "</td>";
+        retVal += `
+            <td style="align=right" sort-value="${info.PremiereDate}" ${premiereDateClass}> ${info.PremiereDate}</td>
+            <td style="align=left"  sort-value="${info.StudioNames.SortBy}">${info.StudioNames.Text}</td>
+            `;
+
         if (showOnServer) {
-            retVal += "<td style='align='left'>" + info.ResolutionDetail + "</td>";
-            retVal += "<td style='align='left'>" + info.Codec + "</td>";
-            retVal += "<td style='align='left'>" + info.DolbyVisionProfile + "</td>";
-            retVal += "<td style='align='left' sort-value='" + info.ServerLocation.SortBy + "'>" + info.ServerLocation.Text + "</td>";
+            retVal += `
+            <td style="align=left">${info.ResolutionDetail}</td>
+            <td style="align=left">${info.Codec}</td>
+            <td style="align=left">${info.DolbyVisionProfile}</td>
+            <td style="align=left" sort-value="${info.ServerLocation.SortBy}">${info.ServerLocation.Text}</td>
+            `;
         }
 
         if (showMissing) {
-            retVal += "<td style='align='left' sort-value='" + info.SearchLocation.SortBy + "'>" + info.SearchLocation.Text + "</td>";
+            retVal += `<td style="align=left" sort-value="${info.SearchLocation.SortBy}">${info.SearchLocation.Text}</td>`;
         }
 
         return retVal;
     }
 
     function getMediaHeader(parentName, showOnServer, showMissing) {
-        var retVal = "";
-        retVal += "<tr style=\"text-align: left;\">";
-        retVal += "    <th data-column=\"Name\" data-type=\"string\" class=\"info_cell_heading\">Name<span class=\"sort-icon\"></span></th>";
-        retVal += "    <th data-column=\"ParentName\" data-type=\"string\" class=\"info_cell_heading\">" + parentName + "<span class=\"sort-icon\"></span></th>";
-        retVal += "    <th data-column=\"PremiereDate\" data-type=\"date\" class=\"info_cell_heading\">Premiere Date<span class=\"sort-icon\"></span></th>";
+        var retVal =
+            `<tr style="text-align: left;">
+            <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
+            <th data-column="ParentName" data-type="string" class="info_cell_heading">${parentName}<span class="sort-icon"></span></th>
+            <th data-column="PremiereDate" data-type="date" class="info_cell_heading">Premiere Date<span class="sort-icon"></span></th>
+            <th data-column="Studios" data-type="string" class="info_cell_heading">Studio(s)<span class="sort-icon"></span></th>
+            `
 
         if (showOnServer) {
-            retVal += "    <th data-column=\"Resolution\" data-type=\"string\" class=\"info_cell_heading\">Resolution<span class=\"sort-icon\"></span></th>";
-            retVal += "    <th data-column=\"Codec\" data-type=\"string\" class=\"info_cell_heading\">Codec<span class=\"sort-icon\"></span></th>";
-            retVal += "    <th data-column=\"DolbyVisionProfile\" data-type=\"string\" class=\"info_cell_heading\">Dolby Vision Profile<span class=\"sort-icon\"></span></th>";
-            retVal += "    <th data-column=\"ServerLocation\" data-type=\"string\" class=\"info_cell_heading\">Location on Server<span class=\"sort-icon\"></span></th>";
+            retVal += `
+                <th data-column="Resolution" data-type="string" class="info_cell_heading">Resolution<span class="sort-icon"></span></th>
+                <th data-column="Codec" data-type="string" class="info_cell_heading">Codec<span class="sort-icon"></span></th>
+                <th data-column="DolbyVisionProfile" data-type="string" class="info_cell_heading">Dolby Vision Profile<span class="sort-icon"></span></th>
+                <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
+                `;
         }
 
         if (showMissing) {
-            retVal += "    <th data-column=\"Search\" data-type=\"string\" class=\"info_cell_heading\">Click to Search<span class=\"sort-icon\"></span></th>";
+            retVal += `<th data-column="Search" data-type="string" class="info_cell_heading">Click to Search<span class="sort-icon"></span></th>`;
         }
 
         retVal += "</tr>";

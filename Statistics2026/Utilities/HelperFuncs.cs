@@ -5,6 +5,7 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using ServiceStack;
+using SQLitePCL;
 using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Text.Json.Nodes;
 using System.Threading;
 using TimeZoneNames;
 
@@ -115,6 +117,32 @@ namespace Statistics2026.Utilities
             if ( !dateOnly )
                 retVal += " " + dt.ToString( "HH:mm" ) + $" {tzAbbreviation}";
             return retVal;
+        }
+
+        public static List<string> JsonToStringArray( string json )
+        {
+            try
+            {
+                var node = JsonNode.Parse( json );
+                if( node == null )
+                    return [];
+
+                var retVal = new List<string>();
+                if( node is JsonArray jsonArray )
+                {
+                    foreach( var studio in jsonArray )
+                    {
+                        if( studio == null )
+                            continue;
+                        retVal.Add( studio.ToString() );
+                    }
+                }
+                return retVal;
+            }
+            catch( Exception )
+            {
+                return json.Split( ',' ).ToList();
+            }
         }
     }
 }
