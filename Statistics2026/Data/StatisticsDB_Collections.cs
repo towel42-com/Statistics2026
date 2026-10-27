@@ -22,9 +22,9 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            _embyInterfaces!._logger?.Debug( $"Starting Collection Analysis" );
+            _embyInterfaces!.Logger().Debug( $"Starting Collection Analysis" );
             progress.Report( 0 );
-            var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, _embyInterfaces?._libraryManager );
+            var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, LibraryManager() );
             progress.Report( 100 );
 
             double count = collections.Count();
@@ -38,7 +38,7 @@ namespace Statistics2026.Data
                 progress.Report( 80.0 * ( ++curr ) / count );
                 sqlCmds.AddRange( AddCollection( collection, cancellationToken, progress ) );
                 cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!._logger?.Debug( $"    Processed Collection ({curr} of {count}) - {collection.Name} items processed" );
+                _embyInterfaces!.Logger().Debug( $"    Processed Collection ({curr} of {count}) - {collection.Name} items processed" );
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -46,7 +46,7 @@ namespace Statistics2026.Data
             progress.Report( 80 );
             _dbHelper.ExecuteCommands( sqlCmds );
             progress.Report( 100 );
-            _embyInterfaces!._logger?.Debug( $"Finished Collection Analysis" );
+            _embyInterfaces!.Logger().Debug( $"Finished Collection Analysis" );
         }
 
         private List<SQLCmdDef> AddChildToCollection( Video video, BoxSet collection )
@@ -57,7 +57,7 @@ namespace Statistics2026.Data
 
             if( video == null || collection == null )
             {
-                _embyInterfaces!._logger?.Error( $"AddChildToCollection video, collection must be set" );
+                _embyInterfaces!.Logger().Error( $"AddChildToCollection video, collection must be set" );
                 return sqlCmds;
             }
 
@@ -89,7 +89,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            _embyInterfaces!._logger?.Debug( $"AddCollectionMembers -     Adding members of Collection - {collection.Name}" );
+            _embyInterfaces!.Logger().Debug( $"AddCollectionMembers -     Adding members of Collection - {collection.Name}" );
 
             var query = new InternalItemsQuery
             {
@@ -97,7 +97,7 @@ namespace Statistics2026.Data
                 Recursive = true
             };
 
-            var baseItems = _embyInterfaces._libraryManager!.GetItemList( query );
+            var baseItems = LibraryManager().GetItemList( query );
             var videos = baseItems.OfType<Video>().ToList();
 
             double count = videos.Count;
@@ -111,7 +111,7 @@ namespace Statistics2026.Data
                 sqlCmds.AddRange( AddChildToCollection( video, collection ) );
                 cancellationToken.ThrowIfCancellationRequested();
             } );
-            _embyInterfaces!._logger?.Debug( $"AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} " );
+            _embyInterfaces!.Logger().Debug( $"AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} " );
             return sqlCmds;
         }
 
@@ -122,11 +122,11 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             if( collection.Id == null )
             {
-                _embyInterfaces!._logger?.Error( $"AddCollection {collection.SortName}: is missing ItemId" );
+                _embyInterfaces!.Logger().Error( $"AddCollection {collection.SortName}: is missing ItemId" );
                 return sqlCmds;
             }
 
-            _embyInterfaces!._logger?.Debug( $"AddCollection - Adding Collection {collection.Name}" );
+            _embyInterfaces!.Logger().Debug( $"AddCollection - Adding Collection {collection.Name}" );
 
             var sql =
                 "INSERT INTO Collections " +
@@ -155,7 +155,7 @@ namespace Statistics2026.Data
                     ;
 
             var tmdbId = collection.GetProviderId( MetadataProviders.Tmdb );
-            if( ( tmdbId != null ) && !long.TryParse( tmdbId, out long result ) )
+            if( ( tmdbId != null ) && !long.TryParse( tmdbId, out _ ) )
             {
                 tmdbId = null;
             }
@@ -168,7 +168,7 @@ namespace Statistics2026.Data
                     ("@SortName", collection.SortName),
                     ("@ImageUrl", ItemImageUrl._ItemImageUrl(collection)),
                 ] ) );
-            _embyInterfaces!._logger?.Debug( $"    AddCollection - Successfully Added Collection" );
+            _embyInterfaces!.Logger().Debug( $"    AddCollection - Successfully Added Collection" );
 
             sqlCmds.AddRange( AddCollectionMembers( collection, cancellationToken, progress ) );
             return sqlCmds;

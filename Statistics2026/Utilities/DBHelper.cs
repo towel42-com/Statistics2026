@@ -3,12 +3,14 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Security;
 using MediaBrowser.Model.Entities;
 using ServiceStack;
 using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -52,26 +54,26 @@ namespace Statistics2026.Utilities
         public DBHelper( EmbyInterfaces embyInterfaces )
         {
             _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
-            var oldFileName = Path.Combine( _embyInterfaces!._configManager!.ApplicationPaths.DataPath, "Statistics2026.db" );
-            var newFileName = Path.Combine( _embyInterfaces!._configManager!.ApplicationPaths.PluginConfigurationsPath, "Statistics2026.db" );
+            var oldFileName = Path.Combine( _embyInterfaces.ConfigManager().ApplicationPaths.DataPath, "Statistics2026.db" );
+            var newFileName = Path.Combine( _embyInterfaces.ConfigManager().ApplicationPaths.PluginConfigurationsPath, "Statistics2026.db" );
 
             if( File.Exists( oldFileName ) )
             {
                 try
                 {
-                    _embyInterfaces?._logger?.Info( "DB exists in old location, moving to plugin/config" );
+                    _embyInterfaces?.Logger().Info( "DB exists in old location, moving to plugin/config" );
                     File.Move( oldFileName, newFileName );
-                    _embyInterfaces?._logger?.Info( "   Moved successfully" );
+                    _embyInterfaces?.Logger().Info( "   Moved successfully" );
                 }
                 catch( IOException ex )
                 {
                     // Handles scenarios like: file already exists at destination, or file is locked
                     // Handles scenarios like: file already exists at destination, or file is locked
-                    _embyInterfaces?._logger?.Error( $"   Failed to be moved, removing and new db will be built - {ex.Message}" );
+                    _embyInterfaces?.Logger().Error( $"   Failed to be moved, removing and new db will be built - {ex.Message}" );
                 }
                 catch( UnauthorizedAccessException ex )
                 {
-                    _embyInterfaces?._logger?.Error( $"   Failed to be moved, removing and new db will be built - Check Permissions - {ex.Message}" );
+                    _embyInterfaces?.Logger().Error( $"   Failed to be moved, removing and new db will be built - Check Permissions - {ex.Message}" );
                 }
             }
 
@@ -79,13 +81,13 @@ namespace Statistics2026.Utilities
             {
                 try
                 {
-                    _embyInterfaces?._logger?.Info( "Deleting old DB file" );
+                    _embyInterfaces?.Logger().Info( "Deleting old DB file" );
                     File.Delete( oldFileName );
-                    _embyInterfaces?._logger?.Info( "   Deleted successfully" );
+                    _embyInterfaces?.Logger().Info( "   Deleted successfully" );
                 }
                 catch( Exception ex )
                 {
-                    _embyInterfaces?._logger?.Error( $"   Failed to be delete - {ex.Message}" );
+                    _embyInterfaces?.Logger().Error( $"   Failed to be delete - {ex.Message}" );
                 }
             }
 
@@ -95,21 +97,22 @@ namespace Statistics2026.Utilities
 
         ~DBHelper()
         {
-            _embyInterfaces?._logger?.Debug( "Statistics2026 : Cleaning up" );
+            _embyInterfaces?.Logger().Debug( "Statistics2026 : Cleaning up" );
             if( Connection != null )
             {
                 Connection.Close();
-                _embyInterfaces?._logger?.Debug( "Statistics2026 : DB Connection Closed" );
+                _embyInterfaces?.Logger().Debug( "Statistics2026 : DB Connection Closed" );
             }
         }
 
+        [MemberNotNullWhen( true, nameof( _embyInterfaces ) )]
         public bool CheckIsValid( ECheckLevel checkLevel )
         {
             List<string> msgs = [ $"DBHelper is not valid 0x{checkLevel:X}" ];
             var retVal = true;
             if( ( checkLevel & ECheckLevel.eInterfaces ) != 0 )
             {
-                if( _embyInterfaces == null || _embyInterfaces._logger == null )
+                if( _embyInterfaces == null || _embyInterfaces.Logger() == null )
                 {
                     retVal = false;
                     msgs.Add( "_embyInterfaces is null" );
@@ -154,7 +157,7 @@ namespace Statistics2026.Utilities
         {
             if( !statement.BindParameters.TryGetValue( name, out var bindParam ) )
             {
-                _embyInterfaces!._logger?.Error( $"Error Binding {name} to {value}" );
+                _embyInterfaces!.Logger().Error( $"Error Binding {name} to {value}" );
                 return false;
             }
 
@@ -270,10 +273,10 @@ namespace Statistics2026.Utilities
         {
             _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
 
-            _embyInterfaces!._logger?.Debug( "CreateConnection : " + db_file );
+            _embyInterfaces!.Logger().Debug( "CreateConnection : " + db_file );
             ConnectionFlags connectionFlags;
 
-            //_embyInterfaces!._logger?.Debug("Opening write _connection");
+            //_embyInterfaces!.Logger().Debug("Opening write _connection");
             connectionFlags = ConnectionFlags.Create; // create if missing
             connectionFlags |= ConnectionFlags.ReadWrite; // open for read-write
             connectionFlags |= ConnectionFlags.PrivateCache;
@@ -299,7 +302,7 @@ namespace Statistics2026.Utilities
             }
 
             Connection = db;
-            _embyInterfaces!._logger?.Debug( "ConnectionCreated : " + Connection.GetHashCode() );
+            _embyInterfaces!.Logger().Debug( "ConnectionCreated : " + Connection.GetHashCode() );
         }
 
         public bool ColumnExists( string tableName, string columnName )
@@ -388,17 +391,17 @@ namespace Statistics2026.Utilities
 
                 if( tableMissing )
                 {
-                    _embyInterfaces?._logger?.Info( $"Table '${tableName}' does not exist." );
+                    _embyInterfaces?.Logger().Info( $"Table '${tableName}' does not exist." );
                 }
 
                 if( columnMissing )
                 {
-                    _embyInterfaces?._logger?.Info( $"Table '${tableName}' is missing a column." );
+                    _embyInterfaces?.Logger().Info( $"Table '${tableName}' is missing a column." );
                 }
 
                 if( tableNeedsData )
                 {
-                    _embyInterfaces?._logger?.Info( $"Table '${tableName}' is missing data." );
+                    _embyInterfaces?.Logger().Info( $"Table '${tableName}' is missing data." );
                 }
                 aTableMissing = aTableMissing || tableMissing;
                 aColumnMissing = aColumnMissing || columnMissing;

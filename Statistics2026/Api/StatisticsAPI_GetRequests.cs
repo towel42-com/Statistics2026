@@ -13,7 +13,7 @@ namespace Statistics2026.Api
     {
         private object HandleRequest( string requestName, Func<AutoTimer, object> requestFunc )
         {
-            using( var timer = new AutoTimer( $"Request: {requestName}", _embyInterfaces._logger ) )
+            using( var timer = new AutoTimer( $"Request: {requestName}", _embyInterfaces.Logger() ) )
             {
                 try
                 {

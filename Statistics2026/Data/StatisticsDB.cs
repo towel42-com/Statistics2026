@@ -1,6 +1,11 @@
-﻿using Statistics2026.Utilities;
+﻿using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Providers;
+using MediaBrowser.Controller.Security;
+using MediaBrowser.Model.Logging;
+using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
 namespace Statistics2026.Data
@@ -35,7 +40,7 @@ namespace Statistics2026.Data
             lock( _padlock )
             {
                 var retVal = new StatisticsDB( embyInterfaces );
-                embyInterfaces._logger!.Debug( "Statistics2026 : New Instance Created : " + retVal.GetHashCode() );
+                embyInterfaces.Logger().Debug( "Statistics2026 : New Instance Created : " + retVal.GetHashCode() );
                 return retVal;
             }
         }
@@ -52,12 +57,12 @@ namespace Statistics2026.Data
 
             ConstructTableList();
 
-            embyInterfaces._logger?.Debug( "Statistics2026 : Creating Database" );
+            embyInterfaces.Logger().Debug( "Statistics2026 : Creating Database" );
 
             _embyInterfaces = embyInterfaces;
             _dbHelper = new DBHelper( _embyInterfaces );
 
-            embyInterfaces._logger?.Debug( "Statistics2026 : Finished Creating Database" );
+            embyInterfaces.Logger().Debug( "Statistics2026 : Finished Creating Database" );
             lock( _padlock )
             {
                 ComputeDBState();
@@ -66,6 +71,44 @@ namespace Statistics2026.Data
 
         ~StatisticsDB()
         {
+        }
+
+        public ILogger Logger()
+        {
+            _dbHelper.CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
+            return _embyInterfaces!._logger!;
+        }
+
+        public ILibraryManager LibraryManager()
+        {
+            if ( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
+                throw new ArgumentNullException( "_embyInterfaces._libraryManager is null" );
+
+            return _embyInterfaces!._libraryManager!;
+        }
+
+        public IUserDataManager UserDataManager()
+        {
+            if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
+                throw new ArgumentNullException( "_embyInterfaces._userDataManager is null" );
+
+            return _embyInterfaces!._userDataManager!;
+        }
+
+        public IUserManager UserManager()
+        {
+            if( _embyInterfaces == null || _embyInterfaces._userManager == null )
+                throw new ArgumentNullException( "_embyInterfaces._userManager is null" );
+
+            return _embyInterfaces!._userManager!;
+        }
+
+        public IProviderManager ProviderManager()
+        {
+            if( _embyInterfaces == null || _embyInterfaces._providerManager == null )
+                throw new ArgumentNullException( "_embyInterfaces._providerManager is null" );
+
+            return _embyInterfaces!._providerManager!;
         }
 
         private void CheckIsValid( ECheckType checkType )

@@ -42,21 +42,24 @@ namespace Statistics2026.ScheduledTasks
             IAuthenticationRepository authenticationRepository
             )
         {
-            _embyInterfaces = new EmbyInterfaces( appHost )
+            _embyInterfaces = new EmbyInterfaces()
             {
+                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeMediaTask" ),
+                _appHost = appHost,
+                _authenticationRepository = authenticationRepository,
                 _fileSystem = fileSystem,
+                _httpClient = httpClient,
+                _jsonSerializer = jsonSerializer,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeMediaTask" ),
+                _providerManager = providerManager,
                 _serverApplicationPaths = serverApplicationPaths,
+                _configManager = configManager,
+                _sessionManager = sessionManager,
+                _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _appHost = appHost,
                 _apiService = apiService,
-                _jsonSerializer = jsonSerializer,
-                _providerManager = providerManager,
-                _configManager = configManager,
-                _taskManager = taskManager,
             };
         }
 
@@ -68,7 +71,7 @@ namespace Statistics2026.ScheduledTasks
 
         string IScheduledTask.Category => "Statistics 2026";
 
-        Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
+        async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
             {
@@ -76,31 +79,29 @@ namespace Statistics2026.ScheduledTasks
             }
 
             var taskName = "Analyze Media";
-            _embyInterfaces._logger!.Info( $"Starting Statistics 2026 {taskName} task" );
-            // purely for progress reporting
+            _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.MediaAnalysis );
 
             long addMedia = 0;
-            using( var timer = new AutoTimer( $"Adding All Media", _embyInterfaces._logger ) )
+            using( var timer = new AutoTimer( $"Adding All Media", _embyInterfaces.Logger() ) )
             {
-                db.AddAllMediaTaskImpl();
+                await db.AddAllMediaTaskImpl();
                 addMedia = timer.ElapsedMilliseconds();
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"          Media: {addMedia} ms" );
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces.Logger().Info( $"=======================================" );
+            _embyInterfaces.Logger().Info( $"          Media: {addMedia} ms" );
+            _embyInterfaces.Logger().Info( $"=======================================" );
+            _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
             db.UpdateLastUpdated( StatisticsDB.EAction.MediaAnalysis, addMedia );
             
             db.ResetCancellationToken();
-            return Task.CompletedTask;
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

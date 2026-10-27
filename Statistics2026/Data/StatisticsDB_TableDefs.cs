@@ -48,8 +48,9 @@ namespace Statistics2026.Data
                         new TableColDef( "ResolutionDetail", "TEXT", true ),
                         new TableColDef( "Codec", "TEXT", true ),
                         new TableColDef( "DolbyVisionProfile", "TEXT", true ),
-                        new TableColDef( "StudioNames", "TEXT", true ),
-                        new TableColDef( "Genres", "TEXT", true ),
+                        new TableColDef( "StudioNames", "TEXT", true ),  // json array of text
+                        new TableColDef( "Genres", "TEXT", true ), // json array of text
+                        new TableColDef( "StreamingServices", "TEXT", true ), // json array of text, only filled in for movies
                         new TableColDef( "ServerLocation", "TEXT", true ),
                         new TableColDef( "FileSize", "INT", true),
                         new TableColDef( "ImageUrl", "TEXT", true ),
@@ -78,6 +79,8 @@ namespace Statistics2026.Data
                         new TableColDef( "Rating", "REAL", true ),
                         new TableColDef( "Status", "TEXT" , true ),
                         new TableColDef( "AverageBitrate", "INT", true ),
+                        new TableColDef( "StreamingServices", "TEXT", true ), // json array of text, only filled in for movies
+
                     ]
                 ),
                 new TableDef("SeriesFilterList",
@@ -118,6 +121,7 @@ namespace Statistics2026.Data
                         new TableColDef( "SeasonNum", "INT", true ),
                         new TableColDef( "EpisodeNum", "INT", true ),
                         new TableColDef( "StudioNames", "TEXT", true ),
+                        new TableColDef( "StreamingServices", "TEXT", true ), // json array of text
                     ]
                 ){ ValidationRequiresData = false },
                 new TableDef("Collections",

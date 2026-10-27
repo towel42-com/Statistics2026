@@ -79,7 +79,7 @@ namespace Statistics2026.Utilities
             }
             var knownTasks = TaskDef.GetKnownTasks( true );
 
-            var allTasks = embyInterfaces._taskManager.ScheduledTasks;
+            var allTasks = embyInterfaces.TaskManager().ScheduledTasks;
             foreach( var task in allTasks )
             {
                 if( task.State == MediaBrowser.Model.Tasks.TaskState.Idle )
@@ -210,14 +210,14 @@ namespace Statistics2026.Utilities
                 } );
             }
 
-            using( var timer = new AutoTimer( task.Description, embyInterfaces._logger ) )
+            using( var timer = new AutoTimer( task.Description, embyInterfaces.Logger() ) )
             {
-                var taskToRun = embyInterfaces._taskManager!.ScheduledTasks.FirstOrDefault( taskToRun => taskToRun.ScheduledTask.GetType() == task.TaskType );
+                var taskToRun = embyInterfaces.TaskManager().ScheduledTasks.FirstOrDefault( taskToRun => taskToRun.ScheduledTask.GetType() == task.TaskType );
                 if( taskToRun == null )
                     throw new Exception( $"Task not found {task.TaskType?.Name}" );
 
                 var options = new TaskOptions() { HasManualInteraction = false };
-                await embyInterfaces._taskManager.Execute( taskToRun, options ).ConfigureAwait( false );
+                await embyInterfaces.TaskManager().Execute( taskToRun, options ).ConfigureAwait( false );
 
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -227,7 +227,7 @@ namespace Statistics2026.Utilities
                     case TaskCompletionStatus.Completed:
                         break;
                     case TaskCompletionStatus.Cancelled:
-                        _ = embyInterfaces._taskManager.CancelIfRunning<RunAllTasksTask>();
+                        _ = embyInterfaces.TaskManager().CancelIfRunning<RunAllTasksTask>();
                         break;
                     case TaskCompletionStatus.Failed:
                     case TaskCompletionStatus.Aborted:

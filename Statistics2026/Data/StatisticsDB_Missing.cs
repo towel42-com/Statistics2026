@@ -502,9 +502,6 @@ namespace Statistics2026.Data
             if( !nested )
                 CheckIsValid( ECheckType.eUpdate );
 
-            if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
-                throw new ArgumentNullException( "_embyInterfaces or libraryManager is null" );
-
             var seriesFilterList = GetSeriesFilter( false );
             Dictionary<string, List<SeriesFilterResponse>> oldFilterMap = [];
             foreach( var series in seriesFilterList )
@@ -522,7 +519,7 @@ namespace Statistics2026.Data
 
             var changedFilterMap = new List<SeriesFilterResponse>();
 
-            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, _embyInterfaces?._libraryManager );
+            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
 
             foreach( var series in seriesList )
             {
@@ -544,7 +541,7 @@ namespace Statistics2026.Data
                     {
                         currFilterMap[ key ] = currFilter;
                         changedFilterMap.Add( currFilter );
-                        _embyInterfaces?._logger?.Debug( msg );
+                        _embyInterfaces?.Logger().Debug( msg );
                     }
                 }
                 else if( oldFilterMap.TryGetValue( oldKey, out var oldFilterList ) )
@@ -563,7 +560,7 @@ namespace Statistics2026.Data
                             {
                                 currFilterMap[ key ] = currFilter;
                                 changedFilterMap.Add( currFilter );
-                                _embyInterfaces?._logger?.Debug( msg );
+                                _embyInterfaces?.Logger().Debug( msg );
                             }
                             found = true;
                             break;
@@ -611,7 +608,7 @@ namespace Statistics2026.Data
                         NumSeasons = numSeasons,
                     };
                     currFilterMap[ key ] = newFilter;
-                    _embyInterfaces?._logger?.Debug( $"Adding default filter for Series: {series.Name} - HasSpecials: {hasSpecials} - NumSeasons: {numSeasons}" );
+                    _embyInterfaces?.Logger().Debug( $"Adding default filter for Series: {series.Name} - HasSpecials: {hasSpecials} - NumSeasons: {numSeasons}" );
                     changedFilterMap.Add( newFilter );
                 }
             }

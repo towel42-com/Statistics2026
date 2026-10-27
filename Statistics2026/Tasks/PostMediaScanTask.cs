@@ -48,21 +48,24 @@ namespace Statistics2026.ScheduledTasks
             IAuthenticationRepository authenticationRepository
             )
         {
-            _embyInterfaces = new EmbyInterfaces( appHost )
+            _embyInterfaces = new EmbyInterfaces()
             {
+                _logger = logManager.GetLogger( "Statistics2026 - PostMediaScanTask" ),
+                _appHost = appHost,
+                _authenticationRepository = authenticationRepository,
                 _fileSystem = fileSystem,
+                _httpClient = httpClient,
+                _jsonSerializer = jsonSerializer,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - PostMediaScanTask" ),
+                _providerManager = providerManager,
                 _serverApplicationPaths = serverApplicationPaths,
+                _configManager = configManager,
+                _sessionManager = sessionManager,
+                _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _appHost = appHost,
                 _apiService = apiService,
-                _jsonSerializer = jsonSerializer,
-                _providerManager = providerManager,
-                _configManager = configManager,
-                _taskManager = taskManager,
             };
         }
 
@@ -76,10 +79,10 @@ namespace Statistics2026.ScheduledTasks
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( null, cancellationToken, progress, false );
 
-            var currLogger = _embyInterfaces._logger;
+            var currLogger = _embyInterfaces.Logger();
             var (runFullAnalysis, runMissingAnalysis) = EmbyHelperFuncs.AnalysisOutOfDate( _embyInterfaces, db );
             _embyInterfaces._logger = currLogger;
-            _embyInterfaces._logger?.Info( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis}");
+            _embyInterfaces.Logger().Info( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis}");
 
             List<Type> tasks = [];
             if( !runFullAnalysis && runMissingAnalysis )

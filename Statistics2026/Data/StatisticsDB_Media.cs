@@ -18,14 +18,14 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public void AddAllMediaTaskImpl()
+        public async Task AddAllMediaTaskImpl()
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            _embyInterfaces!._logger?.Debug( $"Starting Video Analysis" );
+            _embyInterfaces!.Logger().Debug( $"Starting Video Analysis" );
 
             _dbHelper!.Progress?.Report( 0 );
-            var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, _embyInterfaces?._libraryManager );
+            var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
             _dbHelper!.Progress?.Report( 100 );
 
             if( videoList == null )
@@ -54,14 +54,13 @@ namespace Statistics2026.Data
                 existing.Add( video.Id.ToString(), true );
                 paramList.Add( video.Id.ToString() );
 
-
-                using( var mediaInfo = new MediaInfo( video ) )
+                await using( var mediaInfo = await MediaInfo.CreateAsync( video ).ConfigureAwait( false ) )
                 {
                     if( !mediaInfo.aOK )
                         continue;
 
                     sqlCmds.AddRange( AddMediaInfo( mediaInfo ) );
-                    _embyInterfaces!._logger?.Debug( $"    Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
+                    _embyInterfaces!.Logger().Debug( $"    Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
                 }
 
                 _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
@@ -71,7 +70,7 @@ namespace Statistics2026.Data
             sqlCmds.Insert( 1, DBHelper.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
             _dbHelper.ExecuteCommands( sqlCmds );
             _dbHelper!.Progress?.Report( 100 );
-            _embyInterfaces!._logger?.Debug( $"Finished Video Analysis" );
+            _embyInterfaces!.Logger().Debug( $"Finished Video Analysis" );
         }
 
         public List<SQLCmdDef> AddMediaInfo( MediaInfo mediaInfo )
@@ -81,7 +80,7 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             if( mediaInfo == null || !mediaInfo.aOK )
             {
-                _embyInterfaces!._logger?.Error( $"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId" );
+                _embyInterfaces!.Logger().Error( $"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId" );
                 return sqlCmds;
             }
 
@@ -105,6 +104,7 @@ namespace Statistics2026.Data
                     ", DolbyVisionProfile\n" +
                     ", StudioNames \n" +
                     ", Genres \n" +
+                    ", StreamingServices \n" +
                     ", ServerLocation\n" +
                     ", FileSize\n" +
                     ", ImageUrl\n" +
@@ -133,6 +133,7 @@ namespace Statistics2026.Data
                     ", @DolbyVisionProfile\n" +
                     ", @StudioNames \n" +
                     ", @Genres \n" +
+                    ", @StreamingServices \n" +
                     ", @ServerLocation\n" +
                     ", @FileSize\n" +
                     ", @ImageUrl\n" +
@@ -161,6 +162,7 @@ namespace Statistics2026.Data
                     ", DolbyVisionProfile=@DolbyVisionProfile\n" +
                     ", StudioNames=@StudioNames \n" +
                     ", Genres=@Genres \n" +
+                    ", StreamingServices=@StreamingServices \n" +
                     ", ServerLocation=@ServerLocation\n" +
                     ", FileSize=@FileSize\n" +
                     ", ImageUrl=@ImageUrl\n" +
@@ -170,6 +172,8 @@ namespace Statistics2026.Data
                     ", PremiereDate=@PremiereDate\n" +
                     ", DateAdded=@DateAdded"
                     ;
+
+            var services = JsonSerializer.Serialize( mediaInfo.StreamingServices );
 
             sqlCmds.Add( new SQLCmdDef( sql,
             [
@@ -190,6 +194,7 @@ namespace Statistics2026.Data
                 ("@DolbyVisionProfile", mediaInfo.DolbyVisionProfile),
                 ("@StudioNames", JsonSerializer.Serialize(mediaInfo.StudioNames)),
                 ("@Genres", JsonSerializer.Serialize(mediaInfo.Genres)),
+                ("@StreamingServices", JsonSerializer.Serialize(mediaInfo.StreamingServices)),
                 ("@ServerLocation", mediaInfo.ServerLocation),
                 ("@FileSize", mediaInfo.FileSize),
                 ("@ImageUrl",  mediaInfo.ImageUrl ?? string.Empty ),

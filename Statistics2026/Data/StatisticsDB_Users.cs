@@ -17,24 +17,24 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckType.eUpdate );
 
             _dbHelper!.Progress?.Report( 0 );
-            var users = _embyInterfaces?._userManager!.GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+            var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
             if( users == null )
                 return;
 
             _dbHelper!.Progress?.Report( 100 );
 
-            _embyInterfaces?._logger?.Debug( $"Starting User Analysis" );
+            _embyInterfaces?.Logger().Debug( $"Starting User Analysis" );
             double count = users.Count;
             double curr = 0;
 
             _dbHelper!.Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
-            using( var timer = new AutoTimer( $"    Adding All Users - Getting Commands", _embyInterfaces?._logger ) )
+            using( var timer = new AutoTimer( $"    Adding All Users - Getting Commands", Logger() ) )
             {
                 foreach( var user in users )
                 {
                     _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-                    using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces?._logger ) )
+                    using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", Logger() ) )
                     {
                         sqlCmds.AddRange( AddUser( user ) );
                         _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
@@ -44,14 +44,14 @@ namespace Statistics2026.Data
                 _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
             }
 
-            using( var timer = new AutoTimer( $"    Adding All Users - Executing Commands", _embyInterfaces?._logger ) )
+            using( var timer = new AutoTimer( $"    Adding All Users - Executing Commands", Logger() ) )
             {
                 _dbHelper!.Progress?.Report( 80 );
                 _dbHelper.ExecuteCommands( sqlCmds );
                 _dbHelper!.Progress?.Report( 100 );
             }
 
-            _embyInterfaces?._logger?.Debug( $"Finished User Analysis" );
+            _embyInterfaces?.Logger().Debug( $"Finished User Analysis" );
         }
 
         private (long watched, long watchable) AnalyzeOverallTime( User? user, List<User>? userList )
@@ -61,18 +61,18 @@ namespace Statistics2026.Data
             if( user == null && userList == null )
                 throw new ArgumentException( "Either user or allUsers must be provided." );
 
-            var (allVideosForUser, allVideos) = EmbyHelperFuncs.GetAllEpisodesAndMovies( user, _embyInterfaces!._libraryManager, true );
+            var (allVideosForUser, allVideos) = EmbyHelperFuncs.GetAllEpisodesAndMovies( user, LibraryManager(), true );
 
             long watchable = 0;
             long watched = 0;
             if( user == null && userList != null ) // use the list of users
             {
-                watched = allVideos.Where( video => userList.Any( u => _embyInterfaces._userDataManager!.GetUserData( u, video ).Played ) ).Sum( item => item.RunTimeTicks ?? 0 );
+                watched = allVideos.Where( video => userList.Any( u => UserDataManager().GetUserData( u, video ).Played ) ).Sum( item => item.RunTimeTicks ?? 0 );
                 watchable = allVideos.Sum( item => item.RunTimeTicks ?? 0 );
             }
             else
             {
-                watched = allVideosForUser.Where( video => _embyInterfaces!._userDataManager!.GetUserData( user, video ).Played ).Sum( item => item.RunTimeTicks ?? 0 );
+                watched = allVideosForUser.Where( video => UserDataManager().GetUserData( user, video ).Played ).Sum( item => item.RunTimeTicks ?? 0 );
                 watchable = allVideosForUser.Sum( item => item.RunTimeTicks ?? 0 );
             }
 
@@ -89,13 +89,13 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             if( user.Id == null )
             {
-                _embyInterfaces!._logger?.Error( $"AddUser {user.Name}: is missing Id" );
+                _embyInterfaces!.Logger().Error( $"AddUser {user.Name}: is missing Id" );
                 return sqlCmds;
             }
 
             if( user.Name == null )
             {
-                _embyInterfaces!._logger?.Error( $"AddUser {user.Id}: is missing Name" );
+                _embyInterfaces!.Logger().Error( $"AddUser {user.Id}: is missing Name" );
                 return sqlCmds;
             }
 

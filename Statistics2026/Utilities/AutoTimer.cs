@@ -8,10 +8,10 @@ namespace Statistics2026.Utilities
     {
         public string? Text = null;
         private readonly Stopwatch _stopWatch = Stopwatch.StartNew();
-        private readonly ILogger? _logger = null;
+        private readonly ILogger _logger;
         private readonly bool _debug = true;
 
-        public AutoTimer( string text, ILogger? logger, bool debug = true )
+        public AutoTimer( string text, ILogger logger, bool debug = true )
         {
             Text = text;
             _debug = debug;

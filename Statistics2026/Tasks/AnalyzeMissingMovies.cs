@@ -42,24 +42,24 @@ namespace Statistics2026.ScheduledTasks
             IAuthenticationRepository authenticationRepository
             )
         {
-            _embyInterfaces = new EmbyInterfaces( appHost )
+            _embyInterfaces = new EmbyInterfaces()
             {
+                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeMissingMoviesTask" ),
+                _appHost = appHost,
+                _authenticationRepository = authenticationRepository,
                 _fileSystem = fileSystem,
+                _httpClient = httpClient,
+                _jsonSerializer = jsonSerializer,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeMissingMoviesTask" ),
+                _providerManager = providerManager,
                 _serverApplicationPaths = serverApplicationPaths,
+                _configManager = configManager,
+                _sessionManager = sessionManager,
+                _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _appHost = appHost,
                 _apiService = apiService,
-                _jsonSerializer = jsonSerializer,
-                _providerManager = providerManager,
-                _configManager = configManager,
-                _taskManager = taskManager,
-                _httpClient = httpClient,
-                _authenticationRepository = authenticationRepository,
-                _sessionManager = sessionManager,
             };
         }
 
@@ -79,15 +79,14 @@ namespace Statistics2026.ScheduledTasks
             }
 
             var taskName = "Analyze Missing";
-            _embyInterfaces!._logger!.Info( $"Starting Statistics 2026 {taskName} task" );
-            // purely for progress reporting
+            _embyInterfaces!.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.MissingMoviesAnalysis );
 
             long analyzeMissingMovies = 0;
-            using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces._logger ) )
+            using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces.Logger() ) )
             {
                 db.AnalyzeMissingMoviesTaskImpl( cancellationToken, progress ).ConfigureAwait( false ).GetAwaiter().GetResult();
                 analyzeMissingMovies = timer.ElapsedMilliseconds();
@@ -95,10 +94,10 @@ namespace Statistics2026.ScheduledTasks
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"    Missing Movies: {analyzeMissingMovies} ms" );
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces.Logger().Info( $"=======================================" );
+            _embyInterfaces.Logger().Info( $"    Missing Movies: {analyzeMissingMovies} ms" );
+            _embyInterfaces.Logger().Info( $"=======================================" );
+            _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
             db.UpdateLastUpdated( StatisticsDB.EAction.MissingMoviesAnalysis, analyzeMissingMovies );
 

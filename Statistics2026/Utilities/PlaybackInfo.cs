@@ -19,7 +19,6 @@ namespace Statistics2026.Utilities
             PlaybackInfo? retVal;
             if( _PlaybackTracker.ContainsKey( key ) )
             {
-                //_logger.Info("Existing tracker found! : " + key);
                 retVal = _PlaybackTracker[ key ];
             }
             else
@@ -57,11 +56,11 @@ namespace Statistics2026.Utilities
                 var playbackInfo = _PlaybackTracker[ key ];
                 if( activeSessions.Contains( playbackInfo ) == false )
                 {
-                    embyInterfaces._logger!.Info( "Saving final duration for Item : " + key );
+                    embyInterfaces.Logger().Info( "Saving final duration for Item : " + key );
 
                     playbackInfo.UpdatePlaybackState( embyInterfaces );
 
-                    embyInterfaces._logger.Info( "Removing Old Key from playback_trackers : " + key );
+                    embyInterfaces.Logger().Info( "Removing Old Key from playback_trackers : " + key );
                     _ = _PlaybackTracker.Remove( key );
                 }
             }

@@ -47,21 +47,24 @@ namespace Statistics2026.ScheduledTasks
             IAuthenticationRepository authenticationRepository
             )
         {
-            _embyInterfaces = new EmbyInterfaces( appHost )
+            _embyInterfaces = new EmbyInterfaces()
             {
+                _logger = logManager.GetLogger( "Statistics2026 - RunAllTasksTask" ),
+                _appHost = appHost,
+                _authenticationRepository = authenticationRepository,
                 _fileSystem = fileSystem,
+                _httpClient = httpClient,
+                _jsonSerializer = jsonSerializer,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - RunAllTasksTask" ),
+                _providerManager = providerManager,
                 _serverApplicationPaths = serverApplicationPaths,
+                _configManager = configManager,
+                _sessionManager = sessionManager,
+                _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _appHost = appHost,
                 _apiService = apiService,
-                _jsonSerializer = jsonSerializer,
-                _providerManager = providerManager,
-                _configManager = configManager,
-                _taskManager = taskManager,
             };
         }
 
@@ -78,7 +81,7 @@ namespace Statistics2026.ScheduledTasks
         {
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
             {
-                _embyInterfaces?._logger?.Info( "Analysis is currently running" );
+                _embyInterfaces?.Logger().Info( "Analysis is currently running" );
                 return;
             }
             if( PluginConfiguration == null )
@@ -90,8 +93,7 @@ namespace Statistics2026.ScheduledTasks
             cancellationToken.ThrowIfCancellationRequested();
 
             var taskName = "Analyze All";
-            _embyInterfaces._logger!.Info( $"Starting Statistics 2026 {taskName} task" );
-            // purely for progress reporting
+            _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
             var now = DateTimeOffset.UtcNow;
 
             PluginConfiguration.LastUpdated = HelperFuncs.ToDateTimeParamValue( now )!;
@@ -101,7 +103,7 @@ namespace Statistics2026.ScheduledTasks
 
             db.ClearLastUpdated( StatisticsDB.EAction.System );
 
-            var overAllTimer = new AutoTimer( $"Adding All Data", _embyInterfaces._logger, false );
+            var overAllTimer = new AutoTimer( $"Adding All Data", _embyInterfaces.Logger(), false );
             var tasks = TaskDef.GetKnownTasks( false );
 
             for( var ii = 0; ii < tasks?.Count; ii++ )
@@ -120,8 +122,8 @@ namespace Statistics2026.ScheduledTasks
             EmbyHelperFuncs.UpdateLastAdded( _embyInterfaces, db );
 
             overAllTimer.Dispose();
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Time to Add: {overall} ms" );
+            _embyInterfaces.Logger().Info( $"=======================================" );
+            _embyInterfaces.Logger().Info( $"Time to Add: {overall} ms" );
             if( tasks != null )
             {
                 var maxLen = 0;
@@ -138,12 +140,12 @@ namespace Statistics2026.ScheduledTasks
                 {
                     if( task == null )
                         continue;
-                    _embyInterfaces._logger.Info( $"{task.Description.PadLeft( maxLen )}: {task.RunTimeMS} ms" );
+                    _embyInterfaces.Logger().Info( $"{task.Description.PadLeft( maxLen )}: {task.RunTimeMS} ms" );
                 }
             }
 
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces.Logger().Info( $"=======================================" );
+            _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
             Plugin.Instance?.AddDBState( EDBState.eFullyInitialized );
             Plugin.Instance?.SaveConfiguration();

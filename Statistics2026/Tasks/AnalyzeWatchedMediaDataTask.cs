@@ -43,21 +43,24 @@ namespace Statistics2026.ScheduledTasks
             IAuthenticationRepository authenticationRepository
             )
         {
-            _embyInterfaces = new EmbyInterfaces( appHost )
+            _embyInterfaces = new EmbyInterfaces()
             {
+                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeWatchedMediaDataTask" ),
+                _appHost = appHost,
+                _authenticationRepository = authenticationRepository,
                 _fileSystem = fileSystem,
+                _httpClient = httpClient,
+                _jsonSerializer = jsonSerializer,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - AnalyzeWatchedMediaDataTask" ),
+                _providerManager = providerManager,
                 _serverApplicationPaths = serverApplicationPaths,
+                _configManager = configManager,
+                _sessionManager = sessionManager,
+                _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _appHost = appHost,
                 _apiService = apiService,
-                _jsonSerializer = jsonSerializer,
-                _providerManager = providerManager,
-                _configManager = configManager,
-                _taskManager = taskManager,
             };
         }
 
@@ -77,24 +80,24 @@ namespace Statistics2026.ScheduledTasks
             }
 
             var taskName = "Analyze User Watch Data";
-            _embyInterfaces._logger!.Info( $"Starting Statistics 2026 {taskName} task" );
+            _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.UserWatchDataAnalysis );
 
             long addUsers = 0;
-            using( var timer = new AutoTimer( $"Adding User Watch Data", _embyInterfaces._logger ) )
+            using( var timer = new AutoTimer( $"Adding User Watch Data", _embyInterfaces.Logger() ) )
             {
                 db.AnalyzeWatchedMediaDataTaskImpl();
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
 
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"User Watch Data : {addUsers} ms" );
-            _embyInterfaces._logger.Info( $"=======================================" );
-            _embyInterfaces._logger.Info( $"Finished Statistics 2026 {taskName} task" );
+            _embyInterfaces.Logger().Info( $"=======================================" );
+            _embyInterfaces.Logger().Info( $"User Watch Data : {addUsers} ms" );
+            _embyInterfaces.Logger().Info( $"=======================================" );
+            _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
             db.UpdateLastUpdated( StatisticsDB.EAction.UserWatchDataAnalysis, addUsers );
 

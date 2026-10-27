@@ -16,10 +16,10 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            _embyInterfaces!._logger?.Debug( $"Starting Video Analysis" );
+            _embyInterfaces!.Logger().Debug( $"Starting Video Analysis" );
 
             _dbHelper!.Progress?.Report( 0 );
-            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, _embyInterfaces?._libraryManager );
+            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
             _dbHelper!.Progress?.Report( 100 );
 
             double count = seriesList.Count;
@@ -36,22 +36,22 @@ namespace Statistics2026.Data
                 sqlCmds.AddRange( cmds );
                 _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
 
-                _embyInterfaces!._logger?.Debug( $"    Processed Series ({curr} of {count}) - {series.Name}" );
+                _embyInterfaces!.Logger().Debug( $"    Processed Series ({curr} of {count}) - {series.Name}" );
             }
 
             _dbHelper!.Progress?.Report( 80 );
             _dbHelper.ExecuteCommands( sqlCmds );
             _dbHelper!.Progress?.Report( 100 );
             _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
-            _embyInterfaces!._logger?.Debug( $"Finished Video Analysis" );
+            _embyInterfaces!.Logger().Debug( $"Finished Video Analysis" );
         }
 
         private async Task<(int episodes, int specials)> GetCountForSeries( Series series )
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            var libraryOptions = _embyInterfaces!._libraryManager!.GetLibraryOptions( series );
-            var allEpisodes = await _embyInterfaces!._providerManager!.GetAllEpisodes( series, libraryOptions, _dbHelper!.CancellationToken!.Value ).ConfigureAwait( false );
+            var libraryOptions = LibraryManager().GetLibraryOptions( series );
+            var allEpisodes = await ProviderManager().GetAllEpisodes( series, libraryOptions, _dbHelper!.CancellationToken!.Value ).ConfigureAwait( false );
 
             var episodes = allEpisodes.Where( e => !MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTimeOffset.Now ) ).Count();
             var specials = allEpisodes.Where( e => MediaInfo.isTVSpecial( e ) ).Count();
@@ -131,9 +131,6 @@ namespace Statistics2026.Data
 
         public (int numSeasons, bool hasSpecials) GetSeasonCount( Series series )
         {
-            if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
-                throw new ArgumentNullException( "_embyInterfaces or libraryManager is null" );
-
             var query = new InternalItemsQuery
             {
                 Parent = series,
@@ -142,7 +139,7 @@ namespace Statistics2026.Data
                 DtoOptions = new DtoOptions( true )
             };
 
-            var seasons = _embyInterfaces._libraryManager.GetItemList( query );
+            var seasons = LibraryManager().GetItemList( query );
             var numSeasons = seasons.Count();
             bool hasSpecials = false;
             foreach( var season in seasons )
@@ -167,11 +164,11 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             if( series.Id == null )
             {
-                _embyInterfaces!._logger?.Error( $"AddSeries {series.SortName}: is missing ItemId" );
+                _embyInterfaces!.Logger().Error( $"AddSeries {series.SortName}: is missing ItemId" );
                 return sqlCmds;
             }
 
-            _embyInterfaces!._logger?.Debug( $"   AddSeries - Adding Series {series.Name}" );
+            _embyInterfaces!.Logger().Debug( $"   AddSeries - Adding Series {series.Name}" );
 
             long totalFileSize = 0;
             long totalRuntime = 0;
@@ -288,7 +285,7 @@ namespace Statistics2026.Data
 
             sqlCmds.Add( new SQLCmdDef( sql, paramsList ) );
 
-            _embyInterfaces!._logger?.Debug( $"   AddSeries - Successfully Added Series {series.Name}" );
+            _embyInterfaces!.Logger().Debug( $"   AddSeries - Successfully Added Series {series.Name}" );
             return sqlCmds;
         }
 

@@ -4,6 +4,7 @@ using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
 using SQLitePCL.pretty;
@@ -22,7 +23,7 @@ namespace Statistics2026.Utilities
 {
     public static class EmbyHelperFuncs
     {
-        public static List<T> GetLibraryItems<T>( User? user, ILibraryManager? libManager, bool getImages = true )
+        public static List<T> GetLibraryItems<T>( User? user, ILibraryManager libManager, bool getImages = true )
         {
             if( libManager == null )
                 return [];
@@ -46,7 +47,7 @@ namespace Statistics2026.Utilities
             return libManager.GetItemList( query ).OfType<T>().Cast<T>().ToList();
         }
 
-        public static List<Video>? GetAllEpisodesAndMovies( User? user, ILibraryManager? libManager )
+        public static List<Video>? GetAllEpisodesAndMovies( User? user, ILibraryManager libManager )
         {
             if( libManager == null )
                 return null;
@@ -59,7 +60,7 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static (List<Video>? forUser, List<Video>? forAll) GetAllEpisodesAndMovies( User? user, ILibraryManager? libManager, bool computeForNonUsers )
+        public static (List<Video>? forUser, List<Video>? forAll) GetAllEpisodesAndMovies( User? user, ILibraryManager libManager, bool computeForNonUsers )
         {
             if( libManager == null )
                 return (null, null);
@@ -94,11 +95,8 @@ namespace Statistics2026.Utilities
             return null;
         }
 
-        public static Movie? GetMovieByTmdbId( ILibraryManager? libraryManager, string tmdbId )
+        public static Movie? GetMovieByTmdbId( ILibraryManager libraryManager, string tmdbId )
         {
-            if( libraryManager == null )
-                return null;
-
             var query = new InternalItemsQuery
             {
                 // Target only Movie types to ensure accuracy
@@ -120,9 +118,9 @@ namespace Statistics2026.Utilities
             return result.FirstOrDefault() as Movie;
         }
 
-        public static Episode? GetEpisodeFromTmdbId( ILibraryManager? libraryManager, Season embySeason, string tmdbId, int episodeNum )
+        public static Episode? GetEpisodeFromTmdbId( ILibraryManager libraryManager, Season embySeason, string tmdbId, int episodeNum )
         {
-            if( ( libraryManager == null ) || ( embySeason == null ) )
+            if( embySeason == null )
                 return null;
 
             var query = new InternalItemsQuery
@@ -167,7 +165,7 @@ namespace Statistics2026.Utilities
 
         public static BaseItem? GetLastMovieOrEpisodeAdded( EmbyInterfaces? embyInterfaces, EWhichMediaList whichMedia = EWhichMediaList.eMovies | EWhichMediaList.eEpisodes )
         {
-            if( embyInterfaces == null || embyInterfaces._libraryManager == null )
+            if( embyInterfaces == null )
                 return null;
 
             List<string> itemTypes = [];
@@ -193,7 +191,7 @@ namespace Statistics2026.Utilities
                     Limit = limit
                 };
 
-                var items = embyInterfaces._libraryManager.GetItemList( query );
+                var items = embyInterfaces.LibraryManager().GetItemList( query );
                 foreach( var item in items )
                 {
                     if( item.DateCreated == DateTimeOffset.MinValue )
@@ -220,7 +218,7 @@ namespace Statistics2026.Utilities
 
         public static User? GetLastAddedUser( EmbyInterfaces? embyInterfaces )
         {
-            if( embyInterfaces == null || embyInterfaces._userManager == null )
+            if( embyInterfaces == null )
                 return null;
 
             var query = new UserQuery
@@ -230,7 +228,7 @@ namespace Statistics2026.Utilities
                 // IsHidden = false
             };
 
-            var queryResult = embyInterfaces._userManager.GetUserList( query ) ?? null;
+            var queryResult = embyInterfaces.UserManager().GetUserList( query ) ?? null;
             if( queryResult != null )
             {
                 // 3. Find the newest user by sorting their creation date
@@ -299,21 +297,21 @@ namespace Statistics2026.Utilities
             var lastMovieAddedToServer = EmbyHelperFuncs.GetLastMovieAdded( embyInterfaces );
             if( lastMovieAddedToServer != null && lastMovieAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
-                embyInterfaces?._logger?.Info( $"Last Movie added: '{MediaInfo.GetDisplayName( lastMovieAddedToServer )}' on '{lastMovieAddedToServer!.DateCreated.LocalDateTime}'" );
+                embyInterfaces?.Logger().Info( $"Last Movie added: '{MediaInfo.GetDisplayName( lastMovieAddedToServer )}' on '{lastMovieAddedToServer!.DateCreated.LocalDateTime}'" );
                 latestItem = getLatestItem( latestItem, lastMovieAddedToServer );
             }
 
             var lastEpisodeAddedToServer = EmbyHelperFuncs.GetLastEpisodeAdded( embyInterfaces );
             if( lastEpisodeAddedToServer != null && lastEpisodeAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
-                embyInterfaces?._logger?.Info( $"Last Episode added: '{MediaInfo.GetDisplayName( lastEpisodeAddedToServer )}' on '{lastEpisodeAddedToServer!.DateCreated.LocalDateTime}'" );
+                embyInterfaces?.Logger().Info( $"Last Episode added: '{MediaInfo.GetDisplayName( lastEpisodeAddedToServer )}' on '{lastEpisodeAddedToServer!.DateCreated.LocalDateTime}'" );
                 latestItem = getLatestItem( latestItem, lastEpisodeAddedToServer );
             }
 
             var lastUserAddedToServer = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
             if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
-                embyInterfaces?._logger?.Info( $"Last User added: '{lastUserAddedToServer.Name}' on '{lastUserAddedToServer!.DateCreated.LocalDateTime}'" );
+                embyInterfaces?.Logger().Info( $"Last User added: '{lastUserAddedToServer.Name}' on '{lastUserAddedToServer!.DateCreated.LocalDateTime}'" );
                 latestItem = getLatestItem( latestItem, lastUserAddedToServer );
             }
 
@@ -330,7 +328,7 @@ namespace Statistics2026.Utilities
             var msg = $"Last Item Added: '{name}'";
             if( dateCreated != null )
                 msg += $" on '{dateCreated?.LocalDateTime}'";
-            embyInterfaces?._logger?.Info( msg );
+            embyInterfaces?.Logger().Info( msg );
 
             return latestItem;
         }
@@ -340,7 +338,7 @@ namespace Statistics2026.Utilities
             if( embyInterfaces == null )
                 return (false, false);
 
-            var logger = embyInterfaces._logManager?.GetLogger( "Statistics2026 - OOD Analysis" ) ?? null;
+            var logger = embyInterfaces.LogManager().GetLogger( "Statistics2026 - OOD Analysis" ) ?? null;
             embyInterfaces._logger = logger;
 
             logger?.Info( $"Starting OOD Analysis" );

@@ -22,9 +22,9 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            _embyInterfaces!._logger?.Debug( $"Starting Analysis" );
+            _embyInterfaces!.Logger().Debug( $"Starting Analysis" );
             progress.Report( 0 );
-            var allSeries = EmbyHelperFuncs.GetLibraryItems<Series>( null, _embyInterfaces?._libraryManager );
+            var allSeries = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
             allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             progress.Report( 100 );
 
@@ -50,7 +50,7 @@ namespace Statistics2026.Data
                 {
                 }
                 cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!._logger?.Info( $"    Processed Series ({curr} of {count}) - {series.Name}" );
+                _embyInterfaces!.Logger().Info( $"    Processed Series ({curr} of {count}) - {series.Name}" );
             }
 
             sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
@@ -60,12 +60,12 @@ namespace Statistics2026.Data
             progress.Report( 80 );
             _dbHelper.ExecuteCommands( sqlCmds );
             progress.Report( 100 );
-            _embyInterfaces!._logger?.Debug( $"Finished Analysis" );
+            _embyInterfaces!.Logger().Debug( $"Finished Analysis" );
         }
 
         private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodes( TmdbCollectionReader reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
         {
-            _embyInterfaces!._logger?.Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
+            _embyInterfaces!.Logger().Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
 
             var seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( seriesTmbdId ) )
@@ -74,18 +74,18 @@ namespace Statistics2026.Data
             TmdbSeries? tmdbSeries = null;
             try
             {
-                tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId, cancellationToken ).ConfigureAwait( false );
+                tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId ).ConfigureAwait( false );
             }
             catch( Exception ex )
             {
-                _embyInterfaces._logger!.Error( $"Problem connecting to TMDB - {series.Name} - {seriesTmbdId}" );
-                _embyInterfaces!._logger?.Error( ex.ToString() );
+                _embyInterfaces.Logger().Error( $"Problem connecting to TMDB - {series.Name} - {seriesTmbdId}" );
+                _embyInterfaces!.Logger().Error( ex.ToString() );
                 throw ex;
             }
 
             if( tmdbSeries == null )
             {
-                _embyInterfaces._logger!.Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
+                _embyInterfaces.Logger().Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
                 return [];
             }
 
@@ -104,12 +104,12 @@ namespace Statistics2026.Data
 
                     var episodeTmdbId = tmdbEpisode.Id;
                     var episodeIdent = $"S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2}";
-                    _embyInterfaces!._logger?.Debug( $"         Checking for episode {episodeIdent} for {series.Name} on server" );
-                    var embyEpisode = ( embySeason != null ) ? EmbyHelperFuncs.GetEpisodeFromTmdbId( _embyInterfaces._libraryManager, embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber ) : null;
+                    _embyInterfaces!.Logger().Debug( $"         Checking for episode {episodeIdent} for {series.Name} on server" );
+                    var embyEpisode = ( embySeason != null ) ? EmbyHelperFuncs.GetEpisodeFromTmdbId( LibraryManager(), embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber ) : null;
 
                     if( embyEpisode == null )
                     {
-                        _embyInterfaces!._logger?.Info( $"             {series.Name} - {episodeIdent} is missing" );
+                        _embyInterfaces!.Logger().Info( $"             {series.Name} - {episodeIdent} is missing" );
 
                         var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
                         //return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";

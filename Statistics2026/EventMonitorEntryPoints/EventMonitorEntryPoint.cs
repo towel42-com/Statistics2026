@@ -44,23 +44,25 @@ namespace Statistics2026.EventMonitorEntryPoints
             IAuthenticationRepository authenticationRepository
             )
         {
-
-            _embyInterfaces = new EmbyInterfaces( appHost )
+            // missing one
+            _embyInterfaces = new EmbyInterfaces()
             {
+                _logger = logManager.GetLogger( "Statistics2026 - EventMonitorEntryPoint" ),
+                _appHost = appHost,
+                _authenticationRepository = authenticationRepository,
                 _fileSystem = fileSystem,
+                _httpClient = httpClient,
+                _jsonSerializer = jsonSerializer,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
-                _logger = logManager.GetLogger( "Statistics2026 - EventMonitorEntryPoint" ),
+                _providerManager = providerManager,
                 _serverApplicationPaths = serverApplicationPaths,
+                _configManager = configManager,
+                _sessionManager = sessionManager,
+                _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _appHost = appHost,
                 _apiService = apiService,
-                _jsonSerializer = jsonSerializer,
-                _providerManager = providerManager,
-                _configManager = configManager,
-                _taskManager = taskManager,
-                _sessionManager = sessionManager
             };
         }
 
@@ -81,10 +83,10 @@ namespace Statistics2026.EventMonitorEntryPoints
         {
             CheckIsValid();
 
-            _embyInterfaces!._logger!.Debug( "EventMonitorEntryPoint Running" );
+            _embyInterfaces!.Logger().Debug( "EventMonitorEntryPoint Running" );
 
-            _embyInterfaces._sessionManager!.PlaybackStart += _sessionManager_PlaybackStart;
-            _embyInterfaces._sessionManager!.PlaybackStopped += _sessionManager_PlaybackStop;
+            _embyInterfaces.SessionManager().PlaybackStart += _sessionManager_PlaybackStart;
+            _embyInterfaces.SessionManager().PlaybackStopped += _sessionManager_PlaybackStop;
 
             // start playback monitor
             _ = Task.Run( () => PlaybackMonitoringTask() );
@@ -93,7 +95,7 @@ namespace Statistics2026.EventMonitorEntryPoints
         private void _sessionManager_PlaybackStart( object sender, PlaybackProgressEventArgs e )
         {
             CheckIsValid();
-            _embyInterfaces!._logger!.Info( "_sessionManager_PlaybackStart : Entered" );
+            _embyInterfaces!.Logger().Info( "_sessionManager_PlaybackStart : Entered" );
             lock( syncLock )
             {
                 ProcessSessions();
@@ -103,7 +105,7 @@ namespace Statistics2026.EventMonitorEntryPoints
         private void _sessionManager_PlaybackStop( object sender, PlaybackStopEventArgs e )
         {
             CheckIsValid();
-            _embyInterfaces!._logger!.Info( "_sessionManager_PlaybackStop : Entered" );
+            _embyInterfaces!.Logger().Info( "_sessionManager_PlaybackStop : Entered" );
             lock( syncLock )
             {
                 ProcessSessions();
@@ -113,7 +115,7 @@ namespace Statistics2026.EventMonitorEntryPoints
         public async Task PlaybackMonitoringTask()
         {
             CheckIsValid();
-            _embyInterfaces!._logger!.Info( "PlaybackMonitoringTask : Started" );
+            _embyInterfaces!.Logger().Info( "PlaybackMonitoringTask : Started" );
             var currThreadSleep = 20;
             const int maxThreadSleep = 300;
 
@@ -130,7 +132,7 @@ namespace Statistics2026.EventMonitorEntryPoints
                 }
                 catch( Exception err )
                 {
-                    _embyInterfaces!._logger!.ErrorException( "PlaybackMonitoringTask Exception", err );
+                    _embyInterfaces!.Logger().ErrorException( "PlaybackMonitoringTask Exception", err );
 
                     // try to throttle repeated exceptions up to a max of 5 min
                     if( currThreadSleep < maxThreadSleep )
@@ -138,7 +140,7 @@ namespace Statistics2026.EventMonitorEntryPoints
                         currThreadSleep += 10;
                     }
 
-                    _embyInterfaces!._logger!.Debug( "PlaybackMonitoringTask New Thread Sleep : " + currThreadSleep );
+                    _embyInterfaces!.Logger().Debug( "PlaybackMonitoringTask New Thread Sleep : " + currThreadSleep );
                 }
 
                 await Task.Delay( currThreadSleep * 1000 );
@@ -156,7 +158,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, false ) )
             {
-                _embyInterfaces!._logger!.Warn( "Task is running" );
+                _embyInterfaces!.Logger().Warn( "Task is running" );
                 return;
             }
 
@@ -165,25 +167,25 @@ namespace Statistics2026.EventMonitorEntryPoints
                 _ = StatisticsDB.GetInstance( _embyInterfaces );
                 if( !Plugin.Instance.DBStateInitialized() )
                 {
-                    _embyInterfaces!._logger!.Warn( "Databases have not been initialized" );
+                    _embyInterfaces!.Logger().Warn( "Databases have not been initialized" );
                     return;
                 }
             }
 
             if( !Plugin.Instance.IsDBStateSet( EDBState.eSystemTablesCreated | EDBState.eUserTablesCreated | EDBState.eUserDataInitialized ) )
             {
-                _embyInterfaces!._logger!.Warn( "Database state is invalid" );
+                _embyInterfaces!.Logger().Warn( "Database state is invalid" );
                 return;
             }
 
-            _embyInterfaces!._logger!.Debug( "ProcessSessions Start" );
+            _embyInterfaces!.Logger().Debug( "ProcessSessions Start" );
             ActiveSessions = [];
 
-            foreach( var session in _embyInterfaces!._sessionManager!.Sessions )
+            foreach( var session in _embyInterfaces!.SessionManager().Sessions )
             {
                 if( session.NowPlayingItem == null )
                 {
-                    _embyInterfaces!._logger!.Debug( $"user: {session.UserName} - No Media being played" );
+                    _embyInterfaces!.Logger().Debug( $"user: {session.UserName} - No Media being played" );
                     // nothing playing so move on to next
                     continue;
                 }
@@ -196,7 +198,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
             PlaybackInfo.RemoveInactivePlayinfo( ActiveSessions, _embyInterfaces );
             ActiveSessions.Clear();
-            _embyInterfaces!._logger!.Debug( "ProcessSessions End" );
+            _embyInterfaces!.Logger().Debug( "ProcessSessions End" );
         }
     }
 }
