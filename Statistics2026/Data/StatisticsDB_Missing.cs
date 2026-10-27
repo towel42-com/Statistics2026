@@ -39,6 +39,7 @@ namespace Statistics2026.Data
                 ", IsEpisode" +
                 ", SeasonNum" +
                 ", EpisodeNum" +
+                ", StudioNames" +
             ")" +
             " VALUES " +
             "(" +
@@ -53,6 +54,7 @@ namespace Statistics2026.Data
                 ", @IsEpisode" +
                 ", @SeasonNum" +
                 ", @EpisodeNum" +
+                ", @StudioNames" +
             ")" +
             " ON CONFLICT(Key) " +
             " DO UPDATE " +
@@ -66,7 +68,8 @@ namespace Statistics2026.Data
                 ", ParentId=@ParentId" +
                 ", IsEpisode=@IsEpisode" +
                 ", SeasonNum=@SeasonNum" +
-                ", EpisodeNum=@EpisodeNum"
+                ", EpisodeNum=@EpisodeNum" +
+                ", StudioNames=@StudioNames"
                 ;
 
         private bool IsFilteredCollection( string collectionName )
@@ -206,7 +209,8 @@ namespace Statistics2026.Data
 
             var sql = "SELECT " +
                 "  Missing.Title AS ListDisplayName" +
-                ", Missing.ReleaseDate"
+                ", Missing.ReleaseDate" +
+                ", Missing.StudioNames"
                 ;
             if( episodes )
             {
@@ -253,16 +257,18 @@ namespace Statistics2026.Data
 
                 var premiereDate = HelperFuncs.ReadDateTime( row.GetString( 1 ) ) ?? DateTimeOffset.MinValue;
                 var premiereYear = premiereDate == DateTimeOffset.MinValue ? 0 : premiereDate.Year;
+                var studioNames = HelperFuncs.JsonToStringArray( row.GetString( 2 ) ).Join( ", " );
 
                 var curr = new MediaItemResponse()
                 {
                     DisplayName = new SortByText( CleanSortName( row.GetString( 0 ) ), row.GetString( 0 ) ),
                     PremiereDate = premiereDate.ToTZShortString( true, true ) ?? string.Empty,
+                    StudioNames = new SortByText( studioNames ),
                     ResolutionDetail = string.Empty,
                     Codec = string.Empty,
                     DolbyVisionProfile = string.Empty,
                 };
-                var col = 2;
+                var col = 3;
                 curr.ParentName = new SortByText( row.GetString( col++ ), string.Empty );
                 var parentUrl = row.GetString( col++ );
 

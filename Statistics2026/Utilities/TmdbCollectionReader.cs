@@ -1,17 +1,20 @@
 ﻿using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
+using Statistics2026.Secrets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using Statistics2026.Secrets;
 
 namespace Statistics2026.Utilities
 {
@@ -150,10 +153,59 @@ namespace Statistics2026.Utilities
 
             using( var response = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ) )
             {
-                var collections = _embyInterfaces!._jsonSerializer!.DeserializeFromStream<TmdbCollection>( response.Content );
-                return collections ?? null;
+                var text = HelperFuncs.StreamToString( response.Content );
+
+                var collection = _embyInterfaces!._jsonSerializer!.DeserializeFromString<TmdbCollection>( text );
+                if( collection == null )
+                    return collection;
+
+                for( int ii = 0; ii < collection.Movies.Count; ++ii )
+                {
+                    var movie = collection.Movies[ ii ];
+                    if( movie == null )
+                        continue;
+
+                    collection.Movies[ ii ] = await GetMovieStudiosAsync( movie, cancellationToken ).ConfigureAwait( false );
+                }
+                return collection ?? null;
             }
         }
+
+        public async Task<TmdbMovie> GetMovieStudiosAsync( TmdbMovie movie, CancellationToken? cancellationToken = null, string language = "en-US" )
+        {
+            var builder = new UriBuilder
+            {
+                Scheme = "https",
+                Host = "api.themoviedb.org",
+                Path = $"/3/movie/{movie.Id}?language={language}"
+            };
+
+            var query = HttpUtility.ParseQueryString( builder.Query );
+            query[ "api_key" ] = TheMovieDB.getApiKeyV3();
+            builder.Query = query.ToString();
+
+            var url = builder.Uri.ToString();
+            var options = new HttpRequestOptions
+            {
+                Url = url,
+                CancellationToken = cancellationToken ?? CancellationToken.None,
+                // Optional: Set cache timeout if you don't want to hit TMDB constantly
+                CacheLength = System.TimeSpan.FromDays( 1 ),
+                CacheMode = CacheMode.None
+            };
+
+            using( var response = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ) )
+            {
+                var text = HelperFuncs.StreamToString( response.Content );
+
+                var retVal = _embyInterfaces!._jsonSerializer!.DeserializeFromString<TmdbMovie>( text );
+                if( retVal == null )
+                    return movie;
+                movie = retVal;
+            }
+            return movie;
+        }
+
 
         public async Task<TmdbSeries?> GetRemoteSeriesAsync( string tmdbId, CancellationToken? cancellationToken = null, string language = "en-US" )
         {
@@ -185,6 +237,7 @@ namespace Statistics2026.Utilities
                 CacheLength = System.TimeSpan.FromDays( 1 ),
                 CacheMode = CacheMode.None
             };
+
             using( var response = await _embyInterfaces!._httpClient!.GetResponse( options ).ConfigureAwait( false ) )
             {
                 var text = HelperFuncs.StreamToString( response.Content );
@@ -307,6 +360,9 @@ namespace Statistics2026.Utilities
         [DataMember( Name = "poster_path" )]
         public string PosterPath { get; set; } = string.Empty;
 
+        [DataMember( Name = "production_companies" )]
+        public List<TmdbStudio> Studios { get; set; } = [];
+
         public DateTimeOffset? ReleaseDate()
         {
             if( string.IsNullOrEmpty( ReleaseDateText ) )
@@ -314,6 +370,25 @@ namespace Statistics2026.Utilities
 
             return HelperFuncs.ReadDateTime( ReleaseDateText );
         }
+
+        public string StudioNames()
+        {
+            List<string> names = [];
+            foreach( var studio in Studios )
+            {
+                names.Add( studio.Name );
+            }
+            return JsonSerializer.Serialize( names );
+        }
+    }
+
+    public class TmdbStudio
+    {
+        [DataMember( Name = "id" )]
+        public string Id { get; set; } = string.Empty; // The TMDB Movie ID (Crucial for Emby matching)
+
+        [DataMember( Name = "name" )]
+        public string Name { get; set; } = string.Empty;
     }
 
     [DataContract]
