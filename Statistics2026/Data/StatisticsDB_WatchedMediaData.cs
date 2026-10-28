@@ -27,24 +27,37 @@ namespace Statistics2026.Data
             EmbyInterfaces().Logger().Debug( $"Starting User Watch Data Analysis" );
 
             double count = users.Count;
-            double curr = 0;
+            var completedCount = 0;
 
             _dbHelper!.Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
             using( var timer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", Logger() ) )
             {
-                curr = 0;
-                foreach( var user in users )
+                var pool = users.Select( (user, index) => Task.Run( async() =>
                 {
-                    _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-                    using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", Logger() ) )
+                    List<SQLCmdDef> currCmds = [];
+                    long runTimeMS = 0;
+                    using( var userTimer = new AutoTimer( $"    Processed User {user.Name}", Logger() ) )
                     {
-                        sqlCmds.AddRange( await AddWatchedDataForUserAsync( user ).ConfigureAwait( false ) );
-                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                        currCmds = await AddWatchedDataForUserAsync( user ).ConfigureAwait( false );
+                        runTimeMS = timer.ElapsedMilliseconds();
                     }
-                }
 
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    int currProgress = Interlocked.Increment( ref completedCount );
+
+                    _dbHelper!.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                    Logger().Info( $"Processed User {user.Name} - {runTimeMS} ms" );
+
+                    return (index: index, user:user, cmds: currCmds, runTimeMS: runTimeMS);
+                } )).ToList();
+
+                var unsortedResults = await Task.WhenAll( pool );
+                var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                foreach( var result in results )
+                {
+                    sqlCmds.AddRange( result.cmds );
+                }
             }
 
             var config = Statistics2026.Plugin.Instance!.Configuration;
@@ -150,12 +163,13 @@ namespace Statistics2026.Data
             var sql =
                 $"UPDATE {tableName} " +
                 "SET " +
-                " TotalTicksPlayed=@TotalTicksPlayed " +
+                " TotalTicksPlayed=@TotalTicksPlayed, IsPlayed=@IsPlayed " +
                 "WHERE ItemId=@ItemId"
                 ;
             List<(string, object?)> parameters =
                 [
                     ("@TotalTicksPlayed", totalTicksPlayed ),
+                    ("@IsPlayed", true ),
                     ("@ItemId", itemId)
                 ];
 
@@ -218,82 +232,82 @@ namespace Statistics2026.Data
             return $"{sUserMediaTablePrefix}{userId}";
         }
 
-        private readonly Dictionary<string, (bool hit, int playCount)> _baseCount = new()
-                        {
-                            { "Rocky", ( false, 100 ) },
-                            { "Star Wars", ( false, 200) },
-                            { "The Empire Strikes Back", ( false, 100) },
-                            { "Return of the Jedi", ( false, 100) },
-                            { "Captain America: The First Avenger", ( false, 100) },
-                            { "Captain America: Civil War", ( false, 20) },
-                            { "Avengers: Endgame", ( false, 30) },
-                            { "Top Gun: Maverick", ( false, 30) },
-                            { "Caddyshack", ( false, 30) },
-                            { "Wonder Woman", ( false, 20) },
-                            { "Avengers: Infinity War", ( false, 10) },
-                            { "The Avengers", ( false, 10) },
-                            { "Fight Club", ( false, 10) },
-                            { "Harry Potter and The Sorcerer's Stone", ( false, 10 ) },
-                            { "Harry Potter and The Philosopher's Stone", ( false, 10 ) },
-                            { "Harry Potter and The Chamber of Secrets", ( false, 10 ) },
-                            { "Harry Potter and The Goblet of Fire", ( false, 10 ) },
-                            { "Harry Potter and The Prisoner of Azkaban", ( false, 10 ) },
-                            { "Harry Potter and The Order of the Phoenix", ( false, 10 ) },
-                            { "Harry Potter and The Half-Blood Prince", ( false, 10 ) },
-                            { "Harry Potter and The Deathly Hallows: Part 1", ( false, 10 ) },
-                            { "Harry Potter and The Deathly Hallows: Part 2", ( false, 10 ) },
-                            { "Tropic Thunder", ( false, 8) },
-                            { "Ready Player One", ( false, 5) },
-                            { "Rudy", ( false, 5) },
-                            { "Free Guy", ( false, 4) },
-                            { "Baby Driver", ( false, 3) },
+        //private readonly Dictionary<string, (bool hit, int playCount)> _baseCount = new()
+        //                {
+        //                    { "Rocky", ( false, 100 ) },
+        //                    { "Star Wars", ( false, 200) },
+        //                    { "The Empire Strikes Back", ( false, 100) },
+        //                    { "Return of the Jedi", ( false, 100) },
+        //                    { "Captain America: The First Avenger", ( false, 100) },
+        //                    { "Captain America: Civil War", ( false, 20) },
+        //                    { "Avengers: Endgame", ( false, 30) },
+        //                    { "Top Gun: Maverick", ( false, 30) },
+        //                    { "Caddyshack", ( false, 30) },
+        //                    { "Wonder Woman", ( false, 20) },
+        //                    { "Avengers: Infinity War", ( false, 10) },
+        //                    { "The Avengers", ( false, 10) },
+        //                    { "Fight Club", ( false, 10) },
+        //                    { "Harry Potter and The Sorcerer's Stone", ( false, 10 ) },
+        //                    { "Harry Potter and The Philosopher's Stone", ( false, 10 ) },
+        //                    { "Harry Potter and The Chamber of Secrets", ( false, 10 ) },
+        //                    { "Harry Potter and The Goblet of Fire", ( false, 10 ) },
+        //                    { "Harry Potter and The Prisoner of Azkaban", ( false, 10 ) },
+        //                    { "Harry Potter and The Order of the Phoenix", ( false, 10 ) },
+        //                    { "Harry Potter and The Half-Blood Prince", ( false, 10 ) },
+        //                    { "Harry Potter and The Deathly Hallows: Part 1", ( false, 10 ) },
+        //                    { "Harry Potter and The Deathly Hallows: Part 2", ( false, 10 ) },
+        //                    { "Tropic Thunder", ( false, 8) },
+        //                    { "Ready Player One", ( false, 5) },
+        //                    { "Rudy", ( false, 5) },
+        //                    { "Free Guy", ( false, 4) },
+        //                    { "Baby Driver", ( false, 3) },
 
-                            { "The Sopranos", ( false, 20) },
-                            { "Band of Brothers", ( false, 15) },
-                            { "Sons of Anarchy", ( false, 10) },
-                            { "Seinfeld", ( false, 5) },
-                            { "South Park", ( false, 5) },
-                            { "Better Call Saul", ( false, 5) },
-                            { "Entourage", ( false, 5) },
-                            { "Reacher", ( false, 2) },
-                            { "Silicon Valley", ( false, 2) },
-                            { "House", ( false, 2) },
-                            { "Mr. Robot", ( false, 2) },
-                            { "Schoolhouse Rock!", ( false, 2) },
-                        };
-        private static bool ResetMapFixed = false;
+        //                    { "The Sopranos", ( false, 20) },
+        //                    { "Band of Brothers", ( false, 15) },
+        //                    { "Sons of Anarchy", ( false, 10) },
+        //                    { "Seinfeld", ( false, 5) },
+        //                    { "South Park", ( false, 5) },
+        //                    { "Better Call Saul", ( false, 5) },
+        //                    { "Entourage", ( false, 5) },
+        //                    { "Reacher", ( false, 2) },
+        //                    { "Silicon Valley", ( false, 2) },
+        //                    { "House", ( false, 2) },
+        //                    { "Mr. Robot", ( false, 2) },
+        //                    { "Schoolhouse Rock!", ( false, 2) },
+        //                };
+        //private static bool ResetMapFixed = false;
 
-        private void FixResetMap()
-        {
-            if( ResetMapFixed )
-                return;
-            var tmp = new Dictionary<string, (bool, int)>( _baseCount );
-            _baseCount.Clear();
-            foreach( var curr in tmp )
-            {
-                _baseCount[ curr.Key.ToLower() ] = curr.Value;
-            }
+        //private void FixResetMap()
+        //{
+        //    if( ResetMapFixed )
+        //        return;
+        //    var tmp = new Dictionary<string, (bool, int)>( _baseCount );
+        //    _baseCount.Clear();
+        //    foreach( var curr in tmp )
+        //    {
+        //        _baseCount[ curr.Key.ToLower() ] = curr.Value;
+        //    }
 
-            ResetMapFixed = true;
-        }
+        //    ResetMapFixed = true;
+        //}
 
-        private void ValidateResetMapResults()
-        {
-            _ = Statistics2026.Plugin.Instance!.Configuration;
-            foreach( var curr in _baseCount )
-            {
-                if( curr.Value.hit == false )
-                {
-                    EmbyInterfaces().Logger().Warn( $"Video {curr.Key} not hit for scott" );
-                }
-            }
-        }
+        //private void ValidateResetMapResults()
+        //{
+        //    _ = Statistics2026.Plugin.Instance!.Configuration;
+        //    foreach( var curr in _baseCount )
+        //    {
+        //        if( curr.Value.hit == false )
+        //        {
+        //            EmbyInterfaces().Logger().Warn( $"Video {curr.Key} not hit for scott" );
+        //        }
+        //    }
+        //}
 
         private void ResetPlayCount( User user, Video video, ref bool isPlayed, ref int playCount )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            FixResetMap();
+            //FixResetMap();
 
             bool? newIsPlayed = null;
             int? newPlayCount = null;
@@ -315,58 +329,58 @@ namespace Statistics2026.Data
                 newHideFromResume = true;
                 newFavorite = false;
             }
-            else if( user.Name == "scott" )
-            {
-                var name = video!.Name;
-                if( video is Episode episode )
-                {
-                    name = episode.Series.Name;
-                }
+            //else if( user.Name == "scott" )
+            //{
+            //    var name = video.Name;
+            //    if( video is Episode episode )
+            //    {
+            //        name = episode.Series.Name;
+            //    }
 
-                if( _baseCount.TryGetValue( name.ToLower(), out var pc ) )
-                {
-                    newPlayCount = pc.playCount;
-                    _baseCount[ name.ToLower() ] = (true, pc.playCount);
-                    newFavorite = true;
-                }
-                else
-                {
-                    if( playCount > 0 && !isPlayed )
-                    {
-                        newIsPlayed = true;
-                        newPlayCount = 1;
-                    }
+            //    if( _baseCount.TryGetValue( name.ToLower(), out var pc ) )
+            //    {
+            //        newPlayCount = pc.playCount;
+            //        _baseCount[ name.ToLower() ] = (true, pc.playCount);
+            //        newFavorite = true;
+            //    }
+            //    else
+            //    {
+            //        if( playCount > 0 && !isPlayed )
+            //        {
+            //            newIsPlayed = true;
+            //            newPlayCount = 1;
+            //        }
 
-                    newFavorite = false;
-                }
-            }
-            else
-            {
-                if( playCount > 0 && !isPlayed )
-                {
-                    newIsPlayed = true;
-                    newPlayCount = 1;
-                }
-            }
+            //        newFavorite = false;
+            //    }
+            //}
+            //else
+            //{
+            //    if( playCount > 0 && !isPlayed )
+            //    {
+            //        newIsPlayed = true;
+            //        newPlayCount = 1;
+            //    }
+            //}
 
-            if( user.Name == "amy" )
-            {
-                var name = video!.Name;
-                if( video is Episode episode )
-                {
-                    name = episode.Series.Name;
-                }
+            //if( user.Name == "amy" )
+            //{
+            //    var name = video.Name;
+            //    if( video is Episode episode )
+            //    {
+            //        name = episode.Series.Name;
+            //    }
 
-                if( !isPlayed && playCount > 0 )
-                {
-                    newIsPlayed = true;
-                    newPlayCount = playCount;
-                }
-                else if( name.StartsWith( "Outlander" ) )
-                {
-                    return;
-                }
-            }
+            //    if( !isPlayed && playCount > 0 )
+            //    {
+            //        newIsPlayed = true;
+            //        newPlayCount = playCount;
+            //    }
+            //    else if( name.StartsWith( "Outlander" ) )
+            //    {
+            //        return;
+            //    }
+            //}
 
             var update = false;
             if( newIsPlayed != null && ( userData.Played != newIsPlayed.Value ) )
@@ -518,17 +532,16 @@ namespace Statistics2026.Data
 
                 if( config.resetPlayCount )
                     ResetPlayCount( user, video, ref isPlayed, ref playCount );
-                var lastPlayedDate = video?.LastPlayedDate ?? null;
+                var lastPlayedDate = video.LastPlayedDate ?? null;
 
-                await using( var mediaInfo = await MediaInfo.CreateAsync( Logger(), video! ).ConfigureAwait( false ) )
-                {
-                    if( !mediaInfo.aOK )
-                        continue;
+                var mediaInfo = MediaInfo.CreateMinimal( video );
+                if( !mediaInfo.aOK )
+                    continue;
 
-                    sqlCmds.Add( new SQLCmdDef( sql,
-                        [
-                            ( "@UserId", user.Id.ToString()),
-                            ( "@ItemId", video?.Id.ToString() ?? string.Empty),
+                sqlCmds.Add( new SQLCmdDef( sql,
+                    [
+                        ( "@UserId", user.Id.ToString()),
+                            ( "@ItemId", video.Id.ToString() ?? string.Empty),
                             ( "@Name", mediaInfo.PrimaryName),
                             ( "@IsEpisode", mediaInfo.IsEpisode),
                             ( "@NumEpisodes", mediaInfo.NumEpisodes),
@@ -538,9 +551,8 @@ namespace Statistics2026.Data
                             ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null )),
                             ( "@SeriesId", mediaInfo.SeriesId),
                             ( "@RunTimeTicks", mediaInfo.RunTimeTicks )
-                        ] ) );
-                    EmbyInterfaces().Logger().Debug( $"User: {user.Name} - Analyzed video '{mediaInfo.DescriptiveName}' - {++count} of {allVideosForUser.Count}" );
-                }
+                    ] ) );
+                EmbyInterfaces().Logger().Debug( $"User: {user.Name} - Analyzed video '{mediaInfo.DescriptiveName}' - {++count} of {allVideosForUser.Count}" );
             }
 
             if( config.resetPlayCount )
@@ -554,8 +566,8 @@ namespace Statistics2026.Data
                     ;
                 sqlCmds.Add( new SQLCmdDef( sqlUpdateTicks ) );
 
-                if( user.Name == "scott" )
-                    ValidateResetMapResults();
+                //if( user.Name == "scott" )
+                //    ValidateResetMapResults();
             }
 
             return sqlCmds;
