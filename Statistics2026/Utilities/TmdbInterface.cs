@@ -414,7 +414,7 @@ namespace Statistics2026.Utilities
                 }
                 catch( Exception )
                 {
-                    logger.Error( $"Could not get streaming services for video: {video.Name}" );
+                    logger.Error( $"Could not get streaming services for video: '{video.Name}'" );
                     return [];
                 }
             }
