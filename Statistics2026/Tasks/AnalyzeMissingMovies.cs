@@ -63,7 +63,7 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze Missing Movies";
+        string IScheduledTask.Name => "\u2022 7 - Analyze Missing Movies";
 
         string IScheduledTask.Key => "Statistics2026_MissingMoviesTask";
 
@@ -71,7 +71,7 @@ namespace Statistics2026.ScheduledTasks
 
         string IScheduledTask.Category => "Statistics 2026";
 
-        Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
+        async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
             {
@@ -85,24 +85,31 @@ namespace Statistics2026.ScheduledTasks
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.MissingMoviesAnalysis );
 
-            long analyzeMissingMovies = 0;
+            long runtimeMS = 0;
             using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces.Logger() ) )
             {
-                db.AnalyzeMissingMoviesTaskImpl( cancellationToken, progress ).ConfigureAwait( false ).GetAwaiter().GetResult();
-                analyzeMissingMovies = timer.ElapsedMilliseconds();
+                try
+                {
+                    await db.AnalyzeMissingMoviesTaskImplAsync( cancellationToken, progress ).ConfigureAwait( false );
+                    runtimeMS = timer.ElapsedMilliseconds();
+                }
+                catch( Exception ex )
+                {
+                    _embyInterfaces.Logger().ErrorException( $"Problem running '${( (IScheduledTask)this ).Name}", ex );
+                }
+
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"    Missing Movies: {analyzeMissingMovies} ms" );
+            _embyInterfaces.Logger().Info( $"    Missing Movies: {runtimeMS} ms" );
             _embyInterfaces.Logger().Info( $"=======================================" );
             _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.MissingMoviesAnalysis, analyzeMissingMovies );
+            db.UpdateLastUpdated( StatisticsDB.EAction.MissingMoviesAnalysis, runtimeMS );
 
             db.ResetCancellationToken();
-            return Task.CompletedTask;
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

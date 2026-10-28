@@ -64,7 +64,7 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze User Watched Data Information";
+        string IScheduledTask.Name => "\u2022 3 - Analyze User Watched Data Information";
 
         string IScheduledTask.Key => "Statistics2026_UserWatchedDataTask";
 
@@ -72,7 +72,7 @@ namespace Statistics2026.ScheduledTasks
 
         string IScheduledTask.Category => "Statistics 2026";
 
-        Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
+        async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
             {
@@ -89,9 +89,17 @@ namespace Statistics2026.ScheduledTasks
             long addUsers = 0;
             using( var timer = new AutoTimer( $"Adding User Watch Data", _embyInterfaces.Logger() ) )
             {
-                db.AnalyzeWatchedMediaDataTaskImpl();
-                addUsers = timer.ElapsedMilliseconds();
-                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    await db.AnalyzeWatchedMediaDataTaskImplAsync().ConfigureAwait( false );
+                    addUsers = timer.ElapsedMilliseconds();
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+                catch( Exception ex )
+                {
+                    _embyInterfaces.Logger().ErrorException( $"Problem running '${( (IScheduledTask)this ).Name}", ex );
+                }
+
             }
 
             _embyInterfaces.Logger().Info( $"=======================================" );
@@ -103,8 +111,6 @@ namespace Statistics2026.ScheduledTasks
 
             db.ResetCancellationToken();
             Plugin.Instance?.AddDBState( EDBState.eUserTablesCreated );
-
-            return Task.CompletedTask;
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

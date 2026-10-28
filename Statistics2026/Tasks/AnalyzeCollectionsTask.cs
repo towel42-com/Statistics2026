@@ -64,7 +64,7 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze Collection information";
+        string IScheduledTask.Name => "\u2022 4 - Analyze Collection information";
 
         string IScheduledTask.Key => "Statistics2026_CollectionsTask";
 
@@ -72,7 +72,7 @@ namespace Statistics2026.ScheduledTasks
 
         string IScheduledTask.Category => "Statistics 2026";
 
-        Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
+        async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
             {
@@ -85,24 +85,30 @@ namespace Statistics2026.ScheduledTasks
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.CollectionsAnalysis );
 
-            long addCollections = 0;
+            long runtimeMS = 0;
             using( var timer = new AutoTimer( $"Adding Collections", _embyInterfaces.Logger() ) )
             {
-                db.AddAllCollectionsTaskImpl( cancellationToken, progress );
-                addCollections = timer.ElapsedMilliseconds();
+                try
+                {
+                    await db.AddAllCollectionsTaskImplAsync( cancellationToken, progress ).ConfigureAwait( false );
+                    runtimeMS = timer.ElapsedMilliseconds();
+                }
+                catch( Exception ex )
+                {
+                    _embyInterfaces.Logger().ErrorException( $"Problem running '${((IScheduledTask)this).Name}", ex );
+                }
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"    Collections: {addCollections} ms" );
+            _embyInterfaces.Logger().Info( $"    Collections: {runtimeMS} ms" );
             _embyInterfaces.Logger().Info( $"=======================================" );
             _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.CollectionsAnalysis, addCollections );
+            db.UpdateLastUpdated( StatisticsDB.EAction.CollectionsAnalysis, runtimeMS );
 
             db.ResetCancellationToken();
-            return Task.CompletedTask;
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

@@ -63,7 +63,7 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze Media information";
+        string IScheduledTask.Name => "\u2022 2 - Analyze Media information";
 
         string IScheduledTask.Key => "Statistics2026_MediaTask";
 
@@ -85,21 +85,28 @@ namespace Statistics2026.ScheduledTasks
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.MediaAnalysis );
 
-            long addMedia = 0;
+            long runtimeMS = 0;
             using( var timer = new AutoTimer( $"Adding All Media", _embyInterfaces.Logger() ) )
             {
-                await db.AddAllMediaTaskImpl();
-                addMedia = timer.ElapsedMilliseconds();
+                try
+                {
+                    await db.AddAllMediaTaskImplAsync().ConfigureAwait( false );
+                    runtimeMS = timer.ElapsedMilliseconds();
+                }
+                catch( Exception ex )
+                {
+                    _embyInterfaces.Logger().ErrorException( $"Problem running '${( (IScheduledTask)this ).Name}", ex );
+                }
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"          Media: {addMedia} ms" );
+            _embyInterfaces.Logger().Info( $"          Media: {runtimeMS} ms" );
             _embyInterfaces.Logger().Info( $"=======================================" );
             _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.MediaAnalysis, addMedia );
+            db.UpdateLastUpdated( StatisticsDB.EAction.MediaAnalysis, runtimeMS );
             
             db.ResetCancellationToken();
         }

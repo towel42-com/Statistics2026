@@ -63,7 +63,7 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze Missing Episodes";
+        string IScheduledTask.Name => "\u2022 6 - Analyze Missing Episodes";
 
         string IScheduledTask.Key => "Statistics2026_MissingEpisodesTask";
 
@@ -71,7 +71,7 @@ namespace Statistics2026.ScheduledTasks
 
         string IScheduledTask.Category => "Statistics 2026";
 
-        Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
+        async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
             {
@@ -85,24 +85,30 @@ namespace Statistics2026.ScheduledTasks
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.MissingEpisodesAnalysis );
 
-            long analyzeMissingEpisodes = 0;
+            long runtimeMS = 0;
             using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces.Logger() ) )
             {
-                db.AnalyzeMissingEpisodesTaskImpl( cancellationToken, progress ).ConfigureAwait( false ).GetAwaiter().GetResult();
-                analyzeMissingEpisodes = timer.ElapsedMilliseconds();
+                try
+                {
+                    await db.AnalyzeMissingEpisodesTaskImplAsync( cancellationToken, progress ).ConfigureAwait( false );
+                    runtimeMS = timer.ElapsedMilliseconds();
+                }
+                catch( Exception ex )
+                {
+                    _embyInterfaces.Logger().ErrorException( $"Problem running '${( (IScheduledTask)this ).Name}", ex );
+                }
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"    Missing Episodes: {analyzeMissingEpisodes} ms" );
+            _embyInterfaces.Logger().Info( $"    Missing Episodes: {runtimeMS} ms" );
             _embyInterfaces.Logger().Info( $"=======================================" );
             _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.MissingEpisodesAnalysis, analyzeMissingEpisodes );
+            db.UpdateLastUpdated( StatisticsDB.EAction.MissingEpisodesAnalysis, runtimeMS );
 
             db.ResetCancellationToken();
-            return Task.CompletedTask;
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

@@ -12,7 +12,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        async public Task AddAllUsersTaskImplAsync()
+        public async Task AddAllUsersTaskImplAsync()
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
