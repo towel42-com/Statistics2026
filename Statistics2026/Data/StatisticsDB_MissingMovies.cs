@@ -27,7 +27,7 @@ namespace Statistics2026.Data
 
             progress.Report( 100 );
 
-            var reader = new TmdbCollectionReader( _embyInterfaces, cancellationToken );
+            var reader = new TmdbInterface( _embyInterfaces, cancellationToken );
 
             double count = collections.Count();
             var curr = 0.0;
@@ -63,7 +63,7 @@ namespace Statistics2026.Data
             _embyInterfaces!.Logger().Debug( $"Finished Analysis" );
         }
 
-        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollection( TmdbCollectionReader reader, BoxSet collection, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollection( TmdbInterface reader, BoxSet collection, IProgress<double> progress )
         {
             _embyInterfaces!.Logger().Info( $"    Analyzing Collection '{collection.Name}' - checking for missing movies" );
 

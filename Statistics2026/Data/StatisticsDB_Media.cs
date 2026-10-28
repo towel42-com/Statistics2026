@@ -54,7 +54,7 @@ namespace Statistics2026.Data
                 existing.Add( video.Id.ToString(), true );
                 paramList.Add( video.Id.ToString() );
 
-                await using( var mediaInfo = await MediaInfo.CreateAsync( video ).ConfigureAwait( false ) )
+                await using( var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false ) )
                 {
                     if( !mediaInfo.aOK )
                         continue;

@@ -28,7 +28,7 @@ namespace Statistics2026.Data
             allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             progress.Report( 100 );
 
-            var reader = new TmdbCollectionReader( _embyInterfaces, cancellationToken );
+            var reader = new TmdbInterface( _embyInterfaces, cancellationToken );
 
             double count = allSeries.Count();
             var curr = 0.0;
@@ -79,7 +79,7 @@ namespace Statistics2026.Data
             return false;
         }
 
-        private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodes( TmdbCollectionReader reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodes( TmdbInterface reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
         {
             _embyInterfaces!.Logger().Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
 
