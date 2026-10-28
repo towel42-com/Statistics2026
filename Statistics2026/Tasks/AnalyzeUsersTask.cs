@@ -63,7 +63,7 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze User Information";
+        string IScheduledTask.Name => "\u2022 1 - Analyze User Information";
 
         string IScheduledTask.Key => "Statistics2026_UsersTask";
 
@@ -88,10 +88,17 @@ namespace Statistics2026.ScheduledTasks
             long addUsers = 0;
             using( var timer = new AutoTimer( $"Adding All Users", _embyInterfaces.Logger() ) )
             {
-                await db.AddAllUsersTaskImplAsync().ConfigureAwait( false );
-                addUsers = timer.ElapsedMilliseconds();
-                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    await db.AddAllUsersTaskImplAsync().ConfigureAwait( false );
+                    addUsers = timer.ElapsedMilliseconds();
+                }
+                catch( Exception ex )
+                {
+                    _embyInterfaces.Logger().ErrorException( $"Problem running '${( (IScheduledTask)this ).Name}", ex );
+                }
             }
+            cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces.Logger().Info( $"=======================================" );
             _embyInterfaces.Logger().Info( $"Analyze all users" );

@@ -64,7 +64,7 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "• Analyze Series information";
+        string IScheduledTask.Name => "• 5 - Analyze Series information";
 
         string IScheduledTask.Key => "Statistics2026_SeriesTask";
 
@@ -85,21 +85,28 @@ namespace Statistics2026.ScheduledTasks
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.SeriesAnalysis );
 
-            long addSeries = 0;
+            long runtimeMS = 0;
             using( var timer = new AutoTimer( $"Adding All Series", _embyInterfaces.Logger() ) )
             {
-                await db.AddAllSeriesTaskImplAsync();
-                addSeries = timer.ElapsedMilliseconds();
+                try
+                {
+                    await db.AddAllSeriesTaskImplAsync().ConfigureAwait( false );
+                    runtimeMS = timer.ElapsedMilliseconds();
+                }
+                catch( Exception ex )
+                {
+                    _embyInterfaces.Logger().ErrorException( $"Problem running '${( (IScheduledTask)this ).Name}", ex );
+                }
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"         Series: {addSeries} ms" );
+            _embyInterfaces.Logger().Info( $"         Series: {runtimeMS} ms" );
             _embyInterfaces.Logger().Info( $"=======================================" );
             _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.SeriesAnalysis, addSeries );
+            db.UpdateLastUpdated( StatisticsDB.EAction.SeriesAnalysis, runtimeMS );
 
             db.ResetCancellationToken();
         }

@@ -64,7 +64,7 @@ namespace Statistics2026.ScheduledTasks
             };
         }
 
-        string IScheduledTask.Name => "\u2022 Analyze User Watched Data Information";
+        string IScheduledTask.Name => "\u2022 3 - Analyze User Watched Data Information";
 
         string IScheduledTask.Key => "Statistics2026_UserWatchedDataTask";
 
@@ -89,10 +89,17 @@ namespace Statistics2026.ScheduledTasks
             long addUsers = 0;
             using( var timer = new AutoTimer( $"Adding User Watch Data", _embyInterfaces.Logger() ) )
             {
-                await db.AnalyzeWatchedMediaDataTaskImplAsync().ConfigureAwait( false );
-                addUsers = timer.ElapsedMilliseconds();
-                cancellationToken.ThrowIfCancellationRequested();
+                try
+                {
+                    await db.AnalyzeWatchedMediaDataTaskImplAsync().ConfigureAwait( false );
+                    addUsers = timer.ElapsedMilliseconds();
+                }
+                catch( Exception ex )
+                {
+                    _embyInterfaces.Logger().ErrorException( $"Problem running '${( (IScheduledTask)this ).Name}", ex );
+                }
             }
+            cancellationToken.ThrowIfCancellationRequested();
 
             _embyInterfaces.Logger().Info( $"=======================================" );
             _embyInterfaces.Logger().Info( $"User Watch Data : {addUsers} ms" );

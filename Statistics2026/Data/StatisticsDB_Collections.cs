@@ -18,7 +18,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public void AddAllCollectionsTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task AddAllCollectionsTaskImplAsync( CancellationToken cancellationToken, IProgress<double> progress )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -36,7 +36,7 @@ namespace Statistics2026.Data
             foreach( var collection in collections )
             {
                 progress.Report( 80.0 * ( ++curr ) / count );
-                sqlCmds.AddRange( AddCollection( collection, cancellationToken, progress ) );
+                sqlCmds.AddRange( await AddCollectionAsync( collection, cancellationToken, progress ).ConfigureAwait( false ) );
                 cancellationToken.ThrowIfCancellationRequested();
                 Logger().Debug( $"    Processed Collection ({curr} of {count}) - {collection.Name} items processed" );
             }
@@ -49,7 +49,7 @@ namespace Statistics2026.Data
             Logger().Debug( $"Finished Collection Analysis" );
         }
 
-        private List<SQLCmdDef> AddChildToCollection( Video video, BoxSet collection )
+        private async Task<List<SQLCmdDef>> AddChildToCollectionAsync( Video video, BoxSet collection )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -85,7 +85,7 @@ namespace Statistics2026.Data
             return sqlCmds;
         }
 
-        private List<SQLCmdDef> AddCollectionMembers( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AddCollectionMembersAsync( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -105,17 +105,17 @@ namespace Statistics2026.Data
 
             var sqlCmds = new List<SQLCmdDef>();
 
-            videos.ForEach( video =>
+            videos.ForEach( async video =>
             {
                 progress.Report( 100.0 * ( ++curr ) / count );
-                sqlCmds.AddRange( AddChildToCollection( video, collection ) );
+                sqlCmds.AddRange( await AddChildToCollectionAsync( video, collection ).ConfigureAwait( false ) );
                 cancellationToken.ThrowIfCancellationRequested();
             } );
             Logger().Debug( $"AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} " );
             return sqlCmds;
         }
 
-        public List<SQLCmdDef> AddCollection( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task<List<SQLCmdDef>> AddCollectionAsync( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -170,7 +170,7 @@ namespace Statistics2026.Data
                 ] ) );
             Logger().Debug( $"    AddCollection - Successfully Added Collection" );
 
-            sqlCmds.AddRange( AddCollectionMembers( collection, cancellationToken, progress ) );
+            sqlCmds.AddRange( await AddCollectionMembersAsync( collection, cancellationToken, progress ).ConfigureAwait(false) );
             return sqlCmds;
         }
 
