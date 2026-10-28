@@ -28,24 +28,47 @@ namespace Statistics2026.Data
             progress.Report( 100 );
 
             double count = collections.Count();
-            var curr = 0.0;
+            var completedCount = 0;
 
             progress.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
 
-            foreach( var collection in collections )
+            using( var timer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
             {
-                progress.Report( 80.0 * ( ++curr ) / count );
-                sqlCmds.AddRange( await AddCollectionAsync( collection, cancellationToken, progress ).ConfigureAwait( false ) );
-                cancellationToken.ThrowIfCancellationRequested();
-                EmbyInterfaces().Logger().Debug( $"    Processed Collection ({curr} of {count}) - {collection.Name} items processed" );
+                var pool = collections.Select( ( collection, index ) => Task.Run( async() =>
+                {
+                    List<SQLCmdDef> currCmds = [];
+                    long runTimeMS = 0;
+                    using( var userTimer = new AutoTimer( $"    Processed Collection {collection.Name}", Logger() ) )
+                    {
+                        currCmds = await AddCollectionAsync( collection, cancellationToken, progress ).ConfigureAwait( false );
+                        runTimeMS = timer.ElapsedMilliseconds();
+                    }
+
+                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    int currProgress = Interlocked.Increment( ref completedCount );
+                    _dbHelper!.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                    Logger().Info( $"Processed Collection {collection.Name} - {runTimeMS} ms" );
+
+                    return (index: index, collection: collection, cmds: currCmds, runTimeMS: runTimeMS);
+                } ) ).ToList();
+
+                var unsortedResults = await Task.WhenAll( pool );
+                var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                foreach( var result in results )
+                {
+                    sqlCmds.AddRange( result.cmds );
+                }
             }
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            progress.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            progress.Report( 100 );
+            using( var timer = new AutoTimer( $"    Analyze Collection - Executing Commands", Logger() ) )
+            {
+                progress.Report( 80 );
+                _dbHelper.ExecuteCommands( sqlCmds );
+                progress.Report( 100 );
+            }
             EmbyInterfaces().Logger().Debug( $"Finished Collection Analysis" );
         }
 
