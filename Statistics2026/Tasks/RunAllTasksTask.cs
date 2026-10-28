@@ -112,7 +112,7 @@ namespace Statistics2026.ScheduledTasks
                 var task = tasks[ ii ];
                 if( task != null )
                 {
-                    task.Result = await TaskDef.ExecuteSubTask( _embyInterfaces, task, cancellationToken, true );
+                    task.Result = await TaskDef.ExecuteSubTaskAsync( _embyInterfaces, task, cancellationToken, true ).ConfigureAwait( false );
                     tasks[ ii ] = task;
                 }
             }

@@ -3,12 +3,15 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Logging;
 using ServiceStack;
 using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -22,25 +25,25 @@ namespace Statistics2026.Utilities
 {
     public enum ECheckLevel
     {
-        eInterfaces = 0x0001,
-        eConnection = 0x0002,
-        eProgress = 0x0004,
-        eAll = eInterfaces | eConnection | eProgress,
-        eThrowOnFailure = 0x010000,
-        eAllWithThrow = eAll | eThrowOnFailure
-    }
-
-    public enum ECheckType
-    {
-        eNone,
-        eInit,
-        eUpdate,
-        eReport
+        eEmbyInterfaceOnly = 0x00000000 | eThrowOnFailure,
+        eLogger = 0x00000001,
+        eConnection = 0x00000002,
+        eProgress = 0x00000004,
+        eLibraryManager = 0x00000008,
+        eUserDataManager = 0x00000010,
+        eUserManager = 0x00000020,
+        eProviderManager = 0x00000040,
+        eAll = 0x0000FFFF,
+        eThrowOnFailure = 0x00010000,
+        eAllWithThrow = eAll | eThrowOnFailure,
+        eInit = eLogger | eThrowOnFailure,
+        eUpdate = eAllWithThrow,
+        eReport = eLogger | eConnection | eThrowOnFailure
     }
 
     public sealed class DBHelper
     {
-        private readonly EmbyInterfaces? _embyInterfaces;
+        public readonly EmbyInterfaces? _embyInterfaces;
 
         private IDatabaseConnection? Connection { get; set; } = null;
         public CancellationToken? CancellationToken { get; set; } = null;
@@ -105,14 +108,55 @@ namespace Statistics2026.Utilities
             }
         }
 
+        public string ToString( ECheckLevel checkLevel )
+        {
+            List<string> values = [];
+            values.Add( "EmbyInterfaces" );
+
+            foreach( ECheckLevel curr in Enum.GetValues( typeof( ECheckLevel ) ) )
+            {
+                if(
+                       ( ( curr & ECheckLevel.eAll ) != 0 )
+                    || ( ( curr & ECheckLevel.eInit ) != 0 )
+                    || ( ( curr & ECheckLevel.eUpdate ) != 0 )
+                    || ( ( curr & ECheckLevel.eReport ) != 0 )
+                )
+                    continue;
+
+                if( ( checkLevel & curr ) != 0 )
+                {
+                    values.Add( curr.ToString() );
+                }
+            }
+            return values.Join( "|" );
+        }
+
         [MemberNotNullWhen( true, nameof( _embyInterfaces ) )]
         public bool CheckIsValid( ECheckLevel checkLevel )
         {
-            List<string> msgs = [ $"DBHelper is not valid 0x{checkLevel:X}" ];
+            List<string> msgs = [ $"Invalid DBHelper: {ToString( checkLevel )}" ];
             var retVal = true;
-            if( ( checkLevel & ECheckLevel.eInterfaces ) != 0 )
+            if( Statistics2026.Plugin.Instance == null )
             {
-                if( _embyInterfaces == null || _embyInterfaces.Logger() == null )
+                retVal = false;
+                msgs.Add( "Statistics2026.Plugin.Instance is null" );
+            }
+
+            if( Statistics2026.Plugin.Instance!.Configuration == null )
+            {
+                retVal = false;
+                msgs.Add( "Statistics2026.Plugin.Instance.Configuration is null" );
+            }
+
+            if( _embyInterfaces == null )
+            {
+                retVal = false;
+                msgs.Add( "_embyInterfaces is null" );
+            }
+
+            if( ( checkLevel & ECheckLevel.eLogger ) != 0 )
+            {
+                if( _embyInterfaces!.Logger() == null )
                 {
                     retVal = false;
                     msgs.Add( "_embyInterfaces is null" );
@@ -270,7 +314,7 @@ namespace Statistics2026.Utilities
 
         private void CreateConnection( string db_file )
         {
-            _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
+            _ = CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );
 
             _embyInterfaces!.Logger().Debug( "CreateConnection : " + db_file );
             ConnectionFlags connectionFlags;
@@ -441,7 +485,7 @@ namespace Statistics2026.Utilities
             return (columnMissing, tableNeedsData);
         }
 
-        static public SQLCmdDef CreateSQLCmdDef( string sql, string paramListName, List< object > paramList )
+        static public SQLCmdDef CreateSQLCmdDef( string sql, string paramListName, List<object> paramList )
         {
             var placeHolderNames = string.Join( ", ", paramList.Select( ( _, index ) => $"@p{index}" ).ToArray() );
 
@@ -451,7 +495,7 @@ namespace Statistics2026.Utilities
                 sqlDefParams.Add( ($"@p{ii}", paramList[ ii ]) );
             }
 
-            sql = sql.Replace(paramListName, placeHolderNames );
+            sql = sql.Replace( paramListName, placeHolderNames );
             var retVal = new SQLCmdDef( sql, sqlDefParams );
             return retVal;
         }

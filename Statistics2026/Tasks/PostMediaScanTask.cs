@@ -94,7 +94,7 @@ namespace Statistics2026.ScheduledTasks
                 tasks.Add( typeof( RunAllTasksTask ) );
             }
 
-            _ = TaskDef.ExecuteSubTasks( _embyInterfaces, tasks, cancellationToken, false );
+            _ = TaskDef.ExecuteSubTasksAsync( _embyInterfaces, tasks, cancellationToken, false );
             return Task.CompletedTask;
         }
     }

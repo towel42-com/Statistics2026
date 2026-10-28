@@ -18,7 +18,7 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
                 Helpers.injectStyleSheet();
 
-                Helpers.getLastRunInfo(view, "UserAnalysis", "lastRunInfo");
+                Helpers.getLastRunInfoAsync(view, "UserAnalysis", "lastRunInfo");
                 loadData(view, params.userId);
             });
 
@@ -31,7 +31,7 @@
             });
 
             function loadData(view, userId) {
-                if (!Helpers.CheckForValidConfig()) {
+                if (!Helpers.CheckForValidConfigAsync()) {
                     Dashboard.hideLoadingMsg();
                     return;
                 }

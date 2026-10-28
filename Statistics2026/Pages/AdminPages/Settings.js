@@ -104,7 +104,7 @@
                 const baseId = 'seriesFilter';
                 const baseUrl = "Statistics2026/series_filters";
 
-                Helpers.loadTableData(view, baseId, baseUrl, getSeriesFilterHeader, getSeriesFilterRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+                Helpers.loadTableDataAsync(view, baseId, baseUrl, getSeriesFilterHeader, getSeriesFilterRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
             }
 
             // init code here

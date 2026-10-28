@@ -26,10 +26,10 @@ namespace Statistics2026.Utilities
                         while( true )
                         {
                             // Wait for 5 seconds
-                            await Task.Delay( ms, token );
+                            await Task.Delay( ms, token ).ConfigureAwait( false );
 
                             // Execute the action if not canceled
-                            var runAgain = await func( token );
+                            var runAgain = await func( token ).ConfigureAwait( false );
                             if( !runAgain )
                                 break;
                         }

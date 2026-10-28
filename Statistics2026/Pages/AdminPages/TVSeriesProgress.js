@@ -11,7 +11,7 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
 
-                Helpers.getLastRunInfo(view, ["UserWatchDataAnalysis"], "lastRunInfo");
+                Helpers.getLastRunInfoAsync(view, ["UserWatchDataAnalysis"], "lastRunInfo");
                 Helpers.loadUsers(view, `#selectUser_tvprogress`, loadData);
             });
 
@@ -29,7 +29,7 @@
             });
 
             function loadData(view, userId) {
-                if (!Helpers.CheckForValidConfig()) {
+                if (!Helpers.CheckForValidConfigAsync()) {
                     Dashboard.hideLoadingMsg();
                     return;
                 }

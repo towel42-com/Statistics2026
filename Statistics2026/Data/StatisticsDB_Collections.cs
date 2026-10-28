@@ -20,9 +20,9 @@ namespace Statistics2026.Data
     {
         public void AddAllCollectionsTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
-            _embyInterfaces!.Logger().Debug( $"Starting Collection Analysis" );
+            EmbyInterfaces().Logger().Debug( $"Starting Collection Analysis" );
             progress.Report( 0 );
             var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, LibraryManager() );
             progress.Report( 100 );
@@ -38,7 +38,7 @@ namespace Statistics2026.Data
                 progress.Report( 80.0 * ( ++curr ) / count );
                 sqlCmds.AddRange( AddCollection( collection, cancellationToken, progress ) );
                 cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!.Logger().Debug( $"    Processed Collection ({curr} of {count}) - {collection.Name} items processed" );
+                EmbyInterfaces().Logger().Debug( $"    Processed Collection ({curr} of {count}) - {collection.Name} items processed" );
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -46,18 +46,18 @@ namespace Statistics2026.Data
             progress.Report( 80 );
             _dbHelper.ExecuteCommands( sqlCmds );
             progress.Report( 100 );
-            _embyInterfaces!.Logger().Debug( $"Finished Collection Analysis" );
+            EmbyInterfaces().Logger().Debug( $"Finished Collection Analysis" );
         }
 
         private List<SQLCmdDef> AddChildToCollection( Video video, BoxSet collection )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             var sqlCmds = new List<SQLCmdDef>();
 
             if( video == null || collection == null )
             {
-                _embyInterfaces!.Logger().Error( $"AddChildToCollection video, collection must be set" );
+                EmbyInterfaces().Logger().Error( $"AddChildToCollection video, collection must be set" );
                 return sqlCmds;
             }
 
@@ -87,9 +87,9 @@ namespace Statistics2026.Data
 
         private List<SQLCmdDef> AddCollectionMembers( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
-            _embyInterfaces!.Logger().Debug( $"AddCollectionMembers -     Adding members of Collection - {collection.Name}" );
+            EmbyInterfaces().Logger().Debug( $"AddCollectionMembers -     Adding members of Collection - {collection.Name}" );
 
             var query = new InternalItemsQuery
             {
@@ -111,22 +111,22 @@ namespace Statistics2026.Data
                 sqlCmds.AddRange( AddChildToCollection( video, collection ) );
                 cancellationToken.ThrowIfCancellationRequested();
             } );
-            _embyInterfaces!.Logger().Debug( $"AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} " );
+            EmbyInterfaces().Logger().Debug( $"AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} " );
             return sqlCmds;
         }
 
         public List<SQLCmdDef> AddCollection( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             var sqlCmds = new List<SQLCmdDef>();
             if( collection.Id == null )
             {
-                _embyInterfaces!.Logger().Error( $"AddCollection {collection.SortName}: is missing ItemId" );
+                EmbyInterfaces().Logger().Error( $"AddCollection {collection.SortName}: is missing ItemId" );
                 return sqlCmds;
             }
 
-            _embyInterfaces!.Logger().Debug( $"AddCollection - Adding Collection {collection.Name}" );
+            EmbyInterfaces().Logger().Debug( $"AddCollection - Adding Collection {collection.Name}" );
 
             var sql =
                 "INSERT INTO Collections " +
@@ -168,7 +168,7 @@ namespace Statistics2026.Data
                     ("@SortName", collection.SortName),
                     ("@ImageUrl", ItemImageUrl._ItemImageUrl(collection)),
                 ] ) );
-            _embyInterfaces!.Logger().Debug( $"    AddCollection - Successfully Added Collection" );
+            EmbyInterfaces().Logger().Debug( $"    AddCollection - Successfully Added Collection" );
 
             sqlCmds.AddRange( AddCollectionMembers( collection, cancellationToken, progress ) );
             return sqlCmds;
@@ -176,7 +176,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalCollectionCount()
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var sql = "SELECT COUNT( ItemId ) FROM Collections";
 
@@ -185,7 +185,7 @@ namespace Statistics2026.Data
 
         public StatCard MultiCollectionMovies()
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
             var sql = "SELECT  "
                 + "  Media.SortName "
                 + ", Media.ItemId "
@@ -270,7 +270,7 @@ namespace Statistics2026.Data
 
         public SortByText? GetCollectionsForMovie( string movieId, bool includeImage )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
             var sql = "SELECT " +
                 "  Collections.Name" +
                 ", Collections.SortName" +

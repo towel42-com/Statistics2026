@@ -38,8 +38,8 @@
                         view.querySelector(`input[name="${filterId}"][value="All"]`).checked = true;
                     }
 
-                    Helpers.getLastRunInfo(view, lastRunArray, "lastRunInfo");
-                    loadTableData();
+                    Helpers.getLastRunInfoAsync(view, lastRunArray, "lastRunInfo");
+                    loadTableDataAsync();
                 });
             });
 
@@ -65,8 +65,8 @@
                 return Helpers.getMediaRowData(info, showOnServer, showMissing);
             }
 
-            function loadTableData() {
-                if (!Helpers.CheckForValidConfig()) {
+            function loadTableDataAsync() {
+                if (!Helpers.CheckForValidConfigAsync()) {
                     Dashboard.hideLoadingMsg();
                     return;
                 }
@@ -86,7 +86,7 @@
                     url += "?showOnServer=true&showMissing=true";
                 }
 
-                Helpers.loadTableData(view, baseId, url, getMediaHeader, getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+                Helpers.loadTableDataAsync(view, baseId, url, getMediaHeader, getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
                 view.setAttribute('data-initialized', 'true');
             }
 
@@ -115,7 +115,7 @@
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
 
-                    loadTableData();
+                    loadTableDataAsync();
                 });
             });
         };

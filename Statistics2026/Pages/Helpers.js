@@ -1,7 +1,7 @@
 define(function () {
     const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
 
-    async function CheckForValidConfig() {
+    async function CheckForValidConfigAsync() {
         var urlText = "/emby/Statistics2026/database_status";
         var url = ApiClient.getUrl(urlText);
 
@@ -109,10 +109,10 @@ define(function () {
         var url = "Statistics2026/tv_series_progress/" + userName;
 
         const sortit = () => {
-            sortTable(1, "progress", 'TVSeriesProgress', showLoadingFunc, hideLoadingFunc, 'desc');
+            sortTableAsync(1, "progress", 'TVSeriesProgress', showLoadingFunc, hideLoadingFunc, 'desc');
         };
 
-        loadTableData(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
+        loadTableDataAsync(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
     }
 
     function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
@@ -229,7 +229,7 @@ define(function () {
         });
     };
 
-    async function getLastRunInfo(view, whichRuns, div) {
+    async function getLastRunInfoAsync(view, whichRuns, div) {
         const promises = whichRuns.map(whichRun => {
 
             var urlText = "/emby/Statistics2026/last_run/" + whichRun;
@@ -240,7 +240,7 @@ define(function () {
                 return response.html;
             }).catch(error => {
                 var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
-                console.error("getLastRunInfo failed:", errorMessage);
+                console.error("getLastRunInfoAsync failed:", errorMessage);
                 return `<tr><td colspan="2">Error loading ${whichRun} status</td></tr>`;
             });
         });
@@ -316,7 +316,7 @@ define(function () {
 
     const activeLoaders = new Map();
 
-    async function loadTableData(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
+    async function loadTableDataAsync(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
         if (activeLoaders.has(baseId)) {
             activeLoaders.get(baseId).abort();
             activeLoaders.delete(baseId);
@@ -344,14 +344,14 @@ define(function () {
                 }
 
                 var errorMessage = "'" + error + "' - '" + url + "'";
-                console.error("loadTableData failed:", errorMessage, "url:", url);
+                console.error("loadTableDataAsync failed:", errorMessage, "url:", url);
                 hideLoadingFunc();
                 return;
             });
 
             if (resultData === undefined || signal.aborted) {
                 if (!signal.aborted)
-                    console.error("loadTableData failed: result data was undefined", "url:", url);
+                    console.error("loadTableDataAsync failed: result data was undefined", "url:", url);
                 hideLoadingFunc();
                 return;
             }
@@ -417,7 +417,7 @@ define(function () {
                                 headers.forEach((header, index) => {
                                     if (header.getAttribute('data-column') == entry.ColumnName) {
                                         var dataType = header.getAttribute('data-type');
-                                        sortTable(index, dataType, entry.TableId, showLoadingFunc, hideLoadingFunc, entry.AscDesc);
+                                        sortTableAsync(index, dataType, entry.TableId, showLoadingFunc, hideLoadingFunc, entry.AscDesc);
                                         found = true;
                                     }
                                 });
@@ -439,7 +439,7 @@ define(function () {
         }
         catch (error) {
             if (error.name !== 'AbortError') {
-                console.error("Unexpected error in loadTableData workflow:", error);
+                console.error("Unexpected error in loadTableDataAsync workflow:", error);
             }
         }
         finally {
@@ -468,7 +468,7 @@ define(function () {
             header.addEventListener('click', () => {
                 const columnType = header.getAttribute('data-type');
                 let idx = header.cellIndex;
-                sortTable(idx, columnType, baseId, showLoadingFunc, hideLoadingFunc);
+                sortTableAsync(idx, columnType, baseId, showLoadingFunc, hideLoadingFunc);
             });
         });
     }
@@ -507,7 +507,7 @@ define(function () {
 
 
     const sortDirections = new Map();
-    async function sortTable(columnIndex, dataType, baseId, showLoadingFunc, hideLoadingFunc, forcedDir) {
+    async function sortTableAsync(columnIndex, dataType, baseId, showLoadingFunc, hideLoadingFunc, forcedDir) {
         showLoadingFunc();
 
         var load_status = document.querySelector('#' + baseId + '_status');
@@ -688,18 +688,18 @@ define(function () {
 
     return {
         pluginId,
-        CheckForValidConfig,
+        CheckForValidConfigAsync,
         LoadTVProgress,
         LoadUserStats,
         getMediaHeader,
         getMediaRowData,
         getStatistics2026Data,
         getSummaryInfo,
-        getLastRunInfo,
+        getLastRunInfoAsync,
         getTabIndex,
         initCollapsibleTable,
         injectStyleSheet,
-        loadTableData,
+        loadTableDataAsync,
         loadUsers,
         setupSortability,
         showInfo

@@ -47,7 +47,7 @@ namespace Statistics2026.Utilities
 
             try
             {
-                login().GetAwaiter().GetResult();
+                loginAsync().GetAwaiter().GetResult();
             }
             catch( Exception ex )
             {
@@ -101,7 +101,7 @@ namespace Statistics2026.Utilities
             return true;
         }
 
-        private async Task login()
+        private async Task loginAsync()
         {
             if( !CheckIsValid() )
                 return;
@@ -348,27 +348,40 @@ namespace Statistics2026.Utilities
 
         private static readonly ConcurrentDictionary<string, TmdbStreamingProvidersResponse> _ProviderCache = new ConcurrentDictionary<string, TmdbStreamingProvidersResponse>();
 
-        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Video? video, string language = "en-US" )
+        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Video video, string language = "en-US" )
+        {
+            if( video == null )
+                return [];
+            if ( video is Movie )
+                return await GetStreamingServicesAsync( logger, (video as Movie)!, language );
+            if( video is Episode )
+                return await GetStreamingServicesAsync( logger, ( video as Episode )!, language );
+            return [];
+        }
+
+        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Movie movie, string language = "en-US" )
         {
             if( !CheckIsValid() )
                 return [];
 
-            if( video == null )
+            if( movie == null )
                 return [];
 
-            var dispName = MediaInfo.GetDisplayName( video );
-            var tmdbId = string.Empty;
-            var isEpisode = video is Episode;
-            if( isEpisode )
-            {
-                return await GetStreamingServicesAsync( logger, ( video as Episode )!.Series, language );
-            }
-            else
-            {
-                tmdbId = video.GetProviderId( MetadataProviders.Tmdb );
-            }
+            var dispName = MediaInfo.GetDisplayName( movie );
+            var tmdbId = movie.GetProviderId( MetadataProviders.Tmdb );
 
-            return await GetStreamingServicesAsync( logger, tmdbId, isEpisode, dispName, language );
+            return await GetStreamingServicesAsync( logger, tmdbId, false, dispName, language ).ConfigureAwait( false );
+        }
+
+        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Episode? episode, string language = "en-US" )
+        {
+            if( !CheckIsValid() )
+                return [];
+
+            if( episode == null || episode.Series == null )
+                return [];
+
+            return await GetStreamingServicesAsync( logger, episode.Series, language ).ConfigureAwait( false );
         }
 
         public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Series? series, string language = "en-US" )

@@ -16,18 +16,18 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async Task AnalyzeMissingMoviesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task AnalyzeMissingMoviesTaskImplAsync( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
-            _embyInterfaces!.Logger().Debug( $"Starting Analysis" );
+            EmbyInterfaces().Logger().Debug( $"Starting Analysis" );
             progress.Report( 0 );
             var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, LibraryManager() );
             collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
 
             progress.Report( 100 );
 
-            var reader = new TmdbInterface( _embyInterfaces, cancellationToken );
+            var reader = new TmdbInterface( EmbyInterfaces(), cancellationToken );
 
             double count = collections.Count();
             var curr = 0.0;
@@ -41,7 +41,7 @@ namespace Statistics2026.Data
                 progress.Report( 80.0 * ( ++curr ) / count );
                 try
                 {
-                    var cmds = await AnalyzeMissingMoviesInCollection( reader, collection, progress ).ConfigureAwait( false );
+                    var cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection, progress ).ConfigureAwait( false );
                     paramList.Add( collection.Id.ToString() );
                     sqlCmds.AddRange( cmds );
                 }
@@ -49,7 +49,7 @@ namespace Statistics2026.Data
                 {
                 }
                 cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!.Logger().Info( $"    Processed Collection ({curr} of {count}) - {collection.Name}" );
+                EmbyInterfaces().Logger().Info( $"    Processed Collection ({curr} of {count}) - {collection.Name}" );
 
             }
 
@@ -60,12 +60,12 @@ namespace Statistics2026.Data
             progress.Report( 80 );
             _dbHelper.ExecuteCommands( sqlCmds );
             progress.Report( 100 );
-            _embyInterfaces!.Logger().Debug( $"Finished Analysis" );
+            EmbyInterfaces().Logger().Debug( $"Finished Analysis" );
         }
 
-        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollection( TmdbInterface reader, BoxSet collection, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollectionAsync( TmdbInterface reader, BoxSet collection, IProgress<double> progress )
         {
-            _embyInterfaces!.Logger().Info( $"    Analyzing Collection '{collection.Name}' - checking for missing movies" );
+            EmbyInterfaces().Logger().Info( $"    Analyzing Collection '{collection.Name}' - checking for missing movies" );
 
             var collectionTmbdId = collection.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( collectionTmbdId ) )
@@ -79,14 +79,14 @@ namespace Statistics2026.Data
             }
             catch( Exception ex )
             {
-                _embyInterfaces.Logger().Error( $"Problem connecting to TMDB - {collection.Name} - {collectionTmbdId}" );
-                _embyInterfaces!.Logger().Error( ex.ToString() );
+                EmbyInterfaces().Logger().Error( $"Problem connecting to TMDB - {collection.Name} - {collectionTmbdId}" );
+                EmbyInterfaces().Logger().Error( ex.ToString() );
                 throw ex;
             }
 
             if( tmdbCollection == null )
             {
-                _embyInterfaces.Logger().Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
+                EmbyInterfaces().Logger().Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
                 return [];
             }
 
@@ -97,12 +97,12 @@ namespace Statistics2026.Data
                     continue;
 
                 var movieTmdbId = tmdbMovie.Id;
-                _embyInterfaces!.Logger().Debug( $"        Checking for movie {tmdbMovie.Title} for {collection.Name} on server" );
+                EmbyInterfaces().Logger().Debug( $"        Checking for movie {tmdbMovie.Title} for {collection.Name} on server" );
                 var embyMovie = EmbyHelperFuncs.GetMovieByTmdbId( LibraryManager(), movieTmdbId );
 
                 if( embyMovie == null )
                 {
-                    _embyInterfaces!.Logger().Info( $"            {tmdbMovie.Title} is missing" );
+                    EmbyInterfaces().Logger().Info( $"            {tmdbMovie.Title} is missing" );
                     var key = $"{tmdbCollection.Id}-{tmdbMovie.Id}";
                     retVal.Add( new SQLCmdDef( kSQLAddToMissing,
                     [

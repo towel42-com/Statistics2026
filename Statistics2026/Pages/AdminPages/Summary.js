@@ -8,7 +8,7 @@
 
         window.MyPluginHelpers = Helpers;
 
-        async function loadDebugInfo(view, pluginConfig) {
+        async function loadDebugInfoAsync(view, pluginConfig) {
             var url = ApiClient.getUrl("/emby/System/Configuration");
 
             let sysConfig = await ApiClient.getJSON(url).catch(error => {
@@ -60,16 +60,16 @@
             ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
 
                 view.querySelector(`#debugInfo`).style.display = 'none';
-                loadDebugInfo(view, config);
+                loadDebugInfoAsync(view, config);
 
-                if (!Helpers.CheckForValidConfig()) {
+                if (!Helpers.CheckForValidConfigAsync()) {
                     view.querySelector(`#lastRunInfo`).style.display = 'none';
                     Dashboard.hideLoadingMsg();
                     return;
                 }
             });
 
-            Helpers.getLastRunInfo(view, ["System"], "lastRunInfo");
+            Helpers.getLastRunInfoAsync(view, ["System"], "lastRunInfo");
             view.querySelector("#pageIntro").innerHTML =
                 "This plugin will calculate media and user statistics "
                 + "from this Emby server instance.";

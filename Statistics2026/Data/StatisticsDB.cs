@@ -23,7 +23,6 @@ namespace Statistics2026.Data
         private readonly Dictionary<string, TableDef> _tableMap = [];
         private List<TableDef> _tableList = [];
         private TableDef? _userMediaTemplate = null;
-        private readonly EmbyInterfaces? _embyInterfaces = null;
         private MediaBrowser.Model.Tasks.IScheduledTask? _currentTask = null;
 
         public bool AllTablesExisted { get; private set; } = false;
@@ -59,8 +58,7 @@ namespace Statistics2026.Data
 
             embyInterfaces.Logger().Debug( "Statistics2026 : Creating Database" );
 
-            _embyInterfaces = embyInterfaces;
-            _dbHelper = new DBHelper( _embyInterfaces );
+            _dbHelper = new DBHelper( embyInterfaces );
 
             embyInterfaces.Logger().Debug( "Statistics2026 : Finished Creating Database" );
             lock( _padlock )
@@ -73,60 +71,47 @@ namespace Statistics2026.Data
         {
         }
 
+        public EmbyInterfaces EmbyInterfaces()
+        {
+            _dbHelper.CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eThrowOnFailure );
+            return _dbHelper!._embyInterfaces!;
+        }
+
         public ILogger Logger()
         {
-            _dbHelper.CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
-            return _embyInterfaces!._logger!;
+            _dbHelper.CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );
+            return EmbyInterfaces()._logger!;
         }
 
         public ILibraryManager LibraryManager()
         {
-            if ( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
-                throw new ArgumentNullException( "_embyInterfaces._libraryManager is null" );
-
-            return _embyInterfaces!._libraryManager!;
+            _dbHelper.CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eThrowOnFailure );
+            return EmbyInterfaces()._libraryManager!;
         }
 
         public IUserDataManager UserDataManager()
         {
-            if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
-                throw new ArgumentNullException( "_embyInterfaces._userDataManager is null" );
-
-            return _embyInterfaces!._userDataManager!;
+            _dbHelper.CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eUserDataManager | ECheckLevel.eThrowOnFailure );
+            return EmbyInterfaces()._userDataManager!;
         }
 
         public IUserManager UserManager()
         {
-            if( _embyInterfaces == null || _embyInterfaces._userManager == null )
-                throw new ArgumentNullException( "_embyInterfaces._userManager is null" );
-
-            return _embyInterfaces!._userManager!;
+            _dbHelper.CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eUserManager | ECheckLevel.eThrowOnFailure );
+            return EmbyInterfaces()._userManager!;
         }
 
         public IProviderManager ProviderManager()
         {
-            if( _embyInterfaces == null || _embyInterfaces._providerManager == null )
-                throw new ArgumentNullException( "_embyInterfaces._providerManager is null" );
-
-            return _embyInterfaces!._providerManager!;
+            _dbHelper.CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eProviderManager | ECheckLevel.eThrowOnFailure );
+            return EmbyInterfaces()._providerManager!;
         }
 
-        private void CheckIsValid( ECheckType checkType )
+        private void CheckIsValid( ECheckLevel checkType )
         {
-            if( Statistics2026.Plugin.Instance == null )
-                throw new ArgumentNullException( "Statistics2026.Plugin.Instance" );
+            _ = _dbHelper.CheckIsValid( checkType | ECheckLevel.eThrowOnFailure ); // always throw
 
-            if( Statistics2026.Plugin.Instance.Configuration == null || _embyInterfaces == null )
-                throw new ArgumentNullException( "Statistics2026.Plugin.Instance.Configuration" );
-
-            if( checkType == ECheckType.eInit )
-                _ = _dbHelper.CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
-            else if( checkType == ECheckType.eReport )
-                _ = _dbHelper.CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
-            else if( checkType == ECheckType.eUpdate )
-                _ = _dbHelper.CheckIsValid( ECheckLevel.eAllWithThrow );
-
-            if( ( checkType != ECheckType.eInit ) && ( checkType != ECheckType.eReport ) && TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, _currentTask, true ) )
+            if( ( ( checkType & ECheckLevel.eInit ) == 0 ) && ( ( checkType & ECheckLevel.eReport ) != 0 ) && TaskDef.IsStatistics2026TaskRunning( EmbyInterfaces(), _currentTask, true ) )
             {
                 throw new Exception( "Statistics 2026 task is running" );
             }
