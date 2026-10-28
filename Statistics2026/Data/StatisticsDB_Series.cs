@@ -2,6 +2,7 @@
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Logging;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
@@ -207,6 +208,9 @@ namespace Statistics2026.Data
             var seriesStatus = series.Status?.ToString() ?? string.Empty;
             var (numSeasons, hasSpecials) = GetSeasonCount( series );
 
+            var tmdbService = new TmdbInterface();
+            var streamingServices = await tmdbService.GetStreamingServicesAsync( _embyInterfaces.Logger(), series );
+
             var (numEpisodes, numSpecials) = await GetCountForSeries( series );
             List<(string name, object? value)>? paramsList = null;
             sql = "INSERT INTO Series " +
@@ -226,6 +230,7 @@ namespace Statistics2026.Data
                 ", Rating" +
                 ", Status" +
                 ", AverageBitrate" +
+                ", StreamingServices" +
             ")" +
             " VALUES " +
             "(" +
@@ -244,6 +249,7 @@ namespace Statistics2026.Data
                 ", @Rating" +
                 ", @Status" +
                 ", @AverageBitrate" +
+                ", @StreamingServices" +
             ")" +
             " ON CONFLICT(ItemId) " +
             " DO UPDATE " +
@@ -261,26 +267,28 @@ namespace Statistics2026.Data
                 ", RunTimeTicks=@RunTimeTicks" +
                 ", Rating=@Rating" +
                 ", Status=@Status" +
-                ", AverageBitrate=@AverageBitrate";
+                ", AverageBitrate=@AverageBitrate" +
+                ", StreamingServices=@StreamingServices";
 
             paramsList =
                    [
                        ("@ItemId", series.Id.ToString()),
-                           ("@Name", series.Name),
-                           ("@SortName", series.SortName),
-                           ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( series.PremiereDate.HasValue ? series.PremiereDate.Value : null )),
-                           ("@NumEpisodes", numEpisodes),
-                           ("@NumSpecials", numSpecials),
-                           ("@NumSeasons", numSeasons),
-                           ("@HasSpecials", hasSpecials),
-                           ("@DateAdded", HelperFuncs.ToDateTimeParamValue( series.DateCreated )),
-                           ("@ImageUrl", ItemImageUrl._ItemImageUrl(series)),
-                           ("@FileSize", totalFileSize),
-                           ("@RunTimeTicks", totalRuntime),
-                           ("@Rating", averageRating),
-                           ("@Status", seriesStatus),
-                           ("@AverageBitrate", averageBitrate),
-                       ];
+                        ("@Name", series.Name),
+                        ("@SortName", series.SortName),
+                        ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( series.PremiereDate.HasValue ? series.PremiereDate.Value : null )),
+                        ("@NumEpisodes", numEpisodes),
+                        ("@NumSpecials", numSpecials),
+                        ("@NumSeasons", numSeasons),
+                        ("@HasSpecials", hasSpecials),
+                        ("@DateAdded", HelperFuncs.ToDateTimeParamValue( series.DateCreated )),
+                        ("@ImageUrl", ItemImageUrl._ItemImageUrl(series)),
+                        ("@FileSize", totalFileSize),
+                        ("@RunTimeTicks", totalRuntime),
+                        ("@Rating", averageRating),
+                        ("@Status", seriesStatus),
+                        ("@AverageBitrate", averageBitrate),
+                        ("@StreamingServices", streamingServices)
+                    ];
 
 
             sqlCmds.Add( new SQLCmdDef( sql, paramsList ) );
