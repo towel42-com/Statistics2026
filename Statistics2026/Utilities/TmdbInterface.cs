@@ -358,14 +358,37 @@ namespace Statistics2026.Utilities
 
             var dispName = MediaInfo.GetDisplayName( video );
             var tmdbId = string.Empty;
-            if( video is Episode )
+            var isEpisode = video is Episode;
+            if( isEpisode )
             {
-                tmdbId = ( video as Episode )!.Series?.GetProviderId( MetadataProviders.Tmdb );
+                return await GetStreamingServicesAsync( logger, ( video as Episode )!.Series, language );
             }
             else
             {
                 tmdbId = video.GetProviderId( MetadataProviders.Tmdb );
             }
+
+            return await GetStreamingServicesAsync( logger, tmdbId, isEpisode, dispName, language );
+        }
+
+        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Series? series, string language = "en-US" )
+        {
+            if( !CheckIsValid() )
+                return [];
+
+            if( series == null )
+                return [];
+
+            var dispName = series.Name;
+            var tmdbId = series.GetProviderId( MetadataProviders.Tmdb );
+
+            return await GetStreamingServicesAsync( logger, tmdbId, true, dispName, language );
+        }
+
+        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, string? tmdbId, bool isEpisode, string dispName, string language )
+        {
+            if( !CheckIsValid() )
+                return [];
 
             if( ( tmdbId == null ) || tmdbId.IsEmpty() || !long.TryParse( tmdbId, out _ ) )
             {
@@ -375,7 +398,7 @@ namespace Statistics2026.Utilities
             if( !_ProviderCache.TryGetValue( tmdbId, out var providerResponse ) )
             {
                 //string url = https://themoviedb.org/3/movie|tv|series/{tmdbid}/watch/providers?api_key={kApiKeyV3}&language={language}";
-                var videoType = ( video is Episode ) ? "tv" : "movie";
+                var videoType = isEpisode ? "tv" : "movie";
                 var builder = new UriBuilder
                 {
                     Scheme = "https",
