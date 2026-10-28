@@ -50,14 +50,22 @@ namespace Statistics2026.Utilities
         public static List<Video>? GetAllEpisodesAndMovies( User? user, ILibraryManager libManager )
         {
             if( libManager == null )
-                return null;
+                return [];
 
-            List<Video> retVal = [];
+            var query = new InternalItemsQuery( user )
+            {
+                IncludeItemTypes = new[] { typeof( Movie ).Name, typeof( Episode ).Name },
+                Recursive = true,
+                IsVirtualItem = false
+            };
+            query.DtoOptions = new DtoOptions( true ) 
+            {
+                ImageTypes = new[] { ImageType.Thumb, ImageType.Thumbnail },
+                EnableImages = true
+            };
 
-            retVal.AddRange( GetLibraryItems<Episode>( user, libManager ).Cast<Video>() );
-            retVal.AddRange( GetLibraryItems<Movie>( user, libManager ).Cast<Video>() );
 
-            return retVal;
+            return libManager.GetItemList( query ).OfType<Video>().ToList();
         }
 
         public static (List<Video>? forUser, List<Video>? forAll) GetAllEpisodesAndMovies( User? user, ILibraryManager libManager, bool computeForNonUsers )
