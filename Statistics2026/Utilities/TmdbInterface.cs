@@ -356,6 +356,7 @@ namespace Statistics2026.Utilities
             if( video == null )
                 return [];
 
+            var dispName = MediaInfo.GetDisplayName( video );
             var tmdbId = string.Empty;
             if( video is Episode )
             {
@@ -373,32 +374,32 @@ namespace Statistics2026.Utilities
 
             if( !_ProviderCache.TryGetValue( tmdbId, out var providerResponse ) )
             {
+                //string url = https://themoviedb.org/3/movie|tv|series/{tmdbid}/watch/providers?api_key={kApiKeyV3}&language={language}";
+                var videoType = ( video is Episode ) ? "tv" : "movie";
+                var builder = new UriBuilder
+                {
+                    Scheme = "https",
+                    Host = "api.themoviedb.org",
+                    Path = $"/3/{videoType}/{tmdbId}/watch/providers"
+                };
+
+                var query = HttpUtility.ParseQueryString( builder.Query );
+                query[ "api_key" ] = TheMovieDB.getApiKeyV3();
+                query[ "language" ] = language;
+                builder.Query = query.ToString();
+
+                var url = builder.Uri.ToString();
+                var options = new HttpRequestOptions
+                {
+                    Url = url,
+                    CancellationToken = _cancellationToken ?? CancellationToken.None,
+                    // Optional: Set cache timeout if you don't want to hit TMDB constantly
+                    CacheLength = System.TimeSpan.FromDays( 1 ),
+                    CacheMode = CacheMode.None
+                };
+
                 try
                 {
-                    //string url = https://themoviedb.org/3/movie|tv|series/{tmdbid}/watch/providers?api_key={kApiKeyV3}&language={language}";
-                    var videoType = ( video is Episode ) ? "tv" : "movie";
-                    var builder = new UriBuilder
-                    {
-                        Scheme = "https",
-                        Host = "api.themoviedb.org",
-                        Path = $"/3/{videoType}/{tmdbId}/watch/providers"
-                    };
-
-                    var query = HttpUtility.ParseQueryString( builder.Query );
-                    query[ "api_key" ] = TheMovieDB.getApiKeyV3();
-                    query[ "language" ] = language;
-                    builder.Query = query.ToString();
-
-                    var url = builder.Uri.ToString();
-                    var options = new HttpRequestOptions
-                    {
-                        Url = url,
-                        CancellationToken = _cancellationToken ?? CancellationToken.None,
-                        // Optional: Set cache timeout if you don't want to hit TMDB constantly
-                        CacheLength = System.TimeSpan.FromDays( 1 ),
-                        CacheMode = CacheMode.None
-                    };
-
                     using( var response = await _embyInterfaces.HttpClient().Get( options ).ConfigureAwait( false ) )
                     {
                         _cancellationToken?.ThrowIfCancellationRequested();
@@ -414,7 +415,7 @@ namespace Statistics2026.Utilities
                 }
                 catch( Exception )
                 {
-                    logger.Error( $"Could not get streaming services for video: '{video.Name}'" );
+                    logger.Error( $"Could not get streaming services for video: '{dispName} - {tmdbId} - {url}'" );
                     return [];
                 }
             }
