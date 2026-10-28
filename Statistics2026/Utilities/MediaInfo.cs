@@ -48,7 +48,6 @@ namespace Statistics2026.Utilities
             retVal.DolbyVisionProfile = dvProfile;
             retVal.StudioNames = studioNames( video );
             retVal.Genres = genres( video );
-            retVal.StreamingServices = await streamingServices( logger, video );
             retVal.Rating = communityRating( video );
 
             retVal.ServerLocation = video.Path ?? "Unknown";
@@ -73,6 +72,7 @@ namespace Statistics2026.Utilities
             }
             else
             {
+                retVal.StreamingServices = await streamingServices( logger, video );
                 retVal.ListDisplayName = retVal.PrimaryName;
             }
 
