@@ -146,7 +146,6 @@ namespace Statistics2026.Utilities
             if( retVal == false && ( ( checkLevel & ECheckLevel.eThrowOnFailure ) != 0 ) )
             {
                 var msg = string.Join( "\n", msgs );
-
                 throw new ArgumentNullException( msg );
             }
 

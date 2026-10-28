@@ -63,6 +63,22 @@ namespace Statistics2026.Data
             _embyInterfaces!.Logger().Debug( $"Finished Analysis" );
         }
 
+        bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
+        {
+            if( dto == null )
+                return true;
+
+            var numDaysToAdd = ignoreConfig ? 0 : Plugin.Instance!.Configuration.numDaysFutureForMissing;
+            var maxDate = DateTimeOffset.Now.Date.AddDays( numDaysToAdd );
+            if( dto.Value.Date > maxDate )
+                return true;
+
+            if( dto == DateTimeOffset.MinValue )
+                return true;
+
+            return false;
+        }
+
         private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodes( TmdbCollectionReader reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
         {
             _embyInterfaces!.Logger().Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );

@@ -1,8 +1,16 @@
-﻿using ServiceStack;
+﻿using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Model.Logging;
+using ServiceStack;
+using SQLitePCL;
+using SQLitePCL.pretty;
+using Statistics2026;
+using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Utilities;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 namespace Statistics2026.Api
 {
@@ -93,89 +101,5 @@ namespace Statistics2026.Api
 
         public string SortBy { get; set; } = string.Empty;
         public string Text { get; set; } = string.Empty;
-    }
-
-    public class MediaItemResponse
-    {
-        public SortByText DisplayName { get; set; } = new();
-        public string PremiereDate { get; set; } = string.Empty;
-        public string ResolutionDetail { get; set; } = string.Empty;
-        public string Codec { get; set; } = string.Empty;
-        public string DolbyVisionProfile { get; set; } = string.Empty;
-
-        public SortByText StudioNames { get; set; } = new();
-        public SortByText ServerLocation { get; set; } = new();
-        public SortByText SearchLocation { get; set; } = new();
-        public SortByText ParentName { get; set; } = new();
-        public string ParentUrl { get; set; } = string.Empty;
-
-        public string ItemUrl
-        {
-            get;
-            set
-            {
-                field = value ?? string.Empty;
-                if( value != null && value != string.Empty )
-                    DisplayName.Text = value;
-                else
-                    DisplayName.Text = DisplayName.SortBy;
-            }
-        } = string.Empty;
-        public string ItemId { get; set; } = string.Empty;
-
-        public void setParentInfo( string parentJson )
-        {
-            ParentUrl = string.Empty;
-            ParentName = new();
-            try
-            {
-                var jsonNode = JsonNode.Parse( parentJson );
-
-                var parentArray = jsonNode?.AsArray();
-                if( parentArray == null )
-                    return;
-
-                List<SortByText> sortByTexts = [];
-                List<(string id, string url)> urls = [];
-                foreach( var parentNode in parentArray )
-                {
-                    if( parentNode == null )
-                        continue;
-
-                    var name = parentNode[ "name" ]?.GetValue<string>() ?? string.Empty;
-                    var sortName = parentNode[ "sort_name" ]?.GetValue<string>() ?? string.Empty;
-                    var id = parentNode[ "id" ]?.GetValue<string>() ?? string.Empty;
-                    var url = parentNode[ "url" ]?.GetValue<string>() ?? string.Empty;
-                    if( name.IsNullOrEmpty() || sortName.IsNullOrEmpty() ||  id.IsNullOrEmpty() || url.IsNullOrEmpty() )
-                        continue;
-
-                    if( ParentName.SortBy != string.Empty )
-                        ParentName.SortBy += ", ";
-                    ParentName.SortBy += sortName;
-
-                    var currParentUrl = ItemImageUrl.ItemUrl( id, url, name );
-                    if( currParentUrl != null && currParentUrl != string.Empty )
-                    {
-                        if( ParentUrl != string.Empty )
-                            ParentUrl += "\n";
-                        ParentUrl += currParentUrl;
-                        if( !ParentName.Text.IsEmpty() )
-                            ParentName.Text += "\n";
-                        ParentName.Text += currParentUrl;
-                    }
-                    else
-                    {
-
-                        if( ParentName.Text != string.Empty )
-                            ParentName.Text += ", ";
-                        ParentName.Text += name;
-                    }
-                }
-
-            }
-            catch( Exception )
-            {
-            }
-        }
     }
 }

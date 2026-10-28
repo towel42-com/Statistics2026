@@ -17,7 +17,7 @@ namespace Statistics2026.Utilities
             return !Parameters.IsNullOrEmpty();
         }
 
-        public SQLCmdDef( string from, List<string> columns, List<string>? joins, List<string>? whereClauses, List<string>? groupByClauses, List<string>? orderBy, List<(string name, object? value)>? parameters = null, bool failureAllowed = false )
+        public static string CreateCmd( string from, List<string> columns, List<string>? joins, List<string>? whereClauses, List<string>? groupByClauses, List<string>? orderBy )
         {
             var lines = new List<string>() { "SELECT" };
             lines.AddRange( joinWithComma( columns ) );
@@ -36,7 +36,12 @@ namespace Statistics2026.Utilities
             lines.AddRange( joinWithComma( groupByClauses, "GROUP BY" ) );
             lines.AddRange( joinWithComma( orderBy, "ORDER BY" ) );
 
-            Statement = string.Join( "\n", lines );
+            return string.Join( "\n", lines );
+        }
+
+        public SQLCmdDef( string from, List<string> columns, List<string>? joins, List<string>? whereClauses, List<string>? groupByClauses, List<string>? orderBy, List<(string name, object? value)>? parameters = null, bool failureAllowed = false )
+        {
+            Statement = CreateCmd( from, columns, joins, whereClauses, groupByClauses, orderBy );
             Parameters = parameters ?? [];
             FailureAllowed = failureAllowed;
         }
@@ -126,7 +131,7 @@ namespace Statistics2026.Utilities
             }
         }
 
-        private List<string> joinWithComma( List<string>? values, string? prefix = null )
+        public static List<string> joinWithComma( List<string>? values, string? prefix = null )
         {
             List<string> retVal = [];
             if( values == null )

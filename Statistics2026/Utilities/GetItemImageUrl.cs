@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
+using ServiceStack;
 using System;
 
 namespace Statistics2026.Utilities
@@ -70,6 +71,9 @@ namespace Statistics2026.Utilities
         {
             if( ( Plugin.Instance == null ) || ( Plugin.Instance.ServerId == null ) )
                 throw new ArgumentNullException( "Plugin.Instance or Plugin.Instance.ServerId is null." );
+
+            if( itemId == null || itemId.IsEmpty() )
+                return "";
 
             var serverId = Plugin.Instance.ServerId;
 

@@ -269,7 +269,7 @@ namespace Statistics2026.Utilities
         public bool CheckIsValidWithThrow()
         {
             var msgs = new List<string>();
-            if( CheckIsValid( ref msgs ) )
+            if( !CheckIsValid( ref msgs ) )
             {
                 throw new ArgumentNullException( msgs.Join( "\n" ) );
             }

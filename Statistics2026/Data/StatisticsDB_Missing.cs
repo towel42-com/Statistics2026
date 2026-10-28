@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Runtime.InteropServices.ComTypes;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
@@ -161,22 +162,6 @@ namespace Statistics2026.Data
             return filtered;
         }
 
-        private bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
-        {
-            if( dto == null )
-                return true;
-
-            var numDaysToAdd = ignoreConfig ? 0 : Plugin.Instance!.Configuration.numDaysFutureForMissing;
-            var maxDate = DateTimeOffset.Now.Date.AddDays( numDaysToAdd );
-            if( dto.Value.Date > maxDate )
-                return true;
-
-            if( dto == DateTimeOffset.MinValue )
-                return true;
-
-            return false;
-        }
-
         private StatCard TotalMissingMedia( bool episodes )
         {
             CheckIsValid( ECheckType.eReport );
@@ -200,177 +185,6 @@ namespace Statistics2026.Data
             retVal.AddLine( numMissing.ToString(), false );
             retVal.AddLine( subTitle, true );
             retVal.AddLine( numCollections.ToString(), false );
-            return retVal;
-        }
-
-        private List<MediaItemResponse> getMediaListResponseMissing( EWhichMediaList whichMedia )
-        {
-            var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
-
-            var sql = "SELECT " +
-                "  Missing.Title AS ListDisplayName" +
-                ", Missing.ReleaseDate" +
-                ", Missing.StudioNames"
-                ;
-            if( episodes )
-            {
-                sql +=
-                    ", Series.Name" +
-                    ", Series.ImageUrl";
-            }
-            else
-            {
-                sql +=
-                    ", Collections.Name" +
-                    ", Collections.ImageUrl";
-            }
-
-            sql +=
-                ", Missing.PosterPath" +
-                ", Missing.SeasonNum" +
-                ", Missing.EpisodeNum" +
-                ", Missing.ParentId" +
-                " FROM " +
-                "   Missing ";
-
-            if( episodes )
-            {
-                sql += " LEFT JOIN Series ON Series.ItemId=Missing.ParentId ";
-                sql += " WHERE Missing.IsEpisode ";
-            }
-            else
-            {
-                sql += " LEFT JOIN Collections ON Collections.ItemId=Missing.ParentId ";
-                sql += " WHERE NOT Missing.IsEpisode ";
-            }
-
-            sql += " ORDER BY ListDisplayName ASC";
-            if( episodes )
-                sql += ", Missing.SeasonNum ASC, Missing.EpisodeNum ASC ";
-
-            var retVal = new List<MediaItemResponse>();
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
-            {
-                var row = statement.Current;
-                if( !episodes && IsFilteredCollection( row.GetString( 2 ) ) )
-                    return true;
-
-                var premiereDate = HelperFuncs.ReadDateTime( row.GetString( 1 ) ) ?? DateTimeOffset.MinValue;
-                var premiereYear = premiereDate == DateTimeOffset.MinValue ? 0 : premiereDate.Year;
-                var studioNames = HelperFuncs.JsonToStringArray( row.GetString( 2 ) ).Join( ", " );
-
-                var curr = new MediaItemResponse()
-                {
-                    DisplayName = new SortByText( CleanSortName( row.GetString( 0 ) ), row.GetString( 0 ) ),
-                    PremiereDate = premiereDate.ToTZShortString( true, true ) ?? string.Empty,
-                    StudioNames = new SortByText( studioNames ),
-                    ResolutionDetail = string.Empty,
-                    Codec = string.Empty,
-                    DolbyVisionProfile = string.Empty,
-                };
-                var col = 3;
-                curr.ParentName = new SortByText( row.GetString( col++ ), string.Empty );
-                var parentUrl = row.GetString( col++ );
-
-
-                var posterPath = row.GetString( col++ );
-                var seasonNum = row.GetInt( col++ );
-                var episodeNum = row.GetInt( col++ );
-                var parentId = row.GetString( col++ );
-
-                if( episodes && IsFilteredSeries( parentId, seasonNum ) )
-                    return true;
-
-                if( !episodes )
-                {
-                    var collections = GetCollectionName( parentId );
-                    curr.ParentName = collections ?? new();
-                }
-
-                curr.ParentUrl = ItemImageUrl.ItemUrl( parentId, parentUrl, curr.ParentName.Text );
-                if( curr.ParentUrl != null && curr.ParentUrl != string.Empty )
-                {
-                    curr.ParentName.Text = curr.ParentUrl;
-                }
-
-                var futureDate = InvalidDateForMissingAnalysis( premiereDate, true );
-                if( posterPath != null && !posterPath.StartsWith( "/" ) )
-                {
-                    posterPath = "/" + posterPath;
-                    curr.ItemUrl = "https://image.tmdb.org/t/p/w185" + posterPath;
-                }
-
-                if( !futureDate && curr.ItemUrl != null && curr.ItemUrl != string.Empty )
-                {
-                    curr.DisplayName.Text = $"<a is=\"emby-linkbutton\" href=\"{curr.ItemUrl}\"><img loading=\"lazy\" src=\"{curr.ItemUrl}\" height=\"105px\"/>{curr.DisplayName.SortBy}</a>";
-                }
-
-                var searchKey = curr.DisplayName.SortBy;
-                var subKey = string.Empty;
-                if( episodes )
-                {
-                    searchKey = curr.ParentName.SortBy;
-                    if( seasonNum != 0 )
-                        subKey += $"S{seasonNum:D2}";
-                    if( episodeNum != 0 )
-                        subKey += $"E{episodeNum:D2}";
-                }
-                else
-                {
-                    if( premiereYear > 0 )
-                    {
-                        subKey = $"{premiereYear}";
-                    }
-                }
-
-                if( futureDate )
-                {
-                    curr.SearchLocation = new SortByText( WebUtility.HtmlEncode( "<FUTURE RELEASE>" ) );
-                    if( premiereDate != null )
-                    {
-                        var daysTo = Math.Ceiling( ( premiereDate - DateTimeOffset.Now ).TotalDays );
-                        if( daysTo == 0 && premiereDate.Date != DateTimeOffset.Now.Date )
-                            daysTo = 1;
-                        var msg = $"Available in {daysTo} day";
-                        if( daysTo != 1 )
-                            msg += "s";
-                        curr.SearchLocation = new SortByText( msg );
-                        curr.PremiereDate = premiereDate.ToString( "dddd" ) + $" {curr.PremiereDate}";
-                    }
-                }
-                else if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
-                {
-                    if( premiereDate.LocalDateTime.Date == DateTimeOffset.Now.Date )
-                    {
-                        curr.PremiereDate = "Today" + " " + curr.PremiereDate;
-                    }
-                    else if( premiereDate.LocalDateTime.Date == DateTimeOffset.Now.Date.AddDays( -1 ) )
-                    {
-                        curr.PremiereDate = "Yesterday" + " " + curr.PremiereDate;
-                    }
-
-                    var searchUrl = Plugin.Instance!.Configuration.searchLocation;
-                    if( !searchUrl.EndsWith( "?q=" ) )
-                        searchUrl += "?q=";
-                    searchUrl += searchKey;
-
-                    if( !subKey.IsEmpty() )
-                        searchUrl += $" {subKey}";
-
-                    var sortBy = searchKey;
-                    if( !subKey.IsEmpty() )
-                        sortBy += $" - {subKey}";
-
-                    curr.SearchLocation.SortBy = sortBy;
-
-                    var displayText = $"Click to Search for '{sortBy}'";
-                    var searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {sortBy}\">{displayText}</a>";
-                    curr.SearchLocation.Text = searchLocation;
-                }
-
-                retVal.Add( curr );
-                return true;
-            } );
             return retVal;
         }
 
