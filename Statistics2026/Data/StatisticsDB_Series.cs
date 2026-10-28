@@ -13,11 +13,11 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async Task AddAllSeriesTaskImpl()
+        public async Task AddAllSeriesTaskImplAsync()
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
-            _embyInterfaces!.Logger().Debug( $"Starting Video Analysis" );
+            Logger().Debug( $"Starting Video Analysis" );
 
             Progress?.Report( 0 );
             var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
@@ -33,23 +33,22 @@ namespace Statistics2026.Data
             foreach( var series in seriesList )
             {
                 Progress?.Report( 80.0 * ( ++curr ) / count );
-                var cmds = await AddSeries( series );
-                sqlCmds.AddRange( cmds );
+                sqlCmds.AddRange( await AddSeriesAsync( series ).ConfigureAwait( false ) );
                 CancellationToken?.ThrowIfCancellationRequested();
 
-                _embyInterfaces!.Logger().Debug( $"    Processed Series ({curr} of {count}) - {series.Name}" );
+                Logger().Debug( $"    Processed Series ({curr} of {count}) - {series.Name}" );
             }
 
             Progress?.Report( 80 );
             ExecuteCommands( sqlCmds );
             Progress?.Report( 100 );
             CancellationToken?.ThrowIfCancellationRequested();
-            _embyInterfaces!.Logger().Debug( $"Finished Video Analysis" );
+            Logger().Debug( $"Finished Video Analysis" );
         }
 
-        private async Task<(int episodes, int specials)> GetCountForSeries( Series series )
+        private async Task<(int episodes, int specials)> GetCountForSeriesAsync( Series series )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             var libraryOptions = LibraryManager().GetLibraryOptions( series );
             var allEpisodes = await ProviderManager().GetAllEpisodes( series, libraryOptions, CancellationToken!.Value ).ConfigureAwait( false );
@@ -158,18 +157,18 @@ namespace Statistics2026.Data
             return (numSeasons, hasSpecials);
         }
 
-        private async Task<List<SQLCmdDef>> AddSeries( Series series )
+        private async Task<List<SQLCmdDef>> AddSeriesAsync( Series series )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             var sqlCmds = new List<SQLCmdDef>();
             if( series.Id == null )
             {
-                _embyInterfaces!.Logger().Error( $"AddSeries {series.SortName}: is missing ItemId" );
+                Logger().Error( $"AddSeries {series.SortName}: is missing ItemId" );
                 return sqlCmds;
             }
 
-            _embyInterfaces!.Logger().Debug( $"   AddSeries - Adding Series {series.Name}" );
+            Logger().Debug( $"   AddSeries - Adding Series {series.Name}" );
 
             long totalFileSize = 0;
             long totalRuntime = 0;
@@ -209,9 +208,9 @@ namespace Statistics2026.Data
             var (numSeasons, hasSpecials) = GetSeasonCount( series );
 
             var tmdbService = new TmdbInterface();
-            var streamingServices = await tmdbService.GetStreamingServicesAsync( _embyInterfaces.Logger(), series );
+            var streamingServices = await tmdbService.GetStreamingServicesAsync( Logger(), series ).ConfigureAwait( false );
 
-            var (numEpisodes, numSpecials) = await GetCountForSeries( series );
+            var (numEpisodes, numSpecials) = await GetCountForSeriesAsync( series ).ConfigureAwait( false );
             List<(string name, object? value)>? paramsList = null;
             sql = "INSERT INTO Series " +
             "(" +
@@ -293,13 +292,13 @@ namespace Statistics2026.Data
 
             sqlCmds.Add( new SQLCmdDef( sql, paramsList ) );
 
-            _embyInterfaces!.Logger().Debug( $"   AddSeries - Successfully Added Series {series.Name}" );
+            Logger().Debug( $"   AddSeries - Successfully Added Series {series.Name}" );
             return sqlCmds;
         }
 
         public List<GetTVSeriesProgressResponse> GetTVSeriesProgress( User? user )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );

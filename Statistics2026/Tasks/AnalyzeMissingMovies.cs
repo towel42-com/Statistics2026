@@ -79,7 +79,7 @@ namespace Statistics2026.ScheduledTasks
             }
 
             var taskName = "Analyze Missing";
-            _embyInterfaces!.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
+            _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
             using var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( this, cancellationToken, progress );
@@ -88,7 +88,7 @@ namespace Statistics2026.ScheduledTasks
             long analyzeMissingMovies = 0;
             using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces.Logger() ) )
             {
-                await db.AnalyzeMissingMoviesTaskImpl( cancellationToken, progress ).ConfigureAwait( false );
+                await db.AnalyzeMissingMoviesTaskImplAsync( cancellationToken, progress ).ConfigureAwait( false );
                 analyzeMissingMovies = timer.ElapsedMilliseconds();
             }
 

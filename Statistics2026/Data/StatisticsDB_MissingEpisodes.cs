@@ -7,6 +7,7 @@ using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -18,49 +19,49 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async Task AnalyzeMissingEpisodesTaskImpl( CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task AnalyzeMissingEpisodesTaskImplAsync()
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
-            _embyInterfaces!.Logger().Debug( $"Starting Analysis" );
-            progress.Report( 0 );
+            Logger().Debug( $"Starting Analysis" );
+            Progress?.Report( 0 );
             var allSeries = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
             allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
-            progress.Report( 100 );
+            Progress?.Report( 100 );
 
-            var reader = new TmdbInterface( _embyInterfaces, cancellationToken );
+            var reader = new TmdbInterface( _embyInterfaces, CancellationToken );
 
             double count = allSeries.Count();
             var curr = 0.0;
 
-            progress.Report( 0 );
+            Progress?.Report( 0 );
             List<SQLCmdDef> sqlCmds = [];
 
             List<object> paramList = [];
             foreach( var series in allSeries )
             {
-                progress.Report( 80.0 * ( ++curr ) / count );
+                Progress?.Report( 80.0 * ( ++curr ) / count );
                 try
                 {
-                    var cmds = await AnalyzeMissingEpisodes( reader, series, cancellationToken, progress );
+                    var cmds = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
                     paramList.Add( series.Id.ToString() );
                     sqlCmds.AddRange( cmds );
                 }
                 catch( Exception )
                 {
                 }
-                cancellationToken.ThrowIfCancellationRequested();
-                _embyInterfaces!.Logger().Info( $"    Processed Series ({curr} of {count}) - {series.Name}" );
+                CancellationToken?.ThrowIfCancellationRequested();
+                Logger().Info( $"    Processed Series ({curr} of {count}) - {series.Name}" );
             }
 
             sqlCmds.Insert( 0, CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
 
-            cancellationToken.ThrowIfCancellationRequested();
+            CancellationToken?.ThrowIfCancellationRequested();
 
-            progress.Report( 80 );
+            Progress?.Report( 80 );
             ExecuteCommands( sqlCmds );
-            progress.Report( 100 );
-            _embyInterfaces!.Logger().Debug( $"Finished Analysis" );
+            Progress?.Report( 100 );
+            Logger().Debug( $"Finished Analysis" );
         }
 
         bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
@@ -79,9 +80,9 @@ namespace Statistics2026.Data
             return false;
         }
 
-        private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodes( TmdbInterface reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodesAsync( TmdbInterface reader, Series series )
         {
-            _embyInterfaces!.Logger().Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
+            Logger().Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
 
             var seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( seriesTmbdId ) )
@@ -94,14 +95,14 @@ namespace Statistics2026.Data
             }
             catch( Exception ex )
             {
-                _embyInterfaces.Logger().Error( $"Problem connecting to TMDB - {series.Name} - {seriesTmbdId}" );
-                _embyInterfaces!.Logger().Error( ex.ToString() );
+                Logger().Error( $"Problem connecting to TMDB - {series.Name} - {seriesTmbdId}" );
+                Logger().Error( ex.ToString() );
                 throw ex;
             }
 
             if( tmdbSeries == null )
             {
-                _embyInterfaces.Logger().Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
+                Logger().Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
                 return [];
             }
 
@@ -120,12 +121,12 @@ namespace Statistics2026.Data
 
                     var episodeTmdbId = tmdbEpisode.Id;
                     var episodeIdent = $"S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2}";
-                    _embyInterfaces!.Logger().Debug( $"         Checking for episode {episodeIdent} for {series.Name} on server" );
+                    Logger().Debug( $"         Checking for episode {episodeIdent} for {series.Name} on server" );
                     var embyEpisode = ( embySeason != null ) ? EmbyHelperFuncs.GetEpisodeFromTmdbId( LibraryManager(), embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber ) : null;
 
                     if( embyEpisode == null )
                     {
-                        _embyInterfaces!.Logger().Info( $"             {series.Name} - {episodeIdent} is missing" );
+                        Logger().Info( $"             {series.Name} - {episodeIdent} is missing" );
 
                         var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
                         //return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";
@@ -148,7 +149,7 @@ namespace Statistics2026.Data
                         ] ) );
                     }
 
-                    cancellationToken.ThrowIfCancellationRequested();
+                    CancellationToken?.ThrowIfCancellationRequested();
                 }
             }
 

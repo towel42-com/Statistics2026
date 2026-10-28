@@ -88,7 +88,7 @@ namespace Statistics2026.ScheduledTasks
             long addMedia = 0;
             using( var timer = new AutoTimer( $"Adding All Media", _embyInterfaces.Logger() ) )
             {
-                await db.AddAllMediaTaskImpl();
+                await db.AddAllMediaTaskImplAsync().ConfigureAwait( false );
                 addMedia = timer.ElapsedMilliseconds();
             }
 

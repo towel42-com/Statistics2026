@@ -14,9 +14,9 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async Task AnalyzeWatchedMediaDataTaskImpl()
+        public async Task AnalyzeWatchedMediaDataTaskImplAsync()
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             Progress?.Report( 0 );
             var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
@@ -24,7 +24,7 @@ namespace Statistics2026.Data
                 return;
             Progress?.Report( 100 );
 
-            _embyInterfaces?.Logger().Debug( $"Starting User Watch Data Analysis" );
+            Logger().Debug( $"Starting User Watch Data Analysis" );
 
             double count = users.Count;
             double curr = 0;
@@ -39,7 +39,7 @@ namespace Statistics2026.Data
                     Progress?.Report( 80.0 * ( ++curr ) / count );
                     using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", Logger() ) )
                     {
-                        sqlCmds.AddRange( await AddWatchedDataForUser( user ) );
+                        sqlCmds.AddRange( await AddWatchedDataForUserAsync( user ).ConfigureAwait( false ) );
                         CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
@@ -61,16 +61,16 @@ namespace Statistics2026.Data
             ComputeUserDataDBState();
             if( !Plugin.Instance.IsDBStateSet( EDBState.eUserDataInitialized ) )
             {
-                _embyInterfaces?.Logger().Error( "After initializing user watch data, user watch data still doesn't conform." );
+                Logger().Error( "After initializing user watch data, user watch data still doesn't conform." );
             }
 
             Plugin.Instance.AddDBState( EDBState.eUserDataInitialized );
-            _embyInterfaces?.Logger().Debug( $"Finished User Watch Data Analysis" );
+            Logger().Debug( $"Finished User Watch Data Analysis" );
         }
 
         public void InitWatchedMediaTables()
         {
-            CheckIsValid( ECheckType.eInit );
+            CheckIsValid( ECheckLevel.eInit );
 
             if( Plugin.Instance == null )
                 throw new NullReferenceException( $"Plugin.Instance is null" );
@@ -127,7 +127,7 @@ namespace Statistics2026.Data
                 "SELECT " +
                 "TotalTicksPlayed " +
                 $"FROM {tableName} " +
-                $"WHERE ItemId=@ItemId"
+                $"WHERE ItemId=@ItemId AND IsPlayed"
                 ;
             List<(string, object?)> parameters = [ ("@ItemId", itemId) ];
 
@@ -200,9 +200,7 @@ namespace Statistics2026.Data
 
         public User? getUserForTableName( string tableName )
         {
-            if( _embyInterfaces == null )
-                return null;
-
+            CheckIsValid( ECheckLevel.eEmbyInterfaceOnly );
             if( !tableName.StartsWith( sUserMediaTablePrefix ) )
                 return null;
 
@@ -297,13 +295,13 @@ namespace Statistics2026.Data
             {
                 if( curr.Value.hit == false )
                 {
-                    _embyInterfaces!.Logger().Warn( $"Video {curr.Key} not hit for scott" );
+                    Logger().Warn( $"Video {curr.Key} not hit for scott" );
                 }
             }
 #endif
         }
 
-        private (bool isCustomUser, bool justReturn ) CustomResetForUser( Video video, User user, int playCount, ref int? newPlayCount, bool isPlayed, ref bool? newIsPlayed, bool isFavorite, ref bool? newFavorite )
+        private (bool isCustomUser, bool justReturn) CustomResetForUser( Video video, User user, int playCount, ref int? newPlayCount, bool isPlayed, ref bool? newIsPlayed, bool isFavorite, ref bool? newFavorite )
         {
 #if DEBUG
             if( user.Name == "scott" )
@@ -357,7 +355,7 @@ namespace Statistics2026.Data
 
         private void ResetPlayCount( User user, Video video, ref bool isPlayed, ref int playCount, ref bool isFavorite )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
 #if DEBUG
             FixResetMap();
@@ -392,8 +390,8 @@ namespace Statistics2026.Data
                     return;
                 }
 
-                if ( !isCustom )
-                { 
+                if( !isCustom )
+                {
                     if( playCount > 0 && !isPlayed )
                     {
                         newIsPlayed = true;
@@ -476,9 +474,9 @@ namespace Statistics2026.Data
             return sqlCmds;
         }
 
-        private async Task<List<SQLCmdDef>> AddWatchedDataForUser( User? user )
+        private async Task<List<SQLCmdDef>> AddWatchedDataForUserAsync( User? user )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
@@ -540,6 +538,7 @@ namespace Statistics2026.Data
                       "( ( TotalTicksPlayed IS NULL ) OR ( TotalTicksPlayed == 0 ) ) "
                       ;
             }
+
             var count = 0;
             foreach( var video in allVideosForUser )
             {
@@ -595,7 +594,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalFinishedSeries( User? user )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
@@ -664,7 +663,7 @@ namespace Statistics2026.Data
                 return clauses;
             }
 
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
             var numUsers = ( user == null ) ? NumUsers( false, excludeAdmin ) : 1;
@@ -872,7 +871,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalTime( User? user, bool? episodesOnly, bool played )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
@@ -931,7 +930,7 @@ namespace Statistics2026.Data
 
         public List<(string name, DateTimeOffset lastPlayed)> LastSeenValues( User? user, bool movies )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
@@ -982,7 +981,7 @@ namespace Statistics2026.Data
 
         public StatCard LastSeen( User? user, bool movies )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
@@ -1050,19 +1049,19 @@ namespace Statistics2026.Data
 
             ticksPlayed ??= 0;
 
-            //_embyInterfaces!.Logger().Debug( $"Table: {tableName} - # w/TicksPlayed {ticksPlayed} - # w/PlayCount {systemPlayed}" );
+            //Logger().Debug( $"Table: {tableName} - # w/TicksPlayed {ticksPlayed} - # w/PlayCount {systemPlayed}" );
             List<List<object>>? missing = null;
             if( ticksPlayed != systemPlayed && ticksPlayed != 0 )
             {
                 var user = getUserForTableName( tableName );
                 if( user == null )
                 {
-                    _embyInterfaces?.Logger().Warn( $"Invalid user table name {tableName}" );
+                    Logger().Warn( $"Invalid user table name {tableName}" );
                     return [];
                 }
                 else
                 {
-                    _embyInterfaces?.Logger().Warn( $"User: {user.Name} has an invalid UserMedia table" );
+                    Logger().Warn( $"User: {user.Name} has an invalid UserMedia table" );
                 }
 
                 var fields = $"Users.UserName, {tableName}.ItemID, {tableName}.Name, Media.RunTimeTicks, {tableName}.IsPlayed, {tableName}.PlayCount"
@@ -1138,7 +1137,7 @@ namespace Statistics2026.Data
 
         public StatCard? UserWatchMediaIssues()
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var fields =
                 "  Users.UserName\n" +
@@ -1241,7 +1240,7 @@ namespace Statistics2026.Data
 
         public StatCard PlayedUserMedia()
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var tables = allUserMediaTables();
 

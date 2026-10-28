@@ -89,7 +89,7 @@ namespace Statistics2026.ScheduledTasks
             long addUsers = 0;
             using( var timer = new AutoTimer( $"Adding User Watch Data", _embyInterfaces.Logger() ) )
             {
-                await db.AnalyzeWatchedMediaDataTaskImpl();
+                await db.AnalyzeWatchedMediaDataTaskImplAsync().ConfigureAwait( false );
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }

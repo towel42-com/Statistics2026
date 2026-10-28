@@ -12,9 +12,9 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public void AddAllUsersTaskImpl()
+        async public Task AddAllUsersTaskImplAsync()
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             Progress?.Report( 0 );
             var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
@@ -23,7 +23,7 @@ namespace Statistics2026.Data
 
             Progress?.Report( 100 );
 
-            _embyInterfaces?.Logger().Debug( $"Starting User Analysis" );
+            Logger().Debug( $"Starting User Analysis" );
             double count = users.Count;
             double curr = 0;
 
@@ -51,12 +51,12 @@ namespace Statistics2026.Data
                 Progress?.Report( 100 );
             }
 
-            _embyInterfaces?.Logger().Debug( $"Finished User Analysis" );
+            Logger().Debug( $"Finished User Analysis" );
         }
 
         private (long watched, long watchable) AnalyzeOverallTime( User? user, List<User>? userList )
         {
-            CheckIsValid( ECheckType.eNone );
+            CheckIsValid( ECheckLevel.eEmbyInterfaceOnly );
 
             if( user == null && userList == null )
                 throw new ArgumentException( "Either user or allUsers must be provided." );
@@ -81,7 +81,7 @@ namespace Statistics2026.Data
 
         private List<SQLCmdDef> AddUser( User user )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
@@ -89,13 +89,13 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             if( user.Id == null )
             {
-                _embyInterfaces!.Logger().Error( $"AddUser {user.Name}: is missing Id" );
+                Logger().Error( $"AddUser {user.Name}: is missing Id" );
                 return sqlCmds;
             }
 
             if( user.Name == null )
             {
-                _embyInterfaces!.Logger().Error( $"AddUser {user.Id}: is missing Name" );
+                Logger().Error( $"AddUser {user.Id}: is missing Name" );
                 return sqlCmds;
             }
 
@@ -138,7 +138,7 @@ namespace Statistics2026.Data
 
         public long NumUsers( bool hasConnectUserId, bool excludeAdmin )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var sql = "SELECT COUNT(UserName) FROM Users ";
 
@@ -157,7 +157,7 @@ namespace Statistics2026.Data
 
         public long NumUsers()
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             return NumUsers( Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID, Statistics2026.Plugin.Instance!.Configuration.excludeAdmin );
         }
@@ -170,7 +170,7 @@ namespace Statistics2026.Data
 
         public StatCard MostActiveUsers()
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var tables = allUserMediaTables();
 

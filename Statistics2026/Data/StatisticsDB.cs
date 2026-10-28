@@ -22,32 +22,14 @@ namespace Statistics2026.Data
         eEpisode
     }
 
-    public enum ECheckLevel
-    {
-        eInterfaces = 0x0001,
-        eConnection = 0x0002,
-        eProgress = 0x0004,
-        eAll = eInterfaces | eConnection | eProgress,
-        eThrowOnFailure = 0x010000,
-        eAllWithThrow = eAll | eThrowOnFailure
-    }
-
-    public enum ECheckType
-    {
-        eNone,
-        eInit,
-        eUpdate,
-        eReport
-    }
-
     public sealed partial class StatisticsDB : IDisposable
     {
         private bool _disposed = false;
+        EmbyInterfaces? _embyInterfaces = null;
         private static readonly object _padlock = new();
         private readonly Dictionary<string, TableDef> _tableMap = [];
         private List<TableDef> _tableList = [];
         private TableDef? _userMediaTemplate = null;
-        private readonly EmbyInterfaces? _embyInterfaces = null;
         private MediaBrowser.Model.Tasks.IScheduledTask? _currentTask = null;
 
         public bool AllTablesExisted { get; private set; } = false;
@@ -113,117 +95,39 @@ namespace Statistics2026.Data
 
         public ILogger Logger()
         {
-            CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
+            CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );
             return _embyInterfaces!._logger!;
         }
 
         public ILibraryManager LibraryManager()
         {
-            if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
-                throw new ArgumentNullException( "_embyInterfaces._libraryManager is null" );
-
+            CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eLibraryManager | ECheckLevel.eThrowOnFailure );
             return _embyInterfaces!._libraryManager!;
         }
 
         public IUserDataManager UserDataManager()
         {
-            if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
-                throw new ArgumentNullException( "_embyInterfaces._userDataManager is null" );
-
+            CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eUserDataManager | ECheckLevel.eThrowOnFailure );
             return _embyInterfaces!._userDataManager!;
         }
 
         public IUserManager UserManager()
         {
-            if( _embyInterfaces == null || _embyInterfaces._userManager == null )
-                throw new ArgumentNullException( "_embyInterfaces._userManager is null" );
-
+            CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eUserManager | ECheckLevel.eThrowOnFailure );
             return _embyInterfaces!._userManager!;
         }
 
         public IProviderManager ProviderManager()
         {
-            if( _embyInterfaces == null || _embyInterfaces._providerManager == null )
-                throw new ArgumentNullException( "_embyInterfaces._providerManager is null" );
-
+            CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eProviderManager | ECheckLevel.eThrowOnFailure );
             return _embyInterfaces!._providerManager!;
         }
 
         public IServerConfigurationManager ConfigManager()
         {
-            if( _embyInterfaces == null || _embyInterfaces._configManager == null )
-                throw new ArgumentNullException( "_embyInterfaces._configManager is null" );
+            CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eConfigManager | ECheckLevel.eThrowOnFailure );
 
             return _embyInterfaces!._configManager!;
-        }
-
-        [MemberNotNullWhen( true, nameof( _embyInterfaces ) )]
-        public bool CheckIsValid( ECheckLevel checkLevel )
-        {
-            List<string> msgs = [ $"DBHelper is not valid 0x{checkLevel:X}" ];
-            var retVal = true;
-            if( ( checkLevel & ECheckLevel.eInterfaces ) != 0 )
-            {
-                if( _embyInterfaces == null || _embyInterfaces.Logger() == null )
-                {
-                    retVal = false;
-                    msgs.Add( "_embyInterfaces is null" );
-                }
-            }
-
-            if( ( checkLevel & ECheckLevel.eConnection ) != 0 )
-            {
-                if( Connection == null )
-                {
-                    retVal = false;
-                    msgs.Add( "Connection is null" );
-                }
-            }
-
-            if( ( checkLevel & ECheckLevel.eProgress ) != 0 )
-            {
-                if( CancellationToken == null )
-                {
-                    retVal = false;
-                    msgs.Add( "CancellationToken is null" );
-                }
-
-                if( Progress == null )
-                {
-                    retVal = false;
-                    msgs.Add( "Progress is null" );
-                }
-            }
-
-            if( retVal == false && ( ( checkLevel & ECheckLevel.eThrowOnFailure ) != 0 ) )
-            {
-                var msg = string.Join( "\n", msgs );
-                throw new ArgumentNullException( msg );
-            }
-
-            return retVal;
-        }
-
-        [MemberNotNullWhen( true, nameof( _embyInterfaces ) )]
-        private void CheckIsValid( ECheckType checkType )
-        {
-            if( Statistics2026.Plugin.Instance == null )
-                throw new ArgumentNullException( "Statistics2026.Plugin.Instance" );
-
-            if( Statistics2026.Plugin.Instance.Configuration == null || _embyInterfaces == null )
-                throw new ArgumentNullException( "Statistics2026.Plugin.Instance.Configuration" );
-
-            if( checkType == ECheckType.eInit )
-                _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
-            else if( checkType == ECheckType.eReport )
-                _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
-            else if( checkType == ECheckType.eUpdate )
-                _ = CheckIsValid( ECheckLevel.eAllWithThrow );
-
-            if( ( checkType != ECheckType.eInit ) && ( checkType != ECheckType.eReport ) && TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, _currentTask, true ) )
-            {
-                throw new Exception( "Statistics 2026 task is running" );
-            }
         }
 
         private void CreateConnection()
@@ -270,7 +174,7 @@ namespace Statistics2026.Data
 
         private void CreateConnection( string db_file )
         {
-            _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
+            _ = CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );
 
             _embyInterfaces!.Logger().Debug( "CreateConnection : " + db_file );
             ConnectionFlags connectionFlags;

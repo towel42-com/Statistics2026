@@ -148,7 +148,7 @@ namespace Statistics2026.Utilities
             return tasks;
         }
 
-        public static async Task<List<TaskResult>> ExecuteSubTasks( EmbyInterfaces embyInterfaces, List<Type> taskTypes, CancellationToken cancellationToken, bool runAllOkIfRunning )
+        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<Type> taskTypes, CancellationToken cancellationToken, bool runAllOkIfRunning )
         {
             List<TaskDef?> taskDefs = [];
             foreach( var taskType in taskTypes )
@@ -157,10 +157,10 @@ namespace Statistics2026.Utilities
                 taskDefs.Add( taskDef );
             }
 
-            return await ExecuteSubTasks( embyInterfaces, taskDefs, cancellationToken, runAllOkIfRunning );
+            return await ExecuteSubTasksAsync( embyInterfaces, taskDefs, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
         }
 
-        public static async Task<List<TaskResult>> ExecuteSubTasks( EmbyInterfaces embyInterfaces, List<TaskDef?> taskDefs, CancellationToken cancellationToken, bool runAllOkIfRunning )
+        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<TaskDef?> taskDefs, CancellationToken cancellationToken, bool runAllOkIfRunning )
         {
             List<TaskResult> retVal = [];
             var beenCanceled = false;
@@ -172,7 +172,7 @@ namespace Statistics2026.Utilities
                 }
                 else
                 {
-                    var taskResult = await ExecuteSubTask( embyInterfaces, taskDef, cancellationToken, runAllOkIfRunning );
+                    var taskResult = await ExecuteSubTaskAsync( embyInterfaces, taskDef, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
                     beenCanceled = beenCanceled || ( taskResult.Status == TaskCompletionStatus.Cancelled );
                     retVal.Add( taskResult );
                     cancellationToken.ThrowIfCancellationRequested();
@@ -181,7 +181,7 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static async Task<TaskResult> ExecuteSubTask( EmbyInterfaces embyInterfaces, Type taskType, CancellationToken cancellationToken, bool runAllOkIfRunning )
+        public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, Type taskType, CancellationToken cancellationToken, bool runAllOkIfRunning )
         {
             var taskDef = GetTaskDef( taskType );
             if( taskDef == null )
@@ -189,10 +189,10 @@ namespace Statistics2026.Utilities
                 return TaskDef.EmptyTaskResult;
             }
 
-            return await ExecuteSubTask( embyInterfaces, taskDef, cancellationToken, runAllOkIfRunning );
+            return await ExecuteSubTaskAsync( embyInterfaces, taskDef, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
         }
 
-        public static async Task<TaskResult> ExecuteSubTask( EmbyInterfaces embyInterfaces, TaskDef? task, CancellationToken cancellationToken, bool runAllOkIfRunning )
+        public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, TaskDef? task, CancellationToken cancellationToken, bool runAllOkIfRunning )
         {
             TaskResult retVal = TaskDef.EmptyTaskResult;
             if( task == null )

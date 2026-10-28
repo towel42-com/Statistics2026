@@ -34,7 +34,7 @@
                 let configValid = await Helpers.CheckForValidConfig();
                 if (!configValid) {
                     view.querySelector(`#lastRunInfo`).style.display = 'none';
-                    loading.hide;
+                    loading.hide();
                     return;
                 }
                 ApiClient.getUser(userId).then(function (user) {

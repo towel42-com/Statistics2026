@@ -88,7 +88,7 @@ namespace Statistics2026.ScheduledTasks
             long addSeries = 0;
             using( var timer = new AutoTimer( $"Adding All Series", _embyInterfaces.Logger() ) )
             {
-                await db.AddAllSeriesTaskImpl();
+                await db.AddAllSeriesTaskImplAsync();
                 addSeries = timer.ElapsedMilliseconds();
             }
 

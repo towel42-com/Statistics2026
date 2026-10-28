@@ -184,8 +184,6 @@ namespace Statistics2026.Utilities
 
                 using( var response = await httpClient.Get( options ).ConfigureAwait( false ) )
                 {
-                    // Appending /country/ directly to the URI allows the API to return the raw text code string instantly
-                    //string rawResponse = await httpClient.GetStringAsync( "https://ipapi.co/json" ).ConfigureAwait( false );
                     var rawResponse = HelperFuncs.StreamToString( response );
                     if( !string.IsNullOrWhiteSpace( rawResponse ) )
                     {

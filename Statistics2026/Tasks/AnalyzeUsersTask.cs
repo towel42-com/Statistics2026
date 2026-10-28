@@ -71,7 +71,7 @@ namespace Statistics2026.ScheduledTasks
 
         string IScheduledTask.Category => "Statistics 2026";
 
-        Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
+        async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
             {
@@ -88,7 +88,7 @@ namespace Statistics2026.ScheduledTasks
             long addUsers = 0;
             using( var timer = new AutoTimer( $"Adding All Users", _embyInterfaces.Logger() ) )
             {
-                db.AddAllUsersTaskImpl();
+                await db.AddAllUsersTaskImplAsync().ConfigureAwait( false );
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
@@ -103,7 +103,6 @@ namespace Statistics2026.ScheduledTasks
             db.UpdateLastUpdated( StatisticsDB.EAction.UserAnalysis, addUsers );
 
             db.ResetCancellationToken();
-            return Task.CompletedTask;
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

@@ -36,7 +36,7 @@
                 if (!configValid) {
                     view.querySelector(`#lastRunInfo`).style.display = 'none';
                     view.querySelector(`#TVSeriesProgress_status`).style.display = 'none';
-                    loading.hide;
+                    loading.hide();
                     return;
                 }
 

@@ -100,7 +100,7 @@ namespace Statistics2026.Utilities
             var retVal = Create( logger, video );
             if ( !retVal.IsEpisode )
             {
-                retVal.StreamingServices = await streamingServices( logger, video );
+                retVal.StreamingServices = await streamingServicesAsync( logger, video );
             }
             return retVal;
         }
@@ -135,10 +135,10 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static async Task<List<TmdbStreamingProvider>> streamingServices( ILogger logger, Video video )
+        public static async Task<List<TmdbStreamingProvider>> streamingServicesAsync( ILogger logger, Video video )
         {
             var tmdbService = new TmdbInterface();
-            return await tmdbService.GetStreamingServicesAsync( logger, video );
+            return await tmdbService.GetStreamingServicesAsync( logger, video ).ConfigureAwait( false );
         }
 
         public static double communityRating( Video video )

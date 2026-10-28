@@ -133,7 +133,7 @@ namespace Statistics2026.Data
 
         public string GetLastRunInfo( EAction action )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var lastUpdated = GetLastUpdated( action );
             const string notRun = "Not Run";
@@ -179,7 +179,7 @@ namespace Statistics2026.Data
 
         public void ClearLastUpdated( EAction action )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             var buildDate = BuildDateInfo.GetBuildDate();
             var version = Plugin.Instance!.Configuration.Version;
@@ -216,7 +216,7 @@ namespace Statistics2026.Data
 
         public void UpdateLastUpdated( EAction action, long runtimeMS, DateTimeOffset updateTime )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             var buildDate = BuildDateInfo.GetBuildDate();
             var version = Plugin.Instance!.Configuration.Version;

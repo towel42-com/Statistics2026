@@ -234,7 +234,7 @@ namespace Statistics2026
                     {
                         taskTypes.Add( typeof( AnalyzeMissingMoviesTask ) );
                     }
-                    await TaskDef.ExecuteSubTasks( _embyInterfaces, taskTypes, cancellationToken, false );
+                    await TaskDef.ExecuteSubTasksAsync( _embyInterfaces, taskTypes, cancellationToken, false ).ConfigureAwait( false );
                     return false;
                 } );
             }

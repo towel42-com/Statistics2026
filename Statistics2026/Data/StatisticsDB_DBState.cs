@@ -11,7 +11,7 @@ namespace Statistics2026.Data
     {
         private void ComputeDBState()
         {
-            CheckIsValid( ECheckType.eInit );
+            CheckIsValid( ECheckLevel.eInit );
 
             if( !Plugin.Instance!.Configuration.resetDBState && Plugin.Instance!.DBStateInitialized() )
                 return;
@@ -59,7 +59,7 @@ namespace Statistics2026.Data
 
         private void ComputeUserDataDBState()
         {
-            CheckIsValid( ECheckType.eInit );
+            CheckIsValid( ECheckLevel.eInit );
 
             if( !Plugin.Instance!.DBStateInitialized() )
             {
@@ -100,7 +100,7 @@ namespace Statistics2026.Data
             );
 
             if( missing != null && missing.Count > 0 )
-                DumpTable.dumpTable( [ "User", "Item ID", "Name", "Runtime Ticks", "Is Played?", "Play Count", "Total Ticks Played", "Series Name", "Season#", "Episode#" ], missing, text => _embyInterfaces?.Logger().Warn( text ) );
+                DumpTable.dumpTable( [ "User", "Item ID", "Name", "Runtime Ticks", "Is Played?", "Play Count", "Total Ticks Played", "Series Name", "Season#", "Episode#" ], missing, text => Logger().Warn( text ) );
         }
     }
 }

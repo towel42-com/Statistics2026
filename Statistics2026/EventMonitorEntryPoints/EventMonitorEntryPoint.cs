@@ -16,6 +16,7 @@ using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 
 namespace Statistics2026.EventMonitorEntryPoints
@@ -71,6 +72,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
         }
 
+        [MemberNotNull( nameof( _embyInterfaces ) )]
         private void CheckIsValid()
         {
             if( _embyInterfaces == null )
@@ -81,19 +83,19 @@ namespace Statistics2026.EventMonitorEntryPoints
         {
             CheckIsValid();
 
-            _embyInterfaces!.Logger().Debug( "EventMonitorEntryPoint Running" );
+            _embyInterfaces.Logger().Debug( "EventMonitorEntryPoint Running" );
 
             _embyInterfaces.SessionManager().PlaybackStart += _sessionManager_PlaybackStart;
             _embyInterfaces.SessionManager().PlaybackStopped += _sessionManager_PlaybackStop;
 
             // start playback monitor
-            _ = Task.Run( () => PlaybackMonitoringTask() );
+            _ = Task.Run( () => PlaybackMonitoringTaskAsync() );
         }
 
         private void _sessionManager_PlaybackStart( object sender, PlaybackProgressEventArgs e )
         {
             CheckIsValid();
-            _embyInterfaces!.Logger().Info( "_sessionManager_PlaybackStart : Entered" );
+            _embyInterfaces.Logger().Info( "_sessionManager_PlaybackStart : Entered" );
             lock( syncLock )
             {
                 ProcessSessions();
@@ -103,17 +105,17 @@ namespace Statistics2026.EventMonitorEntryPoints
         private void _sessionManager_PlaybackStop( object sender, PlaybackStopEventArgs e )
         {
             CheckIsValid();
-            _embyInterfaces!.Logger().Info( "_sessionManager_PlaybackStop : Entered" );
+            _embyInterfaces.Logger().Info( "_sessionManager_PlaybackStop : Entered" );
             lock( syncLock )
             {
                 ProcessSessions();
             }
         }
 
-        public async Task PlaybackMonitoringTask()
+        public async Task PlaybackMonitoringTaskAsync()
         {
             CheckIsValid();
-            _embyInterfaces!.Logger().Info( "PlaybackMonitoringTask : Started" );
+            _embyInterfaces.Logger().Info( "PlaybackMonitoringTask : Started" );
             var currThreadSleep = 20;
             const int maxThreadSleep = 300;
 
@@ -130,7 +132,7 @@ namespace Statistics2026.EventMonitorEntryPoints
                 }
                 catch( Exception err )
                 {
-                    _embyInterfaces!.Logger().ErrorException( "PlaybackMonitoringTask Exception", err );
+                    _embyInterfaces.Logger().ErrorException( "PlaybackMonitoringTask Exception", err );
 
                     // try to throttle repeated exceptions up to a max of 5 min
                     if( currThreadSleep < maxThreadSleep )
@@ -138,10 +140,10 @@ namespace Statistics2026.EventMonitorEntryPoints
                         currThreadSleep += 10;
                     }
 
-                    _embyInterfaces!.Logger().Debug( "PlaybackMonitoringTask New Thread Sleep : " + currThreadSleep );
+                    _embyInterfaces.Logger().Debug( "PlaybackMonitoringTask New Thread Sleep : " + currThreadSleep );
                 }
 
-                await Task.Delay( currThreadSleep * 1000 );
+                await Task.Delay( currThreadSleep * 1000 ).ConfigureAwait( false );
             }
         }
 
@@ -151,12 +153,12 @@ namespace Statistics2026.EventMonitorEntryPoints
         {
             CheckIsValid();
 
-            if( Plugin.Instance == null || _embyInterfaces == null )
+            if( Plugin.Instance == null )
                 return;
 
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, false ) )
             {
-                _embyInterfaces!.Logger().Warn( "Task is running" );
+                _embyInterfaces.Logger().Warn( "Task is running" );
                 return;
             }
 
@@ -165,25 +167,25 @@ namespace Statistics2026.EventMonitorEntryPoints
                 _ = StatisticsDB.GetInstance( _embyInterfaces );
                 if( !Plugin.Instance.DBStateInitialized() )
                 {
-                    _embyInterfaces!.Logger().Warn( "Databases have not been initialized" );
+                    _embyInterfaces.Logger().Warn( "Databases have not been initialized" );
                     return;
                 }
             }
 
             if( !Plugin.Instance.IsDBStateSet( EDBState.eSystemTablesCreated | EDBState.eUserTablesCreated | EDBState.eUserDataInitialized ) )
             {
-                _embyInterfaces!.Logger().Warn( "Database state is invalid" );
+                _embyInterfaces.Logger().Warn( "Database state is invalid" );
                 return;
             }
 
-            _embyInterfaces!.Logger().Debug( "ProcessSessions Start" );
+            _embyInterfaces.Logger().Debug( "ProcessSessions Start" );
             ActiveSessions = [];
 
-            foreach( var session in _embyInterfaces!.SessionManager().Sessions )
+            foreach( var session in _embyInterfaces.SessionManager().Sessions )
             {
                 if( session.NowPlayingItem == null )
                 {
-                    _embyInterfaces!.Logger().Debug( $"user: {session.UserName} - No Media being played" );
+                    _embyInterfaces.Logger().Debug( $"user: {session.UserName} - No Media being played" );
                     // nothing playing so move on to next
                     continue;
                 }
@@ -196,7 +198,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
             PlaybackInfo.RemoveInactivePlayinfo( ActiveSessions, _embyInterfaces );
             ActiveSessions.Clear();
-            _embyInterfaces!.Logger().Debug( "ProcessSessions End" );
+            _embyInterfaces.Logger().Debug( "ProcessSessions End" );
         }
     }
 }

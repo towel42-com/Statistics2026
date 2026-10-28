@@ -18,11 +18,11 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async Task AddAllMediaTaskImpl()
+        public async Task AddAllMediaTaskImplAsync()
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
-            _embyInterfaces!.Logger().Debug( $"Starting Video Analysis" );
+            Logger().Debug( $"Starting Video Analysis" );
 
             Progress?.Report( 0 );
             var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
@@ -59,7 +59,7 @@ namespace Statistics2026.Data
                     continue;
 
                 sqlCmds.AddRange( AddMediaInfo( mediaInfo ) );
-                _embyInterfaces!.Logger().Debug( $"    Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
+                Logger().Debug( $"    Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
 
                 CancellationToken?.ThrowIfCancellationRequested();
             }
@@ -68,17 +68,17 @@ namespace Statistics2026.Data
             sqlCmds.Insert( 1, CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
             ExecuteCommands( sqlCmds );
             Progress?.Report( 100 );
-            _embyInterfaces!.Logger().Debug( $"Finished Video Analysis" );
+            Logger().Debug( $"Finished Video Analysis" );
         }
 
         public List<SQLCmdDef> AddMediaInfo( MediaInfo mediaInfo )
         {
-            CheckIsValid( ECheckType.eUpdate );
+            CheckIsValid( ECheckLevel.eUpdate );
 
             var sqlCmds = new List<SQLCmdDef>();
             if( mediaInfo == null || !mediaInfo.aOK )
             {
-                _embyInterfaces!.Logger().Error( $"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId" );
+                Logger().Error( $"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId" );
                 return sqlCmds;
             }
 
@@ -208,7 +208,7 @@ namespace Statistics2026.Data
 
         public StatCard MediaResolutions()
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var retVal = new TableBasedStatCard( Constants.MediaResolutions, Constants.HelpMediaResolutions, [ "Movies", "Episodes" ] );
 
@@ -245,7 +245,7 @@ namespace Statistics2026.Data
 
         public StatCard MediaCodecs()
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var retVal = new TableBasedStatCard( Constants.MediaCodecs, Constants.HelpMediaCodecs, [ "Movies", "Episodes" ] );
             var sql =
@@ -273,7 +273,7 @@ namespace Statistics2026.Data
 
         public StatCard DVProfileInfo()
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var sql =
                 "SELECT \n" +
@@ -308,7 +308,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalMovieCount( User? user, bool watched )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var sql = string.Empty;
             var parameters = new List<(string, object?)>();
@@ -361,7 +361,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalTVCount( User? user, bool watched )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var runtimeColumn = string.Empty;
 
@@ -435,7 +435,7 @@ namespace Statistics2026.Data
 
         public long TotalStudioCountValue( User? user, bool movies )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
             if( movies )
@@ -459,7 +459,7 @@ namespace Statistics2026.Data
 
         public StatCard TotalStudioCount( User? user, bool movies )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             var retVal = new TextBasedStatCard( movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, EStatCardStyle.eCompact );
             var value = TotalStudioCountValue( user, movies );
@@ -469,21 +469,21 @@ namespace Statistics2026.Data
 
         public StatCard TotalMovieStudioCount( User? user )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             return TotalStudioCount( user, true );
         }
 
         public StatCard TotalTVStudioCount( User? user )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             return TotalStudioCount( user, false );
         }
 
         public List<(int year, long count)> FavoriteYearValues( User? user, bool movies )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
@@ -545,7 +545,7 @@ namespace Statistics2026.Data
 
         public List<(string genre, long count)> FavoriteGenreValues( User? user, bool movies )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
@@ -603,7 +603,7 @@ namespace Statistics2026.Data
 
         public StatCard FavoriteGenre( User? user, bool movies )
         {
-            CheckIsValid( ECheckType.eReport );
+            CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
