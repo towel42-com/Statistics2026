@@ -12,51 +12,25 @@ namespace Statistics2026.Utilities
     public class MediaInfo : IAsyncDisposable
     {
         public MediaInfo() { }
-        public static async Task<MediaInfo> CreateAsync( ILogger logger, Video video )
+        public static MediaInfo CreateMinimal( Video video )
         {
             var retVal = new MediaInfo();
             retVal.aOK = false;
+
             var (primaryName, secondaryName, descName) = GetDescName( video );
-
-            var mediaStream = video.GetMediaStreams().FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
-            if( !mediaStream?.Width.HasValue ?? true )
-            {
-                return retVal;
-            }
-
-            var resolutionBase = GetMediaResolution( mediaStream, false );
-            var resolutionDetail = GetMediaResolution( mediaStream, true );
-            var codec = mediaStream?.Codec ?? "Unknown";
-            var dvProfile = GetDolbyVisionProfile( mediaStream );
-
             retVal.ItemId = video.Id.ToString();
-            retVal.IsEpisode = video is Episode;
-            retVal.IsTVSpecial = isTVSpecial( video );
-            retVal.NumEpisodes = numEpisodes( video );
-            retVal.SeriesId = seriesId( video );
             retVal.DescriptiveName = descName;
             retVal.PrimaryName = primaryName;
-            retVal.SortName = video.SortName;
             retVal.SecondaryName = secondaryName;
-
-            retVal.StartYear = video.ProductionYear?.ToString() ?? "Unknown";
-            retVal.Season = video.ParentIndexNumber ?? -1;
-            retVal.Episode = video.IndexNumber ?? -1;
-            retVal.ResolutionDetail = resolutionDetail;
-            retVal.ResolutionBase = resolutionBase;
-            retVal.Codec = codec;
-            retVal.DolbyVisionProfile = dvProfile;
-            retVal.StudioNames = studioNames( video );
-            retVal.Genres = genres( video );
-            retVal.Rating = communityRating( video );
-
-            retVal.ServerLocation = video.Path ?? "Unknown";
-            retVal.FileSize = video.Size;
+            retVal.SortName = video.SortName;
+            retVal.IsEpisode = video is Episode;
+            retVal.NumEpisodes = numEpisodes( video );
+            retVal.IsTVSpecial = isTVSpecial( video );
+            retVal.SeriesId = seriesId( video );
             retVal.RunTimeTicks = video.RunTimeTicks ?? 0;
-            if( video.PremiereDate.HasValue )
-                retVal.PremiereDate = video.PremiereDate.Value;
 
-            retVal.ImageUrl = ItemImageUrl._ItemImageUrl( video );
+            retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
+
             if( video is Episode episode )
             {
                 retVal.ListDisplayName = GetDisplayName( retVal.PrimaryName, secondaryName, retVal.Season, retVal.Episode );
@@ -72,11 +46,52 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                retVal.StreamingServices = await streamingServicesAsync( logger, video ).ConfigureAwait( false );
                 retVal.ListDisplayName = retVal.PrimaryName;
             }
 
-            if ( retVal.PremiereDate == null )
+            return retVal;
+        }
+
+        public static async Task<MediaInfo> CreateAsync( ILogger logger, Video video, bool createMinimal = false )
+        {
+            var retVal = CreateMinimal( video );
+            if( createMinimal )
+                return retVal;
+
+            var mediaStream = video.GetMediaStreams().FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
+            if( !mediaStream?.Width.HasValue ?? true )
+            {
+                return retVal;
+            }
+
+            var resolutionBase = GetMediaResolution( mediaStream, false );
+            var resolutionDetail = GetMediaResolution( mediaStream, true );
+            var codec = mediaStream?.Codec ?? "Unknown";
+            var dvProfile = GetDolbyVisionProfile( mediaStream );
+
+            retVal.StartYear = video.ProductionYear?.ToString() ?? "Unknown";
+            retVal.Season = video.ParentIndexNumber ?? -1;
+            retVal.Episode = video.IndexNumber ?? -1;
+            retVal.ResolutionDetail = resolutionDetail;
+            retVal.ResolutionBase = resolutionBase;
+            retVal.Codec = codec;
+            retVal.DolbyVisionProfile = dvProfile;
+            retVal.StudioNames = studioNames( video );
+            retVal.Genres = genres( video );
+            retVal.Rating = communityRating( video );
+
+            retVal.ServerLocation = video.Path ?? "Unknown";
+            retVal.FileSize = video.Size;
+            if( video.PremiereDate.HasValue )
+                retVal.PremiereDate = video.PremiereDate.Value;
+
+            if( !( video is Episode ) )
+            {
+                retVal.StreamingServices = await streamingServicesAsync( logger, video ).ConfigureAwait( false );
+            }
+            retVal.ImageUrl = ItemImageUrl._ItemImageUrl( video );
+
+            if( retVal.PremiereDate == null )
             {
                 BaseItem curr = video;
                 while( curr != null && curr.PremiereDate == null )
@@ -91,7 +106,6 @@ namespace Statistics2026.Utilities
             retVal.TotalBitrate = video.TotalBitrate;
             retVal.DateAdded = video.DateCreated;
 
-            retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
             return retVal;
         }
 
@@ -104,7 +118,7 @@ namespace Statistics2026.Utilities
             }
             GC.SuppressFinalize( this );
         }
-        
+
         public static string[] studioNames( Video video )
         {
             var retVal = video.Studios;
@@ -158,10 +172,6 @@ namespace Statistics2026.Utilities
 
         public static string seriesId( Video video )
         {
-            var isEpisode = video is Episode;
-            if( !isEpisode )
-                return string.Empty;
-
             if( video is not Episode episode )
                 return string.Empty;
 
@@ -192,10 +202,6 @@ namespace Statistics2026.Utilities
 
         public static int numEpisodes( Video video )
         {
-            var isEpisode = video is Episode;
-            if( !isEpisode )
-                return 0;
-
             if( video is not Episode episode )
                 return 0;
 
@@ -210,7 +216,7 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static string GetDisplayName( Video? video )       
+        public static string GetDisplayName( Video? video )
         {
             if( video == null )
                 return string.Empty;
