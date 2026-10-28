@@ -3,6 +3,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Providers;
+using MediaBrowser.Model.Logging;
 using System;
 using System.Linq;
 
@@ -11,7 +12,7 @@ namespace Statistics2026.Utilities
     public class MediaInfo : IAsyncDisposable
     {
         public MediaInfo() { }
-        public static async Task<MediaInfo> CreateAsync( Video video )
+        public static async Task<MediaInfo> CreateAsync( ILogger logger, Video video )
         {
             var retVal = new MediaInfo();
             retVal.aOK = false;
@@ -47,7 +48,7 @@ namespace Statistics2026.Utilities
             retVal.DolbyVisionProfile = dvProfile;
             retVal.StudioNames = studioNames( video );
             retVal.Genres = genres( video );
-            retVal.StreamingServices = await streamingServices( video );
+            retVal.StreamingServices = await streamingServices( logger, video );
             retVal.Rating = communityRating( video );
 
             retVal.ServerLocation = video.Path ?? "Unknown";
@@ -134,10 +135,10 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static async Task<List<TmdbStreamingProvider>> streamingServices( Video video )
+        public static async Task<List<TmdbStreamingProvider>> streamingServices( ILogger logger, Video video )
         {
-            var tmdbService = new TmdbCollectionReader();
-            return await tmdbService.GetStreamingServicesAsync( video );
+            var tmdbService = new TmdbInterface();
+            return await tmdbService.GetStreamingServicesAsync( logger, video );
         }
 
         public static double communityRating( Video video )

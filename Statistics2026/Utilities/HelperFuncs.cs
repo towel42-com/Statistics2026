@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Dto;
+﻿using MediaBrowser.Common.Net;
+using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
@@ -7,6 +8,7 @@ using MediaBrowser.Model.Entities;
 using ServiceStack;
 using SQLitePCL;
 using SQLitePCL.pretty;
+using Statistics2026.Secrets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,7 +18,9 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Text.Json.Nodes;
 using System.Threading;
+using System.Web;
 using TimeZoneNames;
+using static Statistics2026.Utilities.StatGen;
 
 namespace Statistics2026.Utilities
 {
@@ -145,42 +149,60 @@ namespace Statistics2026.Utilities
             }
         }
 
-        public static async Task<string> GetServerCountryCodeAsync( System.Net.Http.HttpClient httpClient )
+        static string? ServerCountryCode = null;
+        public static async Task<string> GetServerCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode="US" )
         {
             // Provide a default fallback region code in case the network request is rate-limited or fails
-            const string fallbackCountryCode = "US";
 
+            if( ServerCountryCode != null )
+                return ServerCountryCode;
+
+            ServerCountryCode = defaultCountryCode;
             if( httpClient == null )
             {
-                return fallbackCountryCode;
+                return ServerCountryCode;
             }
 
             try
             {
-                // Appending /country/ directly to the URI allows the API to return the raw text code string instantly
-                string rawResponse = await httpClient.GetStringAsync( "https://ipapi.co" ).ConfigureAwait( false );
-
-                if( !string.IsNullOrWhiteSpace( rawResponse ) )
+                var builder = new UriBuilder
                 {
-                    string cleanCode = rawResponse.Trim().ToUpperInvariant();
+                    Scheme = "https",
+                    Host = "ipapi.co",
+                    Path = "/json"
+                };
 
-                    // Basic structural validation ensuring it matches an ISO alpha-2 string profile length
-                    if( cleanCode.Length == 2 )
+                var url = builder.Uri.ToString();
+                var options = new HttpRequestOptions
+                {
+                    Url = url,
+                    CancellationToken = CancellationToken.None,
+                    // Optional: Set cache timeout if you don't want to hit TMDB constantly
+                    CacheLength = System.TimeSpan.FromDays( 1 ),
+                    CacheMode = CacheMode.None
+                };
+
+                using( var response = await httpClient.Get( options ).ConfigureAwait( false ) )
+                {
+                    // Appending /country/ directly to the URI allows the API to return the raw text code string instantly
+                    //string rawResponse = await httpClient.GetStringAsync( "https://ipapi.co/json" ).ConfigureAwait( false );
+                    var rawResponse = HelperFuncs.StreamToString( response );
+                    if( !string.IsNullOrWhiteSpace( rawResponse ) )
                     {
-                        return cleanCode;
+                        var jsonNode = JsonNode.Parse( rawResponse );
+                        var obj = jsonNode?.AsObject();
+                        if( obj == null )
+                            return defaultCountryCode;
+
+                        ServerCountryCode = obj[ "country_code" ]?.GetValue<string>() ?? defaultCountryCode;
                     }
                 }
             }
-            catch( System.Net.Http.HttpRequestException )
-            {
-                // Log your connection error details here if your framework provides a logger
-            }
             catch( System.Exception )
             {
-                // Safe-guard against unexpected stream issues or parsing mutations
             }
 
-            return fallbackCountryCode;
+            return ServerCountryCode;
         }
     }
 }

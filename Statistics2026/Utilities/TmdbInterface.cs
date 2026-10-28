@@ -3,6 +3,7 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Providers;
@@ -25,19 +26,19 @@ using System.Collections.Concurrent;
 
 namespace Statistics2026.Utilities
 {
-    public class TmdbCollectionReader
+    public class TmdbInterface
     {
         private readonly EmbyInterfaces? _embyInterfaces = null;
         public readonly CancellationToken? _cancellationToken = null;
 
-        public TmdbCollectionReader()
+        public TmdbInterface()
         {
             if( Plugin.Instance == null )
                 throw new ArgumentNullException( "Plugin.Instance can not be null" );
             _embyInterfaces = Plugin.Instance._embyInterfaces;
         }
 
-        public TmdbCollectionReader( EmbyInterfaces? embyInterfaces, CancellationToken? cancellationToken = null )
+        public TmdbInterface( EmbyInterfaces? embyInterfaces, CancellationToken? cancellationToken = null )
         {
             _embyInterfaces = embyInterfaces;
             _cancellationToken = cancellationToken;
@@ -347,7 +348,7 @@ namespace Statistics2026.Utilities
 
         private static readonly ConcurrentDictionary<string, TmdbStreamingProvidersResponse> _ProviderCache = new ConcurrentDictionary<string, TmdbStreamingProvidersResponse>();
 
-        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( Video? video, string language = "en-US" )
+        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Video? video, string language = "en-US" )
         {
             if( !CheckIsValid() )
                 return [];
@@ -372,48 +373,57 @@ namespace Statistics2026.Utilities
 
             if( !_ProviderCache.TryGetValue( tmdbId, out var providerResponse ) )
             {
-                //string url = https://themoviedb.org/3/movie|tv|series/{tmdbid}/watch/providers?api_key={kApiKeyV3}&language={language}";
-                var videoType = ( video is Episode ) ? "tv" : "movie";
-                var builder = new UriBuilder
+                try
                 {
-                    Scheme = "https",
-                    Host = "api.themoviedb.org",
-                    Path = $"/3/{videoType}/{tmdbId}/watch/providers"
-                };
+                    //string url = https://themoviedb.org/3/movie|tv|series/{tmdbid}/watch/providers?api_key={kApiKeyV3}&language={language}";
+                    var videoType = ( video is Episode ) ? "tv" : "movie";
+                    var builder = new UriBuilder
+                    {
+                        Scheme = "https",
+                        Host = "api.themoviedb.org",
+                        Path = $"/3/{videoType}/{tmdbId}/watch/providers"
+                    };
 
-                var query = HttpUtility.ParseQueryString( builder.Query );
-                query[ "api_key" ] = TheMovieDB.getApiKeyV3();
-                query[ "language" ] = language;
-                builder.Query = query.ToString();
+                    var query = HttpUtility.ParseQueryString( builder.Query );
+                    query[ "api_key" ] = TheMovieDB.getApiKeyV3();
+                    query[ "language" ] = language;
+                    builder.Query = query.ToString();
 
-                var url = builder.Uri.ToString();
-                var options = new HttpRequestOptions
+                    var url = builder.Uri.ToString();
+                    var options = new HttpRequestOptions
+                    {
+                        Url = url,
+                        CancellationToken = _cancellationToken ?? CancellationToken.None,
+                        // Optional: Set cache timeout if you don't want to hit TMDB constantly
+                        CacheLength = System.TimeSpan.FromDays( 1 ),
+                        CacheMode = CacheMode.None
+                    };
+
+                    using( var response = await _embyInterfaces.HttpClient().Get( options ).ConfigureAwait( false ) )
+                    {
+                        _cancellationToken?.ThrowIfCancellationRequested();
+                        var text = HelperFuncs.StreamToString( response );
+
+                        providerResponse = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbStreamingProvidersResponse>( text );
+                        if( providerResponse == null )
+                            return [];
+
+                        providerResponse.UpdateProviderTypes();
+                        _ProviderCache[ tmdbId ] = providerResponse;
+                    }
+                }
+                catch( Exception )
                 {
-                    Url = url,
-                    CancellationToken = _cancellationToken ?? CancellationToken.None,
-                    // Optional: Set cache timeout if you don't want to hit TMDB constantly
-                    CacheLength = System.TimeSpan.FromDays( 1 ),
-                    CacheMode = CacheMode.None
-                };
-
-                using( var response = await _embyInterfaces.HttpClient().Get( options ).ConfigureAwait( false ) )
-                {
-                    _cancellationToken?.ThrowIfCancellationRequested();
-                    var text = HelperFuncs.StreamToString( response );
-
-                    providerResponse = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbStreamingProvidersResponse>( text );
-                    if( providerResponse == null )
-                        return [];
-
-                    providerResponse.UpdateProviderTypes();
-                    _ProviderCache[ tmdbId ] = providerResponse;
+                    logger.Error( $"Could not get streaming services for video: {video.Name}" );
+                    return [];
                 }
             }
             if( providerResponse == null )
                 return [];
 
             RegionInfo currentRegion = RegionInfo.CurrentRegion;
-            string isoCode = currentRegion.TwoLetterISORegionName;
+            var defaultIsoCode = currentRegion.TwoLetterISORegionName;
+            var isoCode = await HelperFuncs.GetServerCountryCodeAsync( _embyInterfaces.HttpClient(), defaultIsoCode );
 
             if( providerResponse.Results.TryGetValue( isoCode, out var region ) )
             {
