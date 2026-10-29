@@ -37,7 +37,6 @@ namespace Statistics2026.Data
 
             double count = videoList.Count;
             var completedCount = 0;
-
             Progress?.Report( 0 );
             var existing = new ConcurrentDictionary<string, bool>();
             ConcurrentBag<object> paramBag = [];

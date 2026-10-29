@@ -47,7 +47,7 @@ namespace Statistics2026.Data
                     return retVal;
                 } ) );
 
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
                 var unsortedResults = await Task.WhenAll( pool );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
                 foreach( var result in results )
@@ -56,7 +56,7 @@ namespace Statistics2026.Data
                     {
                         sqlCmds.Add( result.cmd );
                     }
-                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    CancellationToken?.ThrowIfCancellationRequested();
                 }
             }
 

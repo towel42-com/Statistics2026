@@ -48,6 +48,7 @@ namespace Statistics2026.Data
                     CancellationToken?.ThrowIfCancellationRequested();
                     int currProgress = Interlocked.Increment( ref completedCount );
                     Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+
                     Logger().Info( $"Processed User {user.Name} - {runTimeMS} ms" );
 
                     return (index: index, user: user, cmds: currCmds, runTimeMS: runTimeMS);
