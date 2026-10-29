@@ -8,6 +8,7 @@ using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace Statistics2026.Data
 {
@@ -24,26 +25,48 @@ namespace Statistics2026.Data
             _dbHelper!.Progress?.Report( 100 );
 
             double count = seriesList.Count;
-            var curr = 0.0;
+            var completedCount = 0;
 
             _dbHelper!.Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
             sqlCmds.AddRange( UpdateSeriesFilter() );
 
-            foreach( var series in seriesList )
+            using( var timer = new AutoTimer( $"    Analyze Series - Getting Commands", Logger() ) )
             {
-                _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-                sqlCmds.AddRange( await AddSeriesAsync( series ).ConfigureAwait( false ) );
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                var pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
+                {
+                    var retVal = (index: index, series: series, cmd: (SQLCmdDef?)null);
+                    if( series == null )
+                        return retVal;
 
-                EmbyInterfaces().Logger().Debug( $"    Processed Series ({curr} of {count}) - {series.Name}" );
+                    retVal.cmd = await AddSeriesAsync( series ).ConfigureAwait( false );
+                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    int currProgress = Interlocked.Increment( ref completedCount );
+                    EmbyInterfaces().Logger().Debug( $"    Processed Series ({currProgress} of {count}) - {series.Name}" );
+
+                    return retVal;
+                } ) );
+
+                var unsortedResults = await Task.WhenAll( pool );
+                var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                foreach( var result in results )
+                {
+                    if( result.cmd != null )
+                    {
+                        sqlCmds.Add( result.cmd );
+                    }
+                }
             }
 
-            _dbHelper!.Progress?.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            _dbHelper!.Progress?.Report( 100 );
-            _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
-            EmbyInterfaces().Logger().Debug( $"Finished Video Analysis" );
+            using( var timer = new AutoTimer( $"    Analyze Series - Executing Commands", Logger() ) )
+            {
+
+                _dbHelper!.Progress?.Report( 80 );
+                _dbHelper.ExecuteCommands( sqlCmds );
+                _dbHelper!.Progress?.Report( 100 );
+                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                EmbyInterfaces().Logger().Debug( $"Finished Series Analysis" );
+            }
         }
 
         private async Task<(int episodes, int specials)> GetCountForSeriesAsync( Series series )
@@ -157,15 +180,14 @@ namespace Statistics2026.Data
             return (numSeasons, hasSpecials);
         }
 
-        private async Task<List<SQLCmdDef>> AddSeriesAsync( Series series )
+        private async Task<SQLCmdDef?> AddSeriesAsync( Series series )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            var sqlCmds = new List<SQLCmdDef>();
             if( series.Id == null )
             {
                 EmbyInterfaces().Logger().Error( $"AddSeries {series.SortName}: is missing ItemId" );
-                return sqlCmds;
+                return null;
             }
 
             EmbyInterfaces().Logger().Debug( $"   AddSeries - Adding Series {series.Name}" );
@@ -289,11 +311,8 @@ namespace Statistics2026.Data
                         ("@StreamingServices", streamingServices)
                     ];
 
-
-            sqlCmds.Add( new SQLCmdDef( sql, paramsList ) );
-
             EmbyInterfaces().Logger().Debug( $"   AddSeries - Successfully Added Series {series.Name}" );
-            return sqlCmds;
+            return new SQLCmdDef( sql, paramsList );
         }
 
         public List<GetTVSeriesProgressResponse> GetTVSeriesProgress( User? user )
