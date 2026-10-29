@@ -45,9 +45,9 @@ namespace Statistics2026.Data
                         runTimeMS = timer.ElapsedMilliseconds();
                     }
 
-                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
                     int currProgress = Interlocked.Increment( ref completedCount );
-                    _dbHelper!.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                    _dbHelper.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
                     Logger().Info( $"Processed Collection {collection.Name} - {runTimeMS} ms" );
 
                     return (index: index, collection: collection, cmds: currCmds, runTimeMS: runTimeMS);

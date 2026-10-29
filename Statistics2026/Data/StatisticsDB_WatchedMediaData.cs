@@ -18,18 +18,18 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            _dbHelper!.Progress?.Report( 0 );
+            _dbHelper.Progress?.Report( 0 );
             var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
             if( users == null )
                 return;
-            _dbHelper!.Progress?.Report( 100 );
+            _dbHelper.Progress?.Report( 100 );
 
             EmbyInterfaces().Logger().Debug( $"Starting User Watch Data Analysis" );
 
             double count = users.Count;
             var completedCount = 0;
 
-            _dbHelper!.Progress?.Report( 0 );
+            _dbHelper.Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
             using( var timer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", Logger() ) )
             {
@@ -43,10 +43,10 @@ namespace Statistics2026.Data
                         runTimeMS = timer.ElapsedMilliseconds();
                     }
 
-                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
                     int currProgress = Interlocked.Increment( ref completedCount );
 
-                    _dbHelper!.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                    _dbHelper.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
                     Logger().Info( $"Processed User {user.Name} - {runTimeMS} ms" );
 
                     return (index: index, user: user, cmds: currCmds, runTimeMS: runTimeMS);
@@ -66,9 +66,9 @@ namespace Statistics2026.Data
 
             using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Commands", Logger() ) )
             {
-                _dbHelper!.Progress?.Report( 80 );
+                _dbHelper.Progress?.Report( 80 );
                 _dbHelper.ExecuteCommands( sqlCmds );
-                _dbHelper!.Progress?.Report( 100 );
+                _dbHelper.Progress?.Report( 100 );
             }
 
             ComputeUserDataDBState();
@@ -91,15 +91,15 @@ namespace Statistics2026.Data
             if( !Plugin.Instance.IsDBStateSet( EDBState.eUserTablesCreated ) )
             {
 
-                _dbHelper!.Progress?.Report( 0 );
+                _dbHelper.Progress?.Report( 0 );
                 var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
                 if( users == null )
                 {
-                    _dbHelper!.Progress?.Report( 100 );
+                    _dbHelper.Progress?.Report( 100 );
                     return;
                 }
 
-                _dbHelper!.Progress?.Report( 100 );
+                _dbHelper.Progress?.Report( 100 );
 
                 var sqlCmds = new List<SQLCmdDef>();
                 var curr = 0.0;
@@ -110,22 +110,22 @@ namespace Statistics2026.Data
                     curr = 0;
                     foreach( var user in users )
                     {
-                        _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
+                        _dbHelper.Progress?.Report( 80.0 * ( ++curr ) / count );
                         using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", Logger() ) )
                         {
                             sqlCmds.AddRange( GetInitWatchedMediaTableCommands( user ) );
-                            _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                            _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
                         }
                     }
 
-                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
                 }
 
                 using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Init Table Commands", Logger() ) )
                 {
-                    _dbHelper!.Progress?.Report( 80 );
+                    _dbHelper.Progress?.Report( 80 );
                     _dbHelper.ExecuteCommands( sqlCmds );
-                    _dbHelper!.Progress?.Report( 100 );
+                    _dbHelper.Progress?.Report( 100 );
                 }
 
                 Plugin.Instance.AddDBState( EDBState.eUserTablesCreated );
@@ -420,7 +420,7 @@ namespace Statistics2026.Data
                 update = true;
             }
 
-            _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+            _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
 
             if( !update )
                 return;
@@ -428,7 +428,7 @@ namespace Statistics2026.Data
             if( _dbHelper.CancellationToken == null )
                 return;
 
-            var token = _dbHelper!.CancellationToken.Value;
+            var token = _dbHelper.CancellationToken.Value;
 
             UserDataManager().SaveUserData( user, video, userData, UserDataSaveReason.Import, token );
         }
@@ -553,9 +553,9 @@ namespace Statistics2026.Data
                             ( "@RunTimeTicks", mediaInfo.RunTimeTicks )
                     ] );
                 retVal.cmd = cmd;
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
                 int currProgress = Interlocked.Increment( ref completedCount );
-                //_dbHelper!.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                //_dbHelper.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
 
                 EmbyInterfaces().Logger().Debug( $"User: {user.Name} - Analyzed video '{mediaInfo.DescriptiveName}' - {completedCount} of {allVideosForUser.Count}" );
                 return retVal;

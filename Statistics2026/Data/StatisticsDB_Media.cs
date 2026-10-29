@@ -26,9 +26,9 @@ namespace Statistics2026.Data
 
             EmbyInterfaces().Logger().Debug( $"Starting Media Analysis" );
 
-            _dbHelper!.Progress?.Report( 0 );
+            _dbHelper.Progress?.Report( 0 );
             var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
-            _dbHelper!.Progress?.Report( 100 );
+            _dbHelper.Progress?.Report( 100 );
 
             if( videoList == null )
             {
@@ -38,7 +38,7 @@ namespace Statistics2026.Data
             double count = videoList.Count;
             var completedCount = 0;
 
-            _dbHelper!.Progress?.Report( 0 );
+            _dbHelper.Progress?.Report( 0 );
             var existing = new ConcurrentDictionary<string, bool>();
             ConcurrentBag<object> paramBag = [];
             var sqlCmds = new List<SQLCmdDef>();
@@ -68,10 +68,10 @@ namespace Statistics2026.Data
                             return retVal;
 
                         retVal.cmd = AddMediaInfo( mediaInfo );
-                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                        _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
                         int currProgress = Interlocked.Increment( ref completedCount );
 
-                        _dbHelper!.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                        _dbHelper.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
 
                         EmbyInterfaces().Logger().Debug( $"    Processed Video ({currProgress} of {count}) - {mediaInfo.DescriptiveName}" );
                         //await Task.Delay( 10, CancellationToken.None );
@@ -96,11 +96,11 @@ namespace Statistics2026.Data
 
             using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
             {
-                _dbHelper!.Progress?.Report( 80 );
+                _dbHelper.Progress?.Report( 80 );
                 var paramList = paramBag.ToList();
                 sqlCmds.Insert( 1, SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
                 _dbHelper.ExecuteCommands( sqlCmds );
-                _dbHelper!.Progress?.Report( 100 );
+                _dbHelper.Progress?.Report( 100 );
                 EmbyInterfaces().Logger().Debug( $"Finished Media Analysis" );
             }
         }
