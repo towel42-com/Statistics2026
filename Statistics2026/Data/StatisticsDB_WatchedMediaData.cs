@@ -534,7 +534,7 @@ namespace Statistics2026.Data
                     ResetPlayCount( user, video, ref isPlayed, ref playCount );
 
                 var lastPlayedDate = video.LastPlayedDate ?? null;
-                var mediaInfo = await MediaInfo.CreateAsync( Logger(), video, true );
+                var mediaInfo = MediaInfo.CreateMinimal( Logger(), video );
                 if( !mediaInfo.aOK )
                     return retVal;
 
