@@ -591,7 +591,7 @@ namespace Statistics2026.Data
                 retVal.cmd = cmd;
                 CancellationToken?.ThrowIfCancellationRequested();
                 int currProgress = Interlocked.Increment( ref completedCount );
-                //Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                Progress?.Report( 80.0 * ( 1.0 * currProgress ) / allVideosForUser.Count() );
 
                 Logger().Debug( $"User: {user.Name} - Analyzed video '{mediaInfo.DescriptiveName}' - {completedCount} of {allVideosForUser.Count}" );
                 return retVal;

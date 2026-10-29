@@ -242,7 +242,7 @@ namespace Statistics2026.Data
             } );
             if( !found && updateIfEmpty )
             {
-                var cmds = UpdateSeriesFilter( true );
+                var cmds = UpdateSeriesFilter( true ).Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
                 ExecuteCommands( cmds );
                 return GetSeriesFilter( false );
             }
