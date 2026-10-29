@@ -13,7 +13,7 @@ namespace Statistics2026.Utilities
 {
     public class MediaInfo : IAsyncDisposable
     {
-        private static ConcurrentDictionary<(string, bool minimal), MediaInfo> sMediaInfoCache = [];
+        private static ConcurrentDictionary<(string, bool minimal), MediaInfo> sMediaInfoCache = new( 20000 );
 
         private static string KeyForVideo( Video video )
         {
