@@ -47,6 +47,7 @@ namespace Statistics2026.Data
                     return retVal;
                 } ) );
 
+                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
                 var unsortedResults = await Task.WhenAll( pool );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
                 foreach( var result in results )
@@ -55,12 +56,12 @@ namespace Statistics2026.Data
                     {
                         sqlCmds.Add( result.cmd );
                     }
+                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
                 }
             }
 
             using( var timer = new AutoTimer( $"    Analyze Series - Executing Commands", Logger() ) )
             {
-
                 _dbHelper!.Progress?.Report( 80 );
                 _dbHelper.ExecuteCommands( sqlCmds );
                 _dbHelper!.Progress?.Report( 100 );
