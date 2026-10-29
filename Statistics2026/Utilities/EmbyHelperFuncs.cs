@@ -142,7 +142,7 @@ namespace Statistics2026.Utilities
             return libManager.GetItemList( query ).OfType<T>().ToList();
         }
 
-        public static List<Video>? GetAllEpisodesAndMovies( User? user, ILibraryManager libManager )
+        public static List<Video> GetAllEpisodesAndMovies( User? user, ILibraryManager libManager )
         {
             if( libManager == null )
                 return [];
