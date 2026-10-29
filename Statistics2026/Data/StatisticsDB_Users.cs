@@ -1,4 +1,5 @@
 ﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
@@ -17,34 +18,49 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eUpdate );
 
             Progress?.Report( 0 );
-            var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
-            if( users == null )
+            var userList = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+            if( userList == null )
                 return;
 
             Progress?.Report( 100 );
 
             Logger().Debug( $"Starting User Analysis" );
-            double count = users.Count;
-            double curr = 0;
+            double count = userList.Count;
+            int completedCount = 0;
 
             Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
-            using( var timer = new AutoTimer( $"    Adding All Users - Getting Commands", Logger() ) )
+            using( var timer = new AutoTimer( $"    Analyze Users - Getting Commands", Logger() ) )
             {
-                foreach( var user in users )
+                var pool = userList.Select( ( user, index ) => Task.Run( async () =>
                 {
-                    Progress?.Report( 80.0 * ( ++curr ) / count );
-                    using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", Logger() ) )
-                    {
-                        sqlCmds.AddRange( AddUser( user ) );
-                        CancellationToken?.ThrowIfCancellationRequested();
-                    }
-                }
+                    var retVal = (index: index, user: user, cmd: (SQLCmdDef?)null);
+                    if( user == null )
+                        return retVal;
 
+                    retVal.cmd = AddUser( user );
+                    CancellationToken?.ThrowIfCancellationRequested();
+                    int currProgress = Interlocked.Increment( ref completedCount );
+                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                    Logger().Debug( $"    Processed User ({currProgress} of {count}) - {user.Name}" );
+                    return retVal;
+                } ) );
+
+                CancellationToken?.ThrowIfCancellationRequested();
+                var unsortedResults = await Task.WhenAll( pool );
+                var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                foreach( var result in results )
+                {
+                    if( result.cmd != null )
+                    {
+                        sqlCmds.Add( result.cmd );
+                    }
+                    CancellationToken?.ThrowIfCancellationRequested();
+                }
                 CancellationToken?.ThrowIfCancellationRequested();
             }
 
-            using( var timer = new AutoTimer( $"    Adding All Users - Executing Commands", Logger() ) )
+            using( var timer = new AutoTimer( $"    Analyze Users - Executing Commands", Logger() ) )
             {
                 Progress?.Report( 80 );
                 ExecuteCommands( sqlCmds );
@@ -79,24 +95,22 @@ namespace Statistics2026.Data
             return (watched, watchable);
         }
 
-        private List<SQLCmdDef> AddUser( User user )
+        private SQLCmdDef? AddUser( User user )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
             if( user == null )
-                throw new ArgumentNullException( "user" );
+                return null;
 
-            var sqlCmds = new List<SQLCmdDef>();
             if( user.Id == null )
             {
                 Logger().Error( $"AddUser {user.Name}: is missing Id" );
-                return sqlCmds;
             }
 
             if( user.Name == null )
             {
                 Logger().Error( $"AddUser {user.Id}: is missing Name" );
-                return sqlCmds;
+                return null;
             }
 
             var isAdmin = user.Policy.IsAdministrator;
@@ -125,15 +139,14 @@ namespace Statistics2026.Data
                 " ,IsAdministrator=@IsAdministrator" +
                 " ,MediaTableName=@MediaTableName"
                 ;
-            sqlCmds.Add( new SQLCmdDef( sql,
+            return new SQLCmdDef( sql,
             [
                 ( "@UserId", user.Id.ToString()),
                 ( "@UserName", user.Name),
                 ( "@ConnectUserId", user.ConnectUserId),
                 ( "@IsAdministrator", isAdmin),
                 ( "@MediaTableName", getUserTableName( user ) )
-            ] ) );
-            return sqlCmds;
+            ] );
         }
 
         public long NumUsers( bool hasConnectUserId, bool excludeAdmin )
