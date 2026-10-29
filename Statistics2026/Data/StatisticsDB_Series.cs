@@ -27,17 +27,8 @@ namespace Statistics2026.Data
             public long averageBitrate = 0;
         }
 
-        public async Task AddAllSeriesTaskImplAsync()
+        private (ConcurrentDictionary<string, SeriesInfo> seriesInfoMap, List<object> validSeriesIds) ComputeSeriesInfo( List<Series> seriesList )
         {
-            CheckIsValid( ECheckLevel.eUpdate );
-
-            Logger().Debug( $"Starting Video Analysis" );
-
-            Progress?.Report( 0 );
-            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
-            Progress?.Report( 100 );
-
-            ConcurrentDictionary<string, SeriesInfo> seriesInfoMap = [];
             var sql = "SELECT " +
                 "  Media.SeriesId" +
                 ", Series.Name" +
@@ -51,6 +42,7 @@ namespace Statistics2026.Data
                 "GROUP BY Media.SeriesId"
                 ;
 
+            ConcurrentDictionary<string, SeriesInfo> seriesInfoMap = [];
             var cmd = new SQLCmdDef( sql );
             List<object> validSeriesIds = [];
             ExecuteCommand( cmd,
@@ -74,10 +66,32 @@ namespace Statistics2026.Data
                     return true;
                 } );
 
+            foreach( var series in seriesList )
+            {
+                if( !seriesInfoMap.TryGetValue( series.Id.ToString(), out _ ) )
+                {
+                    Logger().Error( $"Series '{series.Name}' is not in the Media table" );
+                }
+            }
+            return (seriesInfoMap, validSeriesIds);
+        }
+
+        public async Task AddAllSeriesTaskImplAsync()
+        {
+            CheckIsValid( ECheckLevel.eUpdate );
+            Logger().Debug( $"Starting Series Analysis" );
 
             Progress?.Report( 0 );
+            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
+            Progress?.Report( 100 );
+            if( seriesList == null )
+                return;
+
+            var (seriesInfoMap, validSeriesIds) = ComputeSeriesInfo( seriesList );
+
             var sqlCmds = new List<SQLCmdDef>();
             sqlCmds.AddRange( UpdateSeriesFilter() );
+
             int completedCount = 0;
 
             using( var timer = new AutoTimer( $"    Analyze Series - Getting Commands", Logger() ) )
@@ -88,7 +102,7 @@ namespace Statistics2026.Data
                     if( series == null )
                         return retVal;
 
-                    if ( seriesInfoMap.TryGetValue( series.Id.ToString(), out SeriesInfo seriesInfo ) )
+                    if( seriesInfoMap.TryGetValue( series.Id.ToString(), out SeriesInfo seriesInfo ) )
                     {
                         retVal.cmd = await AddSeriesAsync( series, seriesInfo ).ConfigureAwait( false );
                     }
@@ -116,6 +130,7 @@ namespace Statistics2026.Data
                     }
                     CancellationToken?.ThrowIfCancellationRequested();
                 }
+                CancellationToken?.ThrowIfCancellationRequested();
             }
 
             using( var timer = new AutoTimer( $"    Analyze Series - Executing Commands", Logger() ) )

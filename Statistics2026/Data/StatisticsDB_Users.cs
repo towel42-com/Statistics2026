@@ -17,14 +17,13 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
+            Logger().Debug( $"Starting User Analysis" );
             Progress?.Report( 0 );
             var userList = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+            Progress?.Report( 100 );
             if( userList == null )
                 return;
 
-            Progress?.Report( 100 );
-
-            Logger().Debug( $"Starting User Analysis" );
             double count = userList.Count;
             int completedCount = 0;
 
