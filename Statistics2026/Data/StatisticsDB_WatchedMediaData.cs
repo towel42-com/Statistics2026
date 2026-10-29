@@ -569,7 +569,7 @@ namespace Statistics2026.Data
                     ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
                 var lastPlayedDate = video?.LastPlayedDate ?? null;
 
-                var mediaInfo = MediaInfo.Create( Logger(), video! );
+                var mediaInfo = MediaInfo.CreateMinimal( Logger(), video! );
                 if( !mediaInfo.aOK )
                     return retVal;
 

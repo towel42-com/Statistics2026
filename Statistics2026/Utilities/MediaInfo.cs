@@ -6,18 +6,110 @@ using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Logging;
 using System;
 using System.Linq;
+using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace Statistics2026.Utilities
 {
     public class MediaInfo
     {
+        private static ConcurrentDictionary<(string, bool minimal), MediaInfo> sMediaInfoCache = [];
+
+        private static string KeyForVideo( Video video )
+        {
+            return $"{video.Id}";
+        }
+
+        private static bool OutOfDate( Video video, MediaInfo mediaInfo )
+        {
+            if( video == null )
+                return true;
+
+            return video.HasDateModifiedChanged( mediaInfo.DateItemModified );
+        }
+
         public MediaInfo() { }
 
-        public static MediaInfo Create( ILogger logger, Video video )
+        public static MediaInfo CreateMinimal( ILogger logger, Video video, bool minimalOnly = true )
         {
+            if( sMediaInfoCache.TryGetValue( (KeyForVideo( video ), true), out MediaInfo value ) )
+            {
+                if( !OutOfDate( video, value ) )
+                {
+                    if( minimalOnly )
+                        return value;
+                    var json = JsonSerializer.Serialize( value );
+                    var copy = JsonSerializer.Deserialize<MediaInfo>( json );
+                    if( copy == null )
+                        throw new Exception( "Problem deserializing" );
+                    return copy;
+                }
+                else
+                {
+                    sMediaInfoCache.Remove( (KeyForVideo( video ), true), out var currValue );
+                }
+            }
+
             var retVal = new MediaInfo();
             retVal.aOK = false;
+
             var (primaryName, secondaryName, descName) = GetDescName( video );
+            retVal.ItemId = video.Id.ToString();
+            retVal.DescriptiveName = descName;
+            retVal.PrimaryName = primaryName;
+            retVal.SecondaryName = secondaryName;
+            retVal.SortName = video.SortName;
+            retVal.IsEpisode = video is Episode;
+            retVal.NumEpisodes = numEpisodes( video );
+            retVal.IsTVSpecial = isTVSpecial( video );
+            retVal.SeriesId = seriesId( video );
+            retVal.RunTimeTicks = video.RunTimeTicks ?? 0;
+            retVal.DateItemModified = video.DateModified;
+
+            if( video is Episode episode )
+            {
+                retVal.ListDisplayName = GetDisplayName( retVal.PrimaryName, secondaryName, retVal.Season, retVal.Episode );
+                if( episode.Series != null )
+                {
+                    retVal.SortName = episode.Series.SortName + " - " + episode.SortName;
+                    int xyz = 0;
+                    //retVal.SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series, logger );
+                    if( retVal.PremiereDate == null && episode.Series.PremiereDate.HasValue )
+                    {
+                        retVal.PremiereDate = episode.Series.PremiereDate.Value;
+                    }
+                }
+            }
+            else
+            {
+                retVal.ListDisplayName = retVal.PrimaryName;
+            }
+            retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
+
+            if( retVal.aOK )
+            {
+                sMediaInfoCache[ (KeyForVideo( video ), true) ] = retVal;
+            }
+
+            return retVal;
+        }
+
+        public async static Task<MediaInfo> CreateAsync( ILogger logger, Video video )
+        {
+            if( sMediaInfoCache.TryGetValue( (KeyForVideo( video ), false), out MediaInfo value ) )
+            {
+                if( !OutOfDate( video, value ) )
+                {
+                    return value;
+                }
+                sMediaInfoCache.Remove( (KeyForVideo( video ), false), out var currValue );
+            }
+
+            var retVal = CreateMinimal( logger, video );
+            if( retVal.aOK )
+            {
+                sMediaInfoCache[ (KeyForVideo( video ), false) ] = retVal;
+            }
 
             var mediaStream = video.GetMediaStreams().FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
             if( !mediaStream?.Width.HasValue ?? true )
@@ -29,16 +121,6 @@ namespace Statistics2026.Utilities
             var resolutionDetail = GetMediaResolution( mediaStream, true );
             var codec = mediaStream?.Codec ?? "Unknown";
             var dvProfile = GetDolbyVisionProfile( mediaStream );
-
-            retVal.ItemId = video.Id.ToString();
-            retVal.IsEpisode = video is Episode;
-            retVal.IsTVSpecial = isTVSpecial( video );
-            retVal.NumEpisodes = numEpisodes( video );
-            retVal.SeriesId = seriesId( video );
-            retVal.DescriptiveName = descName;
-            retVal.PrimaryName = primaryName;
-            retVal.SortName = video.SortName;
-            retVal.SecondaryName = secondaryName;
 
             retVal.StartYear = video.ProductionYear?.ToString() ?? "Unknown";
             retVal.Season = video.ParentIndexNumber ?? -1;
@@ -53,28 +135,14 @@ namespace Statistics2026.Utilities
 
             retVal.ServerLocation = video.Path ?? "Unknown";
             retVal.FileSize = video.Size;
-            retVal.RunTimeTicks = video.RunTimeTicks ?? 0;
             if( video.PremiereDate.HasValue )
                 retVal.PremiereDate = video.PremiereDate.Value;
 
+            if( !( video is Episode ) )
+            {
+                retVal.StreamingServices = await streamingServicesAsync( logger, video ).ConfigureAwait( false );
+            }
             retVal.ImageUrl = ItemImageUrl._ItemImageUrl( video );
-            if( video is Episode episode )
-            {
-                retVal.ListDisplayName = GetDisplayName( retVal.PrimaryName, secondaryName, retVal.Season, retVal.Episode );
-                if( episode.Series != null )
-                {
-                    retVal.SortName = episode.Series.SortName + " - " + episode.SortName;
-                    retVal.SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series );
-                    if( retVal.PremiereDate == null && episode.Series.PremiereDate.HasValue )
-                    {
-                        retVal.PremiereDate = episode.Series.PremiereDate.Value;
-                    }
-                }
-            }
-            else
-            {
-                retVal.ListDisplayName = retVal.PrimaryName;
-            }
 
             if( retVal.PremiereDate == null )
             {
@@ -92,16 +160,6 @@ namespace Statistics2026.Utilities
             retVal.DateAdded = video.DateCreated;
 
             retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
-            return retVal;
-        }
-
-        public static async Task<MediaInfo> CreateAsync( ILogger logger, Video video )
-        {
-            var retVal = Create( logger, video );
-            if ( !retVal.IsEpisode )
-            {
-                retVal.StreamingServices = await streamingServicesAsync( logger, video );
-            }
             return retVal;
         }
 
@@ -210,7 +268,7 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static string GetDisplayName( Video? video )       
+        public static string GetDisplayName( Video? video )
         {
             if( video == null )
                 return string.Empty;
@@ -326,6 +384,7 @@ namespace Statistics2026.Utilities
         public long TotalBitrate { get; set; } = 0;
         public DateTimeOffset? PremiereDate { get; set; } = null;
         public DateTimeOffset? DateAdded { get; set; } = null;
-        public bool aOK = false;
+        public bool aOK { get; set; } = false;
+        public DateTimeOffset DateItemModified { get; set; } = DateTimeOffset.MinValue;
     }
 }
