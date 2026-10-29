@@ -22,7 +22,7 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting Analysis" );
             progress.Report( 0 );
-            var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, LibraryManager() );
+            var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
             collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
 
             progress.Report( 100 );

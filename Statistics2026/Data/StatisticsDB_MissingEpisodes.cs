@@ -55,7 +55,6 @@ namespace Statistics2026.Data
             }
 
             sqlCmds.Insert( 0, CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
-
             CancellationToken?.ThrowIfCancellationRequested();
 
             Progress?.Report( 80 );
