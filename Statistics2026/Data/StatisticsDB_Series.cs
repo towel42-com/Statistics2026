@@ -27,17 +27,8 @@ namespace Statistics2026.Data
             public long averageBitrate = 0;
         }
 
-        public async Task AddAllSeriesTaskImplAsync()
+        private ( ConcurrentDictionary<string, SeriesInfo> seriesInfoMap, List<object> validSeriesIds ) ComputeSeriesInfo( List<Series> seriesList)
         {
-            CheckIsValid( ECheckLevel.eUpdate );
-
-            EmbyInterfaces().Logger().Debug( $"Starting Series Analysis" );
-
-            _dbHelper.Progress?.Report( 0 );
-            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
-            _dbHelper.Progress?.Report( 100 );
-
-            ConcurrentDictionary<string, SeriesInfo> seriesInfoMap = [];
             var sql = "SELECT " +
                 "  Media.SeriesId" +
                 ", Series.Name" +
@@ -51,6 +42,7 @@ namespace Statistics2026.Data
                 "GROUP BY Media.SeriesId"
                 ;
 
+            ConcurrentDictionary<string, SeriesInfo> seriesInfoMap = [];
             var cmd = new SQLCmdDef( sql );
             List<object> validSeriesIds = [];
             _dbHelper.ExecuteCommand( cmd,
@@ -81,6 +73,21 @@ namespace Statistics2026.Data
                     Logger().Error( $"Series '{series.Name}' is not in the Media table" );
                 }
             }
+            return (seriesInfoMap, validSeriesIds);
+        }
+
+        public async Task AddAllSeriesTaskImplAsync()
+        {
+            CheckIsValid( ECheckLevel.eUpdate );
+            EmbyInterfaces().Logger().Debug( $"Starting Series Analysis" );
+
+            _dbHelper.Progress?.Report( 0 );
+            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
+            _dbHelper.Progress?.Report( 100 );
+            if( seriesList == null )
+                return;
+
+            var ( seriesInfoMap, validSeriesIds ) = ComputeSeriesInfo( seriesList );
 
             var preCmds = UpdateSeriesFilter();
             preCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Series WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validSeriesIds ) );
