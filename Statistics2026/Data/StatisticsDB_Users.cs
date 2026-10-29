@@ -16,57 +16,28 @@ namespace Statistics2026.Data
         public async Task AddAllUsersTaskImplAsync()
         {
             CheckIsValid( ECheckLevel.eUpdate );
+            EmbyInterfaces().Logger().Debug( $"Starting User Analysis" );
 
             _dbHelper.Progress?.Report( 0 );
             var userList = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+            _dbHelper.Progress?.Report( 100 );
             if( userList == null )
                 return;
 
-            _dbHelper.Progress?.Report( 100 );
-
-            EmbyInterfaces().Logger().Debug( $"Starting User Analysis" );
-            double count = userList.Count;
-            var completedCount = 0;
-
-            _dbHelper.Progress?.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>();
-            using( var timer = new AutoTimer( $"    Analyze Users - Getting Commands", Logger() ) )
-            {
-                var pool = userList.Select( ( user, index ) => Task.Run( async () =>
+            await AnalyzeData( "Users", userList,
+                async user =>
                 {
-                    var retVal = (index: index, user: user, cmd: (SQLCmdDef?)null);
-                    if( user == null )
-                        return retVal;
-
-                    retVal.cmd = AddUser( user );
-                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
-                    int currProgress = Interlocked.Increment( ref completedCount );
-                    EmbyInterfaces().Logger().Debug( $"    Processed User ({currProgress} of {count}) - {user.Name}" );
-
-                    return retVal;
-                } ) );
-
-                _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
-                var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                foreach( var result in results )
+                    var retVal = AddUser( user );
+                    if( retVal != null )
+                        return [ retVal ];
+                    return [];
+                },
+                user =>
                 {
-                    if( result.cmd != null )
-                    {
-                        sqlCmds.Add( result.cmd );
-                    }
-                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
+                    return user?.Name ?? string.Empty;
                 }
-            }
-
-            using( var timer = new AutoTimer( $"    Analyze Users - Executing Commands", Logger() ) )
-            {
-                _dbHelper.Progress?.Report( 80 );
-                _dbHelper.ExecuteCommands( sqlCmds );
-                _dbHelper.Progress?.Report( 100 );
-                _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
-                EmbyInterfaces().Logger().Debug( $"Finished User Analysis" );
-            }
+                , []
+                );
         }
 
         private (long watched, long watchable) AnalyzeOverallTime( User? user, List<User>? userList )
