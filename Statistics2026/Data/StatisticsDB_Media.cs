@@ -25,14 +25,13 @@ namespace Statistics2026.Data
             var existing = new ConcurrentDictionary<string, bool>();
 
             var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
-            ConcurrentBag<object> paramBag = [];
+            List<object> paramList = [];
             foreach( var video in videoList )
             {
                 if( video == null )
                     continue;
-                paramBag.Add( video.Id.ToString() );
+                paramList.Add( video.Id.ToString() );
             }
-            var paramList = paramBag.ToList();
             List<SQLCmdDef?> preCmds = new()
             {
                 new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ),

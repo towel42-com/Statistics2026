@@ -90,7 +90,7 @@ namespace Statistics2026.ScheduledTasks
             {
                 try
                 {
-                    await db.AnalyzeMissingEpisodesTaskImplAsync( cancellationToken, progress ).ConfigureAwait( false );
+                    await db.AnalyzeMissingEpisodesTaskImplAsync().ConfigureAwait( false );
                     runtimeMS = timer.ElapsedMilliseconds();
                 }
                 catch( Exception ex )

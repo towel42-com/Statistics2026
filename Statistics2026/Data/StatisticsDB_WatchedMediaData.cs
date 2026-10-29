@@ -38,8 +38,6 @@ namespace Statistics2026.Data
                     {
                         EmbyInterfaces().Logger().Error( "After initializing user watch data, user watch data still doesn't conform." );
                     }
-
-                    Plugin.Instance.AddDBState( EDBState.eUserDataInitialized );
                 },
                 []
                 );

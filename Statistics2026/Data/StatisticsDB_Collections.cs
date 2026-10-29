@@ -18,13 +18,13 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async Task AddAllCollectionsTaskImplAsync( CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task AddAllCollectionsTaskImplAsync()
         {
             await AnalyzeData( "Collection", "Collections",
                 () => { return EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() ); },
                 async collection =>
                 {
-                    var currCmds = await AddCollectionAsync( collection, cancellationToken, progress ).ConfigureAwait( false );
+                    var currCmds = await AddCollectionAsync( collection ).ConfigureAwait( false );
                     return currCmds;
                 },
                 async collection =>
@@ -72,7 +72,7 @@ namespace Statistics2026.Data
             return sqlCmds;
         }
 
-        private async Task<List<SQLCmdDef>> AddCollectionMembersAsync( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AddCollectionMembersAsync( BoxSet collection )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -94,15 +94,15 @@ namespace Statistics2026.Data
 
             videos.ForEach( async video =>
             {
-                progress.Report( 100.0 * ( ++curr ) / count );
+                _dbHelper.Progress?.Report( 100.0 * ( ++curr ) / count );
                 sqlCmds.AddRange( await AddChildToCollectionAsync( video, collection ).ConfigureAwait( false ) );
-                cancellationToken.ThrowIfCancellationRequested();
+                _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
             } );
             EmbyInterfaces().Logger().Debug( $"AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} " );
             return sqlCmds;
         }
 
-        public async Task<List<SQLCmdDef>> AddCollectionAsync( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task<List<SQLCmdDef>> AddCollectionAsync( BoxSet collection)
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -157,7 +157,7 @@ namespace Statistics2026.Data
                 ] ) );
             EmbyInterfaces().Logger().Debug( $"    AddCollection - Successfully Added Collection" );
 
-            sqlCmds.AddRange( await AddCollectionMembersAsync( collection, cancellationToken, progress ).ConfigureAwait( false ) );
+            sqlCmds.AddRange( await AddCollectionMembersAsync( collection).ConfigureAwait( false ) );
             return sqlCmds;
         }
 

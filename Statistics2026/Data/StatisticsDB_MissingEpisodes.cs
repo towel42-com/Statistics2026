@@ -7,6 +7,7 @@ using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -18,49 +19,50 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async Task AnalyzeMissingEpisodesTaskImplAsync( CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task AnalyzeMissingEpisodesTaskImplAsync()
         {
-            CheckIsValid( ECheckLevel.eUpdate );
-
-            EmbyInterfaces().Logger().Debug( $"Starting Analysis" );
-            progress.Report( 0 );
             var allSeries = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
-            allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
-            progress.Report( 100 );
-
-            var reader = new TmdbInterface( EmbyInterfaces(), cancellationToken );
-
-            double count = allSeries.Count();
-            var curr = 0.0;
-
-            progress.Report( 0 );
-            List<SQLCmdDef> sqlCmds = [];
 
             List<object> paramList = [];
             foreach( var series in allSeries )
             {
-                progress.Report( 80.0 * ( ++curr ) / count );
-                try
-                {
-                    var cmds = await AnalyzeMissingEpisodesAsync( reader, series, cancellationToken, progress ).ConfigureAwait( false );
-                    paramList.Add( series.Id.ToString() );
-                    sqlCmds.AddRange( cmds );
-                }
-                catch( Exception )
-                {
-                }
-                cancellationToken.ThrowIfCancellationRequested();
-                EmbyInterfaces().Logger().Info( $"    Processed Series ({curr} of {count}) - {series.Name}" );
+                if( series == null )
+                    continue;
+
+                var seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
+                if( string.IsNullOrEmpty( seriesTmbdId ) )
+                    continue;
+
+                paramList.Add( series.Id.ToString() );
             }
 
-            sqlCmds.Insert( 0, SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
+            //List<SQLCmdDef?> preCmds = new()
+            //{
+            //    SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND TmdbId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList )
+            //};
 
-            cancellationToken.ThrowIfCancellationRequested();
+            var reader = new TmdbInterface( EmbyInterfaces(), _dbHelper.CancellationToken );
 
-            progress.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            progress.Report( 100 );
-            EmbyInterfaces().Logger().Debug( $"Finished Analysis" );
+            await AnalyzeData( "Missing Episode", "Missing Episodes",
+                () =>
+                {
+                    var allSeries = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
+                    allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
+                    return allSeries;
+                },
+                async series =>
+                {
+                    var cmds = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
+                    return cmds;
+                },
+                async series =>
+                {
+                    return series?.Name ?? string.Empty;
+                },
+                () => { },
+                [],
+                10
+                );
         }
 
         bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
@@ -79,7 +81,7 @@ namespace Statistics2026.Data
             return false;
         }
 
-        private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodesAsync( TmdbInterface reader, Series series, CancellationToken cancellationToken, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodesAsync( TmdbInterface reader, Series series )
         {
             EmbyInterfaces().Logger().Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
 
@@ -91,17 +93,16 @@ namespace Statistics2026.Data
             try
             {
                 tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId ).ConfigureAwait( false );
+                if( tmdbSeries == null )
+                {
+                    EmbyInterfaces().Logger().Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
+                    return [];
+                }
             }
             catch( Exception ex )
             {
                 EmbyInterfaces().Logger().Error( $"Problem connecting to TMDB - {series.Name} - {seriesTmbdId}" );
                 EmbyInterfaces().Logger().Error( ex.ToString() );
-                throw ex;
-            }
-
-            if( tmdbSeries == null )
-            {
-                EmbyInterfaces().Logger().Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
                 return [];
             }
 
@@ -148,7 +149,7 @@ namespace Statistics2026.Data
                         ] ) );
                     }
 
-                    cancellationToken.ThrowIfCancellationRequested();
+                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
                 }
             }
 

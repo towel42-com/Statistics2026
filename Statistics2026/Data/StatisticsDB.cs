@@ -6,6 +6,7 @@ using MediaBrowser.Model.Querying;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
@@ -186,7 +187,7 @@ namespace Statistics2026.Data
                         _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
                         int currProgress = Interlocked.Increment( ref completedCount );
                         EmbyInterfaces().Logger().Debug( $"    Processed {analysisType} ({currProgress} of {count}) - {itemNameFunc( item )}" );
-
+                        _dbHelper.Progress?.Report( 80.0 * ( 1.0*currProgress ) / count );
                         return retVal;
                     }
                     finally

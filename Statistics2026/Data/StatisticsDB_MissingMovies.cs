@@ -6,6 +6,7 @@ using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -16,54 +17,53 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async Task AnalyzeMissingMoviesTaskImplAsync( CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task AnalyzeMissingMoviesTaskImplAsync()
         {
-            CheckIsValid( ECheckLevel.eUpdate );
 
-            EmbyInterfaces().Logger().Debug( $"Starting Analysis" );
-            progress.Report( 0 );
-            var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
-            collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
-
-            progress.Report( 100 );
-
-            var reader = new TmdbInterface( EmbyInterfaces(), cancellationToken );
-
-            double count = collections.Count();
-            var curr = 0.0;
-
-            progress.Report( 0 );
-            List<SQLCmdDef> sqlCmds = [];
+            var allBoxSets = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
 
             List<object> paramList = [];
-            foreach( var collection in collections )
+            foreach( var collection in allBoxSets )
             {
-                progress.Report( 80.0 * ( ++curr ) / count );
-                try
-                {
-                    var cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection, progress ).ConfigureAwait( false );
-                    paramList.Add( collection.Id.ToString() );
-                    sqlCmds.AddRange( cmds );
-                }
-                catch( Exception )
-                {
-                }
-                cancellationToken.ThrowIfCancellationRequested();
-                EmbyInterfaces().Logger().Info( $"    Processed Collection ({curr} of {count}) - {collection.Name}" );
+                if( collection == null )
+                    continue;
+                var collectionTmbdId = collection.GetProviderId( MetadataProviders.Tmdb );
+                if( string.IsNullOrEmpty( collectionTmbdId ) )
+                    continue;
 
+                paramList.Add( collectionTmbdId );
             }
 
-            sqlCmds.Insert( 0, SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
+            //List<SQLCmdDef?> preCmds = new()
+            //{
+            //    SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND TmdbId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList )
+            //};
 
-            cancellationToken.ThrowIfCancellationRequested();
+            var reader = new TmdbInterface( EmbyInterfaces(), _dbHelper.CancellationToken );
 
-            progress.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            progress.Report( 100 );
-            EmbyInterfaces().Logger().Debug( $"Finished Analysis" );
+            await AnalyzeData( "Missing Movie", "Missing Movies",
+                () =>
+                {
+                    var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
+                    collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
+                    return collections;
+                },
+                async collection =>
+                {
+                    var cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection ).ConfigureAwait( false );
+                    return cmds;
+                },
+                async collection =>
+                {
+                    return collection?.Name ?? string.Empty;
+                },
+                () => { },
+                [],
+                10
+                );
         }
 
-        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollectionAsync( TmdbInterface reader, BoxSet collection, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollectionAsync( TmdbInterface reader, BoxSet collection )
         {
             EmbyInterfaces().Logger().Info( $"    Analyzing Collection '{collection.Name}' - checking for missing movies" );
 
@@ -76,19 +76,19 @@ namespace Statistics2026.Data
             try
             {
                 tmdbCollection = await reader.GetRemoteCollectionMembersAsync( collectionTmbdId ).ConfigureAwait( false );
+                if( tmdbCollection == null )
+                {
+                    EmbyInterfaces().Logger().Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
+                    return [];
+                }
             }
             catch( Exception ex )
             {
                 EmbyInterfaces().Logger().Error( $"Problem connecting to TMDB - {collection.Name} - {collectionTmbdId}" );
                 EmbyInterfaces().Logger().Error( ex.ToString() );
-                throw ex;
-            }
-
-            if( tmdbCollection == null )
-            {
-                EmbyInterfaces().Logger().Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
                 return [];
             }
+
 
             List<SQLCmdDef> retVal = [];
             foreach( var tmdbMovie in tmdbCollection.Movies )

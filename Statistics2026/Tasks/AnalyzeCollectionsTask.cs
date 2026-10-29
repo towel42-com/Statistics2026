@@ -90,7 +90,7 @@ namespace Statistics2026.ScheduledTasks
             {
                 try
                 {
-                    await db.AddAllCollectionsTaskImplAsync( cancellationToken, progress ).ConfigureAwait( false );
+                    await db.AddAllCollectionsTaskImplAsync().ConfigureAwait( false );
                     runtimeMS = timer.ElapsedMilliseconds();
                 }
                 catch( Exception ex )
