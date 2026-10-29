@@ -22,87 +22,54 @@ namespace Statistics2026.Data
     {
         public async Task AddAllMediaTaskImplAsync()
         {
-            CheckIsValid( ECheckLevel.eUpdate );
-
-            EmbyInterfaces().Logger().Debug( $"Starting Media Analysis" );
-
-            _dbHelper.Progress?.Report( 0 );
-            var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
-            _dbHelper.Progress?.Report( 100 );
-
-            if( videoList == null )
-            {
-                return;
-            }
-
-            double count = videoList.Count;
-            var completedCount = 0;
-
-            _dbHelper.Progress?.Report( 0 );
             var existing = new ConcurrentDictionary<string, bool>();
+
+            var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
             ConcurrentBag<object> paramBag = [];
-            var sqlCmds = new List<SQLCmdDef>();
-            sqlCmds.Add( new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ) );
-
-            using( var timer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
+            foreach( var video in videoList )
             {
-                using var gatekeeper = new SemaphoreSlim( 10, 10 );
+                if( video == null )
+                    continue;
+                paramBag.Add( video.Id.ToString() );
+            }
+            var paramList = paramBag.ToList();
+            List<SQLCmdDef?> preCmds = new()
+            {
+                new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ),
+                SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList )
+            };
 
-                var pool = videoList.Select( ( video, index ) => Task.Run( async () =>
+            await AnalyzeData( "Media", "Media",
+                () => { return EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() ); },
+                async video =>
                 {
-                    await gatekeeper.WaitAsync();
-                    try
-                    {
-                        var retVal = (index: index, video: video, cmd: (SQLCmdDef?)null);
-                        if( video == null )
-                            return retVal;
-
-                        if( existing.ContainsKey( video.Id.ToString() ) )
-                            return retVal;
-
-                        existing.TryAdd( video.Id.ToString(), true );
-                        paramBag.Add( video.Id.ToString() );
-
-                        var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
-                        if( !mediaInfo.aOK )
-                            return retVal;
-
-                        retVal.cmd = AddMediaInfo( mediaInfo );
-                        _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
-                        int currProgress = Interlocked.Increment( ref completedCount );
-
-                        _dbHelper.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
-
-                        EmbyInterfaces().Logger().Debug( $"    Processed Video ({currProgress} of {count}) - {mediaInfo.DescriptiveName}" );
-                        //await Task.Delay( 10, CancellationToken.None );
+                    List<SQLCmdDef> retVal = [];
+                    if( existing.ContainsKey( video.Id.ToString() ) )
                         return retVal;
-                    }
-                    finally
-                    {
-                        gatekeeper.Release();
-                    }
-                } ) );
+                    existing.TryAdd( video.Id.ToString(), true );
+                    var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
+                    if( !mediaInfo.aOK )
+                        return retVal;
 
-                var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                foreach( var result in results )
+                    var cmd = AddMediaInfo( mediaInfo );
+                    if( cmd != null )
+                    {
+                        retVal.Add( cmd );
+                    }
+                    return retVal;
+                },
+                async video =>
                 {
-                    if( result.cmd != null )
-                    {
-                        sqlCmds.Add( result.cmd );
-                    }
-                }
-            }
-
-            using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
-            {
-                _dbHelper.Progress?.Report( 80 );
-                var paramList = paramBag.ToList();
-                sqlCmds.Insert( 1, SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
-                _dbHelper.ExecuteCommands( sqlCmds );
-                _dbHelper.Progress?.Report( 100 );
-                EmbyInterfaces().Logger().Debug( $"Finished Media Analysis" );
-            }
+                    if( video == null )
+                        return string.Empty;
+                    var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
+                    if( !mediaInfo.aOK )
+                        return string.Empty;
+                    return mediaInfo.DescriptiveName;
+                },
+                () => { },
+                preCmds
+                );
         }
 
         public SQLCmdDef? AddMediaInfo( MediaInfo mediaInfo )

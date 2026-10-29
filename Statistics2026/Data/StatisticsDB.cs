@@ -2,6 +2,7 @@
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
 using MediaBrowser.Model.Logging;
+using MediaBrowser.Model.Querying;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
@@ -142,28 +143,59 @@ namespace Statistics2026.Data
             }
         }
 
-        public async Task AnalyzeData<T>( string dataType, List<T> items, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, string> itemNameFunc, List<SQLCmdDef?> initCmds )
+        public async Task AnalyzeData<T>( string analysisType, string plauralAnalysisType, Func<List<T>> getItemsFunc, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, Task<string>> itemNameFunc, Action postRunFunc, List<SQLCmdDef?> initCmds, int? maxThreadCount = null )
+        {
+            CheckIsValid( ECheckLevel.eUpdate );
+            EmbyInterfaces().Logger().Debug( $"Starting {analysisType} Analysis" );
+
+            _dbHelper.Progress?.Report( 0 );
+            var items = getItemsFunc();
+            _dbHelper.Progress?.Report( 100 );
+
+            if( items == null )
+                return;
+
+            await AnalyzeData( analysisType, plauralAnalysisType, items, getSqlCmdsFunc, itemNameFunc, postRunFunc, initCmds, maxThreadCount );
+        }
+
+        public async Task AnalyzeData<T>( string analysisType, string plauralAnalysisType, List<T> items, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, Task<string>> itemNameFunc, Action postRunFunc, List<SQLCmdDef?> initCmds, int? maxThreadCount = null )
         {
             double count = items.Count;
             var completedCount = 0;
             _dbHelper.Progress?.Report( 0 );
             List<SQLCmdDef?> nullableCmds = initCmds ?? [];
 
-            using( var timer = new AutoTimer( $"    Analyze {dataType} - Getting Commands", Logger() ) )
+            using( var timer = new AutoTimer( $"    Analyze {plauralAnalysisType} - Getting Commands", Logger() ) )
             {
+                using var gatekeeper = new SemaphoreSlim( maxThreadCount ?? 10, maxThreadCount ?? 10 );
+
                 var pool = items.Select( ( item, index ) => Task.Run( async () =>
                 {
-                    var retVal = (index: index, item: item, cmds: new List<SQLCmdDef?>());
-                    if( item == null )
+                    if( maxThreadCount != null )
+                    {
+                        await gatekeeper.WaitAsync();
+                    }
+                    try
+                    {
+                        var retVal = (index: index, item: item, cmds: new List<SQLCmdDef?>());
+                        if( item == null )
+                            return retVal;
+
+                        retVal.cmds.AddRange( await getSqlCmdsFunc( item ) );
+
+                        _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
+                        int currProgress = Interlocked.Increment( ref completedCount );
+                        EmbyInterfaces().Logger().Debug( $"    Processed {analysisType} ({currProgress} of {count}) - {itemNameFunc( item )}" );
+
                         return retVal;
-
-                    retVal.cmds.AddRange( await getSqlCmdsFunc( item ) );
-
-                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
-                    int currProgress = Interlocked.Increment( ref completedCount );
-                    EmbyInterfaces().Logger().Debug( $"    Processed {dataType} ({currProgress} of {count}) - {itemNameFunc( item )}" );
-
-                    return retVal;
+                    }
+                    finally
+                    {
+                        if( maxThreadCount != null )
+                        {
+                            gatekeeper.Release();
+                        }
+                    }
                 } ) );
 
                 var unsortedResults = await Task.WhenAll( pool );
@@ -179,14 +211,17 @@ namespace Statistics2026.Data
             List<SQLCmdDef> sqlCmds = nullableCmds.Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
 
             _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
-            using( var timer = new AutoTimer( $"    Analyze {dataType} - Executing Commands", Logger() ) )
+            using( var timer = new AutoTimer( $"    Analyze {plauralAnalysisType} - Executing Commands", Logger() ) )
             {
                 _dbHelper.Progress?.Report( 80 );
                 _dbHelper.ExecuteCommands( sqlCmds );
                 _dbHelper.Progress?.Report( 100 );
                 _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
-                EmbyInterfaces().Logger().Debug( $"Finished Series Analysis" );
             }
+
+            postRunFunc();
+
+            EmbyInterfaces().Logger().Debug( $"Finished Series Analysis" );
         }
     }
 }

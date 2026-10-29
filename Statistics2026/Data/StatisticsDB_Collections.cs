@@ -20,57 +20,20 @@ namespace Statistics2026.Data
     {
         public async Task AddAllCollectionsTaskImplAsync( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            CheckIsValid( ECheckLevel.eUpdate );
-
-            EmbyInterfaces().Logger().Debug( $"Starting Collection Analysis" );
-            progress.Report( 0 );
-            var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
-            progress.Report( 100 );
-
-            double count = collections.Count();
-            var completedCount = 0;
-
-            progress.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>();
-
-            using( var timer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
-            {
-                var pool = collections.Select( ( collection, index ) => Task.Run( async() =>
+            await AnalyzeData( "Collection", "Collections",
+                () => { return EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() ); },
+                async collection =>
                 {
-                    List<SQLCmdDef> currCmds = [];
-                    long runTimeMS = 0;
-                    using( var userTimer = new AutoTimer( $"    Processed Collection {collection.Name}", Logger() ) )
-                    {
-                        currCmds = await AddCollectionAsync( collection, cancellationToken, progress ).ConfigureAwait( false );
-                        runTimeMS = timer.ElapsedMilliseconds();
-                    }
-
-                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
-                    int currProgress = Interlocked.Increment( ref completedCount );
-                    _dbHelper.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
-                    Logger().Info( $"Processed Collection {collection.Name} - {runTimeMS} ms" );
-
-                    return (index: index, collection: collection, cmds: currCmds, runTimeMS: runTimeMS);
-                } ) ).ToList();
-
-                var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-
-                foreach( var result in results )
+                    var currCmds = await AddCollectionAsync( collection, cancellationToken, progress ).ConfigureAwait( false );
+                    return currCmds;
+                },
+                async collection =>
                 {
-                    sqlCmds.AddRange( result.cmds );
-                }
-            }
-
-            cancellationToken.ThrowIfCancellationRequested();
-
-            using( var timer = new AutoTimer( $"    Analyze Collection - Executing Commands", Logger() ) )
-            {
-                progress.Report( 80 );
-                _dbHelper.ExecuteCommands( sqlCmds );
-                progress.Report( 100 );
-            }
-            EmbyInterfaces().Logger().Debug( $"Finished Collection Analysis" );
+                    return collection?.Name ?? string.Empty;
+                },
+                () => {},
+                []
+                );
         }
 
         private async Task<List<SQLCmdDef>> AddChildToCollectionAsync( Video video, BoxSet collection )
@@ -194,7 +157,7 @@ namespace Statistics2026.Data
                 ] ) );
             EmbyInterfaces().Logger().Debug( $"    AddCollection - Successfully Added Collection" );
 
-            sqlCmds.AddRange( await AddCollectionMembersAsync( collection, cancellationToken, progress ).ConfigureAwait(false) );
+            sqlCmds.AddRange( await AddCollectionMembersAsync( collection, cancellationToken, progress ).ConfigureAwait( false ) );
             return sqlCmds;
         }
 
@@ -248,7 +211,8 @@ namespace Statistics2026.Data
                 var itemImageUrl = row.GetString( col++ );
                 var collectionName = row.GetString( col++ );
                 var collectionSortName = row.GetString( col++ );
-                var collectionImageUrl = row.GetString( col++ ); ;
+                var collectionImageUrl = row.GetString( col++ );
+                ;
                 var collectionId = row.GetString( col++ );
 
                 retVal.AddLine( (itemSortName, itemId, itemImageUrl, false), (collectionSortName, collectionId, collectionImageUrl, false) );

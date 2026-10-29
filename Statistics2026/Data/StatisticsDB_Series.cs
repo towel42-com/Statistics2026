@@ -27,7 +27,7 @@ namespace Statistics2026.Data
             public long averageBitrate = 0;
         }
 
-        private ( ConcurrentDictionary<string, SeriesInfo> seriesInfoMap, List<object> validSeriesIds ) ComputeSeriesInfo( List<Series> seriesList)
+        private (ConcurrentDictionary<string, SeriesInfo> seriesInfoMap, List<object> validSeriesIds) ComputeSeriesInfo( List<Series> seriesList )
         {
             var sql = "SELECT " +
                 "  Media.SeriesId" +
@@ -87,12 +87,13 @@ namespace Statistics2026.Data
             if( seriesList == null )
                 return;
 
-            var ( seriesInfoMap, validSeriesIds ) = ComputeSeriesInfo( seriesList );
+            var (seriesInfoMap, validSeriesIds) = ComputeSeriesInfo( seriesList );
 
             var preCmds = UpdateSeriesFilter();
             preCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Series WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validSeriesIds ) );
 
-            await AnalyzeData( "Series", seriesList,
+            await AnalyzeData( "Series", "Series",
+                seriesList,
                 async series =>
                 {
                     List<SQLCmdDef> retVal = [];
@@ -105,11 +106,12 @@ namespace Statistics2026.Data
                     }
                     return retVal;
                 },
-                series =>
+                async series =>
                 {
                     return series?.Name ?? string.Empty;
-                }
-                , preCmds
+                },
+                () => { },
+                preCmds
             );
         }
 

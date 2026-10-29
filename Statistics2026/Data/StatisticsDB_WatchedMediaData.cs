@@ -16,69 +16,33 @@ namespace Statistics2026.Data
     {
         public async Task AnalyzeWatchedMediaDataTaskImplAsync()
         {
-            CheckIsValid( ECheckLevel.eUpdate );
-
-            _dbHelper.Progress?.Report( 0 );
-            var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
-            if( users == null )
-                return;
-            _dbHelper.Progress?.Report( 100 );
-
-            EmbyInterfaces().Logger().Debug( $"Starting User Watch Data Analysis" );
-
-            double count = users.Count;
-            var completedCount = 0;
-
-            _dbHelper.Progress?.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>();
-            using( var timer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", Logger() ) )
-            {
-                var pool = users.Select( ( user, index ) => Task.Run( async () =>
+            await AnalyzeData( "User Watch Data", "User Watch Data",
+                () => { return UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList(); },
+                async user =>
                 {
-                    List<SQLCmdDef> currCmds = [];
-                    long runTimeMS = 0;
-                    using( var userTimer = new AutoTimer( $"    Processed User {user.Name}", Logger() ) )
+                    var currCmds = await AddWatchedDataForUserAsync( user ).ConfigureAwait( false );
+                    return currCmds;
+                },
+                async user =>
+                {
+                    return user?.Name ?? string.Empty;
+                },
+                () =>
+                {
+                    var config = Statistics2026.Plugin.Instance!.Configuration;
+                    config.resetPlayCount = false;
+                    Statistics2026.Plugin.Instance.UpdateConfiguration( config );
+
+                    ComputeUserDataDBState();
+                    if( !Plugin.Instance.IsDBStateSet( EDBState.eUserDataInitialized ) )
                     {
-                        currCmds = await AddWatchedDataForUserAsync( user ).ConfigureAwait( false );
-                        runTimeMS = timer.ElapsedMilliseconds();
+                        EmbyInterfaces().Logger().Error( "After initializing user watch data, user watch data still doesn't conform." );
                     }
 
-                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
-                    int currProgress = Interlocked.Increment( ref completedCount );
-
-                    _dbHelper.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
-                    Logger().Info( $"Processed User {user.Name} - {runTimeMS} ms" );
-
-                    return (index: index, user: user, cmds: currCmds, runTimeMS: runTimeMS);
-                } ) ).ToList();
-
-                var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                foreach( var result in results )
-                {
-                    sqlCmds.AddRange( result.cmds );
-                }
-            }
-
-            var config = Statistics2026.Plugin.Instance!.Configuration;
-            config.resetPlayCount = false;
-            Statistics2026.Plugin.Instance.UpdateConfiguration( config );
-
-            using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Commands", Logger() ) )
-            {
-                _dbHelper.Progress?.Report( 80 );
-                _dbHelper.ExecuteCommands( sqlCmds );
-                _dbHelper.Progress?.Report( 100 );
-            }
-
-            ComputeUserDataDBState();
-            if( !Plugin.Instance.IsDBStateSet( EDBState.eUserDataInitialized ) )
-            {
-                EmbyInterfaces().Logger().Error( "After initializing user watch data, user watch data still doesn't conform." );
-            }
-
-            Plugin.Instance.AddDBState( EDBState.eUserDataInitialized );
-            EmbyInterfaces().Logger().Debug( $"Finished User Watch Data Analysis" );
+                    Plugin.Instance.AddDBState( EDBState.eUserDataInitialized );
+                },
+                []
+                );
         }
 
         public void InitWatchedMediaTables()

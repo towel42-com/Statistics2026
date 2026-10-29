@@ -15,16 +15,14 @@ namespace Statistics2026.Data
     {
         public async Task AddAllUsersTaskImplAsync()
         {
-            CheckIsValid( ECheckLevel.eUpdate );
-            EmbyInterfaces().Logger().Debug( $"Starting User Analysis" );
-
-            _dbHelper.Progress?.Report( 0 );
-            var userList = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
-            _dbHelper.Progress?.Report( 100 );
-            if( userList == null )
-                return;
-
-            await AnalyzeData( "Users", userList,
+            await AnalyzeData( "User", "Users",
+                () => 
+                { 
+                    var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } );
+                    if( users == null )
+                        return [];
+                    return users.ToList();
+                },
                 async user =>
                 {
                     var retVal = AddUser( user );
@@ -32,11 +30,12 @@ namespace Statistics2026.Data
                         return [ retVal ];
                     return [];
                 },
-                user =>
+                async user =>
                 {
                     return user?.Name ?? string.Empty;
-                }
-                , []
+                },
+                () => { },
+                []
                 );
         }
 
