@@ -105,7 +105,7 @@ namespace Statistics2026.Utilities
                 sMediaInfoCache.Remove( (KeyForVideo( video ), false), out var currValue );
             }
 
-            var retVal = CreateMinimal( logger, video );
+            var retVal = CreateMinimal( logger, video, false );
             if( retVal.aOK )
             {
                 sMediaInfoCache[ (KeyForVideo( video ), false) ] = retVal;
