@@ -74,7 +74,7 @@ namespace Statistics2026.Data
         public EmbyInterfaces EmbyInterfaces()
         {
             _dbHelper.CheckIsValid( ECheckLevel.eEmbyInterfaceOnly | ECheckLevel.eThrowOnFailure );
-            return _dbHelper!._embyInterfaces!;
+            return _dbHelper._embyInterfaces!;
         }
 
         public ILogger Logger()
@@ -139,6 +139,53 @@ namespace Statistics2026.Data
             {
                 _dbHelper.CancellationToken = cancellationToken;
                 _dbHelper.Progress = progress;
+            }
+        }
+
+        public async Task AnalyzeData<T>( string dataType, List<T> items, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, string> itemNameFunc, List<SQLCmdDef?>? initCmds = null )
+        {
+            double count = items.Count;
+            var completedCount = 0;
+            _dbHelper.Progress?.Report( 0 );
+            List<SQLCmdDef?> nullableCmds = initCmds ?? [];
+
+            using( var timer = new AutoTimer( $"    Analyze {dataType} - Getting Commands", Logger() ) )
+            {
+                var pool = items.Select( ( item, index ) => Task.Run( async () =>
+                {
+                    var retVal = (index: index, item: item, cmds: new List<SQLCmdDef?>());
+                    if( item == null )
+                        return retVal;
+
+                    retVal.cmds.AddRange( await getSqlCmdsFunc( item ) );
+
+                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
+                    int currProgress = Interlocked.Increment( ref completedCount );
+                    EmbyInterfaces().Logger().Debug( $"    Processed {dataType} ({currProgress} of {count}) - {itemNameFunc( item )}" );
+
+                    return retVal;
+                } ) );
+
+                var unsortedResults = await Task.WhenAll( pool );
+                _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
+                var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                foreach( var result in results )
+                {
+                    nullableCmds.AddRange( result.cmds );
+                    _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
+                }
+            }
+
+            List<SQLCmdDef> sqlCmds = nullableCmds.Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
+
+            _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
+            using( var timer = new AutoTimer( $"    Analyze {dataType} - Executing Commands", Logger() ) )
+            {
+                _dbHelper.Progress?.Report( 80 );
+                _dbHelper.ExecuteCommands( sqlCmds );
+                _dbHelper.Progress?.Report( 100 );
+                _dbHelper.CancellationToken?.ThrowIfCancellationRequested();
+                EmbyInterfaces().Logger().Debug( $"Finished Series Analysis" );
             }
         }
     }

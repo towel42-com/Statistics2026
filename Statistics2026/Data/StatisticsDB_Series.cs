@@ -3,71 +3,107 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Logging;
+using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
+        private class SeriesInfo
+        {
+            public string id = string.Empty;
+            public string name = string.Empty;
+            public long totalFileSize = 0;
+            public long totalRuntime = 0;
+            public double averageRating = 0.0;
+            public long averageBitrate = 0;
+        }
+
         public async Task AddAllSeriesTaskImplAsync()
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            EmbyInterfaces().Logger().Debug( $"Starting Video Analysis" );
+            EmbyInterfaces().Logger().Debug( $"Starting Series Analysis" );
 
-            _dbHelper!.Progress?.Report( 0 );
+            _dbHelper.Progress?.Report( 0 );
             var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
-            _dbHelper!.Progress?.Report( 100 );
+            _dbHelper.Progress?.Report( 100 );
 
-            double count = seriesList.Count;
-            var completedCount = 0;
+            ConcurrentDictionary<string, SeriesInfo> seriesInfoMap = [];
+            var sql = "SELECT " +
+                "  Media.SeriesId" +
+                ", Series.Name" +
+                ", SUM(Media.FileSize)" +
+                ", SUM(Media.RunTimeTicks)" +
+                ", SUM(Media.Rating)/Count(Media.Rating)" +
+                ", Sum(Media.TotalBitrate)/Count(Media.TotalBitrate) " +
+                "FROM Media " +
+                "LEFT JOIN SERIES ON Series.ItemId=Media.SeriesId " +
+                "WHERE Media.IsEpisode AND NOT Media.IsTVSpecial " +
+                "GROUP BY Media.SeriesId"
+                ;
 
-            _dbHelper!.Progress?.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>();
-            sqlCmds.AddRange( UpdateSeriesFilter() );
-
-            using( var timer = new AutoTimer( $"    Analyze Series - Getting Commands", Logger() ) )
-            {
-                var pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
+            var cmd = new SQLCmdDef( sql );
+            List<object> validSeriesIds = [];
+            _dbHelper.ExecuteCommand( cmd,
+                statement =>
                 {
-                    var retVal = (index: index, series: series, cmd: (SQLCmdDef?)null);
-                    if( series == null )
-                        return retVal;
-
-                    retVal.cmd = await AddSeriesAsync( series ).ConfigureAwait( false );
-                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
-                    int currProgress = Interlocked.Increment( ref completedCount );
-                    EmbyInterfaces().Logger().Debug( $"    Processed Series ({currProgress} of {count}) - {series.Name}" );
-
-                    return retVal;
-                } ) );
-
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
-                var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                foreach( var result in results )
-                {
-                    if( result.cmd != null )
+                    var row = statement.Current;
+                    var col = 0;
+                    var id = row.GetString( col++ );
+                    validSeriesIds.Add( id );
+                    SeriesInfo seriesInfo = new()
                     {
-                        sqlCmds.Add( result.cmd );
-                    }
-                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                        id = id,
+                        name = row.GetString( col++ ),
+                        totalFileSize = row.GetInt64( col++ ),
+                        totalRuntime = row.GetInt64( col++ ),
+                        averageRating = row.GetFloat( col++ ),
+                        averageBitrate = row.GetInt64( col++ ),
+                    };
+
+                    seriesInfoMap[ seriesInfo.id ] = seriesInfo;
+                    return true;
+                } );
+
+            foreach( var series in seriesList )
+            {
+                if( !seriesInfoMap.TryGetValue( series.Id.ToString(), out _ ) )
+                {
+                    Logger().Error( $"Series '{series.Name}' is not in the Media table" );
                 }
             }
 
-            using( var timer = new AutoTimer( $"    Analyze Series - Executing Commands", Logger() ) )
-            {
-                _dbHelper!.Progress?.Report( 80 );
-                _dbHelper.ExecuteCommands( sqlCmds );
-                _dbHelper!.Progress?.Report( 100 );
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
-                EmbyInterfaces().Logger().Debug( $"Finished Series Analysis" );
-            }
+            var preCmds = UpdateSeriesFilter();
+            preCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Series WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validSeriesIds ) );
+
+            await AnalyzeData( "Series", seriesList,
+                async series =>
+                {
+                    List<SQLCmdDef> retVal = [];
+                    if( seriesInfoMap.TryGetValue( series.Id.ToString(), out SeriesInfo seriesInfo ) )
+                    {
+                        var cmd = await AddSeriesAsync( series, seriesInfo ).ConfigureAwait( false );
+                        if( cmd != null )
+                            retVal.Add( cmd );
+                        return retVal;
+                    }
+                    return retVal;
+                },
+                series =>
+                {
+                    return series?.Name ?? string.Empty;
+                }
+                , preCmds
+            );
         }
 
         private async Task<(int episodes, int specials)> GetCountForSeriesAsync( Series series )
@@ -75,7 +111,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eUpdate );
 
             var libraryOptions = LibraryManager().GetLibraryOptions( series );
-            var allEpisodes = await ProviderManager().GetAllEpisodes( series, libraryOptions, _dbHelper!.CancellationToken!.Value ).ConfigureAwait( false );
+            var allEpisodes = await ProviderManager().GetAllEpisodes( series, libraryOptions, _dbHelper.CancellationToken!.Value ).ConfigureAwait( false );
 
             var episodes = allEpisodes.Where( e => !MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTimeOffset.Now ) ).Count();
             var specials = allEpisodes.Where( e => MediaInfo.isTVSpecial( e ) ).Count();
@@ -181,7 +217,7 @@ namespace Statistics2026.Data
             return (numSeasons, hasSpecials);
         }
 
-        private async Task<SQLCmdDef?> AddSeriesAsync( Series series )
+        private async Task<SQLCmdDef?> AddSeriesAsync( Series series, SeriesInfo seriesInfo )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -193,40 +229,6 @@ namespace Statistics2026.Data
 
             EmbyInterfaces().Logger().Debug( $"   AddSeries - Adding Series {series.Name}" );
 
-            long totalFileSize = 0;
-            long totalRuntime = 0;
-            var averageRating = 0.0;
-            long averageBitrate = 0;
-
-            var sql = "SELECT " +
-                "  SUM(FileSize)" +
-                ", SUM(RunTimeTicks)" +
-                ", SUM(Rating)/Count(1)" +
-                ", Sum(TotalBitrate)/Count(1) " +
-                "FROM " +
-                "Media " +
-                "WHERE SeriesId=@SeriesId";
-
-            var cmd = new SQLCmdDef( sql,
-                        [
-                            ("@SeriesId", series.Id.ToString())
-                        ] );
-            _dbHelper.ExecuteCommands( [ cmd ],
-                statement =>
-                {
-                    if( statement != null )
-                    {
-                        var row = statement.Current;
-                        totalFileSize = row.GetInt64( 0 );
-                        totalRuntime = row.GetInt64( 1 );
-                        averageRating = row.GetFloat( 2 );
-                        averageBitrate = row.GetInt64( 3 );
-                        return false;
-                    }
-
-                    return true;
-                } );
-
             var seriesStatus = series.Status?.ToString() ?? string.Empty;
             var (numSeasons, hasSpecials) = GetSeasonCount( series );
 
@@ -235,7 +237,7 @@ namespace Statistics2026.Data
 
             var (numEpisodes, numSpecials) = await GetCountForSeriesAsync( series ).ConfigureAwait( false );
             List<(string name, object? value)>? paramsList = null;
-            sql = "INSERT INTO Series " +
+            var sql = "INSERT INTO Series " +
             "(" +
                 "  ItemId" +
                 ", Name" +
@@ -304,11 +306,11 @@ namespace Statistics2026.Data
                         ("@HasSpecials", hasSpecials),
                         ("@DateAdded", HelperFuncs.ToDateTimeParamValue( series.DateCreated )),
                         ("@ImageUrl", ItemImageUrl._ItemImageUrl(series)),
-                        ("@FileSize", totalFileSize),
-                        ("@RunTimeTicks", totalRuntime),
-                        ("@Rating", averageRating),
+                        ("@FileSize", seriesInfo.totalFileSize),
+                        ("@RunTimeTicks", seriesInfo.totalRuntime),
+                        ("@Rating", seriesInfo.averageRating),
                         ("@Status", seriesStatus),
-                        ("@AverageBitrate", averageBitrate),
+                        ("@AverageBitrate", seriesInfo.averageBitrate),
                         ("@StreamingServices", streamingServices)
                     ];
 

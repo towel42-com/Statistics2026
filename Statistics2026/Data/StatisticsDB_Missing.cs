@@ -242,7 +242,7 @@ namespace Statistics2026.Data
             } );
             if( !found && updateIfEmpty )
             {
-                var cmds = UpdateSeriesFilter( true );
+                var cmds = UpdateSeriesFilter( true ).Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
                 _dbHelper.ExecuteCommands( cmds );
                 return GetSeriesFilter( false );
             }
@@ -292,7 +292,7 @@ namespace Statistics2026.Data
             return cmd;
         }
 
-        public List<SQLCmdDef> UpdateSeriesFilter( bool nested = false )
+        public List<SQLCmdDef?> UpdateSeriesFilter( bool nested = false )
         {
             bool filterChanged( ref string msg, ref SeriesFilterResponse lhs, int numSeasons, bool hasSpecials )
             {
@@ -427,7 +427,7 @@ namespace Statistics2026.Data
                 }
             }
 
-            List<SQLCmdDef> sqlCmds = [];
+            List<SQLCmdDef?> sqlCmds = [];
             foreach( var entry in changedFilterMap )
             {
                 sqlCmds.Add( SaveSeriesFilter( entry, false ) );
