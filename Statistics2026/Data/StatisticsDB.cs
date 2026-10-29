@@ -505,7 +505,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task AnalyzeData<T>( string dataType, List<T> items, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, string> itemNameFunc, List<SQLCmdDef?>? initCmds = null )
+        public async Task AnalyzeData<T>( string dataType, List<T> items, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, string> itemNameFunc, List<SQLCmdDef?> initCmds )
         {
             double count = items.Count;
             var completedCount = 0;
