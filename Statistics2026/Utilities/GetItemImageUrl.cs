@@ -32,7 +32,7 @@ namespace Statistics2026.Utilities
             return item == null ? string.Empty : _ItemImageUrl( item, imageType, maxWidth, quality, imageIndex );
         }
 
-        private static Cache<(string itemId, ImageType imageType, int maxWidth, int quality, int index), string> sIdToUrlMap = [];
+        private static ConcurrentCache<(string itemId, ImageType imageType, int maxWidth, int quality, int index), string> sIdToUrlMap = [];
         
         public static string _ItemImageUrl( BaseItem item, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
