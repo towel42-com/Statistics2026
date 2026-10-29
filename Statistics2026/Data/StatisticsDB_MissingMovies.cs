@@ -22,7 +22,7 @@ namespace Statistics2026.Data
 
             EmbyInterfaces().Logger().Debug( $"Starting Analysis" );
             progress.Report( 0 );
-            var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, LibraryManager() );
+            var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
             collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
 
             progress.Report( 100 );
@@ -53,7 +53,7 @@ namespace Statistics2026.Data
 
             }
 
-            sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
+            sqlCmds.Insert( 0, SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
 
             cancellationToken.ThrowIfCancellationRequested();
 

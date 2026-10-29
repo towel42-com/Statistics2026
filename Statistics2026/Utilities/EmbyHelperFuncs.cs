@@ -43,8 +43,7 @@ namespace Statistics2026.Utilities
                 };
             }
 
-
-            return libManager.GetItemList( query ).OfType<T>().Cast<T>().ToList();
+            return libManager.GetItemList( query ).OfType<T>().ToList();
         }
 
         public static List<Video>? GetAllEpisodesAndMovies( User? user, ILibraryManager libManager )
@@ -64,7 +63,6 @@ namespace Statistics2026.Utilities
                 EnableImages = true
             };
 
-
             return libManager.GetItemList( query ).OfType<Video>().ToList();
         }
 
@@ -79,10 +77,16 @@ namespace Statistics2026.Utilities
             return (forUser, all);
         }
 
-        public static List<BoxSet> GetAllBoxSets( User user, ILibraryManager libManager )
+        public static List<BoxSet> GetAllBoxSets( User? user, ILibraryManager libManager )
         {
             var boxSets = GetLibraryItems<BoxSet>( user, libManager );
             return boxSets;
+        }
+
+        public static List<Series> GetAllSeries( User? user, ILibraryManager libManager )
+        {
+            var series = GetLibraryItems<Series>( user, libManager );
+            return series;
         }
 
         public static Season? GetSeasonFromSeries( Series series, int seasonNum )
@@ -93,7 +97,7 @@ namespace Statistics2026.Utilities
                 Recursive = true
             } );
 
-            var seasons = result.Items.Cast<Season>().ToList();
+            var seasons = result.Items.OfType<Season>().ToList();
             foreach( var season in seasons )
             {
                 if( season.IndexNumber == seasonNum )
@@ -162,7 +166,7 @@ namespace Statistics2026.Utilities
 
             // Extract the episode numbers
             var retVal = queryResult.Items
-                .Cast<Episode>()
+                .OfType<Episode>()
                 .FirstOrDefault( ep =>
                 ep.IndexNumber == episodeNum ||
                 ( ep.IndexNumberEnd != null && ( ep.IndexNumber <= episodeNum ) && ( ep.IndexNumberEnd >= episodeNum ) ) )

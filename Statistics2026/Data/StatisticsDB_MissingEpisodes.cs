@@ -24,7 +24,7 @@ namespace Statistics2026.Data
 
             EmbyInterfaces().Logger().Debug( $"Starting Analysis" );
             progress.Report( 0 );
-            var allSeries = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
+            var allSeries = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
             allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             progress.Report( 100 );
 
@@ -53,7 +53,7 @@ namespace Statistics2026.Data
                 EmbyInterfaces().Logger().Info( $"    Processed Series ({curr} of {count}) - {series.Name}" );
             }
 
-            sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
+            sqlCmds.Insert( 0, SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
 
             cancellationToken.ThrowIfCancellationRequested();
 

@@ -24,7 +24,7 @@ namespace Statistics2026.Data
 
             EmbyInterfaces().Logger().Debug( $"Starting Collection Analysis" );
             progress.Report( 0 );
-            var collections = EmbyHelperFuncs.GetLibraryItems<BoxSet>( null, LibraryManager() );
+            var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
             progress.Report( 100 );
 
             double count = collections.Count();
@@ -55,6 +55,7 @@ namespace Statistics2026.Data
 
                 var unsortedResults = await Task.WhenAll( pool );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
+
                 foreach( var result in results )
                 {
                     sqlCmds.AddRange( result.cmds );

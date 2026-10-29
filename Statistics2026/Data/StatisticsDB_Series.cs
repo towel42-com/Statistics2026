@@ -20,7 +20,7 @@ namespace Statistics2026.Data
             EmbyInterfaces().Logger().Debug( $"Starting Video Analysis" );
 
             _dbHelper!.Progress?.Report( 0 );
-            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
+            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
             _dbHelper!.Progress?.Report( 100 );
 
             double count = seriesList.Count;

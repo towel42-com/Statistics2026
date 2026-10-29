@@ -4,10 +4,12 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
+using MediaBrowser.Model.Session;
 using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -22,7 +24,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            EmbyInterfaces().Logger().Debug( $"Starting Video Analysis" );
+            EmbyInterfaces().Logger().Debug( $"Starting Media Analysis" );
 
             _dbHelper!.Progress?.Report( 0 );
             var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
@@ -34,54 +36,83 @@ namespace Statistics2026.Data
             }
 
             double count = videoList.Count;
-            var curr = 0.0;
+            var completedCount = 0;
 
             _dbHelper!.Progress?.Report( 0 );
+            var existing = new ConcurrentDictionary<string, bool>();
+            ConcurrentBag<object> paramBag = [];
             var sqlCmds = new List<SQLCmdDef>();
-            var existing = new Dictionary<string, bool>();
-            List<object> paramList = [];
             sqlCmds.Add( new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ) );
 
-            foreach( var video in videoList )
+            using( var timer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
             {
-                if( video == null )
-                    continue;
+                using var gatekeeper = new SemaphoreSlim( 10, 10 );
 
-                _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
-
-                if( existing.ContainsKey( video.Id.ToString() ) )
-                    continue;
-                existing.Add( video.Id.ToString(), true );
-                paramList.Add( video.Id.ToString() );
-
-                await using( var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false ) )
+                var pool = videoList.Select( ( video, index ) => Task.Run( async () =>
                 {
-                    if( !mediaInfo.aOK )
-                        continue;
+                    await gatekeeper.WaitAsync();
+                    try
+                    {
+                        var retVal = (index: index, video: video, cmd: (SQLCmdDef?)null);
+                        if( video == null )
+                            return retVal;
 
-                    sqlCmds.AddRange( AddMediaInfo( mediaInfo ) );
-                    EmbyInterfaces().Logger().Debug( $"    Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
+                        if( existing.ContainsKey( video.Id.ToString() ) )
+                            return retVal;
+
+                        existing.TryAdd( video.Id.ToString(), true );
+                        paramBag.Add( video.Id.ToString() );
+
+                        var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
+                        if( !mediaInfo.aOK )
+                            return retVal;
+
+                        retVal.cmd = AddMediaInfo( mediaInfo );
+                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                        int currProgress = Interlocked.Increment( ref completedCount );
+
+                        _dbHelper!.Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+
+                        EmbyInterfaces().Logger().Debug( $"    Processed Video ({currProgress} of {count}) - {mediaInfo.DescriptiveName}" );
+                        //await Task.Delay( 10, CancellationToken.None );
+                        return retVal;
+                    }
+                    finally
+                    {
+                        gatekeeper.Release();
+                    }
+                } ) );
+
+                var unsortedResults = await Task.WhenAll( pool );
+                var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                foreach( var result in results )
+                {
+                    if( result.cmd != null )
+                    {
+                        sqlCmds.Add( result.cmd );
+                    }
                 }
-
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
             }
 
-            _dbHelper!.Progress?.Report( 80 );
-            sqlCmds.Insert( 1, DBHelper.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            _dbHelper!.Progress?.Report( 100 );
-            EmbyInterfaces().Logger().Debug( $"Finished Video Analysis" );
+            using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
+            {
+                _dbHelper!.Progress?.Report( 80 );
+                var paramList = paramBag.ToList();
+                sqlCmds.Insert( 1, SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
+                _dbHelper.ExecuteCommands( sqlCmds );
+                _dbHelper!.Progress?.Report( 100 );
+                EmbyInterfaces().Logger().Debug( $"Finished Media Analysis" );
+            }
         }
 
-        public List<SQLCmdDef> AddMediaInfo( MediaInfo mediaInfo )
+        public SQLCmdDef? AddMediaInfo( MediaInfo mediaInfo )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            var sqlCmds = new List<SQLCmdDef>();
             if( mediaInfo == null || !mediaInfo.aOK )
             {
                 EmbyInterfaces().Logger().Error( $"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId" );
-                return sqlCmds;
+                return null;
             }
 
             var sql =
@@ -175,7 +206,7 @@ namespace Statistics2026.Data
 
             var services = JsonSerializer.Serialize( mediaInfo.StreamingServices );
 
-            sqlCmds.Add( new SQLCmdDef( sql,
+            return new SQLCmdDef( sql,
             [
                 ("@ItemId", mediaInfo.ItemId),
                 ("@PrimaryName", mediaInfo.PrimaryName),
@@ -203,9 +234,7 @@ namespace Statistics2026.Data
                 ("@TotalBitrate", mediaInfo.TotalBitrate),
                 ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( mediaInfo.PremiereDate ) ),
                 ("@DateAdded", HelperFuncs.ToDateTimeParamValue( mediaInfo.DateAdded ) ),
-            ] ) );
-
-            return sqlCmds;
+            ] );
         }
 
         public StatCard MediaResolutions()
