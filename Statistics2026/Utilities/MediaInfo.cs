@@ -6,14 +6,49 @@ using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Logging;
 using System;
 using System.Linq;
+using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace Statistics2026.Utilities
 {
     public class MediaInfo : IAsyncDisposable
     {
-        public MediaInfo() { }
-        public static MediaInfo CreateMinimal( Video video )
+        private static ConcurrentDictionary<(string, bool minimal), MediaInfo> sMediaInfoCache = [];
+
+        private static string KeyForVideo( Video video )
         {
+            return $"{video.Id}";
+        }
+
+        private static bool OutOfDate( Video video, MediaInfo mediaInfo )
+        {
+            if( video == null )
+                return true;
+
+            return video.HasDateModifiedChanged( mediaInfo.DateItemModified );
+        }
+
+        public MediaInfo() { }
+        public static MediaInfo CreateMinimal( ILogger logger, Video video, bool minimalOnly = true )
+        {
+            if( sMediaInfoCache.TryGetValue( (KeyForVideo( video ), true), out MediaInfo value ) )
+            {
+                if( !OutOfDate( video, value ) )
+                {
+                    if( minimalOnly )
+                        return value;
+                    var json = JsonSerializer.Serialize( value );
+                    var copy = JsonSerializer.Deserialize<MediaInfo>( json );
+                    if( copy == null )
+                        throw new Exception( "Problem deserializing" );
+                    return copy;
+                }
+                else
+                {
+                    sMediaInfoCache.Remove( (KeyForVideo( video ), true), out var currValue );
+                }
+            }
+
             var retVal = new MediaInfo();
             retVal.aOK = false;
 
@@ -28,8 +63,7 @@ namespace Statistics2026.Utilities
             retVal.IsTVSpecial = isTVSpecial( video );
             retVal.SeriesId = seriesId( video );
             retVal.RunTimeTicks = video.RunTimeTicks ?? 0;
-
-            retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
+            retVal.DateItemModified = video.DateModified;
 
             if( video is Episode episode )
             {
@@ -37,7 +71,7 @@ namespace Statistics2026.Utilities
                 if( episode.Series != null )
                 {
                     retVal.SortName = episode.Series.SortName + " - " + episode.SortName;
-                    retVal.SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series );
+                    retVal.SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series, logger );
                     if( retVal.PremiereDate == null && episode.Series.PremiereDate.HasValue )
                     {
                         retVal.PremiereDate = episode.Series.PremiereDate.Value;
@@ -48,15 +82,35 @@ namespace Statistics2026.Utilities
             {
                 retVal.ListDisplayName = retVal.PrimaryName;
             }
+            retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
+
+            if( retVal.aOK )
+            {
+                sMediaInfoCache[ (KeyForVideo( video ), true) ] = retVal;
+            }
 
             return retVal;
         }
 
         public static async Task<MediaInfo> CreateAsync( ILogger logger, Video video, bool createMinimal = false )
         {
-            var retVal = CreateMinimal( video );
+            if( sMediaInfoCache.TryGetValue( (KeyForVideo(video), false), out MediaInfo value ) )
+            {
+                if( !OutOfDate( video, value ) )
+                {
+                    return value;
+                }
+                sMediaInfoCache.Remove( (KeyForVideo( video ), false), out var currValue );
+            }
+
+            var retVal = CreateMinimal( logger, video, createMinimal );
             if( createMinimal )
                 return retVal;
+
+            if( retVal.aOK )
+            {
+                sMediaInfoCache[ (KeyForVideo( video ), false) ] = retVal;
+            }
 
             var mediaStream = video.GetMediaStreams().FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
             if( !mediaStream?.Width.HasValue ?? true )
@@ -332,7 +386,8 @@ namespace Statistics2026.Utilities
         public long TotalBitrate { get; set; } = 0;
         public DateTimeOffset? PremiereDate { get; set; } = null;
         public DateTimeOffset? DateAdded { get; set; } = null;
-        public bool aOK = false;
+        public bool aOK { get; set; } = false;
+        public DateTimeOffset DateItemModified { get; set; } = DateTimeOffset.MinValue;
         private bool _disposed = false;
 
     }
