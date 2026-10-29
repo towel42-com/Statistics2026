@@ -484,20 +484,5 @@ namespace Statistics2026.Utilities
 
             return (columnMissing, tableNeedsData);
         }
-
-        static public SQLCmdDef CreateSQLCmdDef( string sql, string paramListName, List<object> paramList )
-        {
-            var placeHolderNames = string.Join( ", ", paramList.Select( ( _, index ) => $"@p{index}" ).ToArray() );
-
-            var sqlDefParams = new List<(string name, object? value)>();
-            for( int ii = 0; ii < paramList.Count; ++ii )
-            {
-                sqlDefParams.Add( ($"@p{ii}", paramList[ ii ]) );
-            }
-
-            sql = sql.Replace( paramListName, placeHolderNames );
-            var retVal = new SQLCmdDef( sql, sqlDefParams );
-            return retVal;
-        }
     }
 }
