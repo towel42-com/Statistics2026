@@ -10,10 +10,6 @@ define(function () {
             console.error("database_status failed:", errorMessage);
         });
 
-        if (response.LastUpdated === undefined) {
-            showInfo("No configuration found, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
-            return false;
-        }
         if (response.DBStateOK == false) {
             showInfo("The database has not been initialized, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
             return false;

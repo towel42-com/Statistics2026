@@ -52,13 +52,11 @@ namespace Statistics2026.Api
         public GetDatabaseStatusReponse( PluginConfiguration config )
         {
             BuildDate = config.BuildDate;
-            LastUpdated = config.LastUpdated;
             Version = config.Version;
             DBStateOK = Plugin.Instance?.IsDBStateSet( EDBState.eFullyInitialized ) ?? false;
             DBState = Plugin.Instance?.DBStateString() ?? EDBState.eEmpty.ToPrettyString();
         }
         public string BuildDate { get; set; } = string.Empty;
-        public string LastUpdated { get; set; } = string.Empty;
         public string Version { get; set; } = string.Empty;
         public string DBState { get; set; } = string.Empty;
         public bool DBStateOK { get; set; } = false;
