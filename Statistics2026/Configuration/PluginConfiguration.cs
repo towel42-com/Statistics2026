@@ -1,5 +1,8 @@
 ﻿using MediaBrowser.Model.Plugins;
+using Statistics2026.Utilities;
 using System.Collections.Generic;
+using System.Reflection;
+using ServiceStack;
 
 namespace Statistics2026.Configuration
 {
@@ -14,6 +17,20 @@ namespace Statistics2026.Configuration
     public class PluginConfiguration : BasePluginConfiguration
     {
         public PluginConfiguration() { }
+
+        public void UpdateBuildDateAndVersionInfo()
+        {
+            var gitHash = Assembly.GetExecutingAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split( '+' ).LastOrDefault() ?? String.Empty;
+            gitHash = gitHash.Length >= 8 ? gitHash[ ..8 ] : gitHash;
+            if( !gitHash.IsEmpty() )
+                gitHash = "+" + gitHash;
+
+            var now = DateTimeOffset.UtcNow;
+            LastUpdated = HelperFuncs.ToDateTimeParamValue( now )!;
+            Version = Plugin.Instance?.Version.ToString( 4 ) + gitHash ?? "<UNKNOWN>";
+            BuildDate = HelperFuncs.ToDateTimeParamValue( BuildDateInfo.GetBuildDate() )!;
+            Plugin.Instance?.UpdateConfiguration( this );
+        }
 
         public string BuildDate { get; set; } = string.Empty;
         public string LastUpdated { get; set; } = string.Empty;

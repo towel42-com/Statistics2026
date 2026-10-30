@@ -2,6 +2,7 @@
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
 using MediaBrowser.Model.Logging;
+using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
@@ -41,6 +42,7 @@ namespace Statistics2026.Data
             {
                 var retVal = new StatisticsDB( embyInterfaces );
                 embyInterfaces.Logger().Debug( "Statistics2026 : New Instance Created : " + retVal.GetHashCode() );
+                Plugin.Instance?.Configuration.UpdateBuildDateAndVersionInfo();
                 return retVal;
             }
         }

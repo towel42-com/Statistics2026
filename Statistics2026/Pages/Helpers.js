@@ -11,7 +11,7 @@ define(function () {
         });
 
         if (response.DBStateOK == false) {
-            showInfo("The database has not been initialized, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "No Configuration Found");
+            showInfo("The database has not been initialized or is not finalized, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "Incomplete or Missing Database");
             return false;
         }
         return true;

@@ -11,6 +11,7 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
+using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Data;
@@ -20,6 +21,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -88,18 +90,12 @@ namespace Statistics2026.ScheduledTasks
                 throw new ArgumentNullException( nameof( PluginConfiguration ) );
 
             var db = StatisticsDB.GetInstance( _embyInterfaces );
-            
+
             db.Initialize( this, cancellationToken, progress, PluginConfiguration.resetPlayCount );
             cancellationToken.ThrowIfCancellationRequested();
 
             var taskName = "Analyze All";
             _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
-            var now = DateTimeOffset.UtcNow;
-
-            PluginConfiguration.LastUpdated = HelperFuncs.ToDateTimeParamValue( now )!;
-            PluginConfiguration.Version = Plugin.Instance?.Version.ToString( 4 ) ?? "<UNKNOWN>";
-            PluginConfiguration.BuildDate = HelperFuncs.ToDateTimeParamValue( BuildDateInfo.GetBuildDate() )!;
-            Plugin.Instance?.UpdateConfiguration( PluginConfiguration );
 
             db.ClearLastUpdated( StatisticsDB.EAction.System );
 
