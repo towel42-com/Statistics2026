@@ -71,7 +71,7 @@ namespace Statistics2026.ScheduledTasks
 
         string IScheduledTask.Category => "Statistics 2026";
 
-        Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
+        async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
             {
@@ -88,7 +88,7 @@ namespace Statistics2026.ScheduledTasks
             long analyzeMissingEpisodes = 0;
             using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces.Logger() ) )
             {
-                db.AnalyzeMissingEpisodesTaskImpl( cancellationToken, progress ).ConfigureAwait( false ).GetAwaiter().GetResult();
+                await db.AnalyzeMissingEpisodesTaskImpl( cancellationToken, progress ).ConfigureAwait( false );
                 analyzeMissingEpisodes = timer.ElapsedMilliseconds();
             }
 
@@ -102,7 +102,6 @@ namespace Statistics2026.ScheduledTasks
             db.UpdateLastUpdated( StatisticsDB.EAction.MissingEpisodesAnalysis, analyzeMissingEpisodes );
 
             db.ResetCancellationToken();
-            return Task.CompletedTask;
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

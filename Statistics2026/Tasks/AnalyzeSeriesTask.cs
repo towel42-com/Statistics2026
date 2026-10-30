@@ -72,7 +72,7 @@ namespace Statistics2026.ScheduledTasks
 
         string IScheduledTask.Category => "Statistics 2026";
 
-        Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
+        async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
             {
@@ -88,7 +88,7 @@ namespace Statistics2026.ScheduledTasks
             long addSeries = 0;
             using( var timer = new AutoTimer( $"Adding All Series", _embyInterfaces.Logger() ) )
             {
-                db.AddAllSeriesTaskImpl().GetAwaiter().GetResult();
+                await db.AddAllSeriesTaskImpl();
                 addSeries = timer.ElapsedMilliseconds();
             }
 
@@ -102,7 +102,6 @@ namespace Statistics2026.ScheduledTasks
             db.UpdateLastUpdated( StatisticsDB.EAction.SeriesAnalysis, addSeries );
 
             db.ResetCancellationToken();
-            return Task.CompletedTask;
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

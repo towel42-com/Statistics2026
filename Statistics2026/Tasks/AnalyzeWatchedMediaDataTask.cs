@@ -72,7 +72,7 @@ namespace Statistics2026.ScheduledTasks
 
         string IScheduledTask.Category => "Statistics 2026";
 
-        Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
+        async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
             if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
             {
@@ -89,7 +89,7 @@ namespace Statistics2026.ScheduledTasks
             long addUsers = 0;
             using( var timer = new AutoTimer( $"Adding User Watch Data", _embyInterfaces.Logger() ) )
             {
-                db.AnalyzeWatchedMediaDataTaskImpl();
+                await db.AnalyzeWatchedMediaDataTaskImpl();
                 addUsers = timer.ElapsedMilliseconds();
                 cancellationToken.ThrowIfCancellationRequested();
             }
@@ -103,8 +103,6 @@ namespace Statistics2026.ScheduledTasks
 
             db.ResetCancellationToken();
             Plugin.Instance?.AddDBState( EDBState.eUserTablesCreated );
-
-            return Task.CompletedTask;
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

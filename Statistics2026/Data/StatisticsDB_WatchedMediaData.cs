@@ -14,7 +14,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async void AnalyzeWatchedMediaDataTaskImpl()
+        public async Task AnalyzeWatchedMediaDataTaskImpl()
         {
             CheckIsValid( ECheckType.eUpdate );
 
