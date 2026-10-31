@@ -54,14 +54,12 @@ namespace Statistics2026.Data
                 existing.Add( video.Id.ToString(), true );
                 paramList.Add( video.Id.ToString() );
 
-                await using( var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false ) )
-                {
-                    if( !mediaInfo.aOK )
-                        continue;
+                var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
+                if( !mediaInfo.aOK )
+                    continue;
 
-                    sqlCmds.AddRange( AddMediaInfo( mediaInfo ) );
-                    _embyInterfaces!.Logger().Debug( $"    Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
-                }
+                sqlCmds.AddRange( AddMediaInfo( mediaInfo ) );
+                _embyInterfaces!.Logger().Debug( $"    Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
 
                 _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
             }

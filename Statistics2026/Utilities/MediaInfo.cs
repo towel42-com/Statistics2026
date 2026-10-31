@@ -9,10 +9,11 @@ using System.Linq;
 
 namespace Statistics2026.Utilities
 {
-    public class MediaInfo : IAsyncDisposable
+    public class MediaInfo
     {
         public MediaInfo() { }
-        public static async Task<MediaInfo> CreateAsync( ILogger logger, Video video )
+
+        public static MediaInfo Create( ILogger logger, Video video )
         {
             var retVal = new MediaInfo();
             retVal.aOK = false;
@@ -72,11 +73,10 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                retVal.StreamingServices = await streamingServices( logger, video );
                 retVal.ListDisplayName = retVal.PrimaryName;
             }
 
-            if ( retVal.PremiereDate == null )
+            if( retVal.PremiereDate == null )
             {
                 BaseItem curr = video;
                 while( curr != null && curr.PremiereDate == null )
@@ -95,16 +95,16 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public async ValueTask DisposeAsync()
+        public static async Task<MediaInfo> CreateAsync( ILogger logger, Video video )
         {
-            if( !_disposed )
+            var retVal = Create( logger, video );
+            if ( !retVal.IsEpisode )
             {
-                await Task.Delay( 5 ).ConfigureAwait( false );
-                _disposed = true;
+                retVal.StreamingServices = await streamingServices( logger, video );
             }
-            GC.SuppressFinalize( this );
+            return retVal;
         }
-        
+
         public static string[] studioNames( Video video )
         {
             var retVal = video.Studios;
@@ -327,7 +327,5 @@ namespace Statistics2026.Utilities
         public DateTimeOffset? PremiereDate { get; set; } = null;
         public DateTimeOffset? DateAdded { get; set; } = null;
         public bool aOK = false;
-        private bool _disposed = false;
-
     }
 }
