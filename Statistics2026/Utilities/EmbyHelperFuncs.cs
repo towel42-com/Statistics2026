@@ -9,6 +9,7 @@ using MediaBrowser.Model.Querying;
 using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Data;
+using Statistics2026.Secrets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -23,6 +24,101 @@ namespace Statistics2026.Utilities
 {
     public static class EmbyHelperFuncs
     {
+        public static void AttachDebugger()
+        {
+#if DEBUG
+            // Check if a debugger is already attached
+            if( !Debugger.IsAttached )
+            {
+                // This forces the server startup thread to halt and pop up a
+                // "Choose Just-In-Time Debugger" window or wait for an attachment
+                Debugger.Launch();
+            }
+            else
+            {
+                // If already attached, instantly trigger a breakpoint break
+                Debugger.Break();
+            }
+#endif
+        }
+
+
+        public static void MoveMediaLocations( EmbyInterfaces embyInterfaces )
+        {
+#if DEBUG
+            if( !Debugger.IsAttached )
+            {
+                AttachDebugger();
+            }
+
+            var query = new InternalItemsQuery
+            {
+                IsVirtualItem = false,
+                Recursive = true
+            };
+
+            BaseItem[] allItems = embyInterfaces.LibraryManager().GetItemList( query );
+
+            var items = allItems.Where( item =>
+                   DBLocation.isOldLocation(item.Path)
+                || ( item.ImageInfos != null && item.ImageInfos.Any( imageInfo => DBLocation.isOldLocation( imageInfo.Path ) ) )
+            ).ToList();
+
+            var numModified = 0;
+            for( var ii = 0; ii < items.Count(); ++ii )
+            {
+                if( ( ii % 1000 ) == 0 )
+                {
+                    embyInterfaces.Logger().Debug( $"Updating Library paths from network {ii} of {items.Count()} - {numModified} modified" );
+                }
+
+                var item = items[ ii ];
+                if( item == null )
+                    continue;
+
+                var isModified = false;
+                if( DBLocation.isOldLocation( item.Path ) )
+                {
+                    numModified++;
+                    item.Path = DBLocation.updateLocation( item.Path );
+                    isModified = true;
+                }
+                var allImageInfos = item.ImageInfos;
+                var numImageModified = 0;
+                for( int jj = 0; jj < allImageInfos.Count(); ++jj )
+                {
+                    var imageInfo = allImageInfos[ jj ];
+                    if( imageInfo == null )
+                        continue;
+
+                    if( DBLocation.isOldLocation( imageInfo.Path ) )
+                    {
+                        numImageModified++;
+                        imageInfo.Path = DBLocation.updateLocation( item.Path );
+                        item.SetImage( imageInfo, 0 );
+                        allImageInfos[ jj ] = imageInfo;
+                    }
+                }
+                if( numImageModified != 0 )
+                {
+                    numModified += numImageModified;
+                    item.ImageInfos = allImageInfos;
+                    isModified = true;
+                }
+
+                if( isModified )
+                {
+                    embyInterfaces.LibraryManager().UpdateItem(
+                        item,
+                        item.GetParent(),
+                        ItemUpdateType.None,
+                        null
+                    );
+                }
+            }
+#endif
+        }
+
         public static List<T> GetLibraryItems<T>( User? user, ILibraryManager libManager, bool getImages = true )
         {
             if( libManager == null )
@@ -58,7 +154,7 @@ namespace Statistics2026.Utilities
                 Recursive = true,
                 IsVirtualItem = false
             };
-            query.DtoOptions = new DtoOptions( true ) 
+            query.DtoOptions = new DtoOptions( true )
             {
                 ImageTypes = new[] { ImageType.Thumb, ImageType.Thumbnail },
                 EnableImages = true
