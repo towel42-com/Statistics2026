@@ -26,30 +26,13 @@ namespace Statistics2026.Api
             }
         }
 
-        public object Get( GetLastRun request )
+        public object Get( GetLastRunInfo request )
         {
             return HandleRequest( "GetLastRun", timer =>
             {
                 using var db = StatisticsDB.GetInstance( _embyInterfaces );
 
-                string retVal = "<table><tbody>";
-                var whichRuns = request.whichRuns.Split( ',' );
-
-                foreach( var whichRun in whichRuns )
-                {
-                    retVal += $"<tr><td>";
-                    if( Enum.TryParse( whichRun, true, out StatisticsDB.EAction whichRunEnum ) )
-                    {
-                        retVal += db.GetLastRunInfo( whichRunEnum );
-                    }
-                    else
-                    {
-                        retVal += $"Unknown run type <b>${whichRun}</b>";
-                    }
-                    retVal += "</td></tr>";
-                }
-                retVal += "</tbody></table>";
-                return new HtmlJsonResponse() { html = retVal };
+                return db.GetLastRunsInfo( request.whichRuns );
             } );
         }
 

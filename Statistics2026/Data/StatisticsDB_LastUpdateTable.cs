@@ -1,4 +1,5 @@
-﻿using Statistics2026.Api;
+﻿using MediaBrowser.Model.Services;
+using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
@@ -34,6 +35,55 @@ namespace Statistics2026.Data
                 return false;
             } );
             return lastUpdated;
+        }
+
+        public HtmlJsonResponse GetLastRunsInfo( string whichRuns ) // comma separated list
+        {
+
+            var list = whichRuns.Split( ',' );
+            string retVal = string.Empty;
+            var depth = 0;
+            
+            retVal += StatCardResponse._addToHtml( depth++, "<table>" );
+            retVal += StatCardResponse._addToHtml( depth++, "<tbody>" );
+
+            if( list.Length == 1 && list[ 0 ] == "All" )
+            {
+                list = new[]
+                    {
+                        EAction.System.ToString(),
+                        EAction.CollectionsAnalysis.ToString(),
+                        EAction.MediaAnalysis.ToString(),
+                        EAction.MissingEpisodesAnalysis.ToString(),
+                        EAction.MissingMoviesAnalysis.ToString(),
+                        EAction.SeriesAnalysis.ToString(),
+                        EAction.UserAnalysis.ToString(),
+                        EAction.UserWatchDataAnalysis.ToString(),
+                        EAction.LastMediaOrUserAdded.ToString()
+                    };
+            }
+
+            foreach( var whichRun in list )
+            {
+                retVal += StatCardResponse._addToHtml( depth, "<tr><td>" + GetLastRunInfo( whichRun ) + "</td></tr>" );
+            }
+
+            retVal += StatCardResponse._addToHtml( --depth, "<table>" );
+            retVal += StatCardResponse._addToHtml( --depth, "<tbody>" );
+
+            return new HtmlJsonResponse() { html = retVal };
+        }
+
+        public string GetLastRunInfo( string actionString )
+        {
+            if( Enum.TryParse( actionString, true, out StatisticsDB.EAction whichRunEnum ) )
+            {
+                return GetLastRunInfo( whichRunEnum );
+            }
+            else
+            {
+                return $"Unknown run type <b>${actionString}</b>";
+            }
         }
 
         public string GetLastRunInfo( EAction action )
