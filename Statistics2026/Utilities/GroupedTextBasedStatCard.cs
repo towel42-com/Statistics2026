@@ -91,7 +91,7 @@ namespace Statistics2026.Utilities
 
         override public string GetDataString( int depth )
         {
-            if( ListType != EListType.eNumbered && ListType != EListType.eUnordered )
+            if( ( ListType != EListType.eNumbered ) && ( ListType != EListType.eUnordered ) )
             {
                 throw new Exception( "GetDataStringUnordered called for a non-grouped or non-Unordered and non-Numbered list type" );
             }

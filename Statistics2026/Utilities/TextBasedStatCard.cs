@@ -10,9 +10,9 @@ namespace Statistics2026.Utilities
 {
     public enum EListType
     {
-        eTextOnly = 0x01,
-        eUnordered = 0x02,
-        eNumbered = 0x04,
+        eTextOnly,
+        eUnordered,
+        eNumbered
     }
 
     public class TextBasedStatCard : StatCard
@@ -84,17 +84,30 @@ namespace Statistics2026.Utilities
 
         public override string GetDataString( int depth )
         {
-            if( ListType != EListType.eTextOnly )
+            if( ListType != EListType.eTextOnly && ListType != EListType.eNumbered )
             {
-                throw new Exception( "GetDataString called for non text only list type" );
+                throw new Exception( $"GetDataString called for non text only list type - ${ListType}" );
             }
 
             var retVal = string.Empty;
+            if( ListType == EListType.eNumbered )
+            {
+                retVal += StatCardResponse._addToHtml( depth++, "<ol>" );
+            }
 
             for( var ii = 0; ii < ValueLines.Count; ++ii )
             {
                 var html = getDataHtmlForItem( ValueLines[ ii ], string.Empty );
+                if ( ListType == EListType.eNumbered )
+                {
+                    html = $"<li>{html}</li>";
+                }
                 retVal += StatCardResponse._addToHtml( depth, html );
+            }
+
+            if( ListType == EListType.eNumbered )
+            {
+                retVal += StatCardResponse._addToHtml( --depth, "</ol>" );
             }
 
             return retVal;
