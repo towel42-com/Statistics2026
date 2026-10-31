@@ -36,7 +36,7 @@ namespace Statistics2026.Data
             return lastUpdated;
         }
 
-        public HtmlJsonResponse GetLastRunInfo( EAction action )
+        public string GetLastRunInfo( EAction action )
         {
             CheckIsValid( ECheckType.eReport );
 
@@ -79,12 +79,7 @@ namespace Statistics2026.Data
                     titleText = "User Watch Data Analysis";
                     break;
             }
-            var retVal = new HtmlJsonResponse
-            {
-                html = $"Last {titleText} finished at <b>{lastUpdateText}</b>"
-            };
-
-            return retVal;
+            return $"Last {titleText} finished at <b>{lastUpdateText}</b>";
         }
 
         public void ClearLastUpdated( EAction action )

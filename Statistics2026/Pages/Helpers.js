@@ -226,32 +226,19 @@ define(function () {
     };
 
     async function getLastRunInfo(view, whichRuns, div) {
-        const promises = whichRuns.map(whichRun => {
+        var param = whichRuns.join(',');
+        var urlText = `/Statistics2026/last_run?whichRuns=${param}`;
+        console.info("last_run- '" + urlText + "'");
+        var url = ApiClient.getUrl(urlText);
 
-            var urlText = "/emby/Statistics2026/last_run/" + whichRun;
-            console.info("last_run- '" + urlText + "'");
-            var url = ApiClient.getUrl(urlText);
-
-            return ApiClient.getJSON(url).then(response => {
-                return response.html;
-            }).catch(error => {
-                var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
-                console.error("getLastRunInfo failed:", errorMessage);
-                return `<tr><td colspan="2">Error loading ${whichRun} status</td></tr>`;
-            });
+        ApiClient.getJSON(url).then(response => {
+            view.querySelector("#" + div).innerHTML = response.html;
+        }).catch(error => {
+            var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
+            console.error("getLastRunInfo failed:", errorMessage);
+            return `<tr><td colspan="2">Error loading ${whichRun} status</td></tr>`;
         });
 
-        try {
-            const htmlChunks = await Promise.all(promises);
-            let tableHtml = "<table><tbody>";
-            for (const chunk of htmlChunks) {
-                tableHtml += `<tr><td>${chunk}</td></tr>`;
-            }
-            tableHtml += "</tbody></table>";
-            view.querySelector("#" + div).innerHTML = tableHtml;
-        } catch (criticalError) {
-            console.error("Critical error in batch execution:", criticalError);
-        }
     }
 
     function getSummaryInfo(view, whichSummary, user, parameters = "", div = "") {

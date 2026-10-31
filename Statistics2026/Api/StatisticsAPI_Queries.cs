@@ -45,11 +45,11 @@ namespace Statistics2026.Api
         public int max_season { get; set; } = -1;
     }
 
-    [Route( "/Statistics2026/last_run/{WhichRun}", "GET", Summary = "Returns the last time the analysis for run was finished" )]
+    [Route( "/Statistics2026/last_run", "GET", Summary = "Returns the last time the analysis for run was finished" )]
     [Authenticated( Roles = "admin" )]
     public class GetLastRun : IReturn<object>
     {
-        public string WhichRun { get; set; } = string.Empty;
+        public string whichRuns { get; set; } = string.Empty;
     }
 
     [Route( "/Statistics2026/codec_summary", "GET", Summary = "Gets Codec Summary for Library" )]
