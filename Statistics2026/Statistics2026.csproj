@@ -67,6 +67,14 @@
 			<_Parameter1>TMDB_API_KEY_V4</_Parameter1>
 			<_Parameter2>$(TmdbApiKeyV4)</_Parameter2>
 		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>OLD_SERVER_LOCATION</_Parameter1>
+			<_Parameter2>$(OldServerLocation)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>NEW_SERVER_LOCATION</_Parameter1>
+			<_Parameter2>$(NewServerLocation)</_Parameter2>
+		</AssemblyAttribute>
 	</ItemGroup>
 
 	<ItemGroup>
