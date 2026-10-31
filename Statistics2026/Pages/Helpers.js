@@ -8,13 +8,31 @@ define(function () {
         let response = await ApiClient.getJSON(url).catch(error => {
             var errorMessage = "'" + error + "' - '" + urlText + "'";
             console.error("database_status failed:", errorMessage);
+            return false;
         });
 
-        if (response.DBStateOK == false) {
-            showInfo("The database has not been initialized or is not finalized, please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.", "Incomplete or Missing Database");
-            return false;
+        if (!response.DBStateOK) {
+            let errorMessage = "";
+            let dbLastRunHtml = "";
+
+            dbLastRunHtml = await getLastRunInfo("Any").catch(error => {
+                errorMessage = `'${error}'`;
+                console.error("getLastRunInfo failed:", errorMessage);
+            });
+
+            let message =
+                `<div>The database has not been initialized or is not finalized,</div>
+                 <div>please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.</div>
+                 <div>${dbLastRunHtml}</div>`
+                ;
+
+            if (errorMessage != "")
+                message += `<div>${errorMessage}</div>`;
+
+            let title = "Incomplete or Missing Database";
+            showInfo(message, title);
         }
-        return true;
+        return response.DBStateOK;
     }
 
     if (!String.prototype.endsWith2) {
@@ -225,20 +243,24 @@ define(function () {
         });
     };
 
-    async function getLastRunInfo(view, whichRuns, div) {
+    async function getLastRunInfo(whichRuns) {
         var param = whichRuns.join(',');
-        var urlText = `/Statistics2026/last_run?whichRuns=${param}`;
-        console.info("last_run- '" + urlText + "'");
+        var urlText = `/Statistics2026/last_run_info?whichRuns=${param}`;
+        console.info("last_run_info - '" + urlText + "'");
         var url = ApiClient.getUrl(urlText);
 
-        ApiClient.getJSON(url).then(response => {
+        let response = await ApiClient.getJSON(url);
+        return response;
+    }
+
+    async function insertGetLastRunInfo(view, whichRuns, div) {
+        getLastRunInfo(whichRuns).then(response => {
             view.querySelector("#" + div).innerHTML = response.html;
         }).catch(error => {
             var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
-            console.error("getLastRunInfo failed:", errorMessage);
-            return `<tr><td colspan="2">Error loading ${whichRun} status</td></tr>`;
+            console.error("insertGetLastRunInfo failed:", errorMessage);
+            view.querySelector("#" + div).innerHTML = `<tr><td colspan="2">Error loading ${whichRuns} status</td></tr>`;
         });
-
     }
 
     function getSummaryInfo(view, whichSummary, user, parameters = "", div = "") {
@@ -457,6 +479,12 @@ define(function () {
     }
 
     function showInfo(_text, _title) {
+        dialogs.alert({
+            title: _title,
+            text: _text,
+            html: true // Tells the local UI engine to parse it as HTML
+        });
+
         ApiClient.getJSON(ApiClient.getUrl('Sessions'))
             .then((sessions) => {
                 // 2. Find the session that matches this browser's unique Device ID
@@ -679,6 +707,7 @@ define(function () {
         getStatistics2026Data,
         getSummaryInfo,
         getLastRunInfo,
+        insertGetLastRunInfo,
         getTabIndex,
         initCollapsibleTable,
         injectStyleSheet,

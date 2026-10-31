@@ -38,7 +38,7 @@
                         view.querySelector(`input[name="${filterId}"][value="All"]`).checked = true;
                     }
 
-                    Helpers.getLastRunInfo(view, lastRunArray, "lastRunInfo");
+                    Helpers.insertGetLastRunInfo(view, lastRunArray, "lastRunInfo");
                     loadTableData();
                 });
             });
