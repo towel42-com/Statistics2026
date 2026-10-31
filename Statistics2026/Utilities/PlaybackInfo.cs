@@ -161,7 +161,7 @@ namespace Statistics2026.Utilities
 
         public void LoadPlaybackState( EmbyInterfaces embyInterfaces )
         {
-            var db = StatisticsDB.GetInstance( embyInterfaces );
+            using var db = StatisticsDB.GetInstance( embyInterfaces );
 
             var totalTicksPlayed = db.GetTotalTicksPlayed( UserId, ItemId );
 
@@ -185,7 +185,7 @@ namespace Statistics2026.Utilities
                 return;
 
             TotalTicksPlayed += SessionCurrTickPos.Value - SessionStartTickPos.Value;
-            var db = StatisticsDB.GetInstance( embyInterfaces );
+            using var db = StatisticsDB.GetInstance( embyInterfaces );
             db.UpdateTotalTicksPlayed( UserId, ItemId, TotalTicksPlayed );
 
             SessionStartTickPos = SessionCurrTickPos;

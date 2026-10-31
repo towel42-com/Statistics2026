@@ -94,14 +94,13 @@ namespace Statistics2026.Utilities
             CreateConnection( newFileName );
         }
 
-
-        ~DBHelper()
+        public void CloseConnection()
         {
-            _embyInterfaces?.Logger().Debug( "Statistics2026 : Cleaning up" );
+            _embyInterfaces?.Logger().Debug( "Cleaning up" );
             if( Connection != null )
             {
                 Connection.Close();
-                _embyInterfaces?.Logger().Debug( "Statistics2026 : DB Connection Closed" );
+                _embyInterfaces?.Logger().Debug( $"DB Connection Closed : {Connection.GetHashCode()}" );
             }
         }
 
@@ -301,7 +300,7 @@ namespace Statistics2026.Utilities
             }
 
             Connection = db;
-            _embyInterfaces!.Logger().Debug( "ConnectionCreated : " + Connection.GetHashCode() );
+            _embyInterfaces!.Logger().Debug( "Connection Created : " + Connection.GetHashCode() );
         }
 
         public bool ColumnExists( string tableName, string columnName )

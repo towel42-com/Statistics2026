@@ -89,7 +89,7 @@ namespace Statistics2026.ScheduledTasks
             if( PluginConfiguration == null )
                 throw new ArgumentNullException( nameof( PluginConfiguration ) );
 
-            var db = StatisticsDB.GetInstance( _embyInterfaces );
+            using var db = StatisticsDB.GetInstance( _embyInterfaces );
 
             db.Initialize( this, cancellationToken, progress, PluginConfiguration.resetPlayCount );
             cancellationToken.ThrowIfCancellationRequested();

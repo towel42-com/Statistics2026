@@ -81,7 +81,7 @@ namespace Statistics2026.ScheduledTasks
             var taskName = "Analyze Media";
             _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
-            var db = StatisticsDB.GetInstance( _embyInterfaces );
+            using var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( StatisticsDB.EAction.MediaAnalysis );
 

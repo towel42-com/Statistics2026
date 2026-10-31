@@ -76,7 +76,7 @@ namespace Statistics2026.ScheduledTasks
             if( _embyInterfaces == null || TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
                 return Task.CompletedTask;
 
-            var db = StatisticsDB.GetInstance( _embyInterfaces );
+            using var db = StatisticsDB.GetInstance( _embyInterfaces );
             db.Initialize( null, cancellationToken, progress, false );
 
             var currLogger = _embyInterfaces.Logger();

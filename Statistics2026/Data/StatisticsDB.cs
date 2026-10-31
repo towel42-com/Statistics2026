@@ -18,8 +18,9 @@ namespace Statistics2026.Data
         eEpisode
     }
 
-    public sealed partial class StatisticsDB
+    public sealed partial class StatisticsDB : IDisposable
     {
+        private bool _disposed = false;
         private static readonly object _padlock = new();
         private readonly Dictionary<string, TableDef> _tableMap = [];
         private List<TableDef> _tableList = [];
@@ -41,15 +42,10 @@ namespace Statistics2026.Data
             lock( _padlock )
             {
                 var retVal = new StatisticsDB( embyInterfaces );
-                embyInterfaces.Logger().Debug( "Statistics2026 : New Instance Created : " + retVal.GetHashCode() );
+                embyInterfaces.Logger().Debug( "New Instance Created : " + retVal.GetHashCode() );
                 Plugin.Instance?.Configuration.UpdateBuildDateAndVersionInfo();
                 return retVal;
             }
-        }
-
-        private StatisticsDB()
-        {
-            ConstructTableList();
         }
 
         private StatisticsDB( EmbyInterfaces embyInterfaces )
@@ -59,20 +55,38 @@ namespace Statistics2026.Data
 
             ConstructTableList();
 
-            embyInterfaces.Logger().Debug( "Statistics2026 : Creating Database" );
+            embyInterfaces.Logger().Debug( "Creating Database" );
 
             _embyInterfaces = embyInterfaces;
             _dbHelper = new DBHelper( _embyInterfaces );
 
-            embyInterfaces.Logger().Debug( "Statistics2026 : Finished Creating Database" );
+            embyInterfaces.Logger().Debug( "Finished Creating Database" );
             lock( _padlock )
             {
                 ComputeDBState();
             }
         }
 
+        public void Dispose()
+        {
+            Dispose( true );
+            GC.SuppressFinalize( this );
+        }
+
         ~StatisticsDB()
         {
+            Dispose( false );
+        }
+
+        void Dispose( bool disposing )
+        {
+            if( _disposed )
+                return;
+            if( disposing )
+            {
+                _dbHelper.CloseConnection();
+            }
+            _disposed = true;
         }
 
         public ILogger Logger()
