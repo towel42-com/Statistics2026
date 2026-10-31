@@ -69,6 +69,10 @@ namespace Statistics2026
                 _userManager = userManager,
                 _apiService = apiService
             };
+
+#if DEBUG
+            EmbyHelperFuncs.MoveMediaLocations( _embyInterfaces );
+#endif
         }
 
         public IEnumerable<PluginPageInfo> GetPages()
