@@ -187,6 +187,10 @@ namespace Statistics2026.Data
                 HashSet<string> tableNameSet = [];
                 foreach( var user in users ?? [] )
                 {
+#if DEBUG
+                    if( user.Name != "scott" )
+                        continue;
+#endif
                     var tableName = getUserTableName( user );
                     tableNameSet.Add( tableName );
                 }
@@ -221,6 +225,7 @@ namespace Statistics2026.Data
             return $"{sUserMediaTablePrefix}{userId}";
         }
 
+#if DEBUG
         private readonly Dictionary<string, (bool hit, int playCount)> _baseCount = new()
                         {
                             { "Rocky", ( false, 100 ) },
@@ -279,9 +284,14 @@ namespace Statistics2026.Data
 
             ResetMapFixed = true;
         }
+#endif
 
-        private void ValidateResetMapResults()
+        private void ValidateResetMapResults( User user )
         {
+#if DEBUG
+            if( user == null || user.Name != "scott" )
+                return;
+
             _ = Statistics2026.Plugin.Instance!.Configuration;
             foreach( var curr in _baseCount )
             {
@@ -290,35 +300,13 @@ namespace Statistics2026.Data
                     _embyInterfaces!.Logger().Warn( $"Video {curr.Key} not hit for scott" );
                 }
             }
+#endif
         }
 
-        private void ResetPlayCount( User user, Video video, ref bool isPlayed, ref int playCount )
+        private (bool isCustomUser, bool justReturn ) CustomResetForUser( Video video, User user, int playCount, ref int? newPlayCount, bool isPlayed, ref bool? newIsPlayed, bool isFavorite, ref bool? newFavorite )
         {
-            CheckIsValid( ECheckType.eUpdate );
-
-            FixResetMap();
-
-            bool? newIsPlayed = null;
-            int? newPlayCount = null;
-            DateTimeOffset? newLastPlayedDate = null;
-            bool? newHideFromResume = null;
-            bool? newFavorite = null;
-            var updateLastPlayedDate = false;
-
-            var userData = UserDataManager().GetUserData( user, video );
-            if( userData == null )
-                return;
-
-            if( user.Policy.IsAdministrator )
-            {
-                newIsPlayed = true;
-                newPlayCount = 0;
-                newLastPlayedDate = null;
-                updateLastPlayedDate = true;
-                newHideFromResume = true;
-                newFavorite = false;
-            }
-            else if( user.Name == "scott" )
+#if DEBUG
+            if( user.Name == "scott" )
             {
                 var name = video!.Name;
                 if( video is Episode episode )
@@ -342,17 +330,9 @@ namespace Statistics2026.Data
 
                     newFavorite = false;
                 }
+                return (true, false);
             }
-            else
-            {
-                if( playCount > 0 && !isPlayed )
-                {
-                    newIsPlayed = true;
-                    newPlayCount = 1;
-                }
-            }
-
-            if( user.Name == "amy" )
+            else if( user.Name == "amy" )
             {
                 var name = video!.Name;
                 if( video is Episode episode )
@@ -367,7 +347,58 @@ namespace Statistics2026.Data
                 }
                 else if( name.StartsWith( "Outlander" ) )
                 {
+                    return (true, true);
+                }
+                return (true, false);
+            }
+#endif
+            return (false, false);
+        }
+
+        private void ResetPlayCount( User user, Video video, ref bool isPlayed, ref int playCount, ref bool isFavorite )
+        {
+            CheckIsValid( ECheckType.eUpdate );
+
+#if DEBUG
+            FixResetMap();
+#endif
+
+            bool? newIsPlayed = null;
+            int? newPlayCount = null;
+            DateTimeOffset? newLastPlayedDate = null;
+            bool? newHideFromResume = null;
+            bool? newFavorite = null;
+            var updateLastPlayedDate = false;
+
+            var userData = UserDataManager().GetUserData( user, video );
+            if( userData == null )
+                return;
+
+            if( user.Policy.IsAdministrator )
+            {
+                newIsPlayed = true;
+                newPlayCount = 0;
+                newLastPlayedDate = null;
+                updateLastPlayedDate = true;
+                newHideFromResume = true;
+                newFavorite = false;
+            }
+            else
+            {
+                var (isCustom, justReturn) = CustomResetForUser( video, user, playCount, ref newPlayCount, isPlayed, ref newIsPlayed, isFavorite, ref newFavorite );
+
+                if( justReturn )
+                {
                     return;
+                }
+
+                if ( !isCustom )
+                { 
+                    if( playCount > 0 && !isPlayed )
+                    {
+                        newIsPlayed = true;
+                        newPlayCount = 1;
+                    }
                 }
             }
 
@@ -509,7 +540,7 @@ namespace Statistics2026.Data
                       "( ( TotalTicksPlayed IS NULL ) OR ( TotalTicksPlayed == 0 ) ) "
                       ;
             }
-
+            var count = 0;
             foreach( var video in allVideosForUser )
             {
                 if( video == null )
@@ -517,19 +548,19 @@ namespace Statistics2026.Data
 
                 var isPlayed = video.Played;
                 var playCount = video.PlayCount;
+                var isFavorite = video.IsFavorite;
 
                 if( config.resetPlayCount )
-                    ResetPlayCount( user, video, ref isPlayed, ref playCount );
+                    ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
                 var lastPlayedDate = video?.LastPlayedDate ?? null;
 
-                await using( var mediaInfo = await MediaInfo.CreateAsync( Logger(), video! ) )
-                {
-                    if( !mediaInfo.aOK )
-                        continue;
+                var mediaInfo = MediaInfo.Create( Logger(), video! );
+                if( !mediaInfo.aOK )
+                    continue;
 
-                    sqlCmds.Add( new SQLCmdDef( sql,
-                        [
-                            ( "@UserId", user.Id.ToString()),
+                sqlCmds.Add( new SQLCmdDef( sql,
+                    [
+                        ( "@UserId", user.Id.ToString()),
                             ( "@ItemId", video?.Id.ToString() ?? string.Empty),
                             ( "@Name", mediaInfo.PrimaryName),
                             ( "@IsEpisode", mediaInfo.IsEpisode),
@@ -540,8 +571,9 @@ namespace Statistics2026.Data
                             ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null )),
                             ( "@SeriesId", mediaInfo.SeriesId),
                             ( "@RunTimeTicks", mediaInfo.RunTimeTicks )
-                        ] ) );
-                }
+                    ] ) );
+
+                Logger().Debug( $"Processed watch information for user: '{user.Name}' - Video: '{mediaInfo.DescriptiveName}' - {++count} of {allVideosForUser.Count}" );
             }
 
             if( config.resetPlayCount )
@@ -555,8 +587,7 @@ namespace Statistics2026.Data
                     ;
                 sqlCmds.Add( new SQLCmdDef( sqlUpdateTicks ) );
 
-                if( user.Name == "scott" )
-                    ValidateResetMapResults();
+                ValidateResetMapResults( user );
             }
 
             return sqlCmds;
@@ -1047,20 +1078,14 @@ namespace Statistics2026.Data
                 if( pos != -1 )
                     sqlPlayed = sqlPlayed.Insert( pos, joinClause + " " );
 
-                var sqlAtoB = sqlTicks + " EXCEPT " + sqlPlayed;
-                sqlAtoB = sqlAtoB.Replace( "COUNT(*)", fields );
+                var ticksNotPlayed = sqlTicks + " EXCEPT " + sqlPlayed;
+                ticksNotPlayed = ticksNotPlayed.Replace( "COUNT(*)", fields );
 
-                var sqlBtoA = sqlPlayed + " EXCEPT " + sqlTicks;
-                sqlBtoA = sqlBtoA.Replace( "COUNT(*)", fields );
+                var playedNotTicks = sqlPlayed + " EXCEPT " + sqlTicks;
+                playedNotTicks = playedNotTicks.Replace( "COUNT(*)", fields );
 
-                cmds =
-                [
-                    new( sqlAtoB ),
-                    new( sqlBtoA )
-                ];
-
-                missing = [];
-                _dbHelper.ExecuteCommands( cmds, statement =>
+                List<List<object>> ticksNotPlayedList = [];
+                _dbHelper.ExecuteCommand( new SQLCmdDef( ticksNotPlayed ), statement =>
                 {
                     var row = statement.Current;
                     var col = 0;
@@ -1076,10 +1101,36 @@ namespace Statistics2026.Data
                     var season = row.GetInt64( col++ );
                     var episode = row.GetInt64( col++ );
 
-                    missing.Add( [ userName, itemId, itemName, runtimeTicks, isPlayed, playCount, totalTicksPlayed, seriesName, season, episode ] );
+                    ticksNotPlayedList.Add( [ userName, itemId, itemName, runtimeTicks, isPlayed, playCount, totalTicksPlayed, seriesName, season, episode ] );
 
                     return true;
                 } );
+
+                List<List<object>> playedNotTicksList = [];
+                _dbHelper.ExecuteCommand( new SQLCmdDef( playedNotTicks ), statement =>
+                {
+                    var row = statement.Current;
+                    var col = 0;
+
+                    var userName = row.GetString( col++ );
+                    var itemId = row.GetString( col++ );
+                    var itemName = row.GetString( col++ );
+                    var runtimeTicks = row.GetInt64( col++ );
+                    var isPlayed = row.GetBoolean( col++ );
+                    var playCount = row.GetInt64( col++ );
+                    var totalTicksPlayed = row.GetInt64( col++ );
+                    var seriesName = row.GetString( col++ );
+                    var season = row.GetInt64( col++ );
+                    var episode = row.GetInt64( col++ );
+
+                    playedNotTicksList.Add( [ userName, itemId, itemName, runtimeTicks, isPlayed, playCount, totalTicksPlayed, seriesName, season, episode ] );
+
+                    return true;
+                } );
+
+                missing = [];
+                missing.AddRange( ticksNotPlayedList );
+                missing.AddRange( playedNotTicksList );
             }
 
             return ( ticksPlayed == systemPlayed ) ? null : missing;
@@ -1128,6 +1179,14 @@ namespace Statistics2026.Data
             var tables = allUserMediaTables();
             foreach( var tableName in tables )
             {
+                var user = getUserForTableName( tableName );
+#if DEBUG
+                if( ( user == null ) || user.Name != "scott" )
+                {
+                    continue;
+                }
+#endif
+
                 var curr = sqlAtoB;
                 curr = curr.Replace( "<TABLE_NAME>", tableName );
                 sqlCmds.Add( new SQLCmdDef( curr ) );
