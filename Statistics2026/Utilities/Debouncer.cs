@@ -13,6 +13,7 @@ namespace Statistics2026.Utilities
                 // Cancel the previous scheduled execution
                 CancellationToken?.Cancel();
                 CancellationToken?.Dispose();
+                CancellationToken = null;
 
                 // Create a new token for the current execution
                 CancellationToken = new CancellationTokenSource();
