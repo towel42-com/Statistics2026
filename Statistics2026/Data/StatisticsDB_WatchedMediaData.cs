@@ -18,33 +18,33 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            _dbHelper!.Progress?.Report( 0 );
+            Progress?.Report( 0 );
             var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
             if( users == null )
                 return;
-            _dbHelper!.Progress?.Report( 100 );
+            Progress?.Report( 100 );
 
             _embyInterfaces?.Logger().Debug( $"Starting User Watch Data Analysis" );
 
             double count = users.Count;
             double curr = 0;
 
-            _dbHelper!.Progress?.Report( 0 );
+            Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
             using( var timer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", Logger() ) )
             {
                 curr = 0;
                 foreach( var user in users )
                 {
-                    _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
+                    Progress?.Report( 80.0 * ( ++curr ) / count );
                     using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", Logger() ) )
                     {
                         sqlCmds.AddRange( await AddWatchedDataForUser( user ) );
-                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                        CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
 
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
             }
 
             var config = Statistics2026.Plugin.Instance!.Configuration;
@@ -53,9 +53,9 @@ namespace Statistics2026.Data
 
             using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Commands", Logger() ) )
             {
-                _dbHelper!.Progress?.Report( 80 );
-                _dbHelper.ExecuteCommands( sqlCmds );
-                _dbHelper!.Progress?.Report( 100 );
+                Progress?.Report( 80 );
+                ExecuteCommands( sqlCmds );
+                Progress?.Report( 100 );
             }
 
             ComputeUserDataDBState();
@@ -78,15 +78,15 @@ namespace Statistics2026.Data
             if( !Plugin.Instance.IsDBStateSet( EDBState.eUserTablesCreated ) )
             {
 
-                _dbHelper!.Progress?.Report( 0 );
+                Progress?.Report( 0 );
                 var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
                 if( users == null )
                 {
-                    _dbHelper!.Progress?.Report( 100 );
+                    Progress?.Report( 100 );
                     return;
                 }
 
-                _dbHelper!.Progress?.Report( 100 );
+                Progress?.Report( 100 );
 
                 var sqlCmds = new List<SQLCmdDef>();
                 var curr = 0.0;
@@ -97,22 +97,22 @@ namespace Statistics2026.Data
                     curr = 0;
                     foreach( var user in users )
                     {
-                        _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
+                        Progress?.Report( 80.0 * ( ++curr ) / count );
                         using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", Logger() ) )
                         {
                             sqlCmds.AddRange( GetInitWatchedMediaTableCommands( user ) );
-                            _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                            CancellationToken?.ThrowIfCancellationRequested();
                         }
                     }
 
-                    _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                    CancellationToken?.ThrowIfCancellationRequested();
                 }
 
                 using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Init Table Commands", Logger() ) )
                 {
-                    _dbHelper!.Progress?.Report( 80 );
-                    _dbHelper.ExecuteCommands( sqlCmds );
-                    _dbHelper!.Progress?.Report( 100 );
+                    Progress?.Report( 80 );
+                    ExecuteCommands( sqlCmds );
+                    Progress?.Report( 100 );
                 }
 
                 Plugin.Instance.AddDBState( EDBState.eUserTablesCreated );
@@ -133,7 +133,7 @@ namespace Statistics2026.Data
 
             long? totalTicksPlayed = null;
 
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
             {
                 var row = statement.Current;
                 totalTicksPlayed = row.GetInt64( 0 );
@@ -159,7 +159,7 @@ namespace Statistics2026.Data
                     ("@ItemId", itemId)
                 ];
 
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql, parameters ) );
+            ExecuteCommand( new SQLCmdDef( sql, parameters ) );
         }
 
         public List<SQLCmdDef> DropAllUserMediaCmds()
@@ -440,15 +440,15 @@ namespace Statistics2026.Data
                 update = true;
             }
 
-            _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+            CancellationToken?.ThrowIfCancellationRequested();
 
             if( !update )
                 return;
 
-            if( _dbHelper.CancellationToken == null )
+            if( CancellationToken == null )
                 return;
 
-            var token = _dbHelper!.CancellationToken.Value;
+            var token = CancellationToken.Value;
 
             UserDataManager().SaveUserData( user, video, userData, UserDataSaveReason.Import, token );
         }
@@ -618,7 +618,7 @@ namespace Statistics2026.Data
             List<(string, object?)> parameters = [ ("@UserId", user.Id.ToString()) ];
             var seriesInfo = new Dictionary<string, (string name, long watched, long total)>();
 
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
             {
                 var row = statement.Current;
                 var seriesName = row.GetString( 0 );
@@ -696,7 +696,7 @@ namespace Statistics2026.Data
                     $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId ";
 
                     var clauses = getClauses( tableName, true, user );
-                    sql += DBHelper.JoinClauses( clauses );
+                    sql += JoinClauses( clauses );
 
                     sql += $"GROUP BY SeriesId " +
                            $"ORDER BY PerUser ";
@@ -718,7 +718,7 @@ namespace Statistics2026.Data
                         ;
 
                     var clauses = getClauses( tableName, false, user );
-                    sql += DBHelper.JoinClauses( clauses );
+                    sql += JoinClauses( clauses );
 
                     sql += $"GROUP BY {tableName}.ItemId " +
                            $"ORDER BY PerUser ";
@@ -728,7 +728,7 @@ namespace Statistics2026.Data
                         sql += "DESC ";
                 }
 
-                _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+                ExecuteCommand( new SQLCmdDef( sql ), statement =>
                 {
                     var row = statement.Current;
                     var col = 0;
@@ -914,9 +914,9 @@ namespace Statistics2026.Data
             if( played )
                 clauses.Add( $"{tableName}.IsPlayed" );
 
-            sql += DBHelper.JoinClauses( clauses );
+            sql += JoinClauses( clauses );
 
-            return ValueGroupForSingleItem( title, null, sql, [ ("@UserId", user.Id.ToString()) ], DBHelper.FormatTicks );
+            return ValueGroupForSingleItem( title, null, sql, [ ("@UserId", user.Id.ToString()) ], FormatTicks );
         }
 
         public StatCard TotalTimeWatched( User? user, bool? episodesOnly )
@@ -965,7 +965,7 @@ namespace Statistics2026.Data
             ] );
 
             var retVal = new List<(string genre, DateTimeOffset lastPlayed)>();
-            _dbHelper.ExecuteCommand( sqlCmd, statement =>
+            ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
                 var name = row.GetString( 0 );
@@ -1036,7 +1036,7 @@ namespace Statistics2026.Data
                 new( sqlPlayed )
             ];
 
-            _dbHelper.ExecuteCommands( cmds, statement =>
+            ExecuteCommands( cmds, statement =>
             {
                 var row = statement.Current;
                 var value = row.GetInt64( 0 );
@@ -1085,7 +1085,7 @@ namespace Statistics2026.Data
                 playedNotTicks = playedNotTicks.Replace( "COUNT(*)", fields );
 
                 List<List<object>> ticksNotPlayedList = [];
-                _dbHelper.ExecuteCommand( new SQLCmdDef( ticksNotPlayed ), statement =>
+                ExecuteCommand( new SQLCmdDef( ticksNotPlayed ), statement =>
                 {
                     var row = statement.Current;
                     var col = 0;
@@ -1107,7 +1107,7 @@ namespace Statistics2026.Data
                 } );
 
                 List<List<object>> playedNotTicksList = [];
-                _dbHelper.ExecuteCommand( new SQLCmdDef( playedNotTicks ), statement =>
+                ExecuteCommand( new SQLCmdDef( playedNotTicks ), statement =>
                 {
                     var row = statement.Current;
                     var col = 0;
@@ -1205,7 +1205,7 @@ namespace Statistics2026.Data
 
             SortedDictionary<string, List<object>> items = [];
 
-            _dbHelper.ExecuteCommands( sqlCmds, statement =>
+            ExecuteCommands( sqlCmds, statement =>
             {
                 var row = statement.Current;
                 var col = 0;
@@ -1293,7 +1293,7 @@ namespace Statistics2026.Data
 
             SortedDictionary<string, List<object>> items = [];
 
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
 

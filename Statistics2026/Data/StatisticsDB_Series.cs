@@ -19,31 +19,31 @@ namespace Statistics2026.Data
 
             _embyInterfaces!.Logger().Debug( $"Starting Video Analysis" );
 
-            _dbHelper!.Progress?.Report( 0 );
+            Progress?.Report( 0 );
             var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
-            _dbHelper!.Progress?.Report( 100 );
+            Progress?.Report( 100 );
 
             double count = seriesList.Count;
             var curr = 0.0;
 
-            _dbHelper!.Progress?.Report( 0 );
+            Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
             sqlCmds.AddRange( UpdateSeriesFilter() );
 
             foreach( var series in seriesList )
             {
-                _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
+                Progress?.Report( 80.0 * ( ++curr ) / count );
                 var cmds = await AddSeries( series );
                 sqlCmds.AddRange( cmds );
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
 
                 _embyInterfaces!.Logger().Debug( $"    Processed Series ({curr} of {count}) - {series.Name}" );
             }
 
-            _dbHelper!.Progress?.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            _dbHelper!.Progress?.Report( 100 );
-            _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+            Progress?.Report( 80 );
+            ExecuteCommands( sqlCmds );
+            Progress?.Report( 100 );
+            CancellationToken?.ThrowIfCancellationRequested();
             _embyInterfaces!.Logger().Debug( $"Finished Video Analysis" );
         }
 
@@ -52,7 +52,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckType.eUpdate );
 
             var libraryOptions = LibraryManager().GetLibraryOptions( series );
-            var allEpisodes = await ProviderManager().GetAllEpisodes( series, libraryOptions, _dbHelper!.CancellationToken!.Value ).ConfigureAwait( false );
+            var allEpisodes = await ProviderManager().GetAllEpisodes( series, libraryOptions, CancellationToken!.Value ).ConfigureAwait( false );
 
             var episodes = allEpisodes.Where( e => !MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTimeOffset.Now ) ).Count();
             var specials = allEpisodes.Where( e => MediaInfo.isTVSpecial( e ) ).Count();
@@ -64,7 +64,7 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                _dbHelper.ExecuteCommand( cmd, statement =>
+                ExecuteCommand( cmd, statement =>
                 {
                     if( statement != null )
                     {
@@ -80,7 +80,7 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                _dbHelper.ExecuteCommand( cmd, statement =>
+                ExecuteCommand( cmd, statement =>
                 {
                     if( statement != null )
                     {
@@ -99,7 +99,7 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                _dbHelper.ExecuteCommand( cmd, statement =>
+                ExecuteCommand( cmd, statement =>
                 {
                     if( statement != null )
                     {
@@ -115,7 +115,7 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                _dbHelper.ExecuteCommand( cmd, statement =>
+                ExecuteCommand( cmd, statement =>
                 {
                     if( statement != null )
                     {
@@ -189,7 +189,7 @@ namespace Statistics2026.Data
                         [
                             ("@SeriesId", series.Id.ToString())
                         ] );
-            _dbHelper.ExecuteCommands( [ cmd ],
+            ExecuteCommands( [ cmd ],
                 statement =>
                 {
                     if( statement != null )
@@ -318,7 +318,7 @@ namespace Statistics2026.Data
                 ;
 
             var series = new Dictionary<string, GetTVSeriesProgressResponse>();
-            _dbHelper.ExecuteCommand( new SQLCmdDef( getSeriesSQL ), statement =>
+            ExecuteCommand( new SQLCmdDef( getSeriesSQL ), statement =>
             {
                 var row = statement.Current;
                 var col = 0;
@@ -372,7 +372,7 @@ namespace Statistics2026.Data
 
             List<(string name, object? value)> paramList = [ ("@UserId", user.Id.ToString()) ];
 
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sqlEpisodes, paramList ), statement =>
+            ExecuteCommand( new SQLCmdDef( sqlEpisodes, paramList ), statement =>
             {
                 var row = statement.Current;
                 var col = 0;
@@ -388,7 +388,7 @@ namespace Statistics2026.Data
                 return true;
             } );
 
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sqlSpecials, paramList ), statement =>
+            ExecuteCommand( new SQLCmdDef( sqlSpecials, paramList ), statement =>
             {
                 var row = statement.Current;
                 var col = 0;

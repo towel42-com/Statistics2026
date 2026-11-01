@@ -44,7 +44,7 @@ namespace Statistics2026.Data
             cancellationToken.ThrowIfCancellationRequested();
 
             progress.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
+            ExecuteCommands( sqlCmds );
             progress.Report( 100 );
             _embyInterfaces!.Logger().Debug( $"Finished Collection Analysis" );
         }
@@ -214,7 +214,7 @@ namespace Statistics2026.Data
             };
 
             var sqlCmd = new SQLCmdDef( sql );
-            _dbHelper.ExecuteCommand( sqlCmd, statement =>
+            ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
                 var col = 0;
@@ -253,7 +253,7 @@ namespace Statistics2026.Data
             List<string> names = [];
             List<string> sortByNames = [];
 
-            _dbHelper.ExecuteCommand( sqlCmd, statement =>
+            ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
                 names.Add( row.GetString( 0 ) );
@@ -293,7 +293,7 @@ namespace Statistics2026.Data
             List<string> sortByNames = [];
             List<string> images = [];
 
-            _dbHelper.ExecuteCommand( sqlCmd, statement =>
+            ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
                 var col = 0;

@@ -53,12 +53,12 @@ namespace Statistics2026.Data
 
             }
 
-            sqlCmds.Insert( 0, DBHelper.CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
+            sqlCmds.Insert( 0, CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
 
             cancellationToken.ThrowIfCancellationRequested();
 
             progress.Report( 80 );
-            _dbHelper.ExecuteCommands( sqlCmds );
+            ExecuteCommands( sqlCmds );
             progress.Report( 100 );
             _embyInterfaces!.Logger().Debug( $"Finished Analysis" );
         }

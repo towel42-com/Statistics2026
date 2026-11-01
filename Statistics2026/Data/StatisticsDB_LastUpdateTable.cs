@@ -32,7 +32,7 @@ namespace Statistics2026.Data
                 $"WHERE Action = '{action.ToString()}'\n"
                 ;
             DateTimeOffset? lastUpdated = DateTimeOffset.MinValue;
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 lastUpdated = HelperFuncs.ReadDateTime( row.GetString( 0 ) );
@@ -206,7 +206,7 @@ namespace Statistics2026.Data
                         ] )
             ];
 
-            _dbHelper.ExecuteCommands( sqlCmds );
+            ExecuteCommands( sqlCmds );
         }
 
         public void UpdateLastUpdated( EAction action, long runtimeMS )
@@ -257,7 +257,7 @@ namespace Statistics2026.Data
                         ] )
             ];
 
-            _dbHelper.ExecuteCommands( sqlCmds );
+            ExecuteCommands( sqlCmds );
         }
     }
 }

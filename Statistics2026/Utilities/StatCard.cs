@@ -89,7 +89,7 @@ namespace Statistics2026.Utilities
         {
             while( depth > 0 )
             {
-                EmbyHelperFuncs.addToHtml( --depth, "</div>" );
+                html += EmbyHelperFuncs.addToHtml( --depth, "</div>" );
             }
         }
     };
@@ -296,7 +296,7 @@ namespace Statistics2026.Utilities
             {
                 var id = DivId();
 
-                EmbyHelperFuncs.addToHtml( depth, $"<div id=\"{id}\" class=\"infoBlock\"><i class=\"md-icon\">info</i></div>" );
+                retVal.html += EmbyHelperFuncs.addToHtml( depth, $"<div id=\"{id}\" class=\"infoBlock\"><i class=\"md-icon\">info</i></div>" );
 
                 retVal.addDynamicButton( new DynamicButton { id = id, info = HelpText, title = Title } );
             }
@@ -309,24 +309,24 @@ namespace Statistics2026.Utilities
             if( showImage )
             {
                 var itemUrl = ItemImageUrl.ItemUrl( MediaItemId, ImageUrl );
-                EmbyHelperFuncs.addToHtml( depth, itemUrl );
-                EmbyHelperFuncs.addToHtml( depth++, "<div>" );
+                retVal.html += EmbyHelperFuncs.addToHtml( depth, itemUrl );
+                retVal.html += EmbyHelperFuncs.addToHtml( depth++, "<div>" );
                 titleClass = "statCard-stats-title-left";
             }
             else
             {
                 titleClass = "statCard-stats-title";
-                EmbyHelperFuncs.addToHtml( depth++, "<div style=\"width: 100%;\">" );
+                retVal.html += EmbyHelperFuncs.addToHtml( depth++, "<div style=\"width: 100%;\">" );
             }
 
             if( !Title.IsNullOrEmpty() )
             {
-                EmbyHelperFuncs.addToHtml( depth, $"<div class=\"{titleClass}\">{Title}</div>" );
+                retVal.html += EmbyHelperFuncs.addToHtml( depth, $"<div class=\"{titleClass}\">{Title}</div>" );
             }
 
             if( !SubTitle.IsNullOrEmpty() )
             {
-                EmbyHelperFuncs.addToHtml( depth, $"<div class=\"{titleClass}\">{SubTitle}</div>" );
+                retVal.html += EmbyHelperFuncs.addToHtml( depth, $"<div class=\"{titleClass}\">{SubTitle}</div>" );
             }
         }
 
@@ -348,9 +348,9 @@ namespace Statistics2026.Utilities
                 if( IsClickableTable() )
                     divData += " data-is-clickable=\"true\"";
 
-                EmbyHelperFuncs.addToHtml( depth++, $"<div {divData}>" );
-                EmbyHelperFuncs.addToHtml( 0, tableInfo );
-                EmbyHelperFuncs.addToHtml( --depth, "</div>" );
+                retVal.html += EmbyHelperFuncs.addToHtml( depth++, $"<div {divData}>" );
+                retVal.html += EmbyHelperFuncs.addToHtml( 0, tableInfo );
+                retVal.html += EmbyHelperFuncs.addToHtml( --depth, "</div>" );
             }
 
             return depth;
@@ -361,9 +361,9 @@ namespace Statistics2026.Utilities
             var retVal = new StatCardResponse();
 
             var depth = 0;
-            EmbyHelperFuncs.addToHtml( depth++, $"<div class=\"col {ToString( Style )}\">" );
-            EmbyHelperFuncs.addToHtml( depth++, "<div class=\"statCard\">" );
-            EmbyHelperFuncs.addToHtml( depth++, "<div class=\"statCard-content\">" );
+            retVal.html += EmbyHelperFuncs.addToHtml( depth++, $"<div class=\"col {ToString( Style )}\">" );
+            retVal.html += EmbyHelperFuncs.addToHtml( depth++, "<div class=\"statCard\">" );
+            retVal.html += EmbyHelperFuncs.addToHtml( depth++, "<div class=\"statCard-content\">" );
 
             var preHelpDepth = depth;
             addHelp( ref retVal, ref depth );
@@ -373,22 +373,22 @@ namespace Statistics2026.Utilities
 
             while( depth != preHelpDepth )
             {
-                EmbyHelperFuncs.addToHtml( --depth, "</div>" );
+                retVal.html += EmbyHelperFuncs.addToHtml( --depth, "</div>" );
             }
 
-            EmbyHelperFuncs.addToHtml( --depth, "</div>" ); // statCard-content
-            EmbyHelperFuncs.addToHtml( --depth, "</div>" ); // statCard
+            retVal.html += EmbyHelperFuncs.addToHtml( --depth, "</div>" ); // statCard-content
+            retVal.html += EmbyHelperFuncs.addToHtml( --depth, "</div>" ); // statCard
 
             if( IsClickableTable() )
             {
                 var divId = DivId( "statTable" );
-                EmbyHelperFuncs.addToHtml( depth++, "<img src=\"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///w==\"" );
-                EmbyHelperFuncs.addToHtml( depth, "style=\"display:none\"" );
-                EmbyHelperFuncs.addToHtml( depth, $"onerror=\"console.info('trigger on loading dummy gif hit'); if(window.MyPluginHelpers && window.MyPluginHelpers.initCollapsibleTable){{window.MyPluginHelpers.initCollapsibleTable('{divId}'); }} else {{ throw new Error('Emby Table Engine Failure: window.MyPluginHelpers.initCollapsibleTable is not defined or loaded yet.'); }} \"" );
-                EmbyHelperFuncs.addToHtml( --depth, "/>" );
+                retVal.html += EmbyHelperFuncs.addToHtml( depth++, "<img src=\"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///w==\"" );
+                retVal.html += EmbyHelperFuncs.addToHtml( depth, "style=\"display:none\"" );
+                retVal.html += EmbyHelperFuncs.addToHtml( depth, $"onerror=\"console.info('trigger on loading dummy gif hit'); if(window.MyPluginHelpers && window.MyPluginHelpers.initCollapsibleTable){{window.MyPluginHelpers.initCollapsibleTable('{divId}'); }} else {{ throw new Error('Emby Table Engine Failure: window.MyPluginHelpers.initCollapsibleTable is not defined or loaded yet.'); }} \"" );
+                retVal.html += EmbyHelperFuncs.addToHtml( --depth, "/>" );
             }
 
-            EmbyHelperFuncs.addToHtml( --depth, "</div>" ); // col
+            retVal.html += EmbyHelperFuncs.addToHtml( --depth, "</div>" ); // col
             return retVal;
         }
     }

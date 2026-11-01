@@ -1,5 +1,6 @@
 ﻿using Emby.Media.Common.Extensions;
 using SQLitePCL.pretty;
+using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
 
@@ -33,12 +34,12 @@ namespace Statistics2026.Utilities
         private EStatisticType WhichStatistic { get; set; }
         private EVideoType VideoType { get; set; }
 
-        private DBHelper _dbHelper { get; set; }
-        public StatGen( EStatisticType statType, EVideoType videoType, DBHelper dbHelper )
+        private StatisticsDB _Database { get; set; }
+        public StatGen( EStatisticType statType, EVideoType videoType, StatisticsDB db )
         {
             WhichStatistic = statType;
             VideoType = videoType;
-            _dbHelper = dbHelper;
+            _Database = db;
         }
 
         public class StatCardValues
@@ -59,7 +60,7 @@ namespace Statistics2026.Utilities
             var sqlCmd = new SQLCmdDef( sql );
 
             var cmd = new SQLCmdDef( sql );
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            _Database.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 retVal.ItemId = row.GetString( 0 );
@@ -263,7 +264,7 @@ namespace Statistics2026.Utilities
             else if( VideoType == EVideoType.Episode )
                 whereClauseList.Add( "IsEpisode" );
 
-            return whereClauseList.Count > 0 ? DBHelper.JoinClauses( whereClauseList ) + " " : string.Empty;
+            return whereClauseList.Count > 0 ? StatisticsDB.JoinClauses( whereClauseList ) + " " : string.Empty;
         }
 
         private string Title()

@@ -1,5 +1,6 @@
 ﻿using ServiceStack;
 using SQLitePCL.pretty;
+using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
 using static ServiceStack.Diagnostics;
@@ -86,7 +87,7 @@ namespace Statistics2026.Utilities
             return null;
         }
 
-        private void _Execute( IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement )
+        private void _Execute( IDatabaseConnection connection, StatisticsDB db, Func<IStatement, bool>? onStatement )
         {
             using( var statement = connection.PrepareStatement( Statement ) )
             {
@@ -94,7 +95,7 @@ namespace Statistics2026.Utilities
                 {
                     foreach( var (name, value) in Parameters! )
                     {
-                        _ = dbHelper.TryBind( statement, name, value );
+                        _ = db.TryBind( statement, name, value );
                     }
                 }
 
@@ -108,18 +109,18 @@ namespace Statistics2026.Utilities
                     {
                         if( !onStatement( statement ) )
                             break;
-                        dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                        db.CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
             }
         }
-        public void Execute( IDatabaseConnection connection, DBHelper dbHelper, Func<IStatement, bool>? onStatement )
+        public void Execute( IDatabaseConnection connection, StatisticsDB db, Func<IStatement, bool>? onStatement )
         {
             if( FailureAllowed )
             {
                 try
                 {
-                    _Execute( connection, dbHelper, onStatement );
+                    _Execute( connection, db, onStatement );
                 }
                 catch
                 {
@@ -127,7 +128,7 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                _Execute( connection, dbHelper, onStatement );
+                _Execute( connection, db, onStatement );
             }
         }
 

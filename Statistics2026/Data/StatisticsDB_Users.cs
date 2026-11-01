@@ -16,39 +16,39 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eUpdate );
 
-            _dbHelper!.Progress?.Report( 0 );
+            Progress?.Report( 0 );
             var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
             if( users == null )
                 return;
 
-            _dbHelper!.Progress?.Report( 100 );
+            Progress?.Report( 100 );
 
             _embyInterfaces?.Logger().Debug( $"Starting User Analysis" );
             double count = users.Count;
             double curr = 0;
 
-            _dbHelper!.Progress?.Report( 0 );
+            Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
             using( var timer = new AutoTimer( $"    Adding All Users - Getting Commands", Logger() ) )
             {
                 foreach( var user in users )
                 {
-                    _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
+                    Progress?.Report( 80.0 * ( ++curr ) / count );
                     using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", Logger() ) )
                     {
                         sqlCmds.AddRange( AddUser( user ) );
-                        _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                        CancellationToken?.ThrowIfCancellationRequested();
                     }
                 }
 
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
             }
 
             using( var timer = new AutoTimer( $"    Adding All Users - Executing Commands", Logger() ) )
             {
-                _dbHelper!.Progress?.Report( 80 );
-                _dbHelper.ExecuteCommands( sqlCmds );
-                _dbHelper!.Progress?.Report( 100 );
+                Progress?.Report( 80 );
+                ExecuteCommands( sqlCmds );
+                Progress?.Report( 100 );
             }
 
             _embyInterfaces?.Logger().Debug( $"Finished User Analysis" );
@@ -150,7 +150,7 @@ namespace Statistics2026.Data
             if( excludeAdmin )
                 conditions.Add( "NOT IsAdministrator" );
 
-            sql += DBHelper.JoinClauses( conditions );
+            sql += JoinClauses( conditions );
 
             return GetSingleValueFromSQL( sql ).ToInt64();
         }
@@ -190,7 +190,7 @@ namespace Statistics2026.Data
             if( Statistics2026.Plugin.Instance!.Configuration.excludeAdmin )
                 conditions.Add( "NOT IsAdministrator" );
 
-            sqlBase += DBHelper.JoinClauses( conditions );
+            sqlBase += JoinClauses( conditions );
 
             var playTimeMap = new SortedDictionary<long, List<(string userId, string userName, long ticksPlayed)>>();
             foreach( var tableName in tables )
@@ -198,7 +198,7 @@ namespace Statistics2026.Data
                 var sql = sqlBase;
                 sql = sql.Replace( "<TABLE_NAME>", tableName );
 
-                _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+                ExecuteCommand( new SQLCmdDef( sql ), statement =>
                 {
                     var row = statement.Current;
 

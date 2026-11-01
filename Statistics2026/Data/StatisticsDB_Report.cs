@@ -14,7 +14,7 @@ namespace Statistics2026.Data
             var cmd = new SQLCmdDef( sql, parameters );
 
             var retVal = string.Empty;
-            _dbHelper.ExecuteCommand( cmd, statement =>
+            ExecuteCommand( cmd, statement =>
                 {
                     var row = statement.Current;
                     var count = row.GetInt64( 0 );
@@ -47,7 +47,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eReport );
 
-            var statGen = new StatGen( whichStatistic, videoType, _dbHelper );
+            var statGen = new StatGen( whichStatistic, videoType, this );
             return statGen.GetStatCard();
         }
 
@@ -55,7 +55,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckType.eReport );
 
-            var statGen = new StatGen( whichStatistic, videoType, _dbHelper );
+            var statGen = new StatGen( whichStatistic, videoType, this );
             return statGen.GetStatCardValues();
         }
     }

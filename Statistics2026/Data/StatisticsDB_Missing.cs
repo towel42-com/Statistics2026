@@ -124,7 +124,7 @@ namespace Statistics2026.Data
 
             var isSpecial = ( seasonNum == 0 );
             bool filtered = false;
-            _dbHelper.ExecuteCommand( cmd, statement =>
+            ExecuteCommand( cmd, statement =>
             {
                 var row = statement.Current;
                 var col = 0;
@@ -218,7 +218,7 @@ namespace Statistics2026.Data
 
             List<SeriesFilterResponse> retVal = [];
             bool found = false;
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 found = true;
                 var row = statement.Current;
@@ -243,7 +243,7 @@ namespace Statistics2026.Data
             if( !found && updateIfEmpty )
             {
                 var cmds = UpdateSeriesFilter( true );
-                _dbHelper.ExecuteCommands( cmds );
+                ExecuteCommands( cmds );
                 return GetSeriesFilter( false );
             }
             return retVal;
@@ -287,7 +287,7 @@ namespace Statistics2026.Data
 
             if( andExecute )
             {
-                _dbHelper.ExecuteCommand( cmd );
+                ExecuteCommand( cmd );
             }
             return cmd;
         }

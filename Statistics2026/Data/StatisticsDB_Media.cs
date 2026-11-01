@@ -24,9 +24,9 @@ namespace Statistics2026.Data
 
             _embyInterfaces!.Logger().Debug( $"Starting Video Analysis" );
 
-            _dbHelper!.Progress?.Report( 0 );
+            Progress?.Report( 0 );
             var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
-            _dbHelper!.Progress?.Report( 100 );
+            Progress?.Report( 100 );
 
             if( videoList == null )
             {
@@ -36,7 +36,7 @@ namespace Statistics2026.Data
             double count = videoList.Count;
             var curr = 0.0;
 
-            _dbHelper!.Progress?.Report( 0 );
+            Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
             var existing = new Dictionary<string, bool>();
             List<object> paramList = [];
@@ -47,7 +47,7 @@ namespace Statistics2026.Data
                 if( video == null )
                     continue;
 
-                _dbHelper!.Progress?.Report( 80.0 * ( ++curr ) / count );
+                Progress?.Report( 80.0 * ( ++curr ) / count );
 
                 if( existing.ContainsKey( video.Id.ToString() ) )
                     continue;
@@ -61,13 +61,13 @@ namespace Statistics2026.Data
                 sqlCmds.AddRange( AddMediaInfo( mediaInfo ) );
                 _embyInterfaces!.Logger().Debug( $"    Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
 
-                _dbHelper!.CancellationToken?.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
             }
 
-            _dbHelper!.Progress?.Report( 80 );
-            sqlCmds.Insert( 1, DBHelper.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
-            _dbHelper.ExecuteCommands( sqlCmds );
-            _dbHelper!.Progress?.Report( 100 );
+            Progress?.Report( 80 );
+            sqlCmds.Insert( 1, CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
+            ExecuteCommands( sqlCmds );
+            Progress?.Report( 100 );
             _embyInterfaces!.Logger().Debug( $"Finished Video Analysis" );
         }
 
@@ -230,7 +230,7 @@ namespace Statistics2026.Data
                 "GROUP BY Resolution \n" +
                 "ORDER BY Resolution ASC"
                 ;
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 var resolution = row.GetString( 0 );
@@ -258,7 +258,7 @@ namespace Statistics2026.Data
                 "ORDER BY Codec ASC"
                 ;
 
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 var codec = row.GetString( 0 );
@@ -293,7 +293,7 @@ namespace Statistics2026.Data
             if( Plugin.Instance!.Configuration.showUnknownDVProfiles )
                 retVal.addRow( "Unknown Dolby Profile", [ 0, 0 ] );
 
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 var dvProfile = row.GetString( 0 );
@@ -353,7 +353,7 @@ namespace Statistics2026.Data
             if( totalTicks != 0 )
             {
                 var rt = new RunTime( totalTicks );
-                retVal.AddLine( DBHelper.FormatTicks( totalTicks ), false );
+                retVal.AddLine( FormatTicks( totalTicks ), false );
             }
 
             return retVal;
@@ -426,7 +426,7 @@ namespace Statistics2026.Data
             if( user == null )
             {
                 value = GetSingleValueFromSQL( "SELECT SUM(RunTimeTicks) FROM MEDIA WHERE IsEpisode" );
-                value = DBHelper.FormatTicks( value.ToInt64() );
+                value = FormatTicks( value.ToInt64() );
                 retVal.AddLine( value, false );
             }
 
@@ -446,7 +446,7 @@ namespace Statistics2026.Data
             HashSet<string> studios = [];
 
             var cmd = new SQLCmdDef( sql );
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 var currStudios = HelperFuncs.JsonToStringArray( row.GetString( 0 ) );
@@ -516,7 +516,7 @@ namespace Statistics2026.Data
                                         ] );
 
             var retVal = new List<(int year, long count)>();
-            _dbHelper.ExecuteCommand( sqlCmd, statement =>
+            ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
                 var count = row.GetInt64( 0 );
@@ -576,7 +576,7 @@ namespace Statistics2026.Data
                                         ] );
 
             Dictionary<string, int> genreMap = [];
-            _dbHelper.ExecuteCommand( sqlCmd, statement =>
+            ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
                 var genres = HelperFuncs.JsonToStringArray( row.GetString( 0 ) );

@@ -1,7 +1,9 @@
-﻿using MediaBrowser.Controller.Library;
+﻿using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
 using MediaBrowser.Model.Logging;
+using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Configuration;
 using Statistics2026.Utilities;
@@ -20,6 +22,24 @@ namespace Statistics2026.Data
         eEpisode
     }
 
+    public enum ECheckLevel
+    {
+        eInterfaces = 0x0001,
+        eConnection = 0x0002,
+        eProgress = 0x0004,
+        eAll = eInterfaces | eConnection | eProgress,
+        eThrowOnFailure = 0x010000,
+        eAllWithThrow = eAll | eThrowOnFailure
+    }
+
+    public enum ECheckType
+    {
+        eNone,
+        eInit,
+        eUpdate,
+        eReport
+    }
+
     public sealed partial class StatisticsDB : IDisposable
     {
         private bool _disposed = false;
@@ -34,15 +54,17 @@ namespace Statistics2026.Data
         public bool DataExists { get; private set; } = false;
         public bool UserDataExists { get; private set; } = false;
 
-        private readonly DBHelper _dbHelper = new();
+        private IDatabaseConnection? Connection { get; set; } = null;
+        public CancellationToken? CancellationToken { get; set; } = null;
+        public IProgress<double>? Progress { get; set; } = null;
 
         public static StatisticsDB GetInstance( EmbyInterfaces? embyInterfaces )
         {
-            if( embyInterfaces == null )
-                throw new ArgumentNullException( "EmbyInterfaces is null." );
-
             lock( _padlock )
             {
+                if( embyInterfaces == null )
+                    throw new ArgumentNullException( "EmbyInterfaces is null." );
+
                 var retVal = new StatisticsDB( embyInterfaces );
                 embyInterfaces.Logger().Debug( "New Instance Created : " + retVal.GetHashCode() );
                 Plugin.Instance?.Configuration.UpdateBuildDateAndVersionInfo();
@@ -50,29 +72,15 @@ namespace Statistics2026.Data
             }
         }
 
-        private static ConcurrentDictionary<int, DBHelper> _dbHelpers = [];
-
         private StatisticsDB( EmbyInterfaces embyInterfaces )
         {
-            if( embyInterfaces == null )
-                throw new ArgumentNullException( "embyInterfaces is null." );
+            _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
 
             ConstructTableList();
 
+            Logger().Debug( "Creating Database" );
 
-            var threadId = Environment.CurrentManagedThreadId;
-            if( _dbHelpers.TryGetValue( threadId, out var existingHelper ) )
-            {
-                _embyInterfaces!.Logger().Debug( $"Reusing existing db helper for thread {threadId} : {existingHelper.GetHashCode()}" );
-                _dbHelper = existingHelper;
-                return;
-            }
-
-            embyInterfaces.Logger().Debug( "Creating Database" );
-
-            _embyInterfaces = embyInterfaces;
-            _dbHelper = new DBHelper( _embyInterfaces );
-            _dbHelpers[ threadId ] = _dbHelper;
+            CreateConnection();
 
             embyInterfaces.Logger().Debug( "Finished Creating Database" );
             lock( _padlock )
@@ -98,22 +106,20 @@ namespace Statistics2026.Data
                 return;
             if( disposing )
             {
-                var threadId = Environment.CurrentManagedThreadId;
-                _dbHelpers.TryRemove( threadId, out var _ );
-                _dbHelper.CloseConnection();
+                CloseConnection();
             }
             _disposed = true;
         }
 
         public ILogger Logger()
         {
-            _dbHelper.CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
+            CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
             return _embyInterfaces!._logger!;
         }
 
         public ILibraryManager LibraryManager()
         {
-            if ( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
+            if( _embyInterfaces == null || _embyInterfaces._libraryManager == null )
                 throw new ArgumentNullException( "_embyInterfaces._libraryManager is null" );
 
             return _embyInterfaces!._libraryManager!;
@@ -143,6 +149,62 @@ namespace Statistics2026.Data
             return _embyInterfaces!._providerManager!;
         }
 
+        public IServerConfigurationManager ConfigManager()
+        {
+            if( _embyInterfaces == null || _embyInterfaces._configManager == null )
+                throw new ArgumentNullException( "_embyInterfaces._configManager is null" );
+
+            return _embyInterfaces!._configManager!;
+        }
+
+        [MemberNotNullWhen( true, nameof( _embyInterfaces ) )]
+        public bool CheckIsValid( ECheckLevel checkLevel )
+        {
+            List<string> msgs = [ $"DBHelper is not valid 0x{checkLevel:X}" ];
+            var retVal = true;
+            if( ( checkLevel & ECheckLevel.eInterfaces ) != 0 )
+            {
+                if( _embyInterfaces == null || _embyInterfaces.Logger() == null )
+                {
+                    retVal = false;
+                    msgs.Add( "_embyInterfaces is null" );
+                }
+            }
+
+            if( ( checkLevel & ECheckLevel.eConnection ) != 0 )
+            {
+                if( Connection == null )
+                {
+                    retVal = false;
+                    msgs.Add( "Connection is null" );
+                }
+            }
+
+            if( ( checkLevel & ECheckLevel.eProgress ) != 0 )
+            {
+                if( CancellationToken == null )
+                {
+                    retVal = false;
+                    msgs.Add( "CancellationToken is null" );
+                }
+
+                if( Progress == null )
+                {
+                    retVal = false;
+                    msgs.Add( "Progress is null" );
+                }
+            }
+
+            if( retVal == false && ( ( checkLevel & ECheckLevel.eThrowOnFailure ) != 0 ) )
+            {
+                var msg = string.Join( "\n", msgs );
+                throw new ArgumentNullException( msg );
+            }
+
+            return retVal;
+        }
+
+        [MemberNotNullWhen( true, nameof( _embyInterfaces ) )]
         private void CheckIsValid( ECheckType checkType )
         {
             if( Statistics2026.Plugin.Instance == null )
@@ -152,15 +214,103 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException( "Statistics2026.Plugin.Instance.Configuration" );
 
             if( checkType == ECheckType.eInit )
-                _ = _dbHelper.CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
+                _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
             else if( checkType == ECheckType.eReport )
-                _ = _dbHelper.CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
+                _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
             else if( checkType == ECheckType.eUpdate )
-                _ = _dbHelper.CheckIsValid( ECheckLevel.eAllWithThrow );
+                _ = CheckIsValid( ECheckLevel.eAllWithThrow );
 
             if( ( checkType != ECheckType.eInit ) && ( checkType != ECheckType.eReport ) && TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, _currentTask, true ) )
             {
                 throw new Exception( "Statistics 2026 task is running" );
+            }
+        }
+
+        private void CreateConnection()
+        {
+            var oldFileName = Path.Combine( ConfigManager().ApplicationPaths.DataPath, "Statistics2026.db" );
+            var newFileName = Path.Combine( ConfigManager().ApplicationPaths.PluginConfigurationsPath, "Statistics2026.db" );
+
+            if( File.Exists( oldFileName ) )
+            {
+                try
+                {
+                    Logger().Info( "DB exists in old location, moving to plugin/config" );
+                    File.Move( oldFileName, newFileName );
+                    Logger().Info( "   Moved successfully" );
+                }
+                catch( IOException ex )
+                {
+                    // Handles scenarios like: file already exists at destination, or file is locked
+                    // Handles scenarios like: file already exists at destination, or file is locked
+                    Logger().Error( $"   Failed to be moved, removing and new db will be built - {ex.Message}" );
+                }
+                catch( UnauthorizedAccessException ex )
+                {
+                    Logger().Error( $"   Failed to be moved, removing and new db will be built - Check Permissions - {ex.Message}" );
+                }
+            }
+
+            if( File.Exists( oldFileName ) ) // could not move, try deleting
+            {
+                try
+                {
+                    Logger().Info( "Deleting old DB file" );
+                    File.Delete( oldFileName );
+                    Logger().Info( "   Deleted successfully" );
+                }
+                catch( Exception ex )
+                {
+                    Logger().Error( $"   Failed to be delete - {ex.Message}" );
+                }
+            }
+
+            CreateConnection( newFileName );
+        }
+
+        private void CreateConnection( string db_file )
+        {
+            _ = CheckIsValid( ECheckLevel.eInterfaces | ECheckLevel.eThrowOnFailure );
+
+            _embyInterfaces!.Logger().Debug( "CreateConnection : " + db_file );
+            ConnectionFlags connectionFlags;
+
+            //_embyInterfaces!.Logger().Debug("Opening write _connection");
+            connectionFlags = ConnectionFlags.Create; // create if missing
+            connectionFlags |= ConnectionFlags.ReadWrite; // open for read-write
+            connectionFlags |= ConnectionFlags.PrivateCache;
+            connectionFlags |= ConnectionFlags.NoMutex;
+
+            var db = SQLite3.Open( db_file, connectionFlags, null, true );
+
+            try
+            {
+                List<string> queries =
+                    [
+                        "PRAGMA journal_mode=WAL",
+                        "PRAGMA busy_timeout=5000",
+                        "PRAGMA synchronous=Normal",
+                        "PRAGMA temp_store=file"
+                    ];
+
+                db.ExecuteAll( string.Join( ";", queries.ToArray() ) );
+            }
+            catch
+            {
+                throw;
+            }
+
+            Connection = db;
+            _embyInterfaces!.Logger().Debug( "Connection Created : " + Connection.GetHashCode() );
+        }
+
+        public void CloseConnection()
+        {
+            Logger().Debug( "Cleaning up" );
+            if( Connection != null )
+            {
+                Connection.Close();
+                Logger().Debug( $"DB Connection Closed : {Connection.GetHashCode()}" );
             }
         }
 
@@ -173,20 +323,282 @@ namespace Statistics2026.Data
 
         public void ResetCancellationToken()
         {
-            if( _dbHelper != null )
-            {
-                _dbHelper.CancellationToken = null;
-                _dbHelper.Progress = null;
-            }
+            CancellationToken = null;
+            Progress = null;
         }
 
         private void SetCancellationToken( CancellationToken? cancellationToken, IProgress<double>? progress )
         {
-            if( _dbHelper != null )
+            CancellationToken = cancellationToken;
+            Progress = progress;
+        }
+
+        public bool TryBind<T>( IStatement statement, string name, T? value )
+        {
+            if( !statement.BindParameters.TryGetValue( name, out var bindParam ) )
             {
-                _dbHelper.CancellationToken = cancellationToken;
-                _dbHelper.Progress = progress;
+                _embyInterfaces!.Logger().Error( $"Error Binding {name} to {value}" );
+                return false;
             }
+
+            if( value == null )
+            {
+                bindParam.BindNull();
+                return true;
+            }
+
+            switch( value )
+            {
+                case string s:
+                    bindParam.Bind( s );
+                    break;
+                case int i:
+                    bindParam.Bind( i );
+                    break;
+                case long l:
+                    bindParam.Bind( l );
+                    break;
+                case double d:
+                    bindParam.Bind( d );
+                    break;
+                case float f:
+                    bindParam.Bind( (double)f );
+                    break;
+                case short sh:
+                    bindParam.Bind( sh );
+                    break;
+                case byte[] ba:
+                    bindParam.Bind( ba );
+                    break;
+                case DateTime dt:
+                    bindParam.Bind( HelperFuncs.ToDateTimeParamValue( dt )! ); /*dt.ToString( "o", CultureInfo.InvariantCulture ) )*/
+                    break;
+                case DateTimeOffset dto:
+                    bindParam.Bind( HelperFuncs.ToDateTimeParamValue( dto )! );
+                    break;
+                case bool b:
+                    // store bool as integer 0/1
+                    bindParam.Bind( b ? 1 : 0 );
+                    break;
+                default:
+                    // Fallback: convert to string (covers enums, GUID, etc.)
+                    bindParam.Bind( value.ToString() ?? string.Empty );
+                    break;
+            }
+
+            return true;
+        }
+
+        public void ExecuteCommand( SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null, bool useTransaction = true )
+        {
+            List<SQLCmdDef> cmds = [ cmd ];
+            ExecuteCommands( cmds, onStatement, useTransaction );
+        }
+
+        public void ExecuteCommands( List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null, bool useTransaction = true )
+        {
+            _ = CheckIsValid( ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
+
+            void runCommands( IDatabaseConnection connection, List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement )
+            {
+                for( var ii = 0; ii < cmds.Count; ++ii )
+                {
+                    CancellationToken?.ThrowIfCancellationRequested();
+
+                    var cmd = cmds[ ii ];
+                    cmd.Execute( connection, this, onStatement );
+                    var value = 80 + ( 20.0 * ii / cmds.Count );
+                    Progress?.Report( value );
+                }
+            }
+
+            try
+            {
+                if( useTransaction && ( cmds.Count > 1 ) )
+                {
+                    Connection.RunInTransaction( connection =>
+                    {
+                        runCommands( connection, cmds, onStatement );
+                    } );
+                }
+                else
+                {
+                    runCommands( Connection!, cmds, onStatement );
+                }
+            }
+            catch( Exception )
+            {
+                throw;
+            }
+        }
+
+        public void ExecuteCommands( List<string> cmds, bool useTransaction = true )
+        {
+            List<SQLCmdDef> cmdDefs = [];
+            foreach( var cmd in cmds )
+            {
+                CancellationToken?.ThrowIfCancellationRequested();
+                cmdDefs.Add( new SQLCmdDef( cmd ) );
+            }
+
+            ExecuteCommands( cmdDefs, null, useTransaction );
+        }
+
+        public void ExecuteCommand( string cmd )
+        {
+            ExecuteCommand( new SQLCmdDef( cmd ), null, false );
+        }
+
+        public bool ColumnExists( string tableName, string columnName )
+        {
+            var sql = $"SELECT 1 FROM pragma_table_info(@TableName) WHERE name=@ColumnName";
+            List<(string name, object? value)> parameters =
+                [
+                    ("@TableName", tableName),
+                    ("@ColumnName", columnName)
+                ];
+
+            var exists = false;
+
+            ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            {
+                var row = statement.Current;
+                var value = row.GetInt64( 0 );
+                exists = value != 0;
+                return true;
+            } );
+
+            return exists;
+        }
+
+        public bool TableExists( string tableName )
+        {
+            var sql = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@TableName";
+            List<(string name, object? value)> parameters = [ ("@TableName", tableName) ];
+
+            var exists = false;
+
+            ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            {
+                var row = statement.Current;
+                var value = row.GetInt64( 0 );
+                exists = value != 0;
+                return true;
+            } );
+
+            return exists;
+        }
+
+        public static string FormatTicks( long ticks )
+        {
+            var runtime = new RunTime( ticks );
+            return runtime.ToLongString();
+        }
+
+        public static string JoinClauses( List<string> clauses )
+        {
+            if( clauses.IsNullOrEmpty() )
+                return string.Empty;
+
+            for( var ii = 0; ii < clauses.Count; ++ii )
+            {
+                clauses[ ii ] = $"( {clauses[ ii ]} )";
+            }
+
+            return " WHERE " + string.Join( " AND ", clauses ) + " ";
+        }
+
+        public void ValidateTables( List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState )
+        {
+            if( tables.IsNullOrEmpty() )
+            {
+                updateDBState( true, true );
+                return;
+            }
+
+            var aTableMissing = false;
+            var aColumnMissing = false;
+            var aTableNeedsData = false;
+            foreach( var tableName in tables )
+            {
+                var tableMissing = !TableExists( tableName );
+                var columnMissing = false;
+                var tableNeedsData = false;
+                if( !tableMissing )
+                {
+                    (columnMissing, tableNeedsData) = ValidateTable( tableName, getColumnsFunc( tableName ), validationRequiresDataFunc, additionalNeedsDataFunc );
+                }
+                else
+                {
+                    tableNeedsData = columnMissing = true;
+                }
+
+                if( tableMissing )
+                {
+                    _embyInterfaces?.Logger().Info( $"Table '${tableName}' does not exist." );
+                }
+
+                if( columnMissing )
+                {
+                    _embyInterfaces?.Logger().Info( $"Table '${tableName}' is missing a column." );
+                }
+
+                if( tableNeedsData )
+                {
+                    _embyInterfaces?.Logger().Info( $"Table '${tableName}' is missing data." );
+                }
+                aTableMissing = aTableMissing || tableMissing;
+                aColumnMissing = aColumnMissing || columnMissing;
+                aTableNeedsData = aTableNeedsData || tableNeedsData;
+                if( aTableMissing && aTableNeedsData && aColumnMissing )
+                    break;
+            }
+
+            updateDBState( aTableMissing || aColumnMissing, aTableNeedsData );
+        }
+
+        public (bool columnMissing, bool dataMissing) ValidateTable( string tableName, List<string> columns, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc )
+        {
+            var columnMissing = false;
+            foreach( var columnName in columns )
+            {
+                columnMissing = columnMissing || !ColumnExists( tableName, columnName );
+            }
+
+            var validationRequiresData = validationRequiresDataFunc( tableName );
+            var tableNeedsData = columnMissing;
+            if( !columnMissing && validationRequiresData )
+            {
+                var sql = $"SELECT COUNT(*) FROM {tableName} LIMIT 1";
+
+                tableNeedsData = false;
+                ExecuteCommand( new SQLCmdDef( sql ), statement =>
+                {
+                    var row = statement.Current;
+                    tableNeedsData = row.GetInt64( 0 ) == 0;
+                    return false;
+                }
+                );
+
+                tableNeedsData = tableNeedsData || ( ( additionalNeedsDataFunc != null ) && additionalNeedsDataFunc( tableName ) );
+            }
+
+            return (columnMissing, tableNeedsData);
+        }
+
+        static public SQLCmdDef CreateSQLCmdDef( string sql, string paramListName, List<object> paramList )
+        {
+            var placeHolderNames = string.Join( ", ", paramList.Select( ( _, index ) => $"@p{index}" ).ToArray() );
+
+            var sqlDefParams = new List<(string name, object? value)>();
+            for( int ii = 0; ii < paramList.Count; ++ii )
+            {
+                sqlDefParams.Add( ($"@p{ii}", paramList[ ii ]) );
+            }
+
+            sql = sql.Replace( paramListName, placeHolderNames );
+            var retVal = new SQLCmdDef( sql, sqlDefParams );
+            return retVal;
         }
     }
 }

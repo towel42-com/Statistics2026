@@ -20,7 +20,7 @@ namespace Statistics2026.Data
 
             var tableNames = this.tableNames();
 
-            _dbHelper.ValidateTables( tableNames,
+            ValidateTables( tableNames,
                 tableName =>
                 {
                     if( _tableMap.TryGetValue( tableName, out var tableDef ) )
@@ -76,7 +76,7 @@ namespace Statistics2026.Data
 
             var tableNames = allUserMediaTables( false );
             var missing = new List<List<object>>();
-            _dbHelper.ValidateTables( tableNames,
+            ValidateTables( tableNames,
                 tableName =>
                 {
                     return _userMediaTemplate!.ColumnNames();

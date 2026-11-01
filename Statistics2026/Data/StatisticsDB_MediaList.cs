@@ -204,7 +204,7 @@ namespace Statistics2026.Data
             var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
 
             List<MediaItemResponse> retVal = [];
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sqlCmd ), statement =>
+            ExecuteCommand( new SQLCmdDef( sqlCmd ), statement =>
             {
                 var row = statement.Current;
                 var response = MediaItemResponse.CreateFromStatementRow( row, episodes, IsFilteredSeries, IsFilteredCollection, GetCollectionName );

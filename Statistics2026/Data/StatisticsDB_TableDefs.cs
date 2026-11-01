@@ -245,7 +245,7 @@ namespace Statistics2026.Data
                     Plugin.Instance.RemoveDBState( EDBState.eUserTablesCreated | EDBState.eUserDataInitialized );
                 }
 
-                _dbHelper.ExecuteCommands( sqlCmds );
+                ExecuteCommands( sqlCmds );
 
                 Plugin.Instance.AddDBState( EDBState.eSystemTablesCreated );
             }
@@ -265,7 +265,7 @@ namespace Statistics2026.Data
                 sqlCmds.Add( new SQLCmdDef( TableDef.clearTable( tableName ) ) );
             }
 
-            _dbHelper.ExecuteCommands( sqlCmds );
+            ExecuteCommands( sqlCmds );
         }
 
         public List<SQLCmdDef> DropTableCmds( string tableName )
@@ -282,7 +282,7 @@ namespace Statistics2026.Data
         public void DropTable( string tableName )
         {
             var cmds = DropTableCmds( tableName );
-            _dbHelper.ExecuteCommands( cmds );
+            ExecuteCommands( cmds );
         }
 
         public List<string> allTables( (string regex, bool like)? regex = null )
@@ -295,9 +295,9 @@ namespace Statistics2026.Data
                 clauses.Add( clause );
             }
 
-            var sql = "SELECT name FROM sqlite_master " + DBHelper.JoinClauses( clauses );
+            var sql = "SELECT name FROM sqlite_master " + JoinClauses( clauses );
 
-            _dbHelper.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 retVal.Add( row.GetString( 0 ) );
