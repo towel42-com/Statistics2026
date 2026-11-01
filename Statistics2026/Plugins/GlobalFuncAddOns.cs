@@ -150,4 +150,24 @@ namespace System.Diagnostics.CodeAnalysis
     [AttributeUsage( AttributeTargets.Constructor, AllowMultiple = false, Inherited = false )]
     internal sealed class SetsRequiredMembersAttribute : Attribute { }
 }
+
+
+namespace System.Runtime.CompilerServices
+{
+#if !NET8_0_OR_GREATER
+    [AttributeUsage( AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface, Inherited = false )]
+    internal sealed class CollectionBuilderAttribute : Attribute
+    {
+        public Type BuilderType { get; }
+        public string MethodName { get; }
+
+        public CollectionBuilderAttribute( Type builderType, string methodName )
+        {
+            BuilderType = builderType;
+            MethodName = methodName;
+        }
+    }
+#endif
+}
+
 #endif
