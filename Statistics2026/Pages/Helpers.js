@@ -280,7 +280,7 @@ define([
             getLastRunInfo(whichRuns).then(response => {
                 view.querySelector("#" + div).innerHTML = response.html;
             }).catch(error => {
-                var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
+                var errorMessage = "'" + error + "' - '" + div + "' - '" + whichRuns.join(',') + "'";
                 console.error("insertGetLastRunInfo failed:", errorMessage);
                 view.querySelector("#" + div).innerHTML = `<tr><td colspan="2">Error loading ${whichRuns} status</td></tr>`;
             });

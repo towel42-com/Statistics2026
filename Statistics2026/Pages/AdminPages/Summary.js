@@ -55,18 +55,19 @@
             view.querySelector("#multiCollectionMovies").innerHTML = multiCollectionMovies;
         }
 
-        function loadStats(view) {
+        async function loadStats(view) {
             Dashboard.showLoadingMsg();
-            ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
 
+            let configValid = await Helpers.CheckForValidConfig();
+            if (!configValid) {
+                view.querySelector(`#lastRunInfo`).style.display = 'none';
+                Dashboard.hideLoadingMsg();
+                return;
+            }
+
+            ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                 view.querySelector(`#debugInfo`).style.display = 'none';
                 loadDebugInfo(view, config);
-
-                if (!Helpers.CheckForValidConfig()) {
-                    view.querySelector(`#lastRunInfo`).style.display = 'none';
-                    Dashboard.hideLoadingMsg();
-                    return;
-                }
             });
 
             Helpers.insertGetLastRunInfo(view, ["System"], "lastRunInfo");

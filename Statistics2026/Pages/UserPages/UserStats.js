@@ -18,7 +18,7 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
                 Helpers.injectStyleSheet();
 
-                Helpers.insertGetLastRunInfo(view, "UserAnalysis", "lastRunInfo");
+                Helpers.insertGetLastRunInfo(view, ["UserAnalysis"], "lastRunInfo");
                 loadData(view, params.userId);
             });
 
@@ -30,12 +30,13 @@
 
             });
 
-            function loadData(view, userId) {
-                if (!Helpers.CheckForValidConfig()) {
-                    Dashboard.hideLoadingMsg();
+            async function loadData(view, userId) {
+                let configValid = await Helpers.CheckForValidConfig();
+                if (!configValid) {
+                    view.querySelector(`#lastRunInfo`).style.display = 'none';
+                    loading.hide;
                     return;
                 }
-
                 ApiClient.getUser(userId).then(function (user) {
                     Helpers.LoadUserStats(view, user.Name, loading.show, loading.hide);
                 });

@@ -65,8 +65,11 @@
                 return Helpers.getMediaRowData(info, showOnServer, showMissing);
             }
 
-            function loadTableData() {
-                if (!Helpers.CheckForValidConfig()) {
+            async function loadTableData() {
+                let configValid = await Helpers.CheckForValidConfig();
+                if (!configValid) {
+                    view.querySelector(`#lastRunInfo`).style.display = 'none';
+                    view.querySelector(`#${baseId}_status`).style.display = 'none';
                     Dashboard.hideLoadingMsg();
                     return;
                 }

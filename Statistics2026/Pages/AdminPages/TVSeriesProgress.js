@@ -28,8 +28,11 @@
                 loadData(view, userId);
             });
 
-            function loadData(view, userId) {
-                if (!Helpers.CheckForValidConfig()) {
+            async function loadData(view, userId) {
+                let configValid = await Helpers.CheckForValidConfig();
+                if (!configValid) {
+                    view.querySelector(`#lastRunInfo`).style.display = 'none';
+                    view.querySelector(`#TVSeriesProgress_status`).style.display = 'none';
                     Dashboard.hideLoadingMsg();
                     return;
                 }

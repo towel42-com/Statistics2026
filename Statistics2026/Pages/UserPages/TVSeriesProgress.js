@@ -19,7 +19,7 @@
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
                 Helpers.injectStyleSheet();
 
-                Helpers.insertGetLastRunInfo(view, "UserWatchDataAnalysis", "lastRunInfo");
+                Helpers.insertGetLastRunInfo(view, ["UserWatchDataAnalysis"], "lastRunInfo");
                 loadData(view, params.userId);
             });
 
@@ -31,9 +31,12 @@
 
             });
 
-            function loadData(view, userId) {
-                if (!Helpers.CheckForValidConfig()) {
-                    Dashboard.hideLoadingMsg();
+            async function loadData(view, userId) {
+                let configValid = await Helpers.CheckForValidConfig();
+                if (!configValid) {
+                    view.querySelector(`#lastRunInfo`).style.display = 'none';
+                    view.querySelector(`#TVSeriesProgress_status`).style.display = 'none';
+                    loading.hide;
                     return;
                 }
 
