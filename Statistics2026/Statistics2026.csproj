@@ -1,14 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0;</TargetFrameworks>
-		<Version>1.0.0.11</Version>
-		<AssemblyVersion>1.0.0.11</AssemblyVersion>
-		<FileVersion>1.0.0.11</FileVersion>
+		<Version>1.0.0.12</Version>
+		<AssemblyVersion>1.0.0.12</AssemblyVersion>
+		<FileVersion>1.0.0.12</FileVersion>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<NoWarn>$(NoWarn);SYSLIB1030;CS0436;CS0618</NoWarn>
+
+		<!-- set in Statistics2026.csproj.user-->
 		<TmdbApiKeyV3 Condition="'$(TmdbApiKeyV3)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV3>
 		<TmdbApiKeyV4 Condition="'$(TmdbApiKeyV4)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV4>
+		<OldServerLocation Condition="'$(OldServerLocation)' == ''">""</OldServerLocation>
+		<NewServerLocation Condition="'$(NewServerLocation)' == ''">""</NewServerLocation>
 	</PropertyGroup>
 
 	<ItemGroup>
