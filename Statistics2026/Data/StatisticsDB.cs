@@ -2,9 +2,11 @@
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
 using MediaBrowser.Model.Logging;
+using SQLitePCL.pretty;
 using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
@@ -48,6 +50,8 @@ namespace Statistics2026.Data
             }
         }
 
+        private static ConcurrentDictionary<int, DBHelper> _dbHelpers = [];
+
         private StatisticsDB( EmbyInterfaces embyInterfaces )
         {
             if( embyInterfaces == null )
@@ -55,10 +59,20 @@ namespace Statistics2026.Data
 
             ConstructTableList();
 
+
+            var threadId = Environment.CurrentManagedThreadId;
+            if( _dbHelpers.TryGetValue( threadId, out var existingHelper ) )
+            {
+                _embyInterfaces!.Logger().Debug( $"Reusing existing db helper for thread {threadId} : {existingHelper.GetHashCode()}" );
+                _dbHelper = existingHelper;
+                return;
+            }
+
             embyInterfaces.Logger().Debug( "Creating Database" );
 
             _embyInterfaces = embyInterfaces;
             _dbHelper = new DBHelper( _embyInterfaces );
+            _dbHelpers[ threadId ] = _dbHelper;
 
             embyInterfaces.Logger().Debug( "Finished Creating Database" );
             lock( _padlock )
@@ -84,6 +98,8 @@ namespace Statistics2026.Data
                 return;
             if( disposing )
             {
+                var threadId = Environment.CurrentManagedThreadId;
+                _dbHelpers.TryRemove( threadId, out var _ );
                 _dbHelper.CloseConnection();
             }
             _disposed = true;
