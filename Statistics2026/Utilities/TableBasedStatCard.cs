@@ -29,7 +29,7 @@ namespace Statistics2026.Utilities
             rowText += $"class=\"{string.Join( " ", classArray )}\" ";
             rowText += $"{StatCard.GetStyleString()}>";
 
-            var retVal = StatCardResponse._addToHtml( depth++, rowText );
+            var retVal = EmbyHelperFuncs.addToHtml( depth++, rowText );
             if( showCategory )
             {
                 var td = Name;
@@ -38,9 +38,9 @@ namespace Statistics2026.Utilities
                     td = $"<span class=\"row-toggle\">▶</span> {Name}";
                 }
 
-                retVal += StatCardResponse._addToHtml( depth++, $"<td {StatCard.GetStyleString( keyColAlignment )}>" );
-                retVal += StatCardResponse._addToHtml( depth, td );
-                retVal += StatCardResponse._addToHtml( --depth, $"</td>" );
+                retVal += EmbyHelperFuncs.addToHtml( depth++, $"<td {StatCard.GetStyleString( keyColAlignment )}>" );
+                retVal += EmbyHelperFuncs.addToHtml( depth, td );
+                retVal += EmbyHelperFuncs.addToHtml( --depth, $"</td>" );
             }
 
             if( Values != null )
@@ -69,11 +69,11 @@ namespace Statistics2026.Utilities
                             classes = $"class=\"{string.Join( " ", classArray )}\"";
                         }
                     }
-                    retVal += StatCardResponse._addToHtml( depth, $"<td {classes} {colSpan} {GetStyleString( ii, columnAlignment )}>{td}</td>" );
+                    retVal += EmbyHelperFuncs.addToHtml( depth, $"<td {classes} {colSpan} {GetStyleString( ii, columnAlignment )}>{td}</td>" );
                 }
             }
 
-            retVal += StatCardResponse._addToHtml( --depth, "</tr>" );
+            retVal += EmbyHelperFuncs.addToHtml( --depth, "</tr>" );
 
             return retVal;
         }
@@ -254,20 +254,20 @@ namespace Statistics2026.Utilities
             {
                 if( row.isClickable && inClickableGroup )
                 {
-                    retVal += StatCardResponse._addToHtml( --depth, "</table>" );
-                    retVal += StatCardResponse._addToHtml( --depth, "</div>" );
-                    retVal += StatCardResponse._addToHtml( --depth, "</td>" );
-                    retVal += StatCardResponse._addToHtml( --depth, "</tr>" );
+                    retVal += EmbyHelperFuncs.addToHtml( --depth, "</table>" );
+                    retVal += EmbyHelperFuncs.addToHtml( --depth, "</div>" );
+                    retVal += EmbyHelperFuncs.addToHtml( --depth, "</td>" );
+                    retVal += EmbyHelperFuncs.addToHtml( --depth, "</tr>" );
                 }
 
                 retVal += row.ToString( depth, ColumnCount ?? 0, _keyColumnAlignment, _columnAlignment, ShowCategory, _classesForColumnFunc );
 
                 if( row.isClickable )
                 {
-                    retVal += StatCardResponse._addToHtml( depth++, "<tr class=\"detail-row\">" );
-                    retVal += StatCardResponse._addToHtml( depth++, $"<td colspan=\"{ColumnCount}\">" );
-                    retVal += StatCardResponse._addToHtml( depth++, "<div class=\"detail-content\">" );
-                    retVal += StatCardResponse._addToHtml( depth++, "<table style=\"width: 100%; border-collapse: collapse;\">" );
+                    retVal += EmbyHelperFuncs.addToHtml( depth++, "<tr class=\"detail-row\">" );
+                    retVal += EmbyHelperFuncs.addToHtml( depth++, $"<td colspan=\"{ColumnCount}\">" );
+                    retVal += EmbyHelperFuncs.addToHtml( depth++, "<div class=\"detail-content\">" );
+                    retVal += EmbyHelperFuncs.addToHtml( depth++, "<table style=\"width: 100%; border-collapse: collapse;\">" );
                     retVal += AddHeader( depth, true );
 
                     inClickableGroup = true;
@@ -276,10 +276,10 @@ namespace Statistics2026.Utilities
 
             if( inClickableGroup )
             {
-                retVal += StatCardResponse._addToHtml( --depth, "</table>" );
-                retVal += StatCardResponse._addToHtml( --depth, "</div>" );
-                retVal += StatCardResponse._addToHtml( --depth, "</td>" );
-                retVal += StatCardResponse._addToHtml( --depth, "</tr>" );
+                retVal += EmbyHelperFuncs.addToHtml( --depth, "</table>" );
+                retVal += EmbyHelperFuncs.addToHtml( --depth, "</div>" );
+                retVal += EmbyHelperFuncs.addToHtml( --depth, "</td>" );
+                retVal += EmbyHelperFuncs.addToHtml( --depth, "</tr>" );
             }
 
             return retVal;

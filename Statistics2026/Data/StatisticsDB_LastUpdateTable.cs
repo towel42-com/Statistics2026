@@ -44,8 +44,8 @@ namespace Statistics2026.Data
             string retVal = string.Empty;
             var depth = 0;
             
-            retVal += StatCardResponse._addToHtml( depth++, "<table>" );
-            retVal += StatCardResponse._addToHtml( depth++, "<tbody>" );
+            retVal += EmbyHelperFuncs.addToHtml( depth++, "<table>" );
+            retVal += EmbyHelperFuncs.addToHtml( depth++, "<tbody>" );
 
             if( list.Length == 1 && list[ 0 ] == "All" )
             {
@@ -65,11 +65,11 @@ namespace Statistics2026.Data
 
             foreach( var whichRun in list )
             {
-                retVal += StatCardResponse._addToHtml( depth, "<tr><td>" + GetLastRunInfo( whichRun ) + "</td></tr>" );
+                retVal += EmbyHelperFuncs.addToHtml( depth, "<tr><td>" + GetLastRunInfo( whichRun ) + "</td></tr>" );
             }
 
-            retVal += StatCardResponse._addToHtml( --depth, "<table>" );
-            retVal += StatCardResponse._addToHtml( --depth, "<tbody>" );
+            retVal += EmbyHelperFuncs.addToHtml( --depth, "<table>" );
+            retVal += EmbyHelperFuncs.addToHtml( --depth, "<tbody>" );
 
             return new HtmlJsonResponse() { html = retVal };
         }

@@ -92,7 +92,7 @@ namespace Statistics2026.Utilities
             var retVal = string.Empty;
             if( ListType == EListType.eNumbered )
             {
-                retVal += StatCardResponse._addToHtml( depth++, "<ol>" );
+                retVal += EmbyHelperFuncs.addToHtml( depth++, "<ol>" );
             }
 
             for( var ii = 0; ii < ValueLines.Count; ++ii )
@@ -102,12 +102,12 @@ namespace Statistics2026.Utilities
                 {
                     html = $"<li>{html}</li>";
                 }
-                retVal += StatCardResponse._addToHtml( depth, html );
+                retVal += EmbyHelperFuncs.addToHtml( depth, html );
             }
 
             if( ListType == EListType.eNumbered )
             {
-                retVal += StatCardResponse._addToHtml( --depth, "</ol>" );
+                retVal += EmbyHelperFuncs.addToHtml( --depth, "</ol>" );
             }
 
             return retVal;

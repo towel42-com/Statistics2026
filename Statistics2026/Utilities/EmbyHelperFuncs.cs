@@ -529,5 +529,18 @@ namespace Statistics2026.Utilities
             return (runFullAnalysis, runMissingAnalysis);
         }
 
+        public static string addToHtml( int depth, string _html )
+        {
+            if( _html.IsNullOrEmpty() )
+                return string.Empty;
+
+            var retVal = string.Empty;
+            if( depth > 0 )
+                retVal += new string( ' ', 4 * depth );
+            retVal += _html;
+            if( !retVal.EndsWith( "\n" ) )
+                retVal += "\n";
+            return retVal;
+        }
     }
 }
