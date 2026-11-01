@@ -1,8 +1,12 @@
 ﻿using MediaBrowser.Model.Services;
+using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
+using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace Statistics2026.Data
 {
@@ -37,15 +41,64 @@ namespace Statistics2026.Data
             return lastUpdated;
         }
 
-        public HtmlJsonResponse GetLastRunsInfo( string whichRuns ) // comma separated list
+        public string GetLastRunInfo( string actionString, ref bool ok )
         {
+            if( Enum.TryParse( actionString, true, out StatisticsDB.EAction whichRunEnum ) )
+            {
+                ok = true;
+                return GetLastRunInfo( whichRunEnum );
+            }
+            else
+            {
+                ok = false;
+                return $"Unknown run type <b>{actionString}</b>";
+            }
+        }
 
-            var list = whichRuns.Split( ',' );
-            string retVal = string.Empty;
+
+        public HtmlJsonResponse GetSystemStatus()
+        {
+            var retVal = GetLastRunHtml( "All" );
+
+            var version = Plugin.Instance?.Configuration.Version ?? String.Empty;
+            var buildDate = Plugin.Instance?.Configuration.BuildDate ?? String.Empty;
+
             var depth = 0;
-            
-            retVal += EmbyHelperFuncs.addToHtml( depth++, "<table>" );
-            retVal += EmbyHelperFuncs.addToHtml( depth++, "<tbody>" );
+
+            var systemHtml = EmbyHelperFuncs.addToHtml( depth++, "<ul>" );
+            systemHtml += EmbyHelperFuncs.addToHtml( depth, $"<li>Version: {version}</li>" );
+            systemHtml += EmbyHelperFuncs.addToHtml( depth, $"<li>Build Date: {buildDate}</li>" );
+            systemHtml += EmbyHelperFuncs.addToHtml( --depth, "</ul>" );
+
+            retVal.html = systemHtml + retVal.html;
+
+            var status = Plugin.Instance?.CurrDBState() ?? EDBState.eEmpty;
+            List<string> dbStates = [];
+            foreach( var curr in new[] { EDBState.eSystemTablesCreated, EDBState.eUserTablesCreated, EDBState.eSystemDataInitialized, EDBState.eUserDataInitialized } )
+            {
+                var currState = curr.ToString();
+                currState = Regex.Replace( currState, "^e", "" );
+                if( ( curr & status ) != 0 )
+                {
+                    dbStates.Add( currState + " = <b>true</b>" );
+                }
+                else
+                {
+                    dbStates.Add( currState + " = <b>false</b>" );
+                }
+            }
+
+            retVal.html += EmbyHelperFuncs.MakeTableHtml( "Database State:", dbStates );
+
+            retVal.html = retVal.html.Replace( "</br>", "" );
+            return retVal;
+        }
+
+        public HtmlJsonResponse GetLastRunHtml( string whichRuns ) // whichRuns comma separated list
+        {
+            var list = whichRuns.Split( ',' );
+            List<string> results = [];
+            List<string> errors = [];
 
             if( list.Length == 1 && list[ 0 ] == "All" )
             {
@@ -65,25 +118,17 @@ namespace Statistics2026.Data
 
             foreach( var whichRun in list )
             {
-                retVal += EmbyHelperFuncs.addToHtml( depth, "<tr><td>" + GetLastRunInfo( whichRun ) + "</td></tr>" );
+                bool ok = false;
+                var currData = GetLastRunInfo( whichRun, ref ok );
+                if( ok )
+                    results.Add( currData );
+                else
+                    errors.Add( currData );
             }
+            var resultText = EmbyHelperFuncs.MakeTableHtml( "Analsys Last Run:", results );
 
-            retVal += EmbyHelperFuncs.addToHtml( --depth, "<table>" );
-            retVal += EmbyHelperFuncs.addToHtml( --depth, "<tbody>" );
-
-            return new HtmlJsonResponse() { html = retVal };
-        }
-
-        public string GetLastRunInfo( string actionString )
-        {
-            if( Enum.TryParse( actionString, true, out StatisticsDB.EAction whichRunEnum ) )
-            {
-                return GetLastRunInfo( whichRunEnum );
-            }
-            else
-            {
-                return $"Unknown run type <b>${actionString}</b>";
-            }
+            var errorText = EmbyHelperFuncs.MakeTableHtml( "Error Getting Last Run Information:", errors );
+            return new HtmlJsonResponse() { html = resultText, error = errorText };
         }
 
         public string GetLastRunInfo( EAction action )

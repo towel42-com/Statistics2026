@@ -45,6 +45,11 @@ namespace Statistics2026.Api
         public int max_season { get; set; } = -1;
     }
 
+    [Route( "/Statistics2026/get_system_status", "GET", Summary = "Returns the system status" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetSystemStatus : IReturn<object>
+    {
+    }
     [Route( "/Statistics2026/last_run_info", "GET", Summary = "Returns the last time the analysis for run was finished" )]
     [Authenticated( Roles = "admin" )]
     public class GetLastRunInfo : IReturn<object>

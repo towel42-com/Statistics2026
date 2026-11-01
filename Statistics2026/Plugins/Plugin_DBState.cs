@@ -28,7 +28,6 @@ namespace Statistics2026
             }
             else
             {
-
                 foreach( var curr in new[] { EDBState.eSystemTablesCreated, EDBState.eUserTablesCreated, EDBState.eSystemDataInitialized, EDBState.eUserDataInitialized } )
                 {
                     if( ( curr & status ) != 0 )

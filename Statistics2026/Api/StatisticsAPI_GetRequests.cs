@@ -26,13 +26,23 @@ namespace Statistics2026.Api
             }
         }
 
-        public object Get( GetLastRunInfo request )
+        public object Get( GetSystemStatus request )
         {
-            return HandleRequest( "GetLastRun", timer =>
+            return HandleRequest( "GetSystemStatus", timer =>
             {
                 using var db = StatisticsDB.GetInstance( _embyInterfaces );
 
-                return db.GetLastRunsInfo( request.whichRuns );
+                return db.GetSystemStatus();
+            } );
+        }
+
+        public object Get( GetLastRunInfo request )
+        {
+            return HandleRequest( "GetLastRunInfo", timer =>
+            {
+                using var db = StatisticsDB.GetInstance( _embyInterfaces );
+
+                return db.GetLastRunHtml( request.whichRuns );
             } );
         }
 

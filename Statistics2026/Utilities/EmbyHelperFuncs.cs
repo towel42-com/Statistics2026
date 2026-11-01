@@ -542,5 +542,27 @@ namespace Statistics2026.Utilities
                 retVal += "\n";
             return retVal;
         }
+
+        public static string MakeTableHtml( string title, List<string> values )
+        {
+            if( values.IsNullOrEmpty() )
+                return string.Empty;
+
+            var depth = 0;
+            var retVal = addToHtml( depth++, "</br>\n<div>" );
+            if( !title.IsEmpty() )
+            {
+                retVal += addToHtml( depth, $"<h3>{title}</h3>" );
+            }
+
+            retVal += addToHtml( depth++, "<ul>" );
+            foreach( var curr in values )
+            {
+                retVal += addToHtml( depth, $"<li>{curr}</li>" );
+            }
+            retVal += addToHtml( --depth, "</ul>" );
+            retVal += addToHtml( --depth, "</div>" );
+            return retVal;
+        }
     }
 }

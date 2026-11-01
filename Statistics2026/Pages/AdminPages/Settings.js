@@ -352,65 +352,65 @@
 
             view.querySelector("#numDaysFutureForMissingHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("How many days in the future should Upcoming episodes and movies be searched for (limited by published schedules).", "Number of Days in the Future to Upcoming Videos");
+                    Helpers.showInfo("Number of Days in the Future to Upcoming Videos", "How many days in the future should Upcoming episodes and movies be searched for (limited by published schedules).");
                 });
 
             view.querySelector("#searchLocationHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("URL to the search location for missing videos ie \"https://thepiratebay.org/search.php\"", "Search Location for Missing Videos");
+                    Helpers.showInfo("Search Location for Missing Videos", "URL to the search location for missing videos ie \"https://thepiratebay.org/search.php\"");
                 });
 
             view.querySelector("#numMostActiveHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("The default is 5, but you can limit how many most active users that are reported", "Number of Most Active Users");
+                    Helpers.showInfo("Number of Most Active Users", "The default is 5, but you can limit how many most active users that are reported");
                 });
 
             view.querySelector("#numWatchedToReportHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("The default is 5, but you can limit how many Watched Videos to report on", "Number of Watched Videos");
+                    Helpers.showInfo("Number of Watched Videos", "The default is 5, but you can limit how many Watched Videos to report on");
                 });
 
             view.querySelector("#numTiedToReportHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("The default is 5, but when reporting a list of media, and the value is tied how many do you want to show?", "Number of Tied Videos");
+                    Helpers.showInfo("Number of Tied Videos", "The default is 5, but when reporting a list of media, and the value is tied how many do you want to show?");
                 });
 
             view.querySelector("#excludeAdminHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("For security reasons, Administrators are not typically viewers of media and likely should be excluded from analysis.", "Exclude Administrators");
+                    Helpers.showInfo("Exclude Administrators", "For security reasons, Administrators are not typically viewers of media and likely should be excluded from analysis.");
                 });
 
             view.querySelector("#resetPlayCountHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("When computing the user watch data, reset the playcount to the default value (typically 1), and show Administrators as watched for every video. This settings resets to false after the Reset has occured.", "Reset Play Count");
+                    Helpers.showInfo("Reset Play Count", "When computing the user watch data, reset the playcount to the default value (typically 1), and show Administrators as watched for every video. This settings resets to false after the Reset has occured.");
                 });
 
             view.querySelector("#resetDBStateHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured", "Reset Database State");
+                    Helpers.showInfo("Reset Database State", "Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured");
                 });
 
             view.querySelector("#reportOnMissingSpecialsHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("When analyzing missing episodes, check for episodes that are considered special (Season 0)", "Report on Missing Specials");
+                    Helpers.showInfo("Report on Missing Specials", "When analyzing missing episodes, check for episodes that are considered special (Season 0)");
                 });
 
             view.querySelector("#showDebugInfoHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("More information is reported on the Summary screen, this functionality is also turned on if Debug Logging is enabled", "Show Debug Info");
+                    Helpers.showInfo("Show Debug Info", "More information is reported on the Summary screen, this functionality is also turned on if Debug Logging is enabled");
                 });
 
             view.querySelector("#hasConnectUserIDHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Normally all users are shown, checking this option will display only users with a Connect User ID.", "Show Users with Connect User ID");
+                    Helpers.showInfo("Show Users with Connect User ID", "Normally all users are shown, checking this option will display only users with a Connect User ID.");
                 });
             view.querySelector("#showUnknownDVProfilesHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Normally unknown Dolby Vision Profiles are hidden, checking this option will display the count of unknown Dolby Vision profiles.", "Show Unknown Dolby Vision Profile Count");
+                    Helpers.showInfo("Show Unknown Dolby Vision Profile Count", "Normally unknown Dolby Vision Profiles are hidden, checking this option will display the count of unknown Dolby Vision profiles.");
                 });
             view.querySelector("#showAllResolutionsHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Normally only resolutions in use are show, checking this option will display all resolutions.", "Show All Resolutions");
+                    Helpers.showInfo("Show All Resolutions", "Normally only resolutions in use are show, checking this option will display all resolutions.");
                 });
 
         };

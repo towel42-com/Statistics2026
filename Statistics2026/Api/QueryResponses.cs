@@ -17,6 +17,7 @@ namespace Statistics2026.Api
     public class HtmlJsonResponse
     {
         public string html { get; set; } = string.Empty;
+        public string error { get; set; } = string.Empty;
     }
 
     public class SeriesFilterResponse

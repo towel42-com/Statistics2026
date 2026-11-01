@@ -25,15 +25,12 @@ namespace Statistics2026.Configuration
             if( !gitHash.IsEmpty() )
                 gitHash = "+" + gitHash;
 
-            var now = DateTimeOffset.UtcNow;
-            LastUpdated = HelperFuncs.ToDateTimeParamValue( now )!;
             Version = Plugin.Instance?.Version.ToString( 4 ) + gitHash ?? "<UNKNOWN>";
             BuildDate = HelperFuncs.ToDateTimeParamValue( BuildDateInfo.GetBuildDate() )!;
             Plugin.Instance?.UpdateConfiguration( this );
         }
 
         public string BuildDate { get; set; } = string.Empty;
-        public string LastUpdated { get; set; } = string.Empty;
         public string Version { get; set; } = string.Empty;
 
         public bool hasConnectUserID { get; set; } = false;

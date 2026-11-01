@@ -1,721 +1,827 @@
-define(function () {
-    const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
+define([
+    'dialogHelper',
+    'toast',
+    'prompt'
+],
+    function (dialogHelper, toast, prompt) {
+        'use strict';
 
-    async function CheckForValidConfig() {
-        var urlText = "/emby/Statistics2026/database_status";
-        var url = ApiClient.getUrl(urlText);
+        const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
 
-        let response = await ApiClient.getJSON(url).catch(error => {
-            var errorMessage = "'" + error + "' - '" + urlText + "'";
-            console.error("database_status failed:", errorMessage);
-            return false;
-        });
+        async function CheckForValidConfig() {
+            var urlText = "/emby/Statistics2026/database_status";
+            var url = ApiClient.getUrl(urlText);
 
-        if (!response.DBStateOK) {
-            let errorMessage = "";
-            let dbLastRunHtml = "";
-
-            dbLastRunHtml = await getLastRunInfo("Any").catch(error => {
-                errorMessage = `'${error}'`;
-                console.error("getLastRunInfo failed:", errorMessage);
+            let response = await ApiClient.getJSON(url).catch(error => {
+                var errorMessage = "'" + error + "' - '" + urlText + "'";
+                console.error("database_status failed:", errorMessage);
+                return false;
             });
 
-            let message =
-                `<div>The database has not been initialized or is not finalized,</div>
-                 <div>please run the 'Statistics 2026' task on the Scheduled Tasks page and come back for the results.</div>
-                 <div>${dbLastRunHtml}</div>`
-                ;
+            if (!response.DBStateOK) {
+                let errorMessage = "";
+                let systemStatusObj = null;
 
-            if (errorMessage != "")
-                message += `<div>${errorMessage}</div>`;
+                systemStatusObj = await getSystemStatusAsync().catch(error => {
+                    errorMessage = `'${error}'`;
+                    console.error("getSystemStatus failed:", errorMessage);
+                });
 
-            let title = "Incomplete or Missing Database";
-            showInfo(message, title);
-        }
-        return response.DBStateOK;
-    }
+                let message = `<div>The database has not been initialized or is not finalized, please run the 'Statistics 2026 - Calculate' task on the Scheduled Tasks page and come back for the results.</div>`;
 
-    if (!String.prototype.endsWith2) {
-        String.prototype.endsWith2 = function (searchString, position) {
-            var subjectString = this.toString();
-            if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
-                position = subjectString.length;
+                if (systemStatusObj != null) {
+                    if (systemStatusObj.html != "" && systemStatusObj.html !== undefined) {
+                        message += systemStatusObj.html;
+                    }
+
+                    if (systemStatusObj.error != "" && systemStatusObj.error !== undefined) {
+                        errorMessage = systemStatusObj.error;
+                    }
+                }
+
+                if (errorMessage != "" && errorMessage !== undefined) {
+                    message += `</br><div><b>Error Getting Last Run Information</b>: ${errorMessage}</div>`;
+                }
+
+                let title = "Incomplete or Missing Database";
+                showInfo(title, message, true);
             }
-            position -= searchString.length;
-            var lastIndex = subjectString.indexOf(searchString, position);
-            return lastIndex !== -1 && lastIndex === position;
-        };
-    }
+            return response.DBStateOK;
+        }
 
-    function calculateProgressClass(value) {
-        value = Math.round(value);
-        if (value == 0)
-            return ``;
-        else if (value < 20)
-            return `progress-red`;
-        else if (value < 40)
-            return `progress-darkRed`;
-        else if (value < 60)
-            return `progress-orange`;
-        else if (value < 80)
-            return `progress-darkOrange`;
-        else if (value < 100)
-            return `progress-darkGreen`;
-        else
-            return `progress-green`;
-    };
+        if (!String.prototype.endsWith2) {
+            String.prototype.endsWith2 = function (searchString, position) {
+                var subjectString = this.toString();
+                if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
+                    position = subjectString.length;
+                }
+                position -= searchString.length;
+                var lastIndex = subjectString.indexOf(searchString, position);
+                return lastIndex !== -1 && lastIndex === position;
+            };
+        }
 
-    function numDaysTo(date) {
-        const todayDT = new Date();
-        const today = new Date(todayDT.getFullYear(), todayDT.getMonth(), todayDT.getDate());
-        var numMS = today - date;
-        var msPerDay = 24 * 60 * 60 * 1000;
-
-        const numDays = Math.round(numMS / msPerDay);
-        return numDays;
-    }
-
-    function calculateMediaStatusClass(date) {
-        const numDays = numDaysTo(date);
-
-        if (numDays < 0)
-            return ``;
-        if (numDays <= 3)
-            return `progress-green`;
-        else if (numDays < 7)
-            return `progress-darkGreen`;
-        else if (numDays < 14)
-            return `progress-yellow`;
-        else if (numDays < 28)
-            return `progress-orange`;
-        else if (numDays < 42)
-            return `progress-darkOrange`;
-        else if (numDays < 56)
-            return `progress-red`;
-        else
-            return `progress-darkRed`;
-    };
-
-    function getTVProgressRowData(info) {
-        var retVal = `
-        <td style="vertical-align: middle; white-space: nowrap; align=left>"${info.Name} (${info.PremiereYear})</td>
-        <td class="center ${calculateProgressClass(info.Episodes.Percent)}" style="vertical-align: middle; white-space: nowrap; align=left>"${info.Episodes.String}</td>
-        <td style="vertical-align: middle; white-space: nowrap; align=left">${info.ScoreStr}/10</td>
-        <td style="vertical-align: middle; white-space: nowrap; align=left">${info.SeriesStatus}</td>
-        `;
-        return retVal;
-    }
-
-    function getTVProgressHeader() {
-        var retVal = `
-            <tr style="text-align: left; white-space: nowrap;">
-                <th data-column="Name" data-type="string" class="info_cell_heading">TV Series (Premiere Year)<span class="sort-icon"></span></th>
-                <th data-column="EpisodeProgess" data-type="progress" class="info_cell_heading" style="white-space: nowrap;">Progress<span class="sort-icon"></span><span class="infoBlock" id="episodesInfo"><i class="md-icon">info</i></span></th>
-                <th data-column="Score" data-type="number" class="info_cell_heading">Score<span class="sort-icon"></span></th>
-                <th data-column="Status" data-type="string" class="info_cell_heading">Series Status<span class="sort-icon"></span></th>
-            </tr>`;
-        return retVal;
-    }
-
-    function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc) {
-        view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
-
-        var url = "Statistics2026/tv_series_progress/" + userName;
-
-        const sortit = () => {
-            sortTable(1, "progress", 'TVSeriesProgress', showLoadingFunc, hideLoadingFunc, 'desc');
+        function calculateProgressClass(value) {
+            value = Math.round(value);
+            if (value == 0)
+                return ``;
+            else if (value < 20)
+                return `progress-red`;
+            else if (value < 40)
+                return `progress-darkRed`;
+            else if (value < 60)
+                return `progress-orange`;
+            else if (value < 80)
+                return `progress-darkOrange`;
+            else if (value < 100)
+                return `progress-darkGreen`;
+            else
+                return `progress-green`;
         };
 
-        loadTableData(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
-    }
+        function numDaysTo(date) {
+            const todayDT = new Date();
+            const today = new Date(todayDT.getFullYear(), todayDT.getMonth(), todayDT.getDate());
+            var numMS = today - date;
+            var msPerDay = 24 * 60 * 60 * 1000;
 
-    function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
-        showLoadingFunc();
-
-        try {
-            view.querySelector("#UserTitle").innerHTML = "User statistics for " + userName;
-            view.querySelector("#generalStats").innerHTML = "";
-            view.querySelector("#movieStats").innerHTML = "";
-            view.querySelector("#showStats").innerHTML = "";
-
-            var generalStats = "";
-            generalStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=all");
-            generalStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=all");
-            view.querySelector("#generalStats").innerHTML = generalStats;
-
-            var movieStats = "";
-            movieStats += getSummaryInfo(view, "total_movie_count", userName);
-            movieStats += getSummaryInfo(view, "total_movies_watched", userName);
-            movieStats += getSummaryInfo(view, "movie_favorite_years", userName);
-            movieStats += getSummaryInfo(view, "movie_favorite_genres", userName);
-            movieStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=false", "total_movie_time_watched");
-            movieStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=false", "total_movie_watchable_time");
-            view.querySelector("#movieStats").innerHTML = movieStats;
-
-            var movieMostWatchedStats = "";
-            movieMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=false", "last_seen_movies");
-            movieMostWatchedStats += getSummaryInfo(view, "most_watched_movies", userName);
-            view.querySelector("#movieMostWatchedStats").innerHTML = movieMostWatchedStats;
-
-            var showStats = "";
-            showStats += getSummaryInfo(view, "total_tv_count", userName);
-            showStats += getSummaryInfo(view, "total_tv_watched", userName);
-            showStats += getSummaryInfo(view, "total_series_finished", userName);
-            showStats += getSummaryInfo(view, "tv_favorite_genres", userName);
-            showStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=true", "total_episode_time_watched");
-            showStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=true", "total_episode_watchable_time");
-            view.querySelector("#showStats").innerHTML = showStats;
-
-            var seriesMostWatchedStats = "";
-            seriesMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=true", "last_seen_tv");
-            seriesMostWatchedStats += getSummaryInfo(view, "most_watched_shows", userName, "");
-            view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
-
-            hideLoadingFunc();
-        } catch {
-            hideLoadingFunc();
-        }
-    }
-
-    function getMediaRowData(info, showOnServer, showMissing) {
-        var retVal = `
-        <td style="align=left" sort-value="${info.DisplayName.SortBy}">${info.DisplayName.Text}</td>
-        <td style="align=left" sort-value="${info.ParentName.SortBy}">${info.ParentName.Text}</td>
-        `;
-        let premiereDateClass = "";
-        if (showMissing && info.SearchLocation.Text != "") {
-            premiereDateClass = `class='${calculateMediaStatusClass(new Date(info.PremiereDate))}'`;
+            const numDays = Math.round(numMS / msPerDay);
+            return numDays;
         }
 
-        retVal += `
-            <td style="align=right" sort-value="${info.PremiereDate}" ${premiereDateClass}> ${info.PremiereDate}</td>
-            <td style="align=left"  sort-value="${info.StudioNames.SortBy}">${info.StudioNames.Text}</td>
+        function calculateMediaStatusClass(date) {
+            const numDays = numDaysTo(date);
+
+            if (numDays < 0)
+                return ``;
+            if (numDays <= 3)
+                return `progress-green`;
+            else if (numDays < 7)
+                return `progress-darkGreen`;
+            else if (numDays < 14)
+                return `progress-yellow`;
+            else if (numDays < 28)
+                return `progress-orange`;
+            else if (numDays < 42)
+                return `progress-darkOrange`;
+            else if (numDays < 56)
+                return `progress-red`;
+            else
+                return `progress-darkRed`;
+        };
+
+        function getTVProgressRowData(info) {
+            var retVal = `
+            <td style="vertical-align: middle; white-space: nowrap; align=left>"${info.Name} (${info.PremiereYear})</td>
+            <td class="center ${calculateProgressClass(info.Episodes.Percent)}" style="vertical-align: middle; white-space: nowrap; align=left>"${info.Episodes.String}</td>
+            <td style="vertical-align: middle; white-space: nowrap; align=left">${info.ScoreStr}/10</td>
+            <td style="vertical-align: middle; white-space: nowrap; align=left">${info.SeriesStatus}</td>
             `;
+            return retVal;
+        }
 
-        if (showOnServer) {
-            retVal += `
-            <td style="align=left">${info.ResolutionDetail}</td>
-            <td style="align=left">${info.Codec}</td>
-            <td style="align=left">${info.DolbyVisionProfile}</td>
-            <td style="align=left" sort-value="${info.ServerLocation.SortBy}">${info.ServerLocation.Text}</td>
+        function getTVProgressHeader() {
+            var retVal = `
+                <tr style="text-align: left; white-space: nowrap;">
+                    <th data-column="Name" data-type="string" class="info_cell_heading">TV Series (Premiere Year)<span class="sort-icon"></span></th>
+                    <th data-column="EpisodeProgess" data-type="progress" class="info_cell_heading" style="white-space: nowrap;">Progress<span class="sort-icon"></span><span class="infoBlock" id="episodesInfo"><i class="md-icon">info</i></span></th>
+                    <th data-column="Score" data-type="number" class="info_cell_heading">Score<span class="sort-icon"></span></th>
+                    <th data-column="Status" data-type="string" class="info_cell_heading">Series Status<span class="sort-icon"></span></th>
+                </tr>`;
+            return retVal;
+        }
+
+        function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc) {
+            view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
+
+            var url = "Statistics2026/tv_series_progress/" + userName;
+
+            const sortit = () => {
+                sortTable(1, "progress", 'TVSeriesProgress', showLoadingFunc, hideLoadingFunc, 'desc');
+            };
+
+            loadTableData(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
+        }
+
+        function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
+            showLoadingFunc();
+
+            try {
+                view.querySelector("#UserTitle").innerHTML = "User statistics for " + userName;
+                view.querySelector("#generalStats").innerHTML = "";
+                view.querySelector("#movieStats").innerHTML = "";
+                view.querySelector("#showStats").innerHTML = "";
+
+                var generalStats = "";
+                generalStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=all");
+                generalStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=all");
+                view.querySelector("#generalStats").innerHTML = generalStats;
+
+                var movieStats = "";
+                movieStats += getSummaryInfo(view, "total_movie_count", userName);
+                movieStats += getSummaryInfo(view, "total_movies_watched", userName);
+                movieStats += getSummaryInfo(view, "movie_favorite_years", userName);
+                movieStats += getSummaryInfo(view, "movie_favorite_genres", userName);
+                movieStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=false", "total_movie_time_watched");
+                movieStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=false", "total_movie_watchable_time");
+                view.querySelector("#movieStats").innerHTML = movieStats;
+
+                var movieMostWatchedStats = "";
+                movieMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=false", "last_seen_movies");
+                movieMostWatchedStats += getSummaryInfo(view, "most_watched_movies", userName);
+                view.querySelector("#movieMostWatchedStats").innerHTML = movieMostWatchedStats;
+
+                var showStats = "";
+                showStats += getSummaryInfo(view, "total_tv_count", userName);
+                showStats += getSummaryInfo(view, "total_tv_watched", userName);
+                showStats += getSummaryInfo(view, "total_series_finished", userName);
+                showStats += getSummaryInfo(view, "tv_favorite_genres", userName);
+                showStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=true", "total_episode_time_watched");
+                showStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=true", "total_episode_watchable_time");
+                view.querySelector("#showStats").innerHTML = showStats;
+
+                var seriesMostWatchedStats = "";
+                seriesMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=true", "last_seen_tv");
+                seriesMostWatchedStats += getSummaryInfo(view, "most_watched_shows", userName, "");
+                view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
+
+                hideLoadingFunc();
+            } catch {
+                hideLoadingFunc();
+            }
+        }
+
+        function getMediaRowData(info, showOnServer, showMissing) {
+            var retVal = `
+            <td style="align=left" sort-value="${info.DisplayName.SortBy}">${info.DisplayName.Text}</td>
+            <td style="align=left" sort-value="${info.ParentName.SortBy}">${info.ParentName.Text}</td>
             `;
-        }
+            let premiereDateClass = "";
+            if (showMissing && info.SearchLocation.Text != "") {
+                premiereDateClass = `class='${calculateMediaStatusClass(new Date(info.PremiereDate))}'`;
+            }
 
-        if (showMissing) {
-            retVal += `<td style="align=left" sort-value="${info.SearchLocation.SortBy}">${info.SearchLocation.Text}</td>`;
-        }
-
-        return retVal;
-    }
-
-    function getMediaHeader(parentName, showOnServer, showMissing) {
-        var retVal =
-            `<tr style="text-align: left;">
-            <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
-            <th data-column="ParentName" data-type="string" class="info_cell_heading">${parentName}<span class="sort-icon"></span></th>
-            <th data-column="PremiereDate" data-type="date" class="info_cell_heading">Premiere Date<span class="sort-icon"></span></th>
-            <th data-column="Studios" data-type="string" class="info_cell_heading">Studio(s)<span class="sort-icon"></span></th>
-            `
-
-        if (showOnServer) {
             retVal += `
-                <th data-column="Resolution" data-type="string" class="info_cell_heading">Resolution<span class="sort-icon"></span></th>
-                <th data-column="Codec" data-type="string" class="info_cell_heading">Codec<span class="sort-icon"></span></th>
-                <th data-column="DolbyVisionProfile" data-type="string" class="info_cell_heading">Dolby Vision Profile<span class="sort-icon"></span></th>
-                <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
+                <td style="align=right" sort-value="${info.PremiereDate}" ${premiereDateClass}> ${info.PremiereDate}</td>
+                <td style="align=left"  sort-value="${info.StudioNames.SortBy}">${info.StudioNames.Text}</td>
                 `;
-        }
 
-        if (showMissing) {
-            retVal += `<th data-column="Search" data-type="string" class="info_cell_heading">Click to Search<span class="sort-icon"></span></th>`;
-        }
-
-        retVal += "</tr>";
-        return retVal;
-    }
-
-    getStatistics2026Data = function (url_to_get) {
-        console.log("getStatistics2026Data Url = " + url_to_get);
-        return ApiClient.ajax({
-            type: "GET",
-            url: url_to_get,
-            dataType: "json"
-        });
-    };
-
-    async function getLastRunInfo(whichRuns) {
-        var param = whichRuns.join(',');
-        var urlText = `/Statistics2026/last_run_info?whichRuns=${param}`;
-        console.info("last_run_info - '" + urlText + "'");
-        var url = ApiClient.getUrl(urlText);
-
-        let response = await ApiClient.getJSON(url);
-        return response;
-    }
-
-    async function insertGetLastRunInfo(view, whichRuns, div) {
-        getLastRunInfo(whichRuns).then(response => {
-            view.querySelector("#" + div).innerHTML = response.html;
-        }).catch(error => {
-            var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
-            console.error("insertGetLastRunInfo failed:", errorMessage);
-            view.querySelector("#" + div).innerHTML = `<tr><td colspan="2">Error loading ${whichRuns} status</td></tr>`;
-        });
-    }
-
-    function getSummaryInfo(view, whichSummary, user, parameters = "", div = "") {
-        var urlText = "/emby/Statistics2026/" + whichSummary;
-        if (user != "" && user !== undefined)
-            urlText += "/" + user;
-        urlText += parameters;
-        console.info("getSummaryInfo - '" + urlText + "'");
-        var url = ApiClient.getUrl(urlText);
-
-        if (div == "")
-            div = whichSummary;
-
-        ApiClient.getJSON(url).then(response => {
-            view.querySelector("#" + div).innerHTML = response.html;
-
-            response.dynamicButtons.forEach((v) => {
-                view.querySelector("#" + v.id).addEventListener("click",
-                    function () {
-                        showInfo(v.info, v.title);
-                    });
-            });
-        }).catch(error => {
-            var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
-            console.error("getSummaryInfo failed:", errorMessage);
-        });
-
-        return `<div name="${div}" id="${div}"></div>`;
-    }
-
-    function getTabIndex(tab_name, getTabsFn) {
-        var index = 0;
-
-        var tabs = getTabsFn();
-        for (index = 0; index < tabs.length; ++index) {
-            var path = tabs[index].href;
-            if (path.endsWith2("=" + tab_name)) {
-                return index;
+            if (showOnServer) {
+                retVal += `
+                <td style="align=left">${info.ResolutionDetail}</td>
+                <td style="align=left">${info.Codec}</td>
+                <td style="align=left">${info.DolbyVisionProfile}</td>
+                <td style="align=left" sort-value="${info.ServerLocation.SortBy}">${info.ServerLocation.Text}</td>
+                `;
             }
-        }
-        return -1;
-    }
 
-    const STYLE_ID = 'statistics2026-stylesheet';
-    function injectStyleSheet() {
-        if (document.getElementById(STYLE_ID))  // already added
-            return;
+            if (showMissing) {
+                retVal += `<td style="align=left" sort-value="${info.SearchLocation.SortBy}">${info.SearchLocation.Text}</td>`;
+            }
 
-        const cssUrl = 'configurationpage?name=style.css';
-        const link = document.createElement('link');
-        link.id = STYLE_ID;
-        link.rel = 'stylesheet';
-        link.type = 'text/css';
-        link.href = cssUrl;
-
-        document.head.appendChild(link);
-    }
-
-    const activeLoaders = new Map();
-
-    async function loadTableData(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
-        if (activeLoaders.has(baseId)) {
-            activeLoaders.get(baseId).abort();
-            activeLoaders.delete(baseId);
+            return retVal;
         }
 
-        const abortController = new AbortController();
-        const { signal } = abortController;
-        activeLoaders.set(baseId, abortController);
+        function getMediaHeader(parentName, showOnServer, showMissing) {
+            var retVal =
+                `<tr style="text-align: left;">
+                <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
+                <th data-column="ParentName" data-type="string" class="info_cell_heading">${parentName}<span class="sort-icon"></span></th>
+                <th data-column="PremiereDate" data-type="date" class="info_cell_heading">Premiere Date<span class="sort-icon"></span></th>
+                <th data-column="Studios" data-type="string" class="info_cell_heading">Studio(s)<span class="sort-icon"></span></th>
+                `
 
-        var url = ApiClient.getUrl(apiEndpoint);
+            if (showOnServer) {
+                retVal += `
+                    <th data-column="Resolution" data-type="string" class="info_cell_heading">Resolution<span class="sort-icon"></span></th>
+                    <th data-column="Codec" data-type="string" class="info_cell_heading">Codec<span class="sort-icon"></span></th>
+                    <th data-column="DolbyVisionProfile" data-type="string" class="info_cell_heading">Dolby Vision Profile<span class="sort-icon"></span></th>
+                    <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
+                    `;
+            }
 
-        var load_status = view.querySelector('#' + baseId + '_status');
-        if (load_status !== undefined && load_status != null) {
-            load_status.style.display = '';
-            load_status.innerHTML = "Loading Data...";
+            if (showMissing) {
+                retVal += `<th data-column="Search" data-type="string" class="info_cell_heading">Click to Search<span class="sort-icon"></span></th>`;
+            }
+
+            retVal += "</tr>";
+            return retVal;
         }
 
-        showLoadingFunc();
-        try {
-            console.log("url: " + url);
-            let resultData = await getStatistics2026Data(url, { signal }).catch(error => {
-                if (error.name === 'AbortError') {
-                    console.log(`Load operation for ${baseId} was interrupted during network fetch.`);
+        async function getStatistics2026Data(url_to_get) {
+            console.log("getStatistics2026Data Url = " + url_to_get);
+            return ApiClient.ajax({
+                type: "GET",
+                url: url_to_get,
+                dataType: "json"
+            });
+        };
+
+        async function getSystemStatusAsync() {
+            let urlText = `/Statistics2026/get_system_status`;
+            console.info("get_system_status - '" + urlText + "'");
+            var url = ApiClient.getUrl(urlText);
+
+            let response = await ApiClient.getJSON(url);
+            return response;
+        }
+
+        async function getLastRunInfo(whichRuns) {
+            var param = whichRuns.join(',');
+            var urlText = `/Statistics2026/last_run_info?whichRuns=${param}`;
+            console.info("last_run_info - '" + urlText + "'");
+            var url = ApiClient.getUrl(urlText);
+
+            let response = await ApiClient.getJSON(url);
+            return response;
+        }
+
+        async function insertGetLastRunInfo(view, whichRuns, div) {
+            getLastRunInfo(whichRuns).then(response => {
+                view.querySelector("#" + div).innerHTML = response.html;
+            }).catch(error => {
+                var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
+                console.error("insertGetLastRunInfo failed:", errorMessage);
+                view.querySelector("#" + div).innerHTML = `<tr><td colspan="2">Error loading ${whichRuns} status</td></tr>`;
+            });
+        }
+
+        function getSummaryInfo(view, whichSummary, user, parameters = "", div = "") {
+            var urlText = "/emby/Statistics2026/" + whichSummary;
+            if (user != "" && user !== undefined)
+                urlText += "/" + user;
+            urlText += parameters;
+            console.info("getSummaryInfo - '" + urlText + "'");
+            var url = ApiClient.getUrl(urlText);
+
+            if (div == "")
+                div = whichSummary;
+
+            ApiClient.getJSON(url).then(response => {
+                view.querySelector("#" + div).innerHTML = response.html;
+
+                response.dynamicButtons.forEach((v) => {
+                    view.querySelector("#" + v.id).addEventListener("click",
+                        function () {
+                            showInfo(v.title, v.info);
+                        });
+                });
+            }).catch(error => {
+                var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
+                console.error("getSummaryInfo failed:", errorMessage);
+            });
+
+            return `<div name="${div}" id="${div}"></div>`;
+        }
+
+        function getTabIndex(tab_name, getTabsFn) {
+            var index = 0;
+
+            var tabs = getTabsFn();
+            for (index = 0; index < tabs.length; ++index) {
+                var path = tabs[index].href;
+                if (path.endsWith2("=" + tab_name)) {
+                    return index;
+                }
+            }
+            return -1;
+        }
+
+        const STYLE_ID = 'statistics2026-stylesheet';
+        function injectStyleSheet() {
+            if (document.getElementById(STYLE_ID))  // already added
+                return;
+
+            const cssUrl = 'configurationpage?name=style.css';
+            const link = document.createElement('link');
+            link.id = STYLE_ID;
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = cssUrl;
+
+            document.head.appendChild(link);
+        }
+
+        const activeLoaders = new Map();
+
+        async function loadTableData(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
+            if (activeLoaders.has(baseId)) {
+                activeLoaders.get(baseId).abort();
+                activeLoaders.delete(baseId);
+            }
+
+            const abortController = new AbortController();
+            const { signal } = abortController;
+            activeLoaders.set(baseId, abortController);
+
+            var url = ApiClient.getUrl(apiEndpoint);
+
+            var load_status = view.querySelector('#' + baseId + '_status');
+            if (load_status !== undefined && load_status != null) {
+                load_status.style.display = '';
+                load_status.innerHTML = "Loading Data...";
+            }
+
+            showLoadingFunc();
+            try {
+                console.log("url: " + url);
+                let resultData = await getStatistics2026Data(url, { signal }).catch(error => {
+                    if (error.name === 'AbortError') {
+                        console.log(`Load operation for ${baseId} was interrupted during network fetch.`);
+                        return;
+                    }
+
+                    var errorMessage = "'" + error + "' - '" + url + "'";
+                    console.error("loadTableData failed:", errorMessage, "url:", url);
+                    hideLoadingFunc();
+                    return;
+                });
+
+                if (resultData === undefined || signal.aborted) {
+                    if (!signal.aborted)
+                        console.error("loadTableData failed: result data was undefined", "url:", url);
+                    hideLoadingFunc();
                     return;
                 }
 
-                var errorMessage = "'" + error + "' - '" + url + "'";
-                console.error("loadTableData failed:", errorMessage, "url:", url);
-                hideLoadingFunc();
-                return;
-            });
+                // console.log("resultData: " + JSON.stringify(resultData));
 
-            if (resultData === undefined || signal.aborted) {
-                if (!signal.aborted)
-                    console.error("loadTableData failed: result data was undefined", "url:", url);
-                hideLoadingFunc();
-                return;
-            }
+                var tbody = view.querySelector('#' + baseId + '_body');
+                tbody.innerHTML = "";
 
-            // console.log("resultData: " + JSON.stringify(resultData));
+                var thead = view.querySelector('#' + baseId + '_head');
+                thead.innerHTML = getHeaderFunc();
+                setupSortability(baseId, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
 
-            var tbody = view.querySelector('#' + baseId + '_body');
-            tbody.innerHTML = "";
+                let minChunkSize = 50;
+                let chunkSize = Math.min(minChunkSize, Math.trunc(resultData.length / 20));
+                if (chunkSize == 0)
+                    chunkSize = minChunkSize;
 
-            var thead = view.querySelector('#' + baseId + '_head');
-            thead.innerHTML = getHeaderFunc();
-            setupSortability(baseId, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
-
-            let minChunkSize = 50;
-            let chunkSize = Math.min(minChunkSize, Math.trunc(resultData.length / 20));
-            if (chunkSize == 0)
-                chunkSize = minChunkSize;
-
-            let currentIndex = 0;
-            function renderNextChunk() {
-                if (signal.aborted) {
-                    console.log(`Rendering loop for ${baseId} was interrupted.`);
-                    return;
-                }
-
-                showLoadingFunc();
-                const endIndex = Math.min(currentIndex + chunkSize, resultData.length);
-                const fragment = document.createDocumentFragment();
-
-                if (load_status !== undefined && load_status != null) {
-                    load_status.innerHTML = `Loading Data... ${currentIndex} of ${resultData.length}`;
-                }
-                for (var index = currentIndex; index < endIndex; ++index) {
-                    var info = resultData[index];
-
-                    var row_bg_col = "#BBBBBB00";
-                    if (index % 2 == 0) {
-                        row_bg_col = "#BBBBBB1C";
+                let currentIndex = 0;
+                function renderNextChunk() {
+                    if (signal.aborted) {
+                        console.log(`Rendering loop for ${baseId} was interrupted.`);
+                        return;
                     }
 
-                    const tr = document.createElement('tr');
-                    tr.style.backgroundColor = row_bg_col;
-                    tr.innerHTML = getRowDataFunc(info, index, tr);
-                    fragment.appendChild(tr);
-                }
+                    showLoadingFunc();
+                    const endIndex = Math.min(currentIndex + chunkSize, resultData.length);
+                    const fragment = document.createDocumentFragment();
 
-                tbody.appendChild(fragment);
-                currentIndex = endIndex;
+                    if (load_status !== undefined && load_status != null) {
+                        load_status.innerHTML = `Loading Data... ${currentIndex} of ${resultData.length}`;
+                    }
+                    for (var index = currentIndex; index < endIndex; ++index) {
+                        var info = resultData[index];
 
-                if (currentIndex < resultData.length) {
-                    requestAnimationFrame(renderNextChunk);
-                }
-                else {
-                    if (activeLoaders.get(baseId) === abortController) {
-                        activeLoaders.delete(baseId);
+                        var row_bg_col = "#BBBBBB00";
+                        if (index % 2 == 0) {
+                            row_bg_col = "#BBBBBB1C";
+                        }
+
+                        const tr = document.createElement('tr');
+                        tr.style.backgroundColor = row_bg_col;
+                        tr.innerHTML = getRowDataFunc(info, index, tr);
+                        fragment.appendChild(tr);
                     }
 
-                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-                        var found = false;
-                        config.TableSortEntries.forEach(entry => {
-                            if (entry.TableId == baseId) {
-                                var headers = thead.querySelectorAll('th');
-                                headers.forEach((header, index) => {
-                                    if (header.getAttribute('data-column') == entry.ColumnName) {
-                                        var dataType = header.getAttribute('data-type');
-                                        sortTable(index, dataType, entry.TableId, showLoadingFunc, hideLoadingFunc, entry.AscDesc);
-                                        found = true;
-                                    }
-                                });
+                    tbody.appendChild(fragment);
+                    currentIndex = endIndex;
+
+                    if (currentIndex < resultData.length) {
+                        requestAnimationFrame(renderNextChunk);
+                    }
+                    else {
+                        if (activeLoaders.get(baseId) === abortController) {
+                            activeLoaders.delete(baseId);
+                        }
+
+                        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                            var found = false;
+                            config.TableSortEntries.forEach(entry => {
+                                if (entry.TableId == baseId) {
+                                    var headers = thead.querySelectorAll('th');
+                                    headers.forEach((header, index) => {
+                                        if (header.getAttribute('data-column') == entry.ColumnName) {
+                                            var dataType = header.getAttribute('data-type');
+                                            sortTable(index, dataType, entry.TableId, showLoadingFunc, hideLoadingFunc, entry.AscDesc);
+                                            found = true;
+                                        }
+                                    });
+                                }
+                            });
+
+                            if (found == false && onFinished !== undefined) {
+                                onFinished();
                             }
                         });
 
-                        if (found == false && onFinished !== undefined) {
-                            onFinished();
+                        if (load_status !== undefined && load_status != null) {
+                            load_status.style.display = 'none';
                         }
+                        hideLoadingFunc();
+                    }
+                }
+                requestAnimationFrame(renderNextChunk);
+            }
+            catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error("Unexpected error in loadTableData workflow:", error);
+                }
+            }
+            finally {
+                hideLoadingFunc();
+            }
+        }
+
+        function loadUsers(view, comboBoxId, loadDataFunc) {
+            ApiClient.getUsers().then(function (users) {
+                console.log(`users: {users}`);
+                var select = view.querySelector(comboBoxId);
+                users.forEach((user) => {
+                    var option = document.createElement(`option`);
+                    option.value = user.Id;
+                    option.innerHTML = user.Name;
+                    select.appendChild(option);
+                });
+                if (users.length > 0) {
+                    loadDataFunc(view, users[0].Id);
+                }
+            });
+        }
+
+        function setupSortability(baseId, showLoadingFunc, hideLoadingFunc) {
+            document.querySelectorAll(`#${baseId}_table thead th`).forEach((header, index) => {
+                header.addEventListener('click', () => {
+                    const columnType = header.getAttribute('data-type');
+                    let idx = header.cellIndex;
+                    sortTable(idx, columnType, baseId, showLoadingFunc, hideLoadingFunc);
+                });
+            });
+        }
+
+        /**
+         * Simplified wrapper for showing a quick informational alert.
+         * @param {string} title The dialog header text.
+         * @param {string} message The alert body content.
+         * @param {boolean} [isHtml=false] True to parse string as HTML, false to treat as plain text.
+         * @returns {Promise<boolean>}
+         */
+        function showInfo(title, message, isHtml = false) {
+            let htmlContent = message;
+
+            // If not explicit HTML, safely escape text to prevent accidental rendering bugs or vulnerabilities
+            if (!isHtml) {
+                const div = document.createElement('div');
+                div.textContent = message;
+                htmlContent = div.innerHTML;
+            }
+
+            return showInfoEx({
+                title: title,
+                html: htmlContent,
+                confirmText: 'Got It'
+            });
+        }
+
+        /**
+         * Advanced Emby dialog framework engine supporting auto-sizing HTML content.
+         * @param {Object} options Configuration parameters.
+         * @param {string} options.title The dialog header text.
+         * @param {string} options.html The raw HTML string markup to inject.
+         * @param {string} [options.confirmText='OK'] Label text for the submit button.
+         * @param {string} [options.cancelText] Optional label text to enable a secondary cancel button.
+         * @returns {Promise<boolean>} Resolves to true if confirmed, false if cancelled/closed.
+         */
+        function showInfoEx(options) {
+            return new Promise(function (resolve) {
+                require(['dialogHelper'], function (dialogHelper) {
+
+                    let footerButtonsHtml = '';
+                    if (options.cancelText) {
+                        footerButtonsHtml += `<button is="emby-button" type="button" class="button-cancel raised btnCancel" style="margin-right: 10px; min-width: 80px;">${options.cancelText}</button>`;
+                    }
+
+                    let okButtonText = options.confirmText || (options.cancelText ? 'OK' : 'Got It');
+                    footerButtonsHtml += `<button is="emby-button" type="button" class="button-submit raised btnConfirm" style="min-width: 80px;">${okButtonText}</button>`;
+                    let footerStyle = (options.cancelText && options.confirmText) ? 'display: flex; justify-content: flex-end; margin-top: 2em;' : 'display: flex; justify-content: center; margin-top: 2em; width: 100%;';
+                    // Dynamically scales width to fit text boundaries precisely, capping at viewport limits
+
+                    const dialogTemplate = `
+                        <div class="dialog dialog-fixedSize dialog-alert" style="padding: 2.2em; width: max-content; min-width: 280px; max-width: 90vw; border-radius: 6px; box-sizing: border-box;">
+                            <h2 style="margin-top: 0; font-weight: 500; white-space: nowrap; text-align: center; width: 100%;">
+                                ${options.title || 'Notification'}
+                            </h2>
+                    
+                            <div class="dialogContent" style="margin: 1.5em 0; line-height: 1.5; font-size: 1.05em; height: auto;">
+                                ${options.html}
+                            </div>
+                    
+                            <div style="${footerStyle}">
+                                ${footerButtonsHtml}
+                            </div>
+                        </div>
+                    `;
+
+                    const containerDiv = document.createElement('div');
+                    containerDiv.innerHTML = dialogTemplate;
+                    const targetDialog = containerDiv.firstElementChild;
+
+                    function handleDialogClosure(isConfirmed) {
+                        dialogHelper.close(targetDialog);
+                        setTimeout(() => targetDialog.remove(), 400);
+                        resolve(isConfirmed);
+                    }
+
+                    targetDialog.querySelector('.btnConfirm').addEventListener('click', function () {
+                        handleDialogClosure(true);
                     });
 
-                    if (load_status !== undefined && load_status != null) {
-                        load_status.style.display = 'none';
-                    }
-                    hideLoadingFunc();
-                }
-            }
-            requestAnimationFrame(renderNextChunk);
-        }
-        catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error("Unexpected error in loadTableData workflow:", error);
-            }
-        }
-        finally {
-            hideLoadingFunc();
-        }
-    }
-
-    function loadUsers(view, comboBoxId, loadDataFunc) {
-        ApiClient.getUsers().then(function (users) {
-            console.log(`users: {users}`);
-            var select = view.querySelector(comboBoxId);
-            users.forEach((user) => {
-                var option = document.createElement(`option`);
-                option.value = user.Id;
-                option.innerHTML = user.Name;
-                select.appendChild(option);
-            });
-            if (users.length > 0) {
-                loadDataFunc(view, users[0].Id);
-            }
-        });
-    }
-
-    function setupSortability(baseId, showLoadingFunc, hideLoadingFunc) {
-        document.querySelectorAll(`#${baseId}_table thead th`).forEach((header, index) => {
-            header.addEventListener('click', () => {
-                const columnType = header.getAttribute('data-type');
-                let idx = header.cellIndex;
-                sortTable(idx, columnType, baseId, showLoadingFunc, hideLoadingFunc);
-            });
-        });
-    }
-
-    function showInfo(_text, _title) {
-        dialogs.alert({
-            title: _title,
-            text: _text,
-            html: true // Tells the local UI engine to parse it as HTML
-        });
-
-        ApiClient.getJSON(ApiClient.getUrl('Sessions'))
-            .then((sessions) => {
-                // 2. Find the session that matches this browser's unique Device ID
-                const myCurrentDevice = ApiClient.deviceId();
-                const mySession = sessions.find(s => s.DeviceId === myCurrentDevice);
-
-                if (mySession) {
-                    const urlString = ApiClient.getUrl(`Sessions/${mySession.Id}/Message`);
-                    const payload = {
-                        Header: _title,
-                        Text: _text
-                    };
-                    ApiClient.ajax(
-                        {
-                            type: 'POST',
-                            url: urlString,
-                            data: JSON.stringify(payload),
-                            contentType: 'application/json'
-                        })
-                        .then(function (response) {
-                            console.log("Message sent successfully!");
-                        })
-                        .catch(function (error) {
-                            console.error("Failed to send message:", error);
+                    if (options.cancelText) {
+                        targetDialog.querySelector('.btnCancel').addEventListener('click', function () {
+                            handleDialogClosure(false);
                         });
-                } else {
-                }
-            })
-            .catch((err) => console.error("Error fetching sessions:", err));
-    }
+                    }
 
+                    targetDialog.addEventListener('close', function () {
+                        resolve(false);
+                    });
 
-    const sortDirections = new Map();
-    async function sortTable(columnIndex, dataType, baseId, showLoadingFunc, hideLoadingFunc, forcedDir) {
-        showLoadingFunc();
-
-        var load_status = document.querySelector('#' + baseId + '_status');
-        if (load_status !== undefined && load_status != null) {
-            load_status.innerHTML = "Sorting Data...";
-            load_status.style.display = '';
-        }
-
-        await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
-
-        var tableId = baseId + '_table';
-        const table = document.getElementById(tableId);
-        const tbody = table.querySelector("tbody");
-        // Convert HTMLCollection of rows into a real Array
-        const rows = Array.from(tbody.querySelectorAll("tr"));
-
-        // Toggle between Ascending ('asc') and Descending ('desc')
-
-        let currentMap = sortDirections.get(tableId);
-        if (currentMap === undefined) {
-            sortDirections.set(tableId, new Map());
-            currentMap = sortDirections.get(tableId);
-        }
-
-        let currentDirection = currentMap.get(columnIndex);
-        if (forcedDir === undefined) {
-            currentDirection = currentMap.get(columnIndex);
-            if (currentDirection === undefined) {
-                currentDirection = 'asc';
-            } else {
-                currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-            }
-        } else {
-            currentDirection = forcedDir;
-        }
-
-        sortDirections.get(tableId).set(columnIndex, currentDirection);
-
-        // Reset indicator classes on all headers
-        table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
-        // Add current sorting indicator class to the active header
-        table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
-
-        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
-            let columnName = table.querySelectorAll("th")[columnIndex].getAttribute('data-column');
-
-            var found = false;
-            config.TableSortEntries.forEach(entry => {
-                if (entry.TableId == baseId) {
-                    entry.ColumnName = columnName;
-                    entry.AscDesc = currentDirection;
-                    found = true;
-                }
-            });
-
-            if (!found) {
-                config.TableSortEntries.push({
-                    TableId: baseId,
-                    ColumnName: columnName,
-                    AscDesc: currentDirection
+                    document.body.appendChild(targetDialog);
+                    dialogHelper.open(targetDialog);
                 });
-            }
-            ApiClient.updatePluginConfiguration(pluginId, config);
-        });
-
-        setTimeout(() => {
-            rows.sort((rowA, rowB) => {
-                let cellA = rowA.children[columnIndex].getAttribute('sort-value');
-                if (cellA == null || cellA == '')
-                    cellA = rowA.children[columnIndex].textContent;
-                cellA = cellA.trim();
-
-                let cellB = rowB.children[columnIndex].getAttribute('sort-value');
-                if (cellB == null || cellB == '')
-                    cellB = rowB.children[columnIndex].textContent;
-                cellB = cellB.trim();
-
-                if ((dataType != 'checkbox') && cellA == '' && cellB != '') {
-                    return currentDirection === 'asc' ? -1 : 1;
-                }
-                if ((dataType != 'checkbox') && cellB == '') {
-                    return currentDirection === 'asc' ? 1 : -1;
-                }
-
-                let diff = 0;
-                if (dataType === 'number') {
-                    // Strip out currency symbols or non-numeric formatting characters if present
-                    const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
-                    const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
-                    diff = currentDirection === 'asc' ? numA - numB : numB - numA;
-                } else if (dataType == 'date') {
-                    const dateA = new Date(cellA);
-                    const dateB = new Date(cellB);
-                    diff = currentDirection === 'asc' ? dateA - dateB : dateB - dateA;
-                } else if (dataType == 'progress') {
-                    const matchA = cellA.match(/(?<percent>\d+)\%/);
-                    const matchB = cellB.match(/(?<percent>\d+)\%/);
-
-                    const numA = matchA ? +matchA.groups.percent : 0;
-                    const numB = matchB ? +matchB.groups.percent : 0;
-
-                    diff = currentDirection === 'asc' ? numA - numB : numB - numA;
-                } else if (dataType == 'checkbox') {
-                    const inputA = rowA.children[columnIndex].querySelector('input');
-                    const inputB = rowB.children[columnIndex].querySelector('input');
-
-                    const valA = inputA ? (inputA.checked ? 1 : 0) : 0;
-                    const valB = inputB ? (inputB.checked ? 1 : 0) : 0;
-
-                    diff = currentDirection === 'asc' ? valA - valB : valB - valA;
-                } else { //if (dataType == 'string') {
-                    // Text comparison using localeCompare for proper alphabetical ordering
-                    diff = currentDirection === 'asc'
-                        ? cellA.localeCompare(cellB)
-                        : cellB.localeCompare(cellA);
-                }
-                return diff;
             });
-
-            tbody.innerHTML = "";
-            rows.forEach(row => tbody.appendChild(row));
-            if (load_status !== undefined && load_status != null) {
-                load_status.style.display = 'none';
-            }
-            hideLoadingFunc();
-        }, 10);
-    }
-
-    function initCollapsibleTable(containerId) {
-        // Scope our selector to the active injected Emby view context
-        const container = document.getElementById(containerId);
-        if (!container)
-            return;
-        if (container.getAttribute("data-is-clickable") !== "true")
-            return;
-
-        if (container.dataset.listenerAttached === "true")
-            return;
-
-        container.dataset.listenerAttached = true;
-
-        const thead = container.querySelector(`table thead`);
-        if (thead) {
-            const width = thead.getBoundingClientRect().width;
-            container.style.minWidth = `${width}px`;
-            thead.style.display = 'none';
         }
 
-        container.addEventListener("click", (event) => {
-            const target = event.target;
+        // function showInfo(_title, _text) {
+        //     ApiClient.getJSON(ApiClient.getUrl('Sessions'))
+        //         .then((sessions) => {
+        //             // 2. Find the session that matches this browser's unique Device ID
+        //             const myCurrentDevice = ApiClient.deviceId();
+        //             const mySession = sessions.find(s => s.DeviceId === myCurrentDevice);
 
-            // 1. Prevent expanding if clicking an optional metric box
-            const clickableMetric = target.closest(".is-clickable");
-            if (clickableMetric) {
-                event.stopPropagation();
-                console.log("Emby Metric Clicked:", clickableMetric.textContent.trim());
+        //             if (mySession) {
+        //                 const urlString = ApiClient.getUrl(`Sessions/${mySession.Id}/Message`);
+        //                 const payload = {
+        //                     Header: _title,
+        //                     Text: _text
+        //                 };
+        //                 ApiClient.ajax(
+        //                     {
+        //                         type: 'POST',
+        //                         url: urlString,
+        //                         data: JSON.stringify(payload),
+        //                         contentType: 'application/json'
+        //                     })
+        //                     .then(function (response) {
+        //                         console.log("Message sent successfully!");
+        //                     })
+        //                     .catch(function (error) {
+        //                         console.error("Failed to send message:", error);
+        //                     });
+        //             } else {
+        //             }
+        //         })
+        //         .catch((err) => console.error("Error fetching sessions:", err));
+        // }
+
+        const sortDirections = new Map();
+        async function sortTable(columnIndex, dataType, baseId, showLoadingFunc, hideLoadingFunc, forcedDir) {
+            showLoadingFunc();
+
+            var load_status = document.querySelector('#' + baseId + '_status');
+            if (load_status !== undefined && load_status != null) {
+                load_status.innerHTML = "Sorting Data...";
+                load_status.style.display = '';
+            }
+
+            await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+
+            var tableId = baseId + '_table';
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector("tbody");
+            // Convert HTMLCollection of rows into a real Array
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+
+            // Toggle between Ascending ('asc') and Descending ('desc')
+
+            let currentMap = sortDirections.get(tableId);
+            if (currentMap === undefined) {
+                sortDirections.set(tableId, new Map());
+                currentMap = sortDirections.get(tableId);
+            }
+
+            let currentDirection = currentMap.get(columnIndex);
+            if (forcedDir === undefined) {
+                currentDirection = currentMap.get(columnIndex);
+                if (currentDirection === undefined) {
+                    currentDirection = 'asc';
+                } else {
+                    currentDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+                }
+            } else {
+                currentDirection = forcedDir;
+            }
+
+            sortDirections.get(tableId).set(columnIndex, currentDirection);
+
+            // Reset indicator classes on all headers
+            table.querySelectorAll("th").forEach(th => th.classList.remove("asc", "desc"));
+            // Add current sorting indicator class to the active header
+            table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
+
+            ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                let columnName = table.querySelectorAll("th")[columnIndex].getAttribute('data-column');
+
+                var found = false;
+                config.TableSortEntries.forEach(entry => {
+                    if (entry.TableId == baseId) {
+                        entry.ColumnName = columnName;
+                        entry.AscDesc = currentDirection;
+                        found = true;
+                    }
+                });
+
+                if (!found) {
+                    config.TableSortEntries.push({
+                        TableId: baseId,
+                        ColumnName: columnName,
+                        AscDesc: currentDirection
+                    });
+                }
+                ApiClient.updatePluginConfiguration(pluginId, config);
+            });
+
+            setTimeout(() => {
+                rows.sort((rowA, rowB) => {
+                    let cellA = rowA.children[columnIndex].getAttribute('sort-value');
+                    if (cellA == null || cellA == '')
+                        cellA = rowA.children[columnIndex].textContent;
+                    cellA = cellA.trim();
+
+                    let cellB = rowB.children[columnIndex].getAttribute('sort-value');
+                    if (cellB == null || cellB == '')
+                        cellB = rowB.children[columnIndex].textContent;
+                    cellB = cellB.trim();
+
+                    if ((dataType != 'checkbox') && cellA == '' && cellB != '') {
+                        return currentDirection === 'asc' ? -1 : 1;
+                    }
+                    if ((dataType != 'checkbox') && cellB == '') {
+                        return currentDirection === 'asc' ? 1 : -1;
+                    }
+
+                    let diff = 0;
+                    if (dataType === 'number') {
+                        // Strip out currency symbols or non-numeric formatting characters if present
+                        const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
+                        const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
+                        diff = currentDirection === 'asc' ? numA - numB : numB - numA;
+                    } else if (dataType == 'date') {
+                        const dateA = new Date(cellA);
+                        const dateB = new Date(cellB);
+                        diff = currentDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                    } else if (dataType == 'progress') {
+                        const matchA = cellA.match(/(?<percent>\d+)\%/);
+                        const matchB = cellB.match(/(?<percent>\d+)\%/);
+
+                        const numA = matchA ? +matchA.groups.percent : 0;
+                        const numB = matchB ? +matchB.groups.percent : 0;
+
+                        diff = currentDirection === 'asc' ? numA - numB : numB - numA;
+                    } else if (dataType == 'checkbox') {
+                        const inputA = rowA.children[columnIndex].querySelector('input');
+                        const inputB = rowB.children[columnIndex].querySelector('input');
+
+                        const valA = inputA ? (inputA.checked ? 1 : 0) : 0;
+                        const valB = inputB ? (inputB.checked ? 1 : 0) : 0;
+
+                        diff = currentDirection === 'asc' ? valA - valB : valB - valA;
+                    } else { //if (dataType == 'string') {
+                        // Text comparison using localeCompare for proper alphabetical ordering
+                        diff = currentDirection === 'asc'
+                            ? cellA.localeCompare(cellB)
+                            : cellB.localeCompare(cellA);
+                    }
+                    return diff;
+                });
+
+                tbody.innerHTML = "";
+                rows.forEach(row => tbody.appendChild(row));
+                if (load_status !== undefined && load_status != null) {
+                    load_status.style.display = 'none';
+                }
+                hideLoadingFunc();
+            }, 10);
+        }
+
+        function initCollapsibleTable(containerId) {
+            // Scope our selector to the active injected Emby view context
+            const container = document.getElementById(containerId);
+            if (!container)
                 return;
-            }
-
-            // 2. Handle structural collapsible summary row click
-            const mainRow = target.closest(".clickable-row");
-            if (!mainRow)
+            if (container.getAttribute("data-is-clickable") !== "true")
                 return;
 
-            // Secure Navigation: Search down the dynamic virtual DOM node
-            let detailRow = mainRow.nextElementSibling;
-            while (detailRow && !detailRow.classList.contains("detail-row")) {
-                detailRow = detailRow.nextElementSibling;
+            if (container.dataset.listenerAttached === "true")
+                return;
+
+            container.dataset.listenerAttached = true;
+
+            const thead = container.querySelector(`table thead`);
+            if (thead) {
+                const width = thead.getBoundingClientRect().width;
+                container.style.minWidth = `${width}px`;
+                thead.style.display = 'none';
             }
 
-            // Toggle state classes to match Section 5 CSS styles
-            if (detailRow) {
-                mainRow.classList.toggle("open");
-                detailRow.classList.toggle("show");
-            }
-        });
+            container.addEventListener("click", (event) => {
+                const target = event.target;
+
+                // 1. Prevent expanding if clicking an optional metric box
+                const clickableMetric = target.closest(".is-clickable");
+                if (clickableMetric) {
+                    event.stopPropagation();
+                    console.log("Emby Metric Clicked:", clickableMetric.textContent.trim());
+                    return;
+                }
+
+                // 2. Handle structural collapsible summary row click
+                const mainRow = target.closest(".clickable-row");
+                if (!mainRow)
+                    return;
+
+                // Secure Navigation: Search down the dynamic virtual DOM node
+                let detailRow = mainRow.nextElementSibling;
+                while (detailRow && !detailRow.classList.contains("detail-row")) {
+                    detailRow = detailRow.nextElementSibling;
+                }
+
+                // Toggle state classes to match Section 5 CSS styles
+                if (detailRow) {
+                    mainRow.classList.toggle("open");
+                    detailRow.classList.toggle("show");
+                }
+            });
+        }
+
+        return {
+            pluginId,
+            CheckForValidConfig,
+            LoadTVProgress,
+            LoadUserStats,
+            getMediaHeader,
+            getMediaRowData,
+            getSummaryInfo,
+            insertGetLastRunInfo,
+            getTabIndex,
+            initCollapsibleTable,
+            injectStyleSheet,
+            loadTableData,
+            loadUsers,
+            showInfo
+        };
     }
-
-    return {
-        pluginId,
-        CheckForValidConfig,
-        LoadTVProgress,
-        LoadUserStats,
-        getMediaHeader,
-        getMediaRowData,
-        getStatistics2026Data,
-        getSummaryInfo,
-        getLastRunInfo,
-        insertGetLastRunInfo,
-        getTabIndex,
-        initCollapsibleTable,
-        injectStyleSheet,
-        loadTableData,
-        loadUsers,
-        setupSortability,
-        showInfo
-    };
-
-})
+)
 
