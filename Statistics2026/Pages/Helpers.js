@@ -111,9 +111,10 @@ define([
         };
 
         function getTVProgressRowData(info) {
+            let progressClass = calculateProgressClass(info.Episodes.Percent);
             var retVal = `
             <td style="vertical-align: middle; white-space: nowrap; align=left>"${info.Name} (${info.PremiereYear})</td>
-            <td class="center ${calculateProgressClass(info.Episodes.Percent)}" style="vertical-align: middle; white-space: nowrap; align=left>"${info.Episodes.String}</td>
+            <td class="center ${progressClass}" style="vertical-align: middle; white-space: nowrap; align=left">${info.Episodes.String}</td>
             <td style="vertical-align: middle; white-space: nowrap; align=left">${info.ScoreStr}/10</td>
             <td style="vertical-align: middle; white-space: nowrap; align=left">${info.SeriesStatus}</td>
             `;
