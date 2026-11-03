@@ -19,8 +19,7 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting User Analysis" );
             Progress?.Report( 0 );
-            var userList = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
-            Progress?.Report( 100 );
+            var userList = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
             if( userList == null )
                 return;
 

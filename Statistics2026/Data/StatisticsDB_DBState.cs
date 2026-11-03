@@ -1,6 +1,5 @@
 ﻿using MediaBrowser.Model.Querying;
 using Statistics2026.Utilities;
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,8 +65,7 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException( "Plugin.Instance is null or Plugin.Instance.DBState is null" );
             }
 
-            var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
-
+            var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
             Plugin.Instance.RemoveDBState( EDBState.eUserTablesCreated );
             if( users == null )
             {
