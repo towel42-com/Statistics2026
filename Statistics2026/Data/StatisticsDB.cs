@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Configuration;
+﻿//#define DEBUG_DB
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
@@ -60,7 +61,9 @@ namespace Statistics2026.Data
             lock( _padlock )
             {
                 _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
+#if DEBUG_DB
                 _DBConnLogger = embyInterfaces.LogManager().GetLogger( "Statistics2026 - DBMonitor" );
+#endif
 
                 ConstructTableList();
 
@@ -93,10 +96,9 @@ namespace Statistics2026.Data
             _disposed = true;
         }
 
-        public ILogger DBLogger()
+        public ILogger? DBLogger()
         {
-            CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );
-            return _DBConnLogger!;
+            return _DBConnLogger;
         }
         
         public ILogger Logger()
@@ -230,12 +232,12 @@ namespace Statistics2026.Data
 
         private void dbStatusMessage( string message, bool includeStack = false )
         {
-            _DBConnLogger?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4} - StatisticsDB Hash: 0x{GetHashCode():X16} - DB Hash: 0x{GetDBHashCode():X16} : '{message}'" );
+            DBLogger()?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4} - StatisticsDB Hash: 0x{GetHashCode():X16} - DB Hash: 0x{GetDBHashCode():X16} : '{message}'" );
             if( includeStack )
             {
                 string currentStack = Environment.StackTrace;
                 var list = currentStack.Split( new string[] { "\r\n" }, StringSplitOptions.None );
-                _DBConnLogger?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4}    Stack:" );
+                DBLogger()?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4}    Stack:" );
                 for( int ii = 0; ii < list.Count(); ++ii )
                 {
                     if( list[ ii ].Contains( "get_StackTrace" ) )
@@ -247,7 +249,7 @@ namespace Statistics2026.Data
                     else if( list[ ii ].Contains( "StatisticsDB.GetInstance" ) )
                         continue;
 
-                    _DBConnLogger?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4}        {list[ ii ].Trim()}" );
+                    DBLogger()?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4}        {list[ ii ].Trim()}" );
                 }
 
             }
