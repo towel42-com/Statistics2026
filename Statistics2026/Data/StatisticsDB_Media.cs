@@ -11,6 +11,7 @@ using Statistics2026.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -42,6 +43,7 @@ namespace Statistics2026.Data
             ConcurrentBag<object> paramBag = [];
             var sqlCmds = new List<SQLCmdDef>();
             sqlCmds.Add( new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ) );
+            sqlCmds.Add( new SQLCmdDef( "" ) );  // just a place holder
 
             using( var timer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
             {

@@ -8,6 +8,7 @@ using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -33,16 +34,16 @@ namespace Statistics2026.Data
             Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
 
-            using( var timer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
+            using( var listTimer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
             {
                 var pool = collections.Select( ( collection, index ) => Task.Run( async () =>
                 {
                     List<SQLCmdDef> currCmds = [];
                     long runTimeMS = 0;
-                    using( var userTimer = new AutoTimer( $"    Processed Collection {collection.Name}", Logger() ) )
+                    using( var currTimer = new AutoTimer( $"    Processed Collection {collection.Name}", Logger() ) )
                     {
                         currCmds = await AddCollectionAsync( collection ).ConfigureAwait( false );
-                        runTimeMS = timer.ElapsedMilliseconds();
+                        runTimeMS = currTimer.ElapsedMilliseconds();
                     }
 
                     CancellationToken?.ThrowIfCancellationRequested();
