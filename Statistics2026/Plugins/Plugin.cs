@@ -71,7 +71,7 @@ namespace Statistics2026
             };
 
 #if DEBUG
-            EmbyHelperFuncs.MoveMediaLocations( _embyInterfaces );
+            EmbyHelperFuncs.PreDebugRun( _embyInterfaces );
 #endif
         }
 
