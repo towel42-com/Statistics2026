@@ -55,7 +55,7 @@ namespace Statistics2026.Data
                     using( var currTimer = new AutoTimer( $"    Processed Media {video.Name}", Logger() ) )
                     {
 
-                        var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
+                        var mediaInfo = await MediaInfo.CreateAsync( Logger(), video, false ).ConfigureAwait( false );
                         if( !mediaInfo.aOK )
                             return retVal;
 
@@ -65,12 +65,17 @@ namespace Statistics2026.Data
                         existing[ video.Id.ToString() ] = true;
                         paramList.Add( video.Id.ToString() );
                         retVal.video = video;
-                        retVal.cmds.AddRange( AddMediaInfo( mediaInfo ) );
+                        var cmd = AddMediaInfo( mediaInfo );
+                        if( cmd != null )
+                        {
+                            retVal.cmds.Add( cmd! );
+                        }
                         retVal.runTimeMS = currTimer.ElapsedMilliseconds();
                     }
                     CancellationToken?.ThrowIfCancellationRequested();
                     int currProgress = Interlocked.Increment( ref completedCount );
-                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                    double progressValue = 80.0 * ( 1.0 * currProgress ) / count;
+                    Progress?.Report( progressValue );
                     Logger().Info( $"Processed Video {video.Name} - {runTimeMS} ms" );
 
                     return retVal;
@@ -97,15 +102,14 @@ namespace Statistics2026.Data
             Logger().Debug( $"Finished Video Analysis" );
         }
 
-        public List<SQLCmdDef> AddMediaInfo( MediaInfo mediaInfo )
+        public SQLCmdDef? AddMediaInfo( MediaInfo mediaInfo )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            var sqlCmds = new List<SQLCmdDef>();
             if( mediaInfo == null || !mediaInfo.aOK )
             {
                 Logger().Error( $"AddMediaInfo '{mediaInfo?.SortName}': is missing ItemId" );
-                return sqlCmds;
+                return null;
             }
 
             var sql =
@@ -199,7 +203,7 @@ namespace Statistics2026.Data
 
             var services = JsonSerializer.Serialize( mediaInfo.StreamingServices );
 
-            sqlCmds.Add( new SQLCmdDef( sql,
+            var retVal = new SQLCmdDef( sql,
             [
                 ("@ItemId", mediaInfo.ItemId),
                 ("@PrimaryName", mediaInfo.PrimaryName),
@@ -227,9 +231,9 @@ namespace Statistics2026.Data
                 ("@TotalBitrate", mediaInfo.TotalBitrate),
                 ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( mediaInfo.PremiereDate ) ),
                 ("@DateAdded", HelperFuncs.ToDateTimeParamValue( mediaInfo.DateAdded ) ),
-            ] ) );
+            ] );
 
-            return sqlCmds;
+            return retVal;
         }
 
         public StatCard MediaResolutions()
