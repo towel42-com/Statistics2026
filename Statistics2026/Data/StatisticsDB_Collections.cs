@@ -33,16 +33,16 @@ namespace Statistics2026.Data
             progress.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
 
-            using( var timer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
+            using( var listTimer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
             {
                 var pool = collections.Select( ( collection, index ) => Task.Run( async() =>
                 {
                     List<SQLCmdDef> currCmds = [];
                     long runTimeMS = 0;
-                    using( var userTimer = new AutoTimer( $"    Processed Collection {collection.Name}", Logger() ) )
+                    using( var currTimer = new AutoTimer( $"    Processed Collection {collection.Name}", Logger() ) )
                     {
                         currCmds = await AddCollectionAsync( collection, cancellationToken, progress ).ConfigureAwait( false );
-                        runTimeMS = timer.ElapsedMilliseconds();
+                        runTimeMS = currTimer.ElapsedMilliseconds();
                     }
 
                     CancellationToken?.ThrowIfCancellationRequested();
