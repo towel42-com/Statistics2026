@@ -94,7 +94,7 @@ namespace Statistics2026.Utilities
                     if( DBLocation.isOldLocation( imageInfo.Path ) )
                     {
                         numImageModified++;
-                        imageInfo.Path = DBLocation.updateLocation( item.Path );
+                        imageInfo.Path = DBLocation.updateLocation( imageInfo.Path );
                         item.SetImage( imageInfo, 0 );
                         allImageInfos[ jj ] = imageInfo;
                     }

@@ -70,6 +70,11 @@ namespace Statistics2026.Secrets
                 return path;
             }
 
+            if( path == null )
+            {
+                return string.Empty;
+            }
+
             return path.Replace( oldLocation, newLocation );
         }
     }
