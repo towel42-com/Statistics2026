@@ -26,6 +26,7 @@ namespace Statistics2026.Data
     {
         private bool _disposed = false;
         EmbyInterfaces? _embyInterfaces = null;
+        ILogger? _DBConnLogger = null;
         private static readonly object _padlock = new();
         private readonly Dictionary<string, TableDef> _tableMap = [];
         private List<TableDef> _tableList = [];
@@ -48,7 +49,7 @@ namespace Statistics2026.Data
                     throw new ArgumentNullException( "EmbyInterfaces is null." );
 
                 var retVal = new StatisticsDB( embyInterfaces );
-                embyInterfaces.Logger().Debug( "New Instance Created : " + retVal.GetHashCode() );
+                retVal.dbStatusMessage( "New Instance Created" );
                 Plugin.Instance?.Configuration.UpdateBuildDateAndVersionInfo();
                 return retVal;
             }
@@ -56,17 +57,16 @@ namespace Statistics2026.Data
 
         private StatisticsDB( EmbyInterfaces embyInterfaces )
         {
-            _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
-
-            ConstructTableList();
-
-            Logger().Debug( "Creating Database" );
-
-            CreateConnection();
-
-            embyInterfaces.Logger().Debug( "Finished Creating Database" );
             lock( _padlock )
             {
+                _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
+                _DBConnLogger = embyInterfaces.LogManager().GetLogger( "Statistics2026 - DBMonitor" );
+
+                ConstructTableList();
+
+                dbStatusMessage( "Creating Database", true );
+                CreateConnection();
+                dbStatusMessage( "Finished Creating Database" );
                 ComputeDBState();
             }
         }
@@ -176,7 +176,7 @@ namespace Statistics2026.Data
         {
             _ = CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );
 
-            _embyInterfaces!.Logger().Debug( "CreateConnection : " + db_file );
+            Logger().Debug( $"CreateConnection - ThreadID: {Environment.CurrentManagedThreadId}" );
             ConnectionFlags connectionFlags;
 
             //_embyInterfaces!.Logger().Debug("Opening write _connection");
@@ -185,36 +185,75 @@ namespace Statistics2026.Data
             connectionFlags |= ConnectionFlags.PrivateCache;
             connectionFlags |= ConnectionFlags.NoMutex;
 
-            var db = SQLite3.Open( db_file, connectionFlags, null, true );
-
             try
             {
-                List<string> queries =
-                    [
-                        "PRAGMA journal_mode=WAL",
-                        "PRAGMA busy_timeout=5000",
-                        "PRAGMA synchronous=Normal",
-                        "PRAGMA temp_store=file"
-                    ];
+                lock( _padlock )
+                {
+                    var db = SQLite3.Open( db_file, connectionFlags, null, true );
+                    Connection = db;
+                    dbStatusMessage( "DB Opened" );
 
-                db.ExecuteAll( string.Join( ";", queries.ToArray() ) );
+                    List<string> queries =
+                        [
+                            "PRAGMA busy_timeout = 5000",
+                            "PRAGMA journal_mode=WAL",
+                            "PRAGMA busy_timeout=5000",
+                            "PRAGMA synchronous=Normal",
+                            "PRAGMA temp_store=file"
+                        ];
+
+                    foreach( var query in queries )
+                    {
+                        db.Execute( query );
+                    }
+                }
+                dbStatusMessage( "Pragmas Set" );
             }
             catch
             {
                 throw;
             }
 
-            Connection = db;
-            _embyInterfaces!.Logger().Debug( "Connection Created : " + Connection.GetHashCode() );
+            dbStatusMessage( "Connection Created" );
+        }
+
+        public int GetDBHashCode()
+        {
+            return Connection?.GetHashCode() ?? 0;
+        }
+
+        private void dbStatusMessage( string message, bool includeStack = false )
+        {
+            _DBConnLogger?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4} - StatisticsDB Hash: 0x{GetHashCode():X16} - DB Hash: 0x{GetDBHashCode():X16} : '{message}'" );
+            if( includeStack )
+            {
+                string currentStack = Environment.StackTrace;
+                var list = currentStack.Split( new string[] { "\r\n" }, StringSplitOptions.None );
+                _DBConnLogger?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4}    Stack:" );
+                for( int ii = 0; ii < list.Count(); ++ii )
+                {
+                    if( list[ ii ].Contains( "get_StackTrace" ) )
+                        continue;
+                    else if( list[ ii ].Contains( "StatisticsDB.dbStatusMessage" ) )
+                        continue;
+                    else if( list[ ii ].Contains( "StatisticsDB..ctor" ) )
+                        continue;
+                    else if( list[ ii ].Contains( "StatisticsDB.GetInstance" ) )
+                        continue;
+
+                    _DBConnLogger?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4}        {list[ ii ].Trim()}" );
+                }
+
+            }
         }
 
         public void CloseConnection()
         {
-            Logger().Debug( "Cleaning up" );
+            dbStatusMessage( "Cleaning up" );
             if( Connection != null )
             {
                 Connection.Close();
-                Logger().Debug( $"DB Connection Closed : {Connection.GetHashCode()}" );
+                dbStatusMessage( "DB Connection Closed" );
             }
         }
 
