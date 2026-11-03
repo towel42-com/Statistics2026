@@ -72,7 +72,6 @@ namespace Statistics2026.Data
                 return [];
 
             TmdbCollection? tmdbCollection = null;
-
             try
             {
                 tmdbCollection = await reader.GetRemoteCollectionMembersAsync( collectionTmbdId ).ConfigureAwait( false );
@@ -81,7 +80,6 @@ namespace Statistics2026.Data
             {
                 Logger().Error( $"Problem connecting to TMDB - {collection.Name} - {collectionTmbdId}" );
                 Logger().Error( ex.ToString() );
-                throw ex;
             }
 
             if( tmdbCollection == null )

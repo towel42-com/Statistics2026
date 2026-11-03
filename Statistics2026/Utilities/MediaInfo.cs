@@ -72,8 +72,7 @@ namespace Statistics2026.Utilities
                 if( episode.Series != null )
                 {
                     retVal.SortName = episode.Series.SortName + " - " + episode.SortName;
-                    int xyz = 0;
-                    //retVal.SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series, logger );
+                    retVal.SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series, logger );
                     if( retVal.PremiereDate == null && episode.Series.PremiereDate.HasValue )
                     {
                         retVal.PremiereDate = episode.Series.PremiereDate.Value;
