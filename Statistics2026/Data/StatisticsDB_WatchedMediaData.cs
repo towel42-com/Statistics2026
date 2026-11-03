@@ -21,7 +21,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eUpdate );
 
             Progress?.Report( 0 );
-            var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+            var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
             if( users == null )
                 return;
             Progress?.Report( 100 );
@@ -95,7 +95,7 @@ namespace Statistics2026.Data
             {
 
                 Progress?.Report( 0 );
-                var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+                var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
                 if( users == null )
                 {
                     Progress?.Report( 100 );
@@ -198,15 +198,11 @@ namespace Statistics2026.Data
                 return allTables( (regex: $"{sUserMediaTablePrefix}%", like: true) );
             else
             {
-                var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+                var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
 
                 HashSet<string> tableNameSet = [];
                 foreach( var user in users ?? [] )
                 {
-#if DEBUG
-                    if( user.Name != "scott" )
-                        continue;
-#endif
                     var tableName = getUserTableName( user );
                     tableNameSet.Add( tableName );
                 }
