@@ -6,7 +6,9 @@ using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -25,42 +27,55 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting Analysis" );
             Progress?.Report( 0 );
-            var allSeries = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
-            allSeries.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
+            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
+            seriesList.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             Progress?.Report( 100 );
 
             var reader = new TmdbInterface( _embyInterfaces, CancellationToken );
 
-            double count = allSeries.Count();
-            var curr = 0.0;
+            double count = seriesList.Count();
+            var completedCount = 0;
+
+            List<SQLCmdDef> sqlCmds = [];
+            ConcurrentBag<object> paramBag = [];
 
             Progress?.Report( 0 );
-            List<SQLCmdDef> sqlCmds = [];
-
-            List<object> paramList = [];
-            foreach( var series in allSeries )
+            using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Getting Commands", Logger() ) )
             {
-                Progress?.Report( 80.0 * ( ++curr ) / count );
-                try
+                var pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
                 {
-                    var cmds = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
-                    paramList.Add( series.Id.ToString() );
-                    sqlCmds.AddRange( cmds );
-                }
-                catch( Exception )
+                    var retVal = (index: index, series: series, cmds: new List<SQLCmdDef>());
+                    if( series == null )
+                        return retVal;
+
+                    retVal.cmds = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
+                    CancellationToken?.ThrowIfCancellationRequested();
+
+                    var currProgress = Interlocked.Increment( ref completedCount );
+                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+
+                    Logger().Info( $"    Processed Series ({currProgress} of {count}) - {series.Name}" );
+                    return retVal;
+                } ) ).ToList();
+
+                var unsortedResults = await Task.WhenAll( pool );
+                sqlCmds.Add( CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramBag.ToList() ) );
+                var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                foreach( var result in results )
                 {
+                    sqlCmds.AddRange( result.cmds );
+                    CancellationToken?.ThrowIfCancellationRequested();
                 }
-                CancellationToken?.ThrowIfCancellationRequested();
-                Logger().Info( $"    Processed Series ({curr} of {count}) - {series.Name}" );
             }
+            using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Executing Commands", Logger() ) )
+            {
+                var paramList = paramBag.ToList();
 
-            sqlCmds.Insert( 0, CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
-            CancellationToken?.ThrowIfCancellationRequested();
-
-            Progress?.Report( 80 );
-            ExecuteCommands( sqlCmds );
-            Progress?.Report( 100 );
-            Logger().Debug( $"Finished Analysis" );
+                Progress?.Report( 80 );
+                ExecuteCommands( sqlCmds );
+                Progress?.Report( 100 );
+                Logger().Debug( $"Finished Missing Episodes Analysis" );
+            }
         }
 
         bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )

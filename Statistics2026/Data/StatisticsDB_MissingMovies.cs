@@ -1,14 +1,17 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,43 +27,55 @@ namespace Statistics2026.Data
             Progress?.Report( 0 );
             var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
             collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
-
             Progress?.Report( 100 );
 
             var reader = new TmdbInterface( _embyInterfaces, CancellationToken );
 
             double count = collections.Count();
-            var curr = 0.0;
+            var completedCount = 0;
+
+            List<SQLCmdDef> sqlCmds = [];
+            ConcurrentBag<object> paramBag = [];
 
             Progress?.Report( 0 );
-            List<SQLCmdDef> sqlCmds = [];
-
-            List<object> paramList = [];
-            foreach( var collection in collections )
+            using( var timer = new AutoTimer( $"    Analyze Missing Movies - Getting Commands", Logger() ) )
             {
-                Progress?.Report( 80.0 * ( ++curr ) / count );
-                try
+                var pool = collections.Select( ( collection, index ) => Task.Run( async () =>
                 {
-                    var cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection ).ConfigureAwait( false );
-                    paramList.Add( collection.Id.ToString() );
-                    sqlCmds.AddRange( cmds );
-                }
-                catch( Exception )
-                {
-                }
-                CancellationToken?.ThrowIfCancellationRequested();
-                Logger().Info( $"    Processed Collection ({curr} of {count}) - {collection.Name}" );
+                    var retVal = (index: index, collection: collection, cmds: new List<SQLCmdDef>());
+                    if( collection == null )
+                        return retVal;
 
+                    retVal.cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection ).ConfigureAwait( false );
+                    paramBag.Add( collection.Id.ToString() );
+
+                    CancellationToken?.ThrowIfCancellationRequested();
+
+                    var currProgress = Interlocked.Increment( ref completedCount );
+                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+
+                    Logger().Info( $"    Processed Collection ({currProgress} of {count}) - {collection.Name}" );
+                    return retVal;
+                } ) ).ToList();
+
+                var unsortedResults = await Task.WhenAll( pool );
+                sqlCmds.Add( CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramBag.ToList() ) );
+                var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                foreach( var result in results )
+                {
+                    sqlCmds.AddRange( result.cmds );
+                    CancellationToken?.ThrowIfCancellationRequested();
+                }
             }
 
-            sqlCmds.Insert( 0, CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
-
-            CancellationToken?.ThrowIfCancellationRequested();
-
-            Progress?.Report( 80 );
-            ExecuteCommands( sqlCmds );
-            Progress?.Report( 100 );
-            Logger().Debug( $"Finished Analysis" );
+            using( var timer = new AutoTimer( $"    Analyze Missing Movies - Executing Commands", Logger() ) )
+            {
+                var paramList = paramBag.ToList();
+                Progress?.Report( 80 );
+                ExecuteCommands( sqlCmds );
+                Progress?.Report( 100 );
+                Logger().Debug( $"Finished Missing Movies Analysis" );
+            }
         }
 
         private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollectionAsync( TmdbInterface reader, BoxSet collection )
