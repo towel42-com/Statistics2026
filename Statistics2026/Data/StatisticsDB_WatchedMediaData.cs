@@ -538,7 +538,7 @@ namespace Statistics2026.Data
                     "  IsPlayed=@IsPlayed" +
                     ", PlayCount=@PlayCount" +
                     ", LastPlayedDate=@LastPlayedDate" +
-                    ", TotalTicksPlayed=(@IsPlayed*@PlayCount)*@RunTimeTicks ";
+                    ", TotalTicksPlayed=@TotalTicksPlayed ";
 
             if( !config.resetPlayCount )
             {
@@ -565,7 +565,7 @@ namespace Statistics2026.Data
                     ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
                 var lastPlayedDate = video?.LastPlayedDate ?? null;
 
-                var mediaInfo = MediaInfo.Create( Logger(), video! );
+                var mediaInfo = MediaInfo.Create( Logger(), video!, true );
                 if( !mediaInfo.aOK )
                     return retVal;
 
@@ -581,7 +581,7 @@ namespace Statistics2026.Data
                             ( "@PlayCount", playCount),
                             ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null )),
                             ( "@SeriesId", mediaInfo.SeriesId),
-                            ( "@RunTimeTicks", mediaInfo.RunTimeTicks )
+                            ( "@TotalTicksPlayed", mediaInfo.TotalTicksPlayed ),
                     ] );
                 retVal.cmd = cmd;
                 CancellationToken?.ThrowIfCancellationRequested();

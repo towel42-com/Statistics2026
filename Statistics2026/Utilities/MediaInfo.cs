@@ -13,10 +13,13 @@ namespace Statistics2026.Utilities
     {
         public MediaInfo() { }
 
-        public static MediaInfo Create( ILogger logger, Video video )
+        public static MediaInfo Create( ILogger logger, Video video, bool isUserVideo )
         {
             var retVal = new MediaInfo();
             retVal.aOK = false;
+            if ( video == null )
+                return retVal;
+
             var (primaryName, secondaryName, descName) = GetDescName( video );
 
             var mediaStream = video.GetMediaStreams().FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
@@ -57,7 +60,16 @@ namespace Statistics2026.Utilities
             if( video.PremiereDate.HasValue )
                 retVal.PremiereDate = video.PremiereDate.Value;
 
-            retVal.ImageUrl = ItemImageUrl._ItemImageUrl( video );
+            if( isUserVideo )
+            {
+                retVal.IsPlayed = video.Played;
+                retVal.TotalTicksPlayed = 0;
+                if( video.Played )
+                {
+                    retVal.TotalTicksPlayed = ( video?.PlayCount * video?.RunTimeTicks ) ?? 0;
+                }
+            }
+            retVal.ImageUrl = ItemImageUrl._ItemImageUrl( video! );
             if( video is Episode episode )
             {
                 retVal.ListDisplayName = GetDisplayName( retVal.PrimaryName, secondaryName, retVal.Season, retVal.Episode );
@@ -78,7 +90,7 @@ namespace Statistics2026.Utilities
 
             if( retVal.PremiereDate == null )
             {
-                BaseItem curr = video;
+                BaseItem? curr = video;
                 while( curr != null && curr.PremiereDate == null )
                 {
                     curr = curr.Parent;
@@ -88,17 +100,17 @@ namespace Statistics2026.Utilities
                     retVal.PremiereDate = curr.PremiereDate.Value;
                 }
             }
-            retVal.TotalBitrate = video.TotalBitrate;
-            retVal.DateAdded = video.DateCreated;
+            retVal.TotalBitrate = video!.TotalBitrate;
+            retVal.DateAdded = video!.DateCreated;
 
             retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
             return retVal;
         }
 
-        public static async Task<MediaInfo> CreateAsync( ILogger logger, Video video )
+        public static async Task<MediaInfo> CreateAsync( ILogger logger, Video video, bool isUserVideo )
         {
-            var retVal = Create( logger, video );
-            if ( !retVal.IsEpisode )
+            var retVal = Create( logger, video, isUserVideo );
+            if( !retVal.IsEpisode )
             {
                 retVal.StreamingServices = await streamingServicesAsync( logger, video );
             }
@@ -210,7 +222,7 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static string GetDisplayName( Video? video )       
+        public static string GetDisplayName( Video? video )
         {
             if( video == null )
                 return string.Empty;
@@ -293,6 +305,9 @@ namespace Statistics2026.Utilities
             var dvProfile = mediaStream.ExtendedVideoSubTypeDescription;
             return dvProfile.ToLower() == "none" ? Constants.NoDolbyProfile : dvProfile;
         }
+
+        public bool? IsPlayed { get; set; }
+        public long? TotalTicksPlayed { get; set; }
 
         public string ItemId { get; set; } = string.Empty;
         public string DescriptiveName { get; set; } = string.Empty;
