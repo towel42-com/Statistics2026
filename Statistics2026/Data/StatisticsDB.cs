@@ -93,6 +93,12 @@ namespace Statistics2026.Data
             _disposed = true;
         }
 
+        public ILogger DBLogger()
+        {
+            CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );
+            return _DBConnLogger!;
+        }
+        
         public ILogger Logger()
         {
             CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );

@@ -45,7 +45,7 @@ namespace Statistics2026.Secrets
         {
             if( sNewLocation == null )
             {
-                sNewLocation = GetSecret( "NEW_SERVER_LOCATION" ); //@"\\mediabox";
+                sNewLocation = GetSecret( "NEW_SERVER_LOCATION" );
             }
             return sNewLocation!;
         }

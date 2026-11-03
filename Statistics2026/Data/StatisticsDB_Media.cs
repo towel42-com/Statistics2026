@@ -38,6 +38,7 @@ namespace Statistics2026.Data
 
             double count = videoList.Count;
             var completedCount = 0;
+
             Progress?.Report( 0 );
             var existing = new ConcurrentDictionary<string, bool>();
             ConcurrentBag<object> paramBag = [];
@@ -64,7 +65,7 @@ namespace Statistics2026.Data
                         existing.TryAdd( video.Id.ToString(), true );
                         paramBag.Add( video.Id.ToString() );
 
-                        var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
+                        var mediaInfo = await MediaInfo.CreateAsync( Logger(), video, false ).ConfigureAwait( false );
                         if( !mediaInfo.aOK )
                             return retVal;
 
@@ -207,7 +208,7 @@ namespace Statistics2026.Data
 
             var services = JsonSerializer.Serialize( mediaInfo.StreamingServices );
 
-            return new SQLCmdDef( sql,
+            var retVal = new SQLCmdDef( sql,
             [
                 ("@ItemId", mediaInfo.ItemId),
                 ("@PrimaryName", mediaInfo.PrimaryName),
@@ -236,6 +237,7 @@ namespace Statistics2026.Data
                 ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( mediaInfo.PremiereDate ) ),
                 ("@DateAdded", HelperFuncs.ToDateTimeParamValue( mediaInfo.DateAdded ) ),
             ] );
+            return retVal;
         }
 
         public StatCard MediaResolutions()

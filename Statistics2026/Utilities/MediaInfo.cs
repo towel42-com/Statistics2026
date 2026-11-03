@@ -30,7 +30,7 @@ namespace Statistics2026.Utilities
 
         public MediaInfo() { }
 
-        public static MediaInfo CreateMinimal( ILogger logger, Video video, bool minimalOnly = true )
+        public static MediaInfo CreateMinimal( ILogger logger, Video video, bool isUserVideo, bool minimalOnly )
         {
             if( sMediaInfoCache.TryGetValue( (KeyForVideo( video ), true), out MediaInfo value ) )
             {
@@ -52,6 +52,8 @@ namespace Statistics2026.Utilities
 
             var retVal = new MediaInfo();
             retVal.aOK = false;
+            if ( video == null )
+                return retVal;
 
             var (primaryName, secondaryName, descName) = GetDescName( video );
             retVal.ItemId = video.Id.ToString();
@@ -65,6 +67,16 @@ namespace Statistics2026.Utilities
             retVal.SeriesId = seriesId( video );
             retVal.RunTimeTicks = video.RunTimeTicks ?? 0;
             retVal.DateItemModified = video.DateModified;
+
+            if( isUserVideo )
+            {
+                retVal.IsPlayed = video.Played;
+                retVal.TotalTicksPlayed = 0;
+                if( video.Played )
+                {
+                    retVal.TotalTicksPlayed = ( video?.PlayCount * video?.RunTimeTicks ) ?? 0;
+                }
+            }
 
             if( video is Episode episode )
             {
@@ -87,13 +99,13 @@ namespace Statistics2026.Utilities
 
             if( retVal.aOK )
             {
-                sMediaInfoCache[ (KeyForVideo( video ), true) ] = retVal;
+                sMediaInfoCache[ (KeyForVideo( video! ), true) ] = retVal;
             }
 
             return retVal;
         }
 
-        public async static Task<MediaInfo> CreateAsync( ILogger logger, Video video )
+        public async static Task<MediaInfo> CreateAsync( ILogger logger, Video video, bool isUserVideo )
         {
             if( sMediaInfoCache.TryGetValue( (KeyForVideo( video ), false), out MediaInfo value ) )
             {
@@ -104,7 +116,7 @@ namespace Statistics2026.Utilities
                 sMediaInfoCache.Remove( (KeyForVideo( video ), false), out var currValue );
             }
 
-            var retVal = CreateMinimal( logger, video, false );
+            var retVal = CreateMinimal( logger, video, isUserVideo, false );
             if( retVal.aOK )
             {
                 sMediaInfoCache[ (KeyForVideo( video ), false) ] = retVal;
@@ -145,7 +157,7 @@ namespace Statistics2026.Utilities
 
             if( retVal.PremiereDate == null )
             {
-                BaseItem curr = video;
+                BaseItem? curr = video;
                 while( curr != null && curr.PremiereDate == null )
                 {
                     curr = curr.Parent;
@@ -155,8 +167,8 @@ namespace Statistics2026.Utilities
                     retVal.PremiereDate = curr.PremiereDate.Value;
                 }
             }
-            retVal.TotalBitrate = video.TotalBitrate;
-            retVal.DateAdded = video.DateCreated;
+            retVal.TotalBitrate = video!.TotalBitrate;
+            retVal.DateAdded = video!.DateCreated;
 
             retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
             return retVal;
@@ -350,6 +362,9 @@ namespace Statistics2026.Utilities
             var dvProfile = mediaStream.ExtendedVideoSubTypeDescription;
             return dvProfile.ToLower() == "none" ? Constants.NoDolbyProfile : dvProfile;
         }
+
+        public bool? IsPlayed { get; set; }
+        public long? TotalTicksPlayed { get; set; }
 
         public string ItemId { get; set; } = string.Empty;
         public string DescriptiveName { get; set; } = string.Empty;

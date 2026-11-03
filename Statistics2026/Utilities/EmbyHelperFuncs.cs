@@ -658,7 +658,7 @@ namespace Statistics2026.Utilities
 
             var retVal = embyInterfaces.UserManager().GetUserList( userQuery ).ToList();
 #if DEBUG
-            retVal = retVal.Where( u => u.Name == "scott" ).ToList();
+            //retVal = retVal.Where( u => u.Name == "scott" ).ToList();
 #endif
             return retVal;
         }
