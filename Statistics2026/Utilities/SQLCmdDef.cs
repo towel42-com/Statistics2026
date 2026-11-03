@@ -91,11 +91,14 @@ namespace Statistics2026.Utilities
         {
             using( var statement = connection.PrepareStatement( Statement ) )
             {
+                db.DBLogger().Debug( $"{Statement.GetHashCode():X16} - Executing SQL Statement: - {Statement}" );
                 if( HasParameters() )
                 {
+                    db.DBLogger().Debug( $"{Statement.GetHashCode():X16} -    Parameters:" );
                     foreach( var (name, value) in Parameters! )
                     {
                         _ = db.TryBind( statement, name, value );
+                        db.DBLogger().Debug( $"{Statement.GetHashCode():X16} -     {name} = {value}" );
                     }
                 }
 
