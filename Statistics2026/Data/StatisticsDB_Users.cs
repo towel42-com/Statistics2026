@@ -17,7 +17,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eUpdate );
 
             Progress?.Report( 0 );
-            var users = UserManager().GetUserList( new UserQuery() { EnableRemoteAccess = true } ).ToList();
+            var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
             if( users == null )
                 return;
 
