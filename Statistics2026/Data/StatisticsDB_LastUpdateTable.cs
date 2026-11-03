@@ -104,15 +104,15 @@ namespace Statistics2026.Data
             {
                 list = new[]
                     {
-                        EAction.System.ToString(),
-                        EAction.CollectionsAnalysis.ToString(),
+                        EAction.UserAnalysis.ToString(),
                         EAction.MediaAnalysis.ToString(),
+                        EAction.UserWatchDataAnalysis.ToString(),
+                        EAction.CollectionsAnalysis.ToString(),
+                        EAction.SeriesAnalysis.ToString(),
                         EAction.MissingEpisodesAnalysis.ToString(),
                         EAction.MissingMoviesAnalysis.ToString(),
-                        EAction.SeriesAnalysis.ToString(),
-                        EAction.UserAnalysis.ToString(),
-                        EAction.UserWatchDataAnalysis.ToString(),
-                        EAction.LastMediaOrUserAdded.ToString()
+                        EAction.LastMediaOrUserAdded.ToString(),
+                        EAction.System.ToString(),
                     };
             }
 
