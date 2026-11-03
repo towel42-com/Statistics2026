@@ -95,7 +95,7 @@ namespace Statistics2026.ScheduledTasks
                 }
                 catch( Exception ex )
                 {
-                    _embyInterfaces.Logger().ErrorException( $"Problem running '${( (IScheduledTask)this ).Name}", ex );
+                    _embyInterfaces.Logger().ErrorException( $"Problem running '{( (IScheduledTask)this ).Name}", ex );
                 }
             }
             cancellationToken.ThrowIfCancellationRequested();
