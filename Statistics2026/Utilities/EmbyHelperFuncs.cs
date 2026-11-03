@@ -1,5 +1,6 @@
 ﻿using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
@@ -11,6 +12,7 @@ using SQLitePCL.pretty;
 using Statistics2026.Data;
 using Statistics2026.Secrets;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -42,13 +44,66 @@ namespace Statistics2026.Utilities
 #endif
         }
 
-
-        public static void MoveMediaLocations( EmbyInterfaces embyInterfaces )
+        public static void PreDebugRun( EmbyInterfaces embyInterfaces )
         {
 #if DEBUG
             if( !Debugger.IsAttached )
             {
                 AttachDebugger();
+            }
+
+            EmbyHelperFuncs.MoveMediaLocations( embyInterfaces ).GetAwaiter().GetResult();
+#endif
+        }
+
+        public static async Task MoveMediaLocations( EmbyInterfaces embyInterfaces )
+        {
+#if DEBUG
+            bool copyImages( BaseItem item )
+            {
+                if( item == null )
+                    return false;
+
+                if( item is Video videoItem )
+                {
+                    if( ( videoItem is Movie )
+                        || ( videoItem is Episode )
+                        || ( videoItem is MusicVideo ) )
+                        return true;
+                    return false;
+                }
+
+                if( item is Audio )
+                    return true;
+
+                if( item is Folder )
+                    return true;
+
+                //embyInterfaces.Logger().Debug( $"Item: {item.Name} - {item.MediaType} - {item.GetType()}" );
+
+                var allParents = item.GetParents().ToList();
+                foreach( var parent in allParents )
+                {
+                    var parentType = parent.MediaType;
+                    //embyInterfaces.Logger().Debug( $"CollectionFolder parent: {parent.Name} - {parentType} - {parent.GetType()}" );
+                    if( parent is PhotoAlbum photoAlbum )
+                    {
+                        return false;
+                    }
+                    else if( parent is Folder folder )
+                    {
+                        if( parent.Parent is AggregateFolder )
+                        {
+                            // top level folder
+                            if( parent.Name == "photos" )
+                            {
+                                return false;
+                            }
+                            break;
+                        }
+                    }
+                }
+                return true;
             }
 
             var query = new InternalItemsQuery
@@ -57,34 +112,36 @@ namespace Statistics2026.Utilities
                 Recursive = true
             };
 
+            embyInterfaces.Logger().Debug( $"Updating Library paths: From '{DBLocation.getOldLocations().Join( ", " )}' to '{DBLocation.getNewLocation()}'" );
+
             BaseItem[] allItems = embyInterfaces.LibraryManager().GetItemList( query );
 
             var items = allItems.Where( item =>
-                   DBLocation.isOldLocation(item.Path)
+                   DBLocation.isOldLocation( item.Path )
                 || ( item.ImageInfos != null && item.ImageInfos.Any( imageInfo => DBLocation.isOldLocation( imageInfo.Path ) ) )
             ).ToList();
 
-            var numModified = 0;
-            for( var ii = 0; ii < items.Count(); ++ii )
-            {
-                if( ( ii % 1000 ) == 0 )
-                {
-                    embyInterfaces.Logger().Debug( $"Updating Library paths from network {ii} of {items.Count()} - {numModified} modified" );
-                }
+            ConcurrentBag<BaseItem> modifiedItems = [];
+            long numItemsModified = 0;
+            long numImagesModified = 0;
+            long count = -1;
 
-                var item = items[ ii ];
+            var pool = items.Select( ( item, index ) => Task.Run( () =>
+            {
                 if( item == null )
-                    continue;
+                    return;
+
+                bool copyFile = copyImages( item );
 
                 var isModified = false;
+                var numCurrImageModified = 0;
                 if( DBLocation.isOldLocation( item.Path ) )
                 {
-                    numModified++;
-                    item.Path = DBLocation.updateLocation( item.Path );
+                    numCurrImageModified++;
+                    item.Path = DBLocation.updateLocation( item.Path, false, embyInterfaces.Logger() ).path;
                     isModified = true;
                 }
                 var allImageInfos = item.ImageInfos;
-                var numImageModified = 0;
                 for( int jj = 0; jj < allImageInfos.Count(); ++jj )
                 {
                     var imageInfo = allImageInfos[ jj ];
@@ -93,28 +150,54 @@ namespace Statistics2026.Utilities
 
                     if( DBLocation.isOldLocation( imageInfo.Path ) )
                     {
-                        numImageModified++;
-                        imageInfo.Path = DBLocation.updateLocation( imageInfo.Path );
-                        item.SetImage( imageInfo, 0 );
-                        allImageInfos[ jj ] = imageInfo;
+                        bool aOK = false;
+                        (imageInfo.Path, aOK) = DBLocation.updateLocation( imageInfo.Path, copyFile, embyInterfaces.Logger() );
+                        if( aOK )
+                        {
+                            numCurrImageModified++;
+                            item.SetImage( imageInfo, 0 );
+                            allImageInfos[ jj ] = imageInfo;
+                        }
                     }
                 }
-                if( numImageModified != 0 )
+
+                var imagesModified = Interlocked.Read( ref numImagesModified );
+                if( numCurrImageModified != 0 )
                 {
-                    numModified += numImageModified;
+                    imagesModified = Interlocked.Add( ref numImagesModified, numCurrImageModified );
                     item.ImageInfos = allImageInfos;
                     isModified = true;
                 }
 
+                var numModified = Interlocked.Read( ref numItemsModified );
                 if( isModified )
                 {
-                    embyInterfaces.LibraryManager().UpdateItem(
-                        item,
-                        item.GetParent(),
-                        ItemUpdateType.None,
-                        null
-                    );
+                    numModified = Interlocked.Increment( ref numItemsModified );
+                    modifiedItems.Add( item );
                 }
+
+                var ii = Interlocked.Increment( ref count );
+                if( ( ii % 1000 ) == 0 )
+                {
+                    embyInterfaces.Logger().Debug( $"Updating Library paths ({ii} of {items.Count()} - {numModified} items, {imagesModified} images modified)" );
+                }
+            } ) );
+
+            await Task.WhenAll( pool );
+            embyInterfaces.Logger().Debug( $"Updating Library paths - {numItemsModified} items, {numImagesModified} images modified)" );
+            count = 0;
+            foreach( var item in modifiedItems )
+            {
+                if( ( ( count++ ) % 1000 ) == 0 )
+                {
+                    embyInterfaces.Logger().Debug( $"Updating Library Items - ({count} of {modifiedItems.Count}" );
+                }
+                embyInterfaces.LibraryManager().UpdateItem(
+                    item,
+                    item.GetParent(),
+                    ItemUpdateType.None,
+                    null
+                );
             }
 #endif
         }
