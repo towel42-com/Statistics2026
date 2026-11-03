@@ -8,7 +8,9 @@ using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -34,40 +36,64 @@ namespace Statistics2026.Data
             }
 
             double count = videoList.Count;
-            var curr = 0.0;
+            var completedCount = 0;
 
             Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
-            var existing = new Dictionary<string, bool>();
-            List<object> paramList = [];
             sqlCmds.Add( new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ) );
+            sqlCmds.Add( new SQLCmdDef( "" ) );  // just a place holder
 
-            foreach( var video in videoList )
+            var existing = new ConcurrentDictionary<string, bool>();
+            var paramList = new ConcurrentBag<object>();
+
+            using( var listTimer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
             {
-                if( video == null )
-                    continue;
+                var pool = videoList.Select( ( video, index ) => Task.Run( async () =>
+                {
+                    long runTimeMS = 0;
+                    var retVal = (index: index, video: (Video?)null, cmds: new List<SQLCmdDef>(), runTimeMS: runTimeMS);
+                    using( var currTimer = new AutoTimer( $"    Processed Media {video.Name}", Logger() ) )
+                    {
 
-                Progress?.Report( 80.0 * ( ++curr ) / count );
+                        var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
+                        if( !mediaInfo.aOK )
+                            return retVal;
 
-                if( existing.ContainsKey( video.Id.ToString() ) )
-                    continue;
-                existing.Add( video.Id.ToString(), true );
-                paramList.Add( video.Id.ToString() );
+                        if( existing.ContainsKey( video.Id.ToString() ) )
+                            return retVal;
 
-                var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
-                if( !mediaInfo.aOK )
-                    continue;
+                        existing[ video.Id.ToString() ] = true;
+                        paramList.Add( video.Id.ToString() );
+                        retVal.video = video;
+                        retVal.cmds.AddRange( AddMediaInfo( mediaInfo ) );
+                        retVal.runTimeMS = currTimer.ElapsedMilliseconds();
+                    }
+                    CancellationToken?.ThrowIfCancellationRequested();
+                    int currProgress = Interlocked.Increment( ref completedCount );
+                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                    Logger().Info( $"Processed Video {video.Name} - {runTimeMS} ms" );
 
-                sqlCmds.AddRange( AddMediaInfo( mediaInfo ) );
-                Logger().Debug( $"    Processed Video ({curr} of {count}) - {mediaInfo.DescriptiveName}" );
+                    return retVal;
+                } ) ).ToList();
 
-                CancellationToken?.ThrowIfCancellationRequested();
+                var unsortedResults = await Task.WhenAll( pool );
+                var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                foreach( var result in results )
+                {
+                    sqlCmds.AddRange( result.cmds );
+                    CancellationToken?.ThrowIfCancellationRequested();
+                }
             }
 
-            Progress?.Report( 80 );
-            sqlCmds.Insert( 1, CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
-            ExecuteCommands( sqlCmds );
-            Progress?.Report( 100 );
+            CancellationToken?.ThrowIfCancellationRequested();
+            sqlCmds[ 1 ] = CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList.ToList() );
+
+            using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
+            {
+                Progress?.Report( 80 );
+                ExecuteCommands( sqlCmds );
+                Progress?.Report( 100 );
+            }
             Logger().Debug( $"Finished Video Analysis" );
         }
 
