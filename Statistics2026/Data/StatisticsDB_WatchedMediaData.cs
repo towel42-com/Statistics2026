@@ -33,16 +33,16 @@ namespace Statistics2026.Data
 
             Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
-            using( var timer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", Logger() ) )
+            using( var listTimer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", Logger() ) )
             {
                 var pool = users.Select( ( user, index ) => Task.Run( async () =>
                 {
                     List<SQLCmdDef> currCmds = [];
                     long runTimeMS = 0;
-                    using( var userTimer = new AutoTimer( $"    Processed User {user.Name}", Logger() ) )
+                    using( var currTimer = new AutoTimer( $"    Processed User {user.Name}", Logger() ) )
                     {
                         currCmds = await AddWatchedDataForUserAsync( user ).ConfigureAwait( false );
-                        runTimeMS = timer.ElapsedMilliseconds();
+                        runTimeMS = currTimer.ElapsedMilliseconds();
                     }
 
                     CancellationToken?.ThrowIfCancellationRequested();
