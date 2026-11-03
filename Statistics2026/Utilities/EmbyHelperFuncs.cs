@@ -408,14 +408,7 @@ namespace Statistics2026.Utilities
             if( embyInterfaces == null )
                 return null;
 
-            var query = new UserQuery
-            {
-                // You can optionally add filters here, such as:
-                // IsDisabled = false,
-                // IsHidden = false
-            };
-
-            var queryResult = embyInterfaces.UserManager().GetUserList( query ) ?? null;
+            var queryResult = EmbyHelperFuncs.GetAllUsers( embyInterfaces, false );
             if( queryResult != null )
             {
                 // 3. Find the newest user by sorting their creation date
@@ -645,6 +638,24 @@ namespace Statistics2026.Utilities
             }
             retVal += addToHtml( --depth, "</ul>" );
             retVal += addToHtml( --depth, "</div>" );
+            return retVal;
+        }
+
+        public static List<User> GetAllUsers( EmbyInterfaces? embyInterfaces, bool limitToRemoteAccess = true)
+        {
+            if ( embyInterfaces == null )
+                return [];
+
+            var userQuery = new UserQuery();
+            if ( limitToRemoteAccess )
+            {
+                userQuery.EnableRemoteAccess = true;
+            }
+
+            var retVal = embyInterfaces.UserManager().GetUserList( userQuery ).ToList();
+#if DEBUG
+            retVal = retVal.Where( u => u.Name == "scott" ).ToList();
+#endif
             return retVal;
         }
     }
