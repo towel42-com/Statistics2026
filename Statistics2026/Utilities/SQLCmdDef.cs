@@ -3,6 +3,7 @@ using SQLitePCL.pretty;
 using Statistics2026.Data;
 using System;
 using System.Collections.Generic;
+using System.Text;
 using static ServiceStack.Diagnostics;
 
 namespace Statistics2026.Utilities
@@ -91,15 +92,23 @@ namespace Statistics2026.Utilities
         {
             using( var statement = connection.PrepareStatement( Statement ) )
             {
-                db.DBLogger().Debug( $"{Statement.GetHashCode():X16} - Executing SQL Statement: - {Statement}" );
+                StringBuilder? msgs = null;
+                if( db.DBLogger() != null )
+                    msgs = new StringBuilder();
                 if( HasParameters() )
                 {
-                    db.DBLogger().Debug( $"{Statement.GetHashCode():X16} -    Parameters:" );
+                    db.DBLogger()?.Debug( $"{Statement.GetHashCode():X16} -    Parameters:" );
                     foreach( var (name, value) in Parameters! )
                     {
                         _ = db.TryBind( statement, name, value );
-                        db.DBLogger().Debug( $"{Statement.GetHashCode():X16} -     {name} = {value}" );
+                        if( msgs != null )
+                            msgs.AppendLine( $"{Statement.GetHashCode():X16} -     {name} = {value}" );
                     }
+                }
+
+                if( ( db.DBLogger() != null ) && ( msgs != null ) )
+                {
+                    db.DBLogger()?.LogMultiline( $"{Statement.GetHashCode():X16} - Executing SQL Statement: - {Statement}", MediaBrowser.Model.Logging.LogSeverity.Debug, msgs );
                 }
 
                 if( onStatement == null )
