@@ -79,7 +79,7 @@ namespace Statistics2026.Data
 
             if( ( checkLevel & ECheckLevel.eLogger ) != 0 )
             {
-                if( _embyInterfaces == null || _embyInterfaces._logger == null || _DBConnLogger == null)
+                if( _embyInterfaces == null || _embyInterfaces._logger == null )
                 {
                     retVal = false;
                     msgs.Add( "Logger is null" );
