@@ -141,7 +141,7 @@ define([
                 sortTable(1, "progress", 'TVSeriesProgress', showLoadingFunc, hideLoadingFunc, 'desc');
             };
 
-            loadTableData(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
+            loadTableDataAsync(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
         }
 
         function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
@@ -345,7 +345,7 @@ define([
 
         const activeLoaders = new Map();
 
-        async function loadTableData(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
+        async function loadTableDataAsync(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
             if (activeLoaders.has(baseId)) {
                 activeLoaders.get(baseId).abort();
                 activeLoaders.delete(baseId);
@@ -373,14 +373,14 @@ define([
                     }
 
                     var errorMessage = "'" + error + "' - '" + url + "'";
-                    console.error("loadTableData failed:", errorMessage, "url:", url);
+                    console.error("loadTableDataAsync failed:", errorMessage, "url:", url);
                     hideLoadingFunc();
                     return;
                 });
 
                 if (resultData === undefined || signal.aborted) {
                     if (!signal.aborted)
-                        console.error("loadTableData failed: result data was undefined", "url:", url);
+                        console.error("loadTableDataAsync failed: result data was undefined", "url:", url);
                     hideLoadingFunc();
                     return;
                 }
@@ -468,7 +468,7 @@ define([
             }
             catch (error) {
                 if (error.name !== 'AbortError') {
-                    console.error("Unexpected error in loadTableData workflow:", error);
+                    console.error("Unexpected error in loadTableDataAsync workflow:", error);
                 }
             }
             finally {
@@ -819,7 +819,7 @@ define([
             getTabIndex,
             initCollapsibleTable,
             injectStyleSheet,
-            loadTableData,
+            loadTableDataAsync,
             loadUsers,
             showInfo
         };
