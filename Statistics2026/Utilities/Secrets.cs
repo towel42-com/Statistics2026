@@ -1,14 +1,17 @@
 ﻿using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 using ServiceStack;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -26,14 +29,15 @@ namespace Statistics2026.Secrets
             return attribute?.Value ?? string.Empty;
         }
 
-        static string? sOldLocation = null;
-        static public string getOldLocation()
+        static List<string>? sOldLocations = null;
+        static public List<string> getOldLocations()
         {
-            if( sOldLocation == null )
+            if( sOldLocations == null )
             {
-                sOldLocation = GetSecret( "OLD_SERVER_LOCATION" ); //@"\\mediabox";
+                var oldLocation = GetSecret( "OLD_SERVER_LOCATION" ); //@"\\mediabox";
+                sOldLocations = oldLocation.Split( ';' ).ToList();
             }
-            return sOldLocation!;
+            return sOldLocations!;
         }
 
         static string? sNewLocation = null;
@@ -53,24 +57,67 @@ namespace Statistics2026.Secrets
                 return false;
             }
 
-            var oldLocation = DBLocation.getOldLocation();
-            if( oldLocation.IsEmpty() )
+            var oldLocations = DBLocation.getOldLocations();
+            if( oldLocations.All( loc => loc.IsEmpty() ) )
             {
                 return false;
             }
-            return path.StartsWith( oldLocation, StringComparison.OrdinalIgnoreCase );
+            return oldLocations.Any( loc => path.StartsWith( loc, StringComparison.OrdinalIgnoreCase ) );
         }
 
-        static public string updateLocation( string path )
+        static public ( string path, bool success ) updateLocation( string path, bool copyIfExists, ILogger logger )
         {
-            var oldLocation = DBLocation.getOldLocation();
-            var newLocation = DBLocation.getNewLocation();
-            if( oldLocation.IsEmpty() || newLocation.IsEmpty() )
+            if( path == null )
             {
-                return path;
+                return ( string.Empty, false );
             }
 
-            return path.Replace( oldLocation, newLocation );
+            var oldLocations = DBLocation.getOldLocations();
+            var newLocation = DBLocation.getNewLocation();
+            if( oldLocations.All( loc => loc.IsEmpty() ) || newLocation.IsEmpty() )
+            {
+                return (path, true);
+            }
+
+            bool copyOK = true;
+            var oldPath = path;
+            var newPath = path;
+            foreach( var oldLocation in oldLocations )
+            {
+                if( oldLocation.IsEmpty() )
+                    continue;
+
+                if( !path.StartsWith( oldLocation, StringComparison.OrdinalIgnoreCase ) )
+                {
+                    continue;
+                }
+
+                var pattern = Regex.Escape( oldLocation );
+                newPath = Regex.Replace( path, pattern, newLocation, RegexOptions.IgnoreCase );
+                if( copyIfExists && File.Exists( oldPath ) && !File.Exists( newPath ) )
+                {
+                    //logger.Debug( $"Copying file '{oldPath}' to '{newPath}'" );
+                    try
+                    {
+                        string destDir = Path.GetDirectoryName( newPath );
+                        if( !Directory.Exists( destDir ) )
+                        {
+                            //logger.Debug( $"Creating Directory '{destDir}'" );
+                            Directory.CreateDirectory( destDir );
+                        }
+                        File.Copy( oldPath, newPath );
+                        //logger.Debug( $"Successfully copied file '{oldPath}' to '{newPath}'" );
+                    }
+                    catch( Exception ex )
+                    {
+                        logger.Debug( ex.ToString() );
+                        logger.Debug( $"Error Copying file '{oldPath}' to '{newPath}'" );
+                        copyOK = false;
+                    }
+                }
+            }
+
+            return ( newPath, copyOK );
         }
     }
 
@@ -91,7 +138,7 @@ namespace Statistics2026.Secrets
         {
             if( sApiKeyV3 == null )
             {
-                sApiKeyV3 = GetSecret( "TMDB_API_KEY_V3" ); 
+                sApiKeyV3 = GetSecret( "TMDB_API_KEY_V3" );
             }
             return sApiKeyV3!;
         }
@@ -101,7 +148,7 @@ namespace Statistics2026.Secrets
         {
             if( sApiKeyV4 == null )
             {
-                sApiKeyV4 = GetSecret( "TMDB_API_KEY_V4" ); 
+                sApiKeyV4 = GetSecret( "TMDB_API_KEY_V4" );
             }
             return sApiKeyV4!;
         }
