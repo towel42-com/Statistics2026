@@ -16,32 +16,32 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async Task AnalyzeMissingMoviesTaskImplAsync( CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task AnalyzeMissingMoviesTaskImplAsync()
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
             Logger().Debug( $"Starting Analysis" );
-            progress.Report( 0 );
+            Progress?.Report( 0 );
             var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
             collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
 
-            progress.Report( 100 );
+            Progress?.Report( 100 );
 
-            var reader = new TmdbInterface( _embyInterfaces, cancellationToken );
+            var reader = new TmdbInterface( _embyInterfaces, CancellationToken );
 
             double count = collections.Count();
             var curr = 0.0;
 
-            progress.Report( 0 );
+            Progress?.Report( 0 );
             List<SQLCmdDef> sqlCmds = [];
 
             List<object> paramList = [];
             foreach( var collection in collections )
             {
-                progress.Report( 80.0 * ( ++curr ) / count );
+                Progress?.Report( 80.0 * ( ++curr ) / count );
                 try
                 {
-                    var cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection, progress ).ConfigureAwait( false );
+                    var cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection ).ConfigureAwait( false );
                     paramList.Add( collection.Id.ToString() );
                     sqlCmds.AddRange( cmds );
                 }
@@ -57,13 +57,13 @@ namespace Statistics2026.Data
 
             CancellationToken?.ThrowIfCancellationRequested();
 
-            progress.Report( 80 );
+            Progress?.Report( 80 );
             ExecuteCommands( sqlCmds );
-            progress.Report( 100 );
+            Progress?.Report( 100 );
             Logger().Debug( $"Finished Analysis" );
         }
 
-        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollectionAsync( TmdbInterface reader, BoxSet collection, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollectionAsync( TmdbInterface reader, BoxSet collection )
         {
             Logger().Info( $"    Analyzing Collection '{collection.Name}' - checking for missing movies" );
 

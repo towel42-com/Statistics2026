@@ -18,30 +18,30 @@ namespace Statistics2026.Data
 {
     public sealed partial class StatisticsDB
     {
-        public async Task AddAllCollectionsTaskImplAsync( CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task AddAllCollectionsTaskImplAsync()
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
             Logger().Debug( $"Starting Collection Analysis" );
-            progress.Report( 0 );
+            Progress?.Report( 0 );
             var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
-            progress.Report( 100 );
+            Progress?.Report( 100 );
 
             double count = collections.Count();
             var completedCount = 0;
 
-            progress.Report( 0 );
+            Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
 
             using( var timer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
             {
-                var pool = collections.Select( ( collection, index ) => Task.Run( async() =>
+                var pool = collections.Select( ( collection, index ) => Task.Run( async () =>
                 {
                     List<SQLCmdDef> currCmds = [];
                     long runTimeMS = 0;
                     using( var userTimer = new AutoTimer( $"    Processed Collection {collection.Name}", Logger() ) )
                     {
-                        currCmds = await AddCollectionAsync( collection, cancellationToken, progress ).ConfigureAwait( false );
+                        currCmds = await AddCollectionAsync( collection ).ConfigureAwait( false );
                         runTimeMS = timer.ElapsedMilliseconds();
                     }
 
@@ -62,13 +62,13 @@ namespace Statistics2026.Data
                 }
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
+            CancellationToken?.ThrowIfCancellationRequested();
 
             using( var timer = new AutoTimer( $"    Analyze Collection - Executing Commands", Logger() ) )
             {
-                progress.Report( 80 );
+                Progress?.Report( 80 );
                 ExecuteCommands( sqlCmds );
-                progress.Report( 100 );
+                Progress?.Report( 100 );
             }
             Logger().Debug( $"Finished Collection Analysis" );
         }
@@ -109,7 +109,7 @@ namespace Statistics2026.Data
             return sqlCmds;
         }
 
-        private async Task<List<SQLCmdDef>> AddCollectionMembersAsync( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
+        private async Task<List<SQLCmdDef>> AddCollectionMembersAsync( BoxSet collection )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -131,15 +131,15 @@ namespace Statistics2026.Data
 
             videos.ForEach( async video =>
             {
-                progress.Report( 100.0 * ( ++curr ) / count );
+                Progress?.Report( 100.0 * ( ++curr ) / count );
                 sqlCmds.AddRange( await AddChildToCollectionAsync( video, collection ).ConfigureAwait( false ) );
-                cancellationToken.ThrowIfCancellationRequested();
+                CancellationToken?.ThrowIfCancellationRequested();
             } );
             Logger().Debug( $"AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} " );
             return sqlCmds;
         }
 
-        public async Task<List<SQLCmdDef>> AddCollectionAsync( BoxSet collection, CancellationToken cancellationToken, IProgress<double> progress )
+        public async Task<List<SQLCmdDef>> AddCollectionAsync( BoxSet collection )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -194,7 +194,7 @@ namespace Statistics2026.Data
                 ] ) );
             Logger().Debug( $"    AddCollection - Successfully Added Collection" );
 
-            sqlCmds.AddRange( await AddCollectionMembersAsync( collection, cancellationToken, progress ).ConfigureAwait(false) );
+            sqlCmds.AddRange( await AddCollectionMembersAsync( collection ).ConfigureAwait( false ) );
             return sqlCmds;
         }
 
@@ -248,7 +248,8 @@ namespace Statistics2026.Data
                 var itemImageUrl = row.GetString( col++ );
                 var collectionName = row.GetString( col++ );
                 var collectionSortName = row.GetString( col++ );
-                var collectionImageUrl = row.GetString( col++ ); ;
+                var collectionImageUrl = row.GetString( col++ );
+                ;
                 var collectionId = row.GetString( col++ );
 
                 retVal.AddLine( (itemSortName, itemId, itemImageUrl, false), (collectionSortName, collectionId, collectionImageUrl, false) );

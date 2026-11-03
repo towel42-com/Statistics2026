@@ -96,7 +96,6 @@ namespace Statistics2026.Data
             {
                 Logger().Error( $"Problem connecting to TMDB - {series.Name} - {seriesTmbdId}" );
                 Logger().Error( ex.ToString() );
-                throw ex;
             }
 
             if( tmdbSeries == null )
