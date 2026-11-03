@@ -44,7 +44,6 @@ namespace Statistics2026.Data
             ConcurrentBag<object> paramBag = [];
             var sqlCmds = new List<SQLCmdDef>();
             sqlCmds.Add( new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ) );
-            sqlCmds.Add( new SQLCmdDef( "" ) );  // just a place holder
 
             using( var timer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
             {
@@ -87,6 +86,7 @@ namespace Statistics2026.Data
 
                 var unsortedResults = await Task.WhenAll( pool );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramBag.ToList() ) );
                 foreach( var result in results )
                 {
                     if( result.cmd != null )
@@ -99,8 +99,6 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
             {
                 Progress?.Report( 80 );
-                var paramList = paramBag.ToList();
-                sqlCmds.Insert( 1, SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList ) );
                 ExecuteCommands( sqlCmds );
                 Progress?.Report( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
