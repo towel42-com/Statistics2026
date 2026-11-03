@@ -573,16 +573,16 @@ namespace Statistics2026.Data
                 var cmd = new SQLCmdDef( sql,
                     [
                         ( "@UserId", user.Id.ToString()),
-                            ( "@ItemId", video?.Id.ToString() ?? string.Empty),
-                            ( "@Name", mediaInfo.PrimaryName),
-                            ( "@IsEpisode", mediaInfo.IsEpisode),
-                            ( "@NumEpisodes", mediaInfo.NumEpisodes),
-                            ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
-                            ( "@IsPlayed", isPlayed),
-                            ( "@PlayCount", playCount),
-                            ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null )),
-                            ( "@SeriesId", mediaInfo.SeriesId),
-                            ( "@RunTimeTicks", mediaInfo.RunTimeTicks ),
+                        ( "@ItemId", video?.Id.ToString() ?? string.Empty),
+                        ( "@Name", mediaInfo.PrimaryName),
+                        ( "@IsEpisode", mediaInfo.IsEpisode),
+                        ( "@NumEpisodes", mediaInfo.NumEpisodes),
+                        ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
+                        ( "@IsPlayed", isPlayed),
+                        ( "@PlayCount", playCount),
+                        ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null )),
+                        ( "@SeriesId", mediaInfo.SeriesId),
+                        ( "@TotalTicksPlayed", mediaInfo.TotalTicksPlayed ),
                     ] );
                 retVal.cmd = cmd;
                 CancellationToken?.ThrowIfCancellationRequested();

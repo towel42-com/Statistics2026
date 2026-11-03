@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Dto;
+﻿//#define DEBUG_DB
+using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Entities.Movies;
@@ -657,8 +658,8 @@ namespace Statistics2026.Utilities
             }
 
             var retVal = embyInterfaces.UserManager().GetUserList( userQuery ).ToList();
-#if DEBUG
-            //retVal = retVal.Where( u => u.Name == "scott" ).ToList();
+#if DEBUG_DB
+            retVal = retVal.Where( u => u.Name == "scott" ).ToList();
 #endif
             return retVal;
         }

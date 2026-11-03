@@ -237,6 +237,7 @@ namespace Statistics2026.Data
                 ("@PremiereDate", HelperFuncs.ToDateTimeParamValue( mediaInfo.PremiereDate ) ),
                 ("@DateAdded", HelperFuncs.ToDateTimeParamValue( mediaInfo.DateAdded ) ),
             ] );
+
             return retVal;
         }
 
