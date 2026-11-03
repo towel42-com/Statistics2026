@@ -267,6 +267,34 @@ define([
             return response;
         }
 
+        async function insertSystemStatus(view, div) {
+            let errorMessage = "";
+            let systemStatusObj = null;
+
+            systemStatusObj = await getSystemStatusAsync().catch(error => {
+                errorMessage = `'${error}'`;
+                console.error("getSystemStatus failed:", errorMessage);
+            });
+
+            let message = '';
+
+            if (systemStatusObj != null) {
+                if (systemStatusObj.html != "" && systemStatusObj.html !== undefined) {
+                    message += systemStatusObj.html;
+                }
+
+                if (systemStatusObj.error != "" && systemStatusObj.error !== undefined) {
+                    errorMessage = systemStatusObj.error;
+                }
+            }
+
+            if (errorMessage != "" && errorMessage !== undefined) {
+                message += `</br><div><b>Error Getting Last Run Information</b>: ${errorMessage}</div>`;
+            }
+
+            view.querySelector("#" + div).innerHTML = message;
+        }
+
         async function getLastRunInfo(whichRuns) {
             var param = whichRuns.join(',');
             var urlText = `/Statistics2026/last_run_info?whichRuns=${param}`;
@@ -816,6 +844,7 @@ define([
             getMediaRowData,
             getSummaryInfo,
             insertGetLastRunInfo,
+            insertSystemStatus,
             getTabIndex,
             initCollapsibleTable,
             injectStyleSheet,

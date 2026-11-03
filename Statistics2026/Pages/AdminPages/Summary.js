@@ -16,7 +16,7 @@
                 return;
             });
 
-            if (!sysConfig.EnableDebugLevelLogging && !pluginConfig.showDebugInfo) {
+            if (!pluginConfig.showDebugInfo) {
                 view.querySelector(`#debugInfo`).style.display = 'none';
                 view.querySelector(`#playedUserMedia`).style.display = 'none';
                 view.querySelector(`#userWatchMediaIssues`).style.display = 'none';
@@ -70,7 +70,7 @@
                 loadDebugInfoAsync(view, config);
             });
 
-            Helpers.insertGetLastRunInfo(view, ["System"], "lastRunInfo");
+            Helpers.insertSystemStatus(view, "lastRunInfo");
 
             view.querySelector("#pageIntro").innerHTML =
                 "This plugin will calculate media and user statistics "
