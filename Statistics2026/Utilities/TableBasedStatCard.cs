@@ -36,6 +36,7 @@ namespace Statistics2026.Utilities
                 if( isClickable )
                 {
                     td = $"<span class=\"row-toggle\">▶</span> {Name}";
+                    keyColAlignment = StatCard.EAlignment.eLeft;
                 }
 
                 retVal += EmbyHelperFuncs.addToHtml( depth++, $"<td {StatCard.GetStyleString( keyColAlignment )}>" );
@@ -48,9 +49,12 @@ namespace Statistics2026.Utilities
                 for( var ii = 0; ii < Values.Count(); ++ii )
                 {
                     var td = Values[ ii ].ToString();
+
+                    var style = GetStyleString( ii, columnAlignment );
                     if( !showCategory && ( Values.Count == 1 ) && ( ii == 0 ) && isClickable )
                     {
                         td = $"<span class=\"row-toggle\">▶</span>{td}";
+                        style = StatCard.GetStyleString( StatCard.EAlignment.eLeft );
                     }
 
                     var colSpan = "colSpan=\"1\"";
@@ -69,7 +73,8 @@ namespace Statistics2026.Utilities
                             classes = $"class=\"{string.Join( " ", classArray )}\"";
                         }
                     }
-                    retVal += EmbyHelperFuncs.addToHtml( depth, $"<td {classes} {colSpan} {GetStyleString( ii, columnAlignment )}>{td}</td>" );
+
+                    retVal += EmbyHelperFuncs.addToHtml( depth, $"<td {classes} {colSpan} {style}>{td}</td>" );
                 }
             }
 
@@ -83,7 +88,8 @@ namespace Statistics2026.Utilities
             StatCard.EAlignment colAlign = StatCard.EAlignment.eUnset;
             if( columnAlignment != null )
             {
-                columnAlignment.TryGetValue( columnNumber, out colAlign );
+                if ( columnAlignment.ContainsKey( columnNumber ) )
+                    colAlign = columnAlignment[ columnNumber ];
             }
             return StatCard.GetStyleString( colAlign );
         }
