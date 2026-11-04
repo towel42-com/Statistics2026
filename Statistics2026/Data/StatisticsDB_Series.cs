@@ -90,6 +90,7 @@ namespace Statistics2026.Data
             var (seriesInfoMap, validSeriesIds) = ComputeSeriesInfo( seriesList );
 
             var sqlCmds = new List<SQLCmdDef>();
+            ConcurrentBag<object> validIds = [];
             sqlCmds.AddRange( UpdateSeriesFilter() );
 
             int completedCount = 0;
@@ -105,6 +106,7 @@ namespace Statistics2026.Data
                     if( seriesInfoMap.TryGetValue( series.Id.ToString(), out SeriesInfo seriesInfo ) )
                     {
                         retVal.cmd = await AddSeriesAsync( series, seriesInfo ).ConfigureAwait( false );
+                        validIds.Add( series.Id.ToString() );
                     }
                     else
                     {
@@ -122,6 +124,7 @@ namespace Statistics2026.Data
                 CancellationToken?.ThrowIfCancellationRequested();
                 var unsortedResults = await Task.WhenAll( pool );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Series WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
                 foreach( var result in results )
                 {
                     if( result.cmd != null )
