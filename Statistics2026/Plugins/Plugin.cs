@@ -1,4 +1,6 @@
-﻿//#define DEBUG_PLUGIN
+﻿#if DEBUG
+//#define DEBUG_PLUGIN
+#endif
 using MediaBrowser.Common;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Net;

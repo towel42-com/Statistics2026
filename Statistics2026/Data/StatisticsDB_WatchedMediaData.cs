@@ -1,4 +1,6 @@
-﻿#define DEBUG_PLUGIN
+﻿#if DEBUG
+//#define DEBUG_PLUGIN
+#endif
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;

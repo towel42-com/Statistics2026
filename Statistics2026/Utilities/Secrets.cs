@@ -1,4 +1,8 @@
-﻿using MediaBrowser.Common.Net;
+﻿#if DEBUG
+//#define DEBUG_PLUGIN
+#endif
+
+using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Logging;
@@ -29,29 +33,42 @@ namespace Statistics2026.Secrets
             return attribute?.Value ?? string.Empty;
         }
 
+#if DEBUG_PLUGIN
         static List<string>? sOldLocations = null;
+#endif
         static public List<string> getOldLocations()
         {
+#if DEBUG_PLUGIN
             if( sOldLocations == null )
             {
                 var oldLocation = GetSecret( "OLD_SERVER_LOCATION" ); //@"\\mediabox";
                 sOldLocations = oldLocation.Split( ';' ).ToList();
             }
             return sOldLocations!;
+#else
+            return [];
+#endif
         }
 
+#if DEBUG_PLUGIN
         static string? sNewLocation = null;
+#endif
         static public string getNewLocation()
         {
+#if DEBUG_PLUGIN
             if( sNewLocation == null )
             {
                 sNewLocation = GetSecret( "NEW_SERVER_LOCATION" );
             }
             return sNewLocation!;
+#else
+            return string.Empty;
+#endif
         }
 
         static public bool isOldLocation( string? path )
         {
+#if DEBUG_PLUGIN
             if( path == null )
             {
                 return false;
@@ -63,10 +80,14 @@ namespace Statistics2026.Secrets
                 return false;
             }
             return oldLocations.Any( loc => path.StartsWith( loc, StringComparison.OrdinalIgnoreCase ) );
+#else
+            return false;
+#endif
         }
 
-        static public ( string path, bool success ) updateLocation( string path, bool copyIfExists, ILogger logger )
+        static public (string path, bool success) updateLocation( string path, bool copyIfExists, ILogger logger )
         {
+#if DEBUG_PLUGIN
             if( path == null )
             {
                 return ( string.Empty, false );
@@ -118,9 +139,12 @@ namespace Statistics2026.Secrets
             }
 
             return ( newPath, copyOK );
+#else
+            return (path, true);
+#endif
         }
     }
-
+    
     public static class TheMovieDB
     {
         private static string GetSecret( string keyName )
