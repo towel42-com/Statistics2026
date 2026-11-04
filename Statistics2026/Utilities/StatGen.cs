@@ -455,9 +455,8 @@ namespace Statistics2026.Utilities
                 case EStatisticType.Smallest:
                 case EStatisticType.Largest:
                 {
-                    float maxSize = sqlResultValue.GetInt64( index );
-                    maxSize /= 1024 * 1024 * 1024; // in GB;
-                    value = $"{maxSize:F1} Gb";
+                    var size = sqlResultValue.GetInt64( index );
+                    value = EmbyHelperFuncs.PrettyPrintFileSize( size );
                 }
 
                 break;
