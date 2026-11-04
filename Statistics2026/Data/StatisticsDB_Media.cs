@@ -41,7 +41,7 @@ namespace Statistics2026.Data
 
             Progress?.Report( 0 );
             var existing = new ConcurrentDictionary<string, bool>();
-            ConcurrentBag<object> paramBag = [];
+            ConcurrentBag<object> validIds = [];
             var sqlCmds = new List<SQLCmdDef>();
             sqlCmds.Add( new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ) );
 
@@ -62,7 +62,7 @@ namespace Statistics2026.Data
                             return retVal;
 
                         existing.TryAdd( video.Id.ToString(), true );
-                        paramBag.Add( video.Id.ToString() );
+                        validIds.Add( video.Id.ToString() );
 
                         var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
                         if( !mediaInfo.aOK )
@@ -86,7 +86,7 @@ namespace Statistics2026.Data
 
                 var unsortedResults = await Task.WhenAll( pool );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramBag.ToList() ) );
+                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
                 foreach( var result in results )
                 {
                     if( result.cmd != null )
@@ -665,6 +665,39 @@ namespace Statistics2026.Data
             }
 
             return retVal;
+        }
+
+        public (int current, int inDB) totalMediaCount()
+        {
+            CheckIsValid( ECheckLevel.eReport );
+
+            var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
+
+            var currentCount = 0;
+            if( videoList != null )
+            {
+                var existing = new Dictionary<string, bool>();
+                foreach( var video in videoList )
+                {
+                    if( video == null )
+                        continue;
+                    if( existing.ContainsKey( video.Id.ToString() ) )
+                        continue;
+                    existing.Add( video.Id.ToString(), true );
+                }
+                currentCount = existing.Count();
+            }
+
+            var sql = "SELECT COUNT(*) FROM Media";
+            var inDBCount = 0;
+            ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            {
+                var row = statement.Current;
+                inDBCount = row.GetInt( 0 );
+                return true;
+            } );
+
+            return (currentCount, inDBCount);
         }
     }
 }
