@@ -48,7 +48,7 @@ namespace Statistics2026.Data
 
                     using( var currTimer = new AutoTimer( $"    Processed User {user.Name}", Logger() ) )
                     {
-                        currCmds = await AddWatchedDataForUserAsync( user, progressWindow, startedCount, users.Count ).ConfigureAwait( false );
+                        currCmds = await AddWatchedDataForUserAsync( user, progressWindow, userNum, users.Count ).ConfigureAwait( false );
                         runTimeMS = currTimer.ElapsedMilliseconds();
                     }
 
@@ -574,7 +574,7 @@ namespace Statistics2026.Data
                     ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
 
                 var lastPlayedDate = video?.LastPlayedDate ?? null;
-                var mediaInfo = MediaInfo.CreateMinimal( Logger(), video!, false, true );
+                var mediaInfo = MediaInfo.CreateMinimal( Logger(), video! );
                 if( !mediaInfo.aOK )
                     return retVal;
 
