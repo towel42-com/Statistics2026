@@ -13,11 +13,11 @@ namespace Statistics2026.Utilities
 {
     public class MediaInfo
     {
-        private static ConcurrentDictionary<(string, bool minimal), MediaInfo> sMediaInfoCache = [];
+        private static ConcurrentDictionary<(string, bool isUserVideo, bool minimal), MediaInfo> sMediaInfoCache = [];
 
         private static string KeyForVideo( Video video )
         {
-            return $"{video.Id}";
+            return video.Id.ToString();
         }
 
         private static bool OutOfDate( Video video, MediaInfo mediaInfo )
@@ -30,29 +30,63 @@ namespace Statistics2026.Utilities
 
         public MediaInfo() { }
 
-        public static MediaInfo CreateMinimal( ILogger logger, Video video, bool isUserVideo, bool minimalOnly )
+        private static void SetCachedValue( MediaInfo mediaInfo )
         {
-            if( sMediaInfoCache.TryGetValue( (KeyForVideo( video ), true), out MediaInfo value ) )
+            if( mediaInfo.aOK )
             {
-                if( !OutOfDate( video, value ) )
-                {
-                    if( minimalOnly )
-                        return value;
-                    var json = JsonSerializer.Serialize( value );
-                    var copy = JsonSerializer.Deserialize<MediaInfo>( json );
-                    if( copy == null )
-                        throw new Exception( "Problem deserializing" );
-                    return copy;
-                }
-                else
-                {
-                    sMediaInfoCache.Remove( (KeyForVideo( video ), true), out var currValue );
-                }
+                var cacheKey = (mediaInfo.ItemId, mediaInfo.HasUserData, mediaInfo.IsMinimal);
+                sMediaInfoCache[ cacheKey ] = mediaInfo;
+            }
+        }
+
+        private static MediaInfo? GetCachedValue( Video video, bool minimalOnly )
+        {
+            var cacheKey = (KeyForVideo( video ), video.UserDataSet, minimalOnly);
+            MediaInfo? cachedValue = null;
+            if( !sMediaInfoCache.TryGetValue( cacheKey, out cachedValue ) )
+            {
+                sMediaInfoCache.TryGetValue( (KeyForVideo( video ), video.UserDataSet, !minimalOnly), out cachedValue );
             }
 
-            var retVal = new MediaInfo();
+            if( cachedValue == null )
+                return null;
+
+            if( OutOfDate( video, cachedValue ) )
+            {
+                if( cachedValue.IsMinimal )
+                    sMediaInfoCache.Remove( cacheKey, out var currValue );
+                else
+                    sMediaInfoCache.Remove( (KeyForVideo( video ), video.UserDataSet, false), out var currValue );
+                return null;
+            }
+
+            if( minimalOnly || ( !minimalOnly && !cachedValue.IsMinimal ) )
+                return cachedValue;
+
+            var json = JsonSerializer.Serialize( cachedValue );
+            var copy = JsonSerializer.Deserialize<MediaInfo>( json );
+            if( copy == null )
+                throw new Exception( "Problem deserializing" );
+            copy.IsMinimal = false;
+
+            return copy;
+        }
+
+
+        public static MediaInfo CreateMinimal( ILogger logger, Video video )
+        {
+            return CreateMinimal( logger, video, true );
+        }
+
+        private static MediaInfo CreateMinimal( ILogger logger, Video video, bool minimalOnly )
+        {
+            var cachedValue = GetCachedValue( video, minimalOnly );
+            if( cachedValue != null )
+                return cachedValue;
+
+            var retVal = new MediaInfo() { IsMinimal = true };
             retVal.aOK = false;
-            if ( video == null )
+            if( video == null )
                 return retVal;
 
             var (primaryName, secondaryName, descName) = GetDescName( video );
@@ -67,8 +101,8 @@ namespace Statistics2026.Utilities
             retVal.SeriesId = seriesId( video );
             retVal.RunTimeTicks = video.RunTimeTicks ?? 0;
             retVal.DateItemModified = video.DateModified;
-
-            if( isUserVideo )
+            retVal.HasUserData = video.UserDataSet;
+            if( video.UserDataSet )
             {
                 retVal.IsPlayed = video.Played;
                 retVal.TotalTicksPlayed = 0;
@@ -97,39 +131,35 @@ namespace Statistics2026.Utilities
             }
             retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
 
-            if( retVal.aOK )
-            {
-                sMediaInfoCache[ (KeyForVideo( video! ), true) ] = retVal;
-            }
+            SetCachedValue( retVal );
 
-            return retVal;
+            if( minimalOnly )
+                return retVal;
+
+            var json = JsonSerializer.Serialize( retVal );
+            var copy = JsonSerializer.Deserialize<MediaInfo>( json );
+            if( copy == null )
+                throw new Exception( "Problem deserializing" );
+            return copy;
         }
 
-        public async static Task<MediaInfo> CreateAsync( ILogger logger, Video video, bool isUserVideo )
+        public async static Task<MediaInfo> CreateAsync( ILogger logger, Video video )
         {
-            if( sMediaInfoCache.TryGetValue( (KeyForVideo( video ), false), out MediaInfo value ) )
-            {
-                if( !OutOfDate( video, value ) )
-                {
-                    return value;
-                }
-                sMediaInfoCache.Remove( (KeyForVideo( video ), false), out var currValue );
-            }
+            var cachedValue = GetCachedValue( video, false );
+            if( cachedValue != null )
+                return cachedValue;
 
-            var retVal = CreateMinimal( logger, video, isUserVideo, false );
-            if( retVal.aOK )
-            {
-                sMediaInfoCache[ (KeyForVideo( video ), false) ] = retVal;
-            }
+            var retVal = CreateMinimal( logger, video, false );
+            if( !retVal.aOK || ( retVal.aOK && !retVal.IsMinimal ) )
+                return retVal;
+
+            retVal.IsMinimal = false;
 
             var mediaStream = video.GetMediaStreams().FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
-            if( !mediaStream?.Width.HasValue ?? true )
-            {
-                return retVal;
-            }
 
             var resolutionBase = GetMediaResolution( mediaStream, false );
             var resolutionDetail = GetMediaResolution( mediaStream, true );
+
             var codec = mediaStream?.Codec ?? "Unknown";
             var dvProfile = GetDolbyVisionProfile( mediaStream );
 
@@ -171,6 +201,7 @@ namespace Statistics2026.Utilities
             retVal.DateAdded = video!.DateCreated;
 
             retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
+            SetCachedValue( retVal );
             return retVal;
         }
 
@@ -400,5 +431,8 @@ namespace Statistics2026.Utilities
         public DateTimeOffset? DateAdded { get; set; } = null;
         public bool aOK { get; set; } = false;
         public DateTimeOffset DateItemModified { get; set; } = DateTimeOffset.MinValue;
+
+        public bool IsMinimal { get; set; } = false;
+        public bool HasUserData { get; set; } = false;
     }
 }
