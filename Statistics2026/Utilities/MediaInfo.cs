@@ -102,14 +102,19 @@ namespace Statistics2026.Utilities
             retVal.RunTimeTicks = video.RunTimeTicks ?? 0;
             retVal.DateItemModified = video.DateModified;
             retVal.HasUserData = video.UserDataSet;
+            retVal.PlayCount = null;
+            retVal.IsPlayed = null;
+            retVal.TotalTicksPlayed = null;
             if( video.UserDataSet )
             {
+                retVal.PlayCount = video.PlayCount;
                 retVal.IsPlayed = video.Played;
                 retVal.TotalTicksPlayed = 0;
-                if( video.Played )
-                {
-                    retVal.TotalTicksPlayed = ( video?.PlayCount * video?.RunTimeTicks ) ?? 0;
-                }
+
+                var playCount = retVal.PlayCount ?? 0;
+                var isPlayed = retVal.IsPlayed ?? false;
+                if( isPlayed && ( playCount > 0 ) )
+                    retVal.TotalTicksPlayed = ( video.PlayCount * video.RunTimeTicks );
             }
 
             if( video is Episode episode )
@@ -394,6 +399,7 @@ namespace Statistics2026.Utilities
             return dvProfile.ToLower() == "none" ? Constants.NoDolbyProfile : dvProfile;
         }
 
+        public int? PlayCount { get; set; }
         public bool? IsPlayed { get; set; }
         public long? TotalTicksPlayed { get; set; }
 
