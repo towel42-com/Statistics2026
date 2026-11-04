@@ -1,7 +1,4 @@
-﻿#if DEBUG
-//#define DEBUG_PLUGIN
-#endif
-using MediaBrowser.Common;
+﻿using MediaBrowser.Common;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Common.Plugins;
@@ -73,9 +70,7 @@ namespace Statistics2026
                 _apiService = apiService
             };
 
-#if DEBUG_PLUGIN
             EmbyHelperFuncs.PreDebugRun( _embyInterfaces );
-#endif
         }
 
         public IEnumerable<PluginPageInfo> GetPages()
