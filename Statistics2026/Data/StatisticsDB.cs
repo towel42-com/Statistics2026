@@ -486,17 +486,17 @@ namespace Statistics2026.Data
 
                 if( tableMissing )
                 {
-                    _embyInterfaces?.Logger().Info( $"Table '${tableName}' does not exist." );
+                    _embyInterfaces?.Logger().Info( $"Table '{tableName}' does not exist." );
                 }
 
                 if( columnMissing )
                 {
-                    _embyInterfaces?.Logger().Info( $"Table '${tableName}' is missing a column." );
+                    _embyInterfaces?.Logger().Info( $"Table '{tableName}' is missing a column." );
                 }
 
                 if( tableNeedsData )
                 {
-                    _embyInterfaces?.Logger().Info( $"Table '${tableName}' is missing data." );
+                    _embyInterfaces?.Logger().Info( $"Table '{tableName}' is missing data." );
                 }
                 aTableMissing = aTableMissing || tableMissing;
                 aColumnMissing = aColumnMissing || columnMissing;
@@ -567,6 +567,7 @@ namespace Statistics2026.Data
                     if( item == null )
                         return retVal;
 
+                    await Task.Yield();
                     retVal.cmds.AddRange( await getSqlCmdsFunc( item ) );
 
                     CancellationToken?.ThrowIfCancellationRequested();
