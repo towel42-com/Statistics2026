@@ -40,22 +40,32 @@ namespace Statistics2026.Data
             Progress?.Report( 0 );
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Getting Commands", Logger() ) )
             {
+                using var gatekeeper = new SemaphoreSlim( 10, 10 );
+
                 var pool = collections.Select( ( collection, index ) => Task.Run( async () =>
                 {
-                    var retVal = (index: index, collection: collection, cmds: new List<SQLCmdDef>());
-                    if( collection == null )
+                    await gatekeeper.WaitAsync();
+                    try
+                    {
+                        var retVal = (index: index, collection: collection, cmds: new List<SQLCmdDef>());
+                        if( collection == null )
+                            return retVal;
+
+                        retVal.cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection ).ConfigureAwait( false );
+                        paramBag.Add( collection.Id.ToString() );
+
+                        CancellationToken?.ThrowIfCancellationRequested();
+
+                        var currProgress = Interlocked.Increment( ref completedCount );
+                        Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+
+                        Logger().Info( $"    Processed Collection ({currProgress} of {count}) - {collection.Name}" );
                         return retVal;
-
-                    retVal.cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection ).ConfigureAwait( false );
-                    paramBag.Add( collection.Id.ToString() );
-
-                    CancellationToken?.ThrowIfCancellationRequested();
-
-                    var currProgress = Interlocked.Increment( ref completedCount );
-                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
-
-                    Logger().Info( $"    Processed Collection ({currProgress} of {count}) - {collection.Name}" );
-                    return retVal;
+                    }
+                    finally
+                    {
+                        gatekeeper.Release();
+                    }
                 } ) ).ToList();
 
                 var unsortedResults = await Task.WhenAll( pool );

@@ -42,20 +42,32 @@ namespace Statistics2026.Data
             Progress?.Report( 0 );
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Getting Commands", Logger() ) )
             {
+                using var gatekeeper = new SemaphoreSlim( 10, 10 );
+
                 var pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
                 {
-                    var retVal = (index: index, series: series, cmds: new List<SQLCmdDef>());
-                    if( series == null )
+                    await gatekeeper.WaitAsync();
+                    try
+                    {
+                        var retVal = (index: index, series: series, cmds: new List<SQLCmdDef>());
+                        if( series == null )
+                            return retVal;
+
+                        retVal.cmds = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
+                        CancellationToken?.ThrowIfCancellationRequested();
+                        paramBag.Add( series.Id.ToString() );
+
+
+                        var currProgress = Interlocked.Increment( ref completedCount );
+                        Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+
+                        Logger().Info( $"    Processed Series ({currProgress} of {count}) - {series.Name}" );
                         return retVal;
-
-                    retVal.cmds = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
-                    CancellationToken?.ThrowIfCancellationRequested();
-
-                    var currProgress = Interlocked.Increment( ref completedCount );
-                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
-
-                    Logger().Info( $"    Processed Series ({currProgress} of {count}) - {series.Name}" );
-                    return retVal;
+                    }
+                    finally
+                    {
+                        gatekeeper.Release();
+                    }
                 } ) ).ToList();
 
                 var unsortedResults = await Task.WhenAll( pool );
@@ -69,8 +81,6 @@ namespace Statistics2026.Data
             }
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Executing Commands", Logger() ) )
             {
-                var paramList = paramBag.ToList();
-
                 Progress?.Report( 80 );
                 ExecuteCommands( sqlCmds );
                 Progress?.Report( 100 );
