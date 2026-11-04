@@ -7,7 +7,19 @@ namespace Statistics2026.Utilities
     public class TableBasedStatCardRow
     {
         public string Name { get; private set; } = string.Empty;
-        public List<object>? Values { get; set; } = null;
+        public List<object>? Values { get;
+            set
+            {
+                field = value;
+                for( int ii = 0; ii < field?.Count; ++ii )
+                {
+                    if( field[ ii ] == null )
+                    {
+                        field[ ii ] = string.Empty;
+                    }
+                }
+            }
+        } = null;
         public bool isClickable { get; set; } = false;
 
         public TableBasedStatCardRow( string name, List<object>? values, bool isClickable )
@@ -48,7 +60,8 @@ namespace Statistics2026.Utilities
             {
                 for( var ii = 0; ii < Values.Count(); ++ii )
                 {
-                    var td = Values[ ii ].ToString();
+                    var valueString = Values[ ii ]?.ToString() ?? string.Empty;
+                    string td = valueString;
 
                     var style = GetStyleString( ii, columnAlignment );
                     if( !showCategory && ( Values.Count == 1 ) && ( ii == 0 ) && isClickable )
@@ -66,7 +79,7 @@ namespace Statistics2026.Utilities
                     var classes = string.Empty;
                     if( classesForValueFunc != null )
                     {
-                        classArray = classesForValueFunc( ii, Values[ ii ].ToString() );
+                        classArray = classesForValueFunc( ii, valueString );
                         classArray.Add( "statCard-stats-number" );
                         if( classArray.Count != 0 )
                         {
