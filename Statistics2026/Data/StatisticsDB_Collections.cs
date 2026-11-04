@@ -40,8 +40,11 @@ namespace Statistics2026.Data
                 {
                     List<SQLCmdDef> currCmds = [];
                     long runTimeMS = 0;
+
+                    await Task.Yield();
                     using( var currTimer = new AutoTimer( $"    Processed Collection {collection.Name}", Logger() ) )
                     {
+                        currTimer.Restart();
                         currCmds = await AddCollectionAsync( collection ).ConfigureAwait( false );
                         runTimeMS = currTimer.ElapsedMilliseconds();
                     }
