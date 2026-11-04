@@ -6,6 +6,7 @@ using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -28,6 +29,8 @@ namespace Statistics2026.Data
 
             Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
+            ConcurrentBag<object> validIds = [];
+
             using( var timer = new AutoTimer( $"    Analyze Users - Getting Commands", Logger() ) )
             {
                 var pool = userList.Select( ( user, index ) => Task.Run( async () =>
@@ -37,6 +40,7 @@ namespace Statistics2026.Data
                         return retVal;
 
                     retVal.cmd = AddUser( user );
+                    validIds.Add( user.Id.ToString() );
                     CancellationToken?.ThrowIfCancellationRequested();
                     int currProgress = Interlocked.Increment( ref completedCount );
                     Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
@@ -47,6 +51,8 @@ namespace Statistics2026.Data
                 CancellationToken?.ThrowIfCancellationRequested();
                 var unsortedResults = await Task.WhenAll( pool );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
+
+                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Users WHERE UserId NOT IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
                 foreach( var result in results )
                 {
                     if( result.cmd != null )
