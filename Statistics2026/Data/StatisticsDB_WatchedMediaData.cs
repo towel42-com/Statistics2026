@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Entities;
+﻿#define DEBUG_PLUGIN
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
@@ -39,26 +40,37 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             using( var listTimer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", Logger() ) )
             {
+                using var gatekeeper = new SemaphoreSlim( 10, 10 );
                 var pool = users.Select( ( user, index ) => Task.Run( async () =>
                 {
-                    List<SQLCmdDef> currCmds = [];
-                    long runTimeMS = 0;
-
-                    var userNum = Interlocked.Increment( ref startedCount );
-
-                    using( var currTimer = new AutoTimer( $"    Processed User {user.Name}", Logger() ) )
+                    await gatekeeper.WaitAsync();
+                    try
                     {
-                        currCmds = await AddWatchedDataForUserAsync( user, progressWindow, userNum, users.Count ).ConfigureAwait( false );
-                        runTimeMS = currTimer.ElapsedMilliseconds();
+                        List<SQLCmdDef> currCmds = [];
+                        long runTimeMS = 0;
+
+                        var userNum = Interlocked.Increment( ref startedCount );
+
+                        await Task.Yield();
+                        using( var currTimer = new AutoTimer( $"    Processed User {user.Name}", Logger() ) )
+                        {
+                            currTimer.Restart();
+                            currCmds = await AddWatchedDataForUserAsync( user, progressWindow, userNum, users.Count ).ConfigureAwait( false );
+                            runTimeMS = currTimer.ElapsedMilliseconds();
+                        }
+
+                        CancellationToken?.ThrowIfCancellationRequested();
+                        var currProgress = Interlocked.Increment( ref completedCount );
+                        Progress?.Report( progressWindow * currProgress );
+
+                        Logger().Info( $"Processed User {user.Name} - {runTimeMS} ms {userNum} of {count}" );
+
+                        return (index: index, user: user, cmds: currCmds, runTimeMS: runTimeMS);
                     }
-
-                    CancellationToken?.ThrowIfCancellationRequested();
-                    var currProgress = Interlocked.Increment( ref completedCount );
-                    Progress?.Report( progressWindow * currProgress );
-
-                    Logger().Info( $"Processed User {user.Name} - {runTimeMS} ms" );
-
-                    return (index: index, user: user, cmds: currCmds, runTimeMS: runTimeMS);
+                    finally
+                    {
+                        gatekeeper.Release();
+                    }
                 } ) ).ToList();
 
                 var unsortedResults = await Task.WhenAll( pool );
@@ -88,8 +100,154 @@ namespace Statistics2026.Data
                 Logger().Error( "After initializing user watch data, user watch data still doesn't conform." );
             }
 
-            Plugin.Instance.AddDBState( EDBState.eUserDataInitialized );
             Logger().Debug( $"Finished User Watch Data Analysis" );
+        }
+
+        private async Task<List<SQLCmdDef>> AddWatchedDataForUserAsync( User? user, double progressWindow, int userIndex, int userCount )
+        {
+            CheckIsValid( ECheckLevel.eUpdate );
+
+            if( user == null )
+                throw new ArgumentNullException( "user" );
+
+            var userTableName = getUserTableName( user );
+            if( _userMediaTemplate == null )
+                throw new Exception( $"AddWatchedDataForUser: TableDef for {sUserMediaTablePrefix}<USER_ID> is null" );
+
+            var config = Statistics2026.Plugin.Instance!.Configuration;
+
+            var allVideosForUser = EmbyHelperFuncs.GetAllEpisodesAndMovies( user, LibraryManager() );
+            if( allVideosForUser == null )
+            {
+                return [];
+            }
+            //_tableList
+            var sql =
+                $"INSERT INTO {userTableName} " +
+                "(" +
+                    "  UserId" +
+                    ", ItemId" +
+                    ", IsPlayed" +
+                    ", Name" +
+                    ", PlayCount" +
+                    ", LastPlayedDate" +
+                    ", IsEpisode" +
+                    ", NumEpisodes" +
+                    ", IsTVSpecial" +
+                    ", SeriesId" +
+                ")" +
+                " VALUES " +
+                "(" +
+                    "  @UserId" +
+                    ", @ItemId" +
+                    ", @IsPlayed" +
+                    ", @Name" +
+                    ", @PlayCount" +
+                    ", @LastPlayedDate" +
+                    ", @IsEpisode" +
+                    ", @NumEpisodes" +
+                    ", @IsTVSpecial" +
+                    ", @SeriesId" +
+                ") " +
+                " ON CONFLICT(ItemId) " +
+                " DO UPDATE " +
+                " SET " +
+                    "  IsPlayed=@IsPlayed" +
+                    ", PlayCount=@PlayCount" +
+                    ", LastPlayedDate=@LastPlayedDate" +
+                    ", TotalTicksPlayed=@TotalTicksPlayed ";
+
+            if( !config.resetPlayCount )
+            {
+                sql +=
+                      " WHERE " +
+                      " ItemId=@ItemId AND " +
+                      "( ( TotalTicksPlayed IS NULL ) OR ( TotalTicksPlayed == 0 ) ) "
+                      ;
+            }
+
+            var progressBase = progressWindow * userIndex;
+            var completedCount = 0;
+            ConcurrentBag<object> paramBag = [];
+
+            var pool = allVideosForUser.Select( ( video, index ) => Task.Run( async () =>
+            {
+                var retVal = (index: index, video: video, cmd: (SQLCmdDef?)null);
+                if( video == null )
+                    return retVal;
+
+                var isPlayed = video.Played;
+                var playCount = video.PlayCount;
+                var isFavorite = video.IsFavorite;
+
+                if( config.resetPlayCount )
+                    ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
+
+                paramBag.Add( video.Id.ToString() );
+
+                var lastPlayedDate = video?.LastPlayedDate ?? null;
+                var mediaInfo = MediaInfo.CreateMinimal( Logger(), video! );
+                if( !mediaInfo.aOK )
+                    return retVal;
+
+                if( !config.resetPlayCount )
+                {
+                    isPlayed = mediaInfo.IsPlayed ?? false;
+                    playCount = mediaInfo.PlayCount ?? 0;
+                }
+
+                var cmd = new SQLCmdDef( sql,
+                [
+                    ( "@UserId", user.Id.ToString()),
+                    ( "@ItemId", video?.Id.ToString() ?? string.Empty),
+                    ( "@Name", mediaInfo.PrimaryName),
+                    ( "@IsEpisode", mediaInfo.IsEpisode),
+                    ( "@NumEpisodes", mediaInfo.NumEpisodes),
+                    ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
+                    ( "@IsPlayed", isPlayed),
+                    ( "@PlayCount", playCount),
+                    ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null )),
+                    ( "@SeriesId", mediaInfo.SeriesId),
+                    ( "@TotalTicksPlayed", mediaInfo.TotalTicksPlayed ),
+                ] );
+                retVal.cmd = cmd;
+                CancellationToken?.ThrowIfCancellationRequested();
+                int currProgress = Interlocked.Increment( ref completedCount );
+
+                Progress?.Report( progressBase + ( progressWindow * ( 1.0 * currProgress ) / allVideosForUser.Count() ) );
+
+                Logger().Debug( $"User: {user.Name} {userIndex + 1} of {userCount} - Analyzed video '{mediaInfo.DescriptiveName}' - {completedCount} of {allVideosForUser.Count}" );
+                return retVal;
+            } ) );
+
+            var unsortedResults = await Task.WhenAll( pool );
+            var results = unsortedResults.OrderBy( item => item.index ).Where( item => item.cmd != null ).ToList();
+
+            var sqlCmds = new List<SQLCmdDef>();
+            sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM {userTableName} WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramBag.ToList() ) );
+
+            foreach( var result in results )
+            {
+                if( result.cmd == null )
+                    continue;
+                sqlCmds.Add( result.cmd );
+            }
+
+            if( config.resetPlayCount )
+            {
+                var sqlUpdateTicks =
+                    $"UPDATE {userTableName} " +
+                    $" SET " +
+                    $"  TotalTicksPlayed=(IsPlayed*PlayCount)*Media.RunTimeTicks " +
+                    $" FROM Media " +
+                    $" WHERE Media.ItemId={userTableName}.ItemId"
+                    ;
+                sqlCmds.Add( new SQLCmdDef( sqlUpdateTicks ) );
+
+                ValidateResetMapResults( user );
+            }
+
+            return sqlCmds;
         }
 
         public void InitWatchedMediaTables()
@@ -243,7 +401,7 @@ namespace Statistics2026.Data
             return $"{sUserMediaTablePrefix}{userId}";
         }
 
-#if DEBUG
+#if DEBUG_PLUGIN
         private readonly Dictionary<string, (bool hit, int playCount)> _baseCount = new()
                         {
                             { "Rocky", ( false, 100 ) },
@@ -306,7 +464,7 @@ namespace Statistics2026.Data
 
         private void ValidateResetMapResults( User user )
         {
-#if DEBUG
+#if DEBUG_PLUGIN
             if( user == null || user.Name != "scott" )
                 return;
 
@@ -323,7 +481,7 @@ namespace Statistics2026.Data
 
         private (bool isCustomUser, bool justReturn) CustomResetForUser( Video video, User user, int playCount, ref int? newPlayCount, bool isPlayed, ref bool? newIsPlayed, bool isFavorite, ref bool? newFavorite )
         {
-#if DEBUG
+#if DEBUG_PLUGIN
             if( user.Name == "scott" )
             {
                 var name = video!.Name;
@@ -377,7 +535,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-#if DEBUG
+#if DEBUG_PLUGIN
             FixResetMap();
 #endif
 
@@ -489,142 +647,6 @@ namespace Statistics2026.Data
                 var cmd = new SQLCmdDef( cmds[ ii ] );
                 cmd.Replace( $"{sUserMediaTablePrefix}<USER_ID>", userTableName );
                 sqlCmds.Add( cmd );
-            }
-
-            return sqlCmds;
-        }
-
-        private async Task<List<SQLCmdDef>> AddWatchedDataForUserAsync( User? user, double progressWindow, int userIndex, int userCount )
-        {
-            CheckIsValid( ECheckLevel.eUpdate );
-
-            if( user == null )
-                throw new ArgumentNullException( "user" );
-
-            var userTableName = getUserTableName( user );
-            if( _userMediaTemplate == null )
-                throw new Exception( $"AddWatchedDataForUser: TableDef for {sUserMediaTablePrefix}<USER_ID> is null" );
-
-            var config = Statistics2026.Plugin.Instance!.Configuration;
-
-            var allVideosForUser = EmbyHelperFuncs.GetAllEpisodesAndMovies( user, LibraryManager() );
-            if( allVideosForUser == null )
-            {
-                return [];
-            }
-            //_tableList
-            var sql =
-                $"INSERT INTO {userTableName} " +
-                "(" +
-                    "  UserId" +
-                    ", ItemId" +
-                    ", IsPlayed" +
-                    ", Name" +
-                    ", PlayCount" +
-                    ", LastPlayedDate" +
-                    ", IsEpisode" +
-                    ", NumEpisodes" +
-                    ", IsTVSpecial" +
-                    ", SeriesId" +
-                ")" +
-                " VALUES " +
-                "(" +
-                    "  @UserId" +
-                    ", @ItemId" +
-                    ", @IsPlayed" +
-                    ", @Name" +
-                    ", @PlayCount" +
-                    ", @LastPlayedDate" +
-                    ", @IsEpisode" +
-                    ", @NumEpisodes" +
-                    ", @IsTVSpecial" +
-                    ", @SeriesId" +
-                ") " +
-                " ON CONFLICT(ItemId) " +
-                " DO UPDATE " +
-                " SET " +
-                    "  IsPlayed=@IsPlayed" +
-                    ", PlayCount=@PlayCount" +
-                    ", LastPlayedDate=@LastPlayedDate" +
-                    ", TotalTicksPlayed=@TotalTicksPlayed ";
-
-            if( !config.resetPlayCount )
-            {
-                sql +=
-                      " WHERE " +
-                      " ItemId=@ItemId AND " +
-                      "( ( TotalTicksPlayed IS NULL ) OR ( TotalTicksPlayed == 0 ) ) "
-                      ;
-            }
-
-            var progressBase = progressWindow * userIndex; 
-            var completedCount = 0;
-
-            var pool = allVideosForUser.Select( ( video, index ) => Task.Run( async () =>
-            {
-                var retVal = (index: index, video: video, cmd: (SQLCmdDef?)null);
-                if( video == null )
-                    return retVal;
-
-                var isPlayed = video.Played;
-                var playCount = video.PlayCount;
-                var isFavorite = video.IsFavorite;
-
-                if( config.resetPlayCount )
-                    ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
-
-                var lastPlayedDate = video?.LastPlayedDate ?? null;
-                var mediaInfo = MediaInfo.CreateMinimal( Logger(), video! );
-                if( !mediaInfo.aOK )
-                    return retVal;
-
-                var cmd = new SQLCmdDef( sql,
-                    [
-                        ( "@UserId", user.Id.ToString()),
-                        ( "@ItemId", video?.Id.ToString() ?? string.Empty),
-                        ( "@Name", mediaInfo.PrimaryName),
-                        ( "@IsEpisode", mediaInfo.IsEpisode),
-                        ( "@NumEpisodes", mediaInfo.NumEpisodes),
-                        ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
-                        ( "@IsPlayed", isPlayed),
-                        ( "@PlayCount", playCount),
-                        ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null )),
-                        ( "@SeriesId", mediaInfo.SeriesId),
-                        ( "@TotalTicksPlayed", mediaInfo.TotalTicksPlayed ),
-                    ] );
-                retVal.cmd = cmd;
-                CancellationToken?.ThrowIfCancellationRequested();
-                int currProgress = Interlocked.Increment( ref completedCount );
-
-                Progress?.Report( progressBase + ( progressWindow * ( 1.0 * currProgress ) / allVideosForUser.Count() ) );
-
-                Logger().Debug( $"User: {user.Name} {userIndex+1} of {userCount} - Analyzed video '{mediaInfo.DescriptiveName}' - {completedCount} of {allVideosForUser.Count}" );
-                return retVal;
-            } ) );
-
-            var unsortedResults = await Task.WhenAll( pool );
-            var results = unsortedResults.OrderBy( item => item.index ).Where( item => item.cmd != null ).ToList();
-
-            var sqlCmds = new List<SQLCmdDef>();
-            foreach( var result in results )
-            {
-                if( result.cmd == null )
-                    continue;
-                sqlCmds.Add( result.cmd );
-            }
-
-            if( config.resetPlayCount )
-            {
-                var sqlUpdateTicks =
-                    $"UPDATE {userTableName} " +
-                    $" SET " +
-                    $"  TotalTicksPlayed=(IsPlayed*PlayCount)*Media.RunTimeTicks " +
-                    $" FROM Media " +
-                    $" WHERE Media.ItemId={userTableName}.ItemId"
-                    ;
-                sqlCmds.Add( new SQLCmdDef( sqlUpdateTicks ) );
-
-                ValidateResetMapResults( user );
             }
 
             return sqlCmds;
@@ -1061,7 +1083,7 @@ namespace Statistics2026.Data
 
         private List<List<object>>? CheckUserMediaTableHasData( string tableName )
         {
-            var sqlTicks = $"SELECT COUNT(*) FROM {tableName} WHERE TotalTicksPlayed IS NOT NULL AND iif( {tableName}.IsPlayed,  {tableName}.TotalTicksPlayed, 0 ) != 0";
+            var sqlTicks = $"SELECT COUNT(*) FROM {tableName} WHERE TotalTicksPlayed IS NOT NULL AND iif( {tableName}.IsPlayed AND ( {tableName}.PlayCount > 0 ), {tableName}.TotalTicksPlayed, 0 ) != 0";
             var sqlPlayed = $"SELECT COUNT(*) FROM {tableName} WHERE PlayCount>0 AND IsPlayed";
 
             long? ticksPlayed = null;
@@ -1217,7 +1239,7 @@ namespace Statistics2026.Data
             foreach( var tableName in tables )
             {
                 var user = getUserForTableName( tableName );
-#if DEBUG
+#if DEBUG_PLUGIN
                 if( ( user == null ) || user.Name != "scott" )
                 {
                     continue;
