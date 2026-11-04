@@ -25,20 +25,22 @@ namespace Statistics2026.Data
             LastMediaOrUserAdded
         }
 
-        public DateTimeOffset? GetLastUpdated( EAction action )
+        public (DateTimeOffset? when, long ms) GetLastUpdated( EAction action )
         {
-            var sql = "SELECT LastUpdated FROM \n" +
+            var sql = "SELECT LastUpdated, RunTimeMS FROM \n" +
                 "LastUpdateTable \n" +
                 $"WHERE Action = '{action.ToString()}'\n"
                 ;
             DateTimeOffset? lastUpdated = DateTimeOffset.MinValue;
+            long ms = 0;
             ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 lastUpdated = HelperFuncs.ReadDateTime( row.GetString( 0 ) );
+                ms = row.GetInt64( 1 );
                 return false;
             } );
-            return lastUpdated;
+            return (lastUpdated, ms);
         }
 
         public string GetLastRunInfo( string actionString, ref bool ok )
@@ -135,7 +137,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var lastUpdated = GetLastUpdated( action );
+            var (lastUpdated, runtimeMS) = GetLastUpdated( action );
             const string notRun = "Not Run";
             var lastUpdateText = notRun;
             if( lastUpdated != null && lastUpdated.HasValue && lastUpdated.Value != DateTimeOffset.MinValue )
@@ -174,7 +176,9 @@ namespace Statistics2026.Data
                     titleText = "User Watch Data Analysis";
                     break;
             }
-            return $"Last {titleText} finished at <b>{lastUpdateText}</b>";
+
+            var rt = RunTime.CreateFromMS( runtimeMS );
+            return $"Last {titleText} finished at <b>{lastUpdateText}</b> taking <b>{rt.ToShortString( false )}</b>";
         }
 
         public void ClearLastUpdated( EAction action )

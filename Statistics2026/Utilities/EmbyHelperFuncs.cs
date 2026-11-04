@@ -530,7 +530,7 @@ namespace Statistics2026.Utilities
             logger?.Info( $"Starting OOD Analysis" );
 
             bool runFullAnalysis = false;
-            var lastAnalysisAdded = db.GetLastUpdated( EAction.LastMediaOrUserAdded );
+            var lastAnalysisAdded = db.GetLastUpdated( EAction.LastMediaOrUserAdded ).when;
             if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTimeOffset.MinValue )
             {
                 logger?.Info( "Analysis has not been run yet" );
@@ -560,7 +560,7 @@ namespace Statistics2026.Utilities
             bool runMissingAnalysis = false;
 
             DateTimeOffset? lastMissingAnalysis = null;
-            var lastMissingEpisodeAnalysis = db.GetLastUpdated( EAction.MissingEpisodesAnalysis );
+            var lastMissingEpisodeAnalysis = db.GetLastUpdated( EAction.MissingEpisodesAnalysis ).when;
             if( lastMissingEpisodeAnalysis == null || lastMissingEpisodeAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;
@@ -572,7 +572,7 @@ namespace Statistics2026.Utilities
                 logger?.Info( $"Last Missing Episode Analysis run: {lastMissingEpisodeAnalysis.Value.LocalDateTime}" );
             }
 
-            var lastMissingMovieAnalysis = db.GetLastUpdated( EAction.MissingMoviesAnalysis );
+            var lastMissingMovieAnalysis = db.GetLastUpdated( EAction.MissingMoviesAnalysis ).when;
             if( lastMissingMovieAnalysis == null || lastMissingMovieAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;
