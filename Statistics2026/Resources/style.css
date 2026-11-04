@@ -50,6 +50,7 @@ img {
         justify-content: center;
         align-items: center;
         text-align: center;
+        gap: 12px;
     }
 
         .statCard-compact .statCard-content div {
@@ -105,8 +106,8 @@ img {
     background-color: var(--local-theme-background-accent);
     border-radius: var(--card-border-radius, 4px);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    height: 100%;
-    width: 100%;
+    min-width: 250px;
+    min-height: 120px;
     display: flex;
 }
 
@@ -118,10 +119,12 @@ img {
         width: 100%;
         box-sizing: border-box;
         padding: 14px;
+        padding-right: 40px;
+        gap: 12px;
         background-color: var(--local-theme-primary-color);
         color: var(--local-statcard-text) !important;
     }
-
+    
         .statCard .statCard-content img {
             padding-right: 10px;
         }
@@ -136,6 +139,7 @@ img {
             right: 8px;
             top: 8px;
             cursor: pointer;
+            float: left;
             color: var(--local-statcard-text);
         }
 
