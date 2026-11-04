@@ -25,7 +25,13 @@ namespace Statistics2026.Utilities
             if( video == null )
                 return true;
 
-            return video.HasDateModifiedChanged( mediaInfo.DateItemModified );
+            if( video.HasDateModifiedChanged( mediaInfo.DateItemModified ) )
+                return true;
+
+            if ( ( video.Played != ( mediaInfo.IsPlayed?? false ) ) || ( video.PlayCount != ( mediaInfo.PlayCount ?? 0 ) ) )
+                return true;
+
+            return false;
         }
 
         public MediaInfo() { }
