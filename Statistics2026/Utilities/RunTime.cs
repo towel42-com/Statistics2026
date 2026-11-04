@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 namespace Statistics2026.Utilities
 {
@@ -18,6 +19,12 @@ namespace Statistics2026.Utilities
         {
             _timeSpan = timeSpan;
         }
+
+        static public RunTime CreateFromMS( long ms )
+        {
+            return new RunTime( new TimeSpan( ms * TimeSpan.TicksPerMillisecond ) );
+        }
+
 
         public RunTime( object ticks )
         {
@@ -63,13 +70,30 @@ namespace Statistics2026.Utilities
 
         }
 
-        public string ToShortString()
+        public string ToShortString( bool verbose = true )
         {
             if( IsNegative )
             {
-                return $"-{new RunTime( _timeSpan.Negate() ).ToShortString()}";
+                return $"-{new RunTime( _timeSpan.Negate() ).ToShortString( verbose )}";
             }
-            return $"{Days:D2}:{Hours:D2}:{Minutes:D2}:{Seconds:D2}.{Milliseconds:D3}";
+            if ( verbose )
+                return $"{Days:D2}:{Hours:D2}:{Minutes:D2}:{Seconds:D2}.{Milliseconds:D3}";
+            else
+            {
+                StringBuilder retVal = new StringBuilder();
+
+                if( Days > 0 )
+                    retVal.Append( $"{Days:D2}:" );
+                if( ( retVal.Length > 0 ) || ( Hours > 0 ) )
+                    retVal.Append( $"{Hours:D2}:" );
+
+                if( ( retVal.Length > 0 ) || ( Minutes > 0 ) )
+                    retVal.Append( $"{Minutes:D2}:" );
+
+                retVal.Append( $"{Seconds:D2}.{Milliseconds:D3}" );
+
+                return retVal.ToString();
+            }
         }
 
         public int CompareTo( RunTime other )
