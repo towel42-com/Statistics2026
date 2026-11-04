@@ -37,7 +37,7 @@ namespace Statistics2026.Data
             var completedCount = 0;
 
             List<SQLCmdDef> sqlCmds = [];
-            ConcurrentBag<object> paramBag = [];
+            ConcurrentBag<object> validIds = [];
 
             Progress?.Report( 0 );
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Getting Commands", Logger() ) )
@@ -55,7 +55,7 @@ namespace Statistics2026.Data
 
                         retVal.cmds = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
                         CancellationToken?.ThrowIfCancellationRequested();
-                        paramBag.Add( series.Id.ToString() );
+                        validIds.Add( series.Id.ToString() );
 
 
                         var currProgress = Interlocked.Increment( ref completedCount );
@@ -71,7 +71,7 @@ namespace Statistics2026.Data
                 } ) ).ToList();
 
                 var unsortedResults = await Task.WhenAll( pool );
-                sqlCmds.Add( CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramBag.ToList() ) );
+                sqlCmds.Add( CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
                 foreach( var result in results )
                 {

@@ -170,7 +170,7 @@ namespace Statistics2026.Data
 
             var progressBase = progressWindow * userIndex;
             var completedCount = 0;
-            ConcurrentBag<object> paramBag = [];
+            ConcurrentBag<object> validIds = [];
 
             var pool = allVideosForUser.Select( ( video, index ) => Task.Run( async () =>
             {
@@ -185,7 +185,7 @@ namespace Statistics2026.Data
                 if( config.resetPlayCount )
                     ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
 
-                paramBag.Add( video.Id.ToString() );
+                validIds.Add( video.Id.ToString() );
 
                 var lastPlayedDate = video?.LastPlayedDate ?? null;
                 var mediaInfo = MediaInfo.CreateMinimal( Logger(), video! );
@@ -226,7 +226,7 @@ namespace Statistics2026.Data
             var results = unsortedResults.OrderBy( item => item.index ).Where( item => item.cmd != null ).ToList();
 
             var sqlCmds = new List<SQLCmdDef>();
-            sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM {userTableName} WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramBag.ToList() ) );
+            sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM {userTableName} WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
 
             foreach( var result in results )
             {
@@ -1240,8 +1240,8 @@ namespace Statistics2026.Data
             var tables = allUserMediaTables();
             foreach( var tableName in tables )
             {
-                var user = getUserForTableName( tableName );
 #if DEBUG_PLUGIN
+                var user = getUserForTableName( tableName );
                 if( ( user == null ) || user.Name != "scott" )
                 {
                     continue;
@@ -1282,6 +1282,10 @@ namespace Statistics2026.Data
                 var totalTicksPlayed = row.GetInt64( col++ );
 
                 var mediaName = MediaInfo.GetDisplayName( primaryName, secondaryName, season, episode );
+                if ( mediaName == null || mediaName == "" )
+                {
+                    return true;
+                }
                 var rtTicks = new RunTime( runTimeTicks );
                 var totalTicks = new RunTime( totalTicksPlayed );
 

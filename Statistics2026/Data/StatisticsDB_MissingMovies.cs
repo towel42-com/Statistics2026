@@ -35,7 +35,7 @@ namespace Statistics2026.Data
             var completedCount = 0;
 
             List<SQLCmdDef> sqlCmds = [];
-            ConcurrentBag<object> paramBag = [];
+            ConcurrentBag<object> validIds = [];
 
             Progress?.Report( 0 );
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Getting Commands", Logger() ) )
@@ -52,7 +52,7 @@ namespace Statistics2026.Data
                             return retVal;
 
                         retVal.cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection ).ConfigureAwait( false );
-                        paramBag.Add( collection.Id.ToString() );
+                        validIds.Add( collection.Id.ToString() );
 
                         CancellationToken?.ThrowIfCancellationRequested();
 
@@ -69,7 +69,7 @@ namespace Statistics2026.Data
                 } ) ).ToList();
 
                 var unsortedResults = await Task.WhenAll( pool );
-                sqlCmds.Add( CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", paramBag.ToList() ) );
+                sqlCmds.Add( CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
                 foreach( var result in results )
                 {
@@ -80,7 +80,6 @@ namespace Statistics2026.Data
 
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Executing Commands", Logger() ) )
             {
-                var paramList = paramBag.ToList();
                 Progress?.Report( 80 );
                 ExecuteCommands( sqlCmds );
                 Progress?.Report( 100 );
