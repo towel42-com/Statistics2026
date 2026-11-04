@@ -14,6 +14,8 @@ namespace Statistics2026.Utilities
     public class MediaInfo
     {
         private static ConcurrentDictionary<(string, bool isUserVideo, bool minimal), MediaInfo> sMediaInfoCache = [];
+        private static DateTimeOffset? DateCacheCreated = null;
+        private static object _padlock = new object();
 
         private static string KeyForVideo( Video video )
         {
@@ -28,7 +30,7 @@ namespace Statistics2026.Utilities
             if( video.HasDateModifiedChanged( mediaInfo.DateItemModified ) )
                 return true;
 
-            if ( ( video.Played != ( mediaInfo.IsPlayed?? false ) ) || ( video.PlayCount != ( mediaInfo.PlayCount ?? 0 ) ) )
+            if( ( video.Played != ( mediaInfo.IsPlayed ?? false ) ) || ( video.PlayCount != ( mediaInfo.PlayCount ?? 0 ) ) )
                 return true;
 
             return false;
@@ -47,6 +49,15 @@ namespace Statistics2026.Utilities
 
         private static MediaInfo? GetCachedValue( Video video, bool minimalOnly )
         {
+            lock( _padlock )
+            {
+                if( DateCacheCreated == null || DateCacheCreated.Value.AddHours( 24 * 7 ) < DateTimeOffset.Now )
+                {
+                    sMediaInfoCache.Clear();
+                    DateCacheCreated = DateTimeOffset.Now;
+                }
+            }
+
             var cacheKey = (KeyForVideo( video ), video.UserDataSet, minimalOnly);
             MediaInfo? cachedValue = null;
             if( !sMediaInfoCache.TryGetValue( cacheKey, out cachedValue ) )
