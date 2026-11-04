@@ -7,6 +7,7 @@ using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -33,6 +34,7 @@ namespace Statistics2026.Data
 
             Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
+            ConcurrentBag<object> validIds = [];
 
             using( var listTimer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
             {
@@ -46,6 +48,7 @@ namespace Statistics2026.Data
                     {
                         currTimer.Restart();
                         currCmds = await AddCollectionAsync( collection ).ConfigureAwait( false );
+                        validIds.Add( collection.Id.ToString() );
                         runTimeMS = currTimer.ElapsedMilliseconds();
                     }
 
@@ -60,6 +63,7 @@ namespace Statistics2026.Data
                 var unsortedResults = await Task.WhenAll( pool );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
 
+                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Collections WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
                 foreach( var result in results )
                 {
                     sqlCmds.AddRange( result.cmds );
