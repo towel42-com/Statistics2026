@@ -85,6 +85,10 @@ namespace Statistics2026.Data
                 },
                 tableName =>
                 {
+                    var user = getUserForTableName( tableName );
+                    if( ( user != null ) && ( user.Policy.IsAdministrator ) )
+                        return false;
+
                     var missingRows = CheckUserMediaTableHasData( tableName );
                     if( missingRows != null )
                         missing.AddRange( missingRows );

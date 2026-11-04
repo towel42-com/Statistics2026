@@ -6,42 +6,162 @@ using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Logging;
 using System;
 using System.Linq;
+using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace Statistics2026.Utilities
 {
     public class MediaInfo
     {
+        private static ConcurrentDictionary<(string, bool isUserVideo, bool minimal), MediaInfo> sMediaInfoCache = [];
+
+        private static string KeyForVideo( Video video )
+        {
+            return video.Id.ToString();
+        }
+
+        private static bool OutOfDate( Video video, MediaInfo mediaInfo )
+        {
+            if( video == null )
+                return true;
+
+            return video.HasDateModifiedChanged( mediaInfo.DateItemModified );
+        }
+
         public MediaInfo() { }
 
-        public static MediaInfo Create( ILogger logger, Video video, bool isUserVideo )
+        private static void SetCachedValue( MediaInfo mediaInfo )
         {
-            var retVal = new MediaInfo();
+            if( mediaInfo.aOK )
+            {
+                var cacheKey = (mediaInfo.ItemId, mediaInfo.HasUserData, mediaInfo.IsMinimal);
+                sMediaInfoCache[ cacheKey ] = mediaInfo;
+            }
+        }
+
+        private static MediaInfo? GetCachedValue( Video video, bool minimalOnly )
+        {
+            var cacheKey = (KeyForVideo( video ), video.UserDataSet, minimalOnly);
+            MediaInfo? cachedValue = null;
+            if( !sMediaInfoCache.TryGetValue( cacheKey, out cachedValue ) )
+            {
+                sMediaInfoCache.TryGetValue( (KeyForVideo( video ), video.UserDataSet, !minimalOnly), out cachedValue );
+            }
+
+            if( cachedValue == null )
+                return null;
+
+            if( OutOfDate( video, cachedValue ) )
+            {
+                if( cachedValue.IsMinimal )
+                    sMediaInfoCache.Remove( cacheKey, out var currValue );
+                else
+                    sMediaInfoCache.Remove( (KeyForVideo( video ), video.UserDataSet, false), out var currValue );
+                return null;
+            }
+
+            if( minimalOnly || ( !minimalOnly && !cachedValue.IsMinimal ) )
+                return cachedValue;
+
+            var json = JsonSerializer.Serialize( cachedValue );
+            var copy = JsonSerializer.Deserialize<MediaInfo>( json );
+            if( copy == null )
+                throw new Exception( "Problem deserializing" );
+            copy.IsMinimal = false;
+
+            return copy;
+        }
+
+
+        public static MediaInfo CreateMinimal( ILogger logger, Video video )
+        {
+            return CreateMinimal( logger, video, true );
+        }
+
+        private static MediaInfo CreateMinimal( ILogger logger, Video video, bool minimalOnly )
+        {
+            var cachedValue = GetCachedValue( video, minimalOnly );
+            if( cachedValue != null )
+                return cachedValue;
+
+            var retVal = new MediaInfo() { IsMinimal = true };
             retVal.aOK = false;
-            if ( video == null )
+            if( video == null )
                 return retVal;
 
             var (primaryName, secondaryName, descName) = GetDescName( video );
+            retVal.ItemId = video.Id.ToString();
+            retVal.DescriptiveName = descName;
+            retVal.PrimaryName = primaryName;
+            retVal.SecondaryName = secondaryName;
+            retVal.SortName = video.SortName;
+            retVal.IsEpisode = video is Episode;
+            retVal.NumEpisodes = numEpisodes( video );
+            retVal.IsTVSpecial = isTVSpecial( video );
+            retVal.SeriesId = seriesId( video );
+            retVal.RunTimeTicks = video.RunTimeTicks ?? 0;
+            retVal.DateItemModified = video.DateModified;
+            retVal.HasUserData = video.UserDataSet;
+            if( video.UserDataSet )
+            {
+                retVal.IsPlayed = video.Played;
+                retVal.TotalTicksPlayed = 0;
+                if( video.Played )
+                {
+                    retVal.TotalTicksPlayed = ( video?.PlayCount * video?.RunTimeTicks ) ?? 0;
+                }
+            }
+
+            if( video is Episode episode )
+            {
+                retVal.ListDisplayName = GetDisplayName( retVal.PrimaryName, secondaryName, retVal.Season, retVal.Episode );
+                if( episode.Series != null )
+                {
+                    retVal.SortName = episode.Series.SortName + " - " + episode.SortName;
+                    retVal.SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series, logger );
+                    if( retVal.PremiereDate == null && episode.Series.PremiereDate.HasValue )
+                    {
+                        retVal.PremiereDate = episode.Series.PremiereDate.Value;
+                    }
+                }
+            }
+            else
+            {
+                retVal.ListDisplayName = retVal.PrimaryName;
+            }
+            retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
+
+            SetCachedValue( retVal );
+
+            if( minimalOnly )
+                return retVal;
+
+            var json = JsonSerializer.Serialize( retVal );
+            var copy = JsonSerializer.Deserialize<MediaInfo>( json );
+            if( copy == null )
+                throw new Exception( "Problem deserializing" );
+            return copy;
+        }
+
+        public async static Task<MediaInfo> CreateAsync( ILogger logger, Video video )
+        {
+            var cachedValue = GetCachedValue( video, false );
+            if( cachedValue != null )
+                return cachedValue;
+
+            var retVal = CreateMinimal( logger, video, false );
+            if( !retVal.aOK || ( retVal.aOK && !retVal.IsMinimal ) )
+                return retVal;
+
+            retVal.IsMinimal = false;
 
             var mediaStream = video.GetMediaStreams().FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
-            if( !mediaStream?.Width.HasValue ?? true )
-            {
-                return retVal;
-            }
 
             var resolutionBase = GetMediaResolution( mediaStream, false );
             var resolutionDetail = GetMediaResolution( mediaStream, true );
+
             var codec = mediaStream?.Codec ?? "Unknown";
             var dvProfile = GetDolbyVisionProfile( mediaStream );
-
-            retVal.ItemId = video.Id.ToString();
-            retVal.IsEpisode = video is Episode;
-            retVal.IsTVSpecial = isTVSpecial( video );
-            retVal.NumEpisodes = numEpisodes( video );
-            retVal.SeriesId = seriesId( video );
-            retVal.DescriptiveName = descName;
-            retVal.PrimaryName = primaryName;
-            retVal.SortName = video.SortName;
-            retVal.SecondaryName = secondaryName;
 
             retVal.StartYear = video.ProductionYear?.ToString() ?? "Unknown";
             retVal.Season = video.ParentIndexNumber ?? -1;
@@ -56,37 +176,14 @@ namespace Statistics2026.Utilities
 
             retVal.ServerLocation = video.Path ?? "Unknown";
             retVal.FileSize = video.Size;
-            retVal.RunTimeTicks = video.RunTimeTicks ?? 0;
             if( video.PremiereDate.HasValue )
                 retVal.PremiereDate = video.PremiereDate.Value;
 
-            if( isUserVideo )
+            if( !( video is Episode ) )
             {
-                retVal.IsPlayed = video.Played;
-                retVal.TotalTicksPlayed = 0;
-                if( video.Played )
-                {
-                    retVal.TotalTicksPlayed = ( video?.PlayCount * video?.RunTimeTicks ) ?? 0;
-                }
+                retVal.StreamingServices = await streamingServicesAsync( logger, video ).ConfigureAwait( false );
             }
-            retVal.ImageUrl = ItemImageUrl._ItemImageUrl( video! );
-            if( video is Episode episode )
-            {
-                retVal.ListDisplayName = GetDisplayName( retVal.PrimaryName, secondaryName, retVal.Season, retVal.Episode );
-                if( episode.Series != null )
-                {
-                    retVal.SortName = episode.Series.SortName + " - " + episode.SortName;
-                    retVal.SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series );
-                    if( retVal.PremiereDate == null && episode.Series.PremiereDate.HasValue )
-                    {
-                        retVal.PremiereDate = episode.Series.PremiereDate.Value;
-                    }
-                }
-            }
-            else
-            {
-                retVal.ListDisplayName = retVal.PrimaryName;
-            }
+            retVal.ImageUrl = ItemImageUrl._ItemImageUrl( video );
 
             if( retVal.PremiereDate == null )
             {
@@ -104,16 +201,7 @@ namespace Statistics2026.Utilities
             retVal.DateAdded = video!.DateCreated;
 
             retVal.aOK = !retVal.ItemId.IsNullOrEmpty() && ( retVal.RunTimeTicks != 0 );
-            return retVal;
-        }
-
-        public static async Task<MediaInfo> CreateAsync( ILogger logger, Video video, bool isUserVideo )
-        {
-            var retVal = Create( logger, video, isUserVideo );
-            if( !retVal.IsEpisode )
-            {
-                retVal.StreamingServices = await streamingServicesAsync( logger, video );
-            }
+            SetCachedValue( retVal );
             return retVal;
         }
 
@@ -341,6 +429,10 @@ namespace Statistics2026.Utilities
         public long TotalBitrate { get; set; } = 0;
         public DateTimeOffset? PremiereDate { get; set; } = null;
         public DateTimeOffset? DateAdded { get; set; } = null;
-        public bool aOK = false;
+        public bool aOK { get; set; } = false;
+        public DateTimeOffset DateItemModified { get; set; } = DateTimeOffset.MinValue;
+
+        public bool IsMinimal { get; set; } = false;
+        public bool HasUserData { get; set; } = false;
     }
 }

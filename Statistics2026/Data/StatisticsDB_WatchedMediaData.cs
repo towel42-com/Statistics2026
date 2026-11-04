@@ -6,6 +6,7 @@ using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -29,7 +30,10 @@ namespace Statistics2026.Data
             Logger().Debug( $"Starting User Watch Data Analysis" );
 
             double count = users.Count;
-            int completedCount = 0;
+            var completedCount = 0;
+            var startedCount = 0;
+
+            double progressWindow = 80.0 * 1.0 / count;
 
             Progress?.Report( 0 );
             var sqlCmds = new List<SQLCmdDef>();
@@ -39,15 +43,19 @@ namespace Statistics2026.Data
                 {
                     List<SQLCmdDef> currCmds = [];
                     long runTimeMS = 0;
+
+                    var userNum = Interlocked.Increment( ref startedCount );
+
                     using( var currTimer = new AutoTimer( $"    Processed User {user.Name}", Logger() ) )
                     {
-                        currCmds = await AddWatchedDataForUserAsync( user ).ConfigureAwait( false );
+                        currCmds = await AddWatchedDataForUserAsync( user, progressWindow, userNum, users.Count ).ConfigureAwait( false );
                         runTimeMS = currTimer.ElapsedMilliseconds();
                     }
 
                     CancellationToken?.ThrowIfCancellationRequested();
-                    int currProgress = Interlocked.Increment( ref completedCount );
-                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                    var currProgress = Interlocked.Increment( ref completedCount );
+                    Progress?.Report( progressWindow * currProgress );
+
                     Logger().Info( $"Processed User {user.Name} - {runTimeMS} ms" );
 
                     return (index: index, user: user, cmds: currCmds, runTimeMS: runTimeMS);
@@ -486,7 +494,7 @@ namespace Statistics2026.Data
             return sqlCmds;
         }
 
-        private async Task<List<SQLCmdDef>> AddWatchedDataForUserAsync( User? user )
+        private async Task<List<SQLCmdDef>> AddWatchedDataForUserAsync( User? user, double progressWindow, int userIndex, int userCount )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -549,6 +557,7 @@ namespace Statistics2026.Data
                       ;
             }
 
+            var progressBase = progressWindow * userIndex; 
             var completedCount = 0;
 
             var pool = allVideosForUser.Select( ( video, index ) => Task.Run( async () =>
@@ -563,45 +572,45 @@ namespace Statistics2026.Data
 
                 if( config.resetPlayCount )
                     ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
-                var lastPlayedDate = video?.LastPlayedDate ?? null;
 
-                var mediaInfo = MediaInfo.Create( Logger(), video!, true );
+                var lastPlayedDate = video?.LastPlayedDate ?? null;
+                var mediaInfo = MediaInfo.CreateMinimal( Logger(), video! );
                 if( !mediaInfo.aOK )
                     return retVal;
 
                 var cmd = new SQLCmdDef( sql,
                     [
                         ( "@UserId", user.Id.ToString()),
-                            ( "@ItemId", video?.Id.ToString() ?? string.Empty),
-                            ( "@Name", mediaInfo.PrimaryName),
-                            ( "@IsEpisode", mediaInfo.IsEpisode),
-                            ( "@NumEpisodes", mediaInfo.NumEpisodes),
-                            ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
-                            ( "@IsPlayed", isPlayed),
-                            ( "@PlayCount", playCount),
-                            ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null )),
-                            ( "@SeriesId", mediaInfo.SeriesId),
-                            ( "@TotalTicksPlayed", mediaInfo.TotalTicksPlayed ),
+                        ( "@ItemId", video?.Id.ToString() ?? string.Empty),
+                        ( "@Name", mediaInfo.PrimaryName),
+                        ( "@IsEpisode", mediaInfo.IsEpisode),
+                        ( "@NumEpisodes", mediaInfo.NumEpisodes),
+                        ( "@IsTVSpecial", mediaInfo.IsTVSpecial),
+                        ( "@IsPlayed", isPlayed),
+                        ( "@PlayCount", playCount),
+                        ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null )),
+                        ( "@SeriesId", mediaInfo.SeriesId),
+                        ( "@TotalTicksPlayed", mediaInfo.TotalTicksPlayed ),
                     ] );
                 retVal.cmd = cmd;
                 CancellationToken?.ThrowIfCancellationRequested();
                 int currProgress = Interlocked.Increment( ref completedCount );
-                //Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
 
-                Logger().Debug( $"User: {user.Name} - Analyzed video '{mediaInfo.DescriptiveName}' - {completedCount} of {allVideosForUser.Count}" );
+                Progress?.Report( progressBase + ( progressWindow * ( 1.0 * currProgress ) / allVideosForUser.Count() ) );
+
+                Logger().Debug( $"User: {user.Name} {userIndex+1} of {userCount} - Analyzed video '{mediaInfo.DescriptiveName}' - {completedCount} of {allVideosForUser.Count}" );
                 return retVal;
             } ) );
 
             var unsortedResults = await Task.WhenAll( pool );
-            var results = unsortedResults.OrderBy( item => item.index ).ToList();
+            var results = unsortedResults.OrderBy( item => item.index ).Where( item => item.cmd != null ).ToList();
 
             var sqlCmds = new List<SQLCmdDef>();
             foreach( var result in results )
             {
-                if( result.cmd != null )
-                {
-                    sqlCmds.Add( result.cmd );
-                }
+                if( result.cmd == null )
+                    continue;
+                sqlCmds.Add( result.cmd );
             }
 
             if( config.resetPlayCount )

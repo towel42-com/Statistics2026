@@ -242,7 +242,7 @@ namespace Statistics2026.Data
             } );
             if( !found && updateIfEmpty )
             {
-                var cmds = UpdateSeriesFilter( true );
+                var cmds = UpdateSeriesFilter( true ).Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
                 ExecuteCommands( cmds );
                 return GetSeriesFilter( false );
             }
@@ -333,7 +333,7 @@ namespace Statistics2026.Data
 
             var changedFilterMap = new List<SeriesFilterResponse>();
 
-            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
+            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
 
             foreach( var series in seriesList )
             {

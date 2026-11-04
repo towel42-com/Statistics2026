@@ -4,6 +4,7 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
+using MediaBrowser.Model.Session;
 using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
@@ -39,67 +40,69 @@ namespace Statistics2026.Data
             var completedCount = 0;
 
             Progress?.Report( 0 );
+            var existing = new ConcurrentDictionary<string, bool>();
+            ConcurrentBag<object> paramBag = [];
             var sqlCmds = new List<SQLCmdDef>();
             sqlCmds.Add( new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ) );
-            sqlCmds.Add( new SQLCmdDef( "" ) );  // just a place holder
 
-            var existing = new ConcurrentDictionary<string, bool>();
-            var paramList = new ConcurrentBag<object>();
-
-            using( var listTimer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
+            using( var timer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
             {
+                using var gatekeeper = new SemaphoreSlim( 10, 10 );
+
                 var pool = videoList.Select( ( video, index ) => Task.Run( async () =>
                 {
-                    long runTimeMS = 0;
-                    var retVal = (index: index, video: (Video?)null, cmds: new List<SQLCmdDef>(), runTimeMS: runTimeMS);
-                    using( var currTimer = new AutoTimer( $"    Processed Media {video.Name}", Logger() ) )
+                    await gatekeeper.WaitAsync();
+                    try
                     {
-
-                        var mediaInfo = await MediaInfo.CreateAsync( Logger(), video, false ).ConfigureAwait( false );
-                        if( !mediaInfo.aOK )
+                        var retVal = (index: index, video: video, cmd: (SQLCmdDef?)null);
+                        if( video == null )
                             return retVal;
 
                         if( existing.ContainsKey( video.Id.ToString() ) )
                             return retVal;
 
-                        existing[ video.Id.ToString() ] = true;
-                        paramList.Add( video.Id.ToString() );
-                        retVal.video = video;
-                        var cmd = AddMediaInfo( mediaInfo );
-                        if( cmd != null )
-                        {
-                            retVal.cmds.Add( cmd! );
-                        }
-                        retVal.runTimeMS = currTimer.ElapsedMilliseconds();
-                    }
-                    CancellationToken?.ThrowIfCancellationRequested();
-                    int currProgress = Interlocked.Increment( ref completedCount );
-                    double progressValue = 80.0 * ( 1.0 * currProgress ) / count;
-                    Progress?.Report( progressValue );
-                    Logger().Info( $"Processed Video {video.Name} - {runTimeMS} ms" );
+                        existing.TryAdd( video.Id.ToString(), true );
+                        paramBag.Add( video.Id.ToString() );
 
-                    return retVal;
-                } ) ).ToList();
+                        var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
+                        if( !mediaInfo.aOK )
+                            return retVal;
+
+                        retVal.cmd = AddMediaInfo( mediaInfo );
+                        CancellationToken?.ThrowIfCancellationRequested();
+                        int currProgress = Interlocked.Increment( ref completedCount );
+
+                        Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+
+                        Logger().Debug( $"    Processed Video ({currProgress} of {count}) - {mediaInfo.DescriptiveName}" );
+                        //await Task.Delay( 10, CancellationToken.None );
+                        return retVal;
+                    }
+                    finally
+                    {
+                        gatekeeper.Release();
+                    }
+                } ) );
 
                 var unsortedResults = await Task.WhenAll( pool );
                 var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramBag.ToList() ) );
                 foreach( var result in results )
                 {
-                    sqlCmds.AddRange( result.cmds );
-                    CancellationToken?.ThrowIfCancellationRequested();
+                    if( result.cmd != null )
+                    {
+                        sqlCmds.Add( result.cmd );
+                    }
                 }
             }
-
-            CancellationToken?.ThrowIfCancellationRequested();
-            sqlCmds[ 1 ] = CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", paramList.ToList() );
 
             using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
             {
                 Progress?.Report( 80 );
                 ExecuteCommands( sqlCmds );
                 Progress?.Report( 100 );
+                Logger().Debug( $"Finished Media Analysis" );
             }
-            Logger().Debug( $"Finished Video Analysis" );
         }
 
         public SQLCmdDef? AddMediaInfo( MediaInfo mediaInfo )

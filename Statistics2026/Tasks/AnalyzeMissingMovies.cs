@@ -90,12 +90,12 @@ namespace Statistics2026.ScheduledTasks
             {
                 try
                 {
-                    await db.AnalyzeMissingMoviesTaskImplAsync( cancellationToken, progress ).ConfigureAwait( false );
+                    await db.AnalyzeMissingMoviesTaskImplAsync().ConfigureAwait( false );
                     runtimeMS = timer.ElapsedMilliseconds();
                 }
                 catch( Exception ex )
                 {
-                    _embyInterfaces.Logger().ErrorException( $"Problem running '${( (IScheduledTask)this ).Name}", ex );
+                    _embyInterfaces.Logger().ErrorException( $"Problem running '{( (IScheduledTask)this ).Name}", ex );
                 }
             }
 
