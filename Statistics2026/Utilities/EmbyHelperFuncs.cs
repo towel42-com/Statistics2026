@@ -1,5 +1,7 @@
-﻿//#define DEBUG_PLUGIN
+﻿#if DEBUG
+//#define DEBUG_PLUGIN
 //#define DEBUG_DB
+#endif
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
@@ -543,6 +545,16 @@ namespace Statistics2026.Utilities
 
             if( !runFullAnalysis )
             {
+                var (curr, inDB) = db.totalMediaCount();
+                if( curr != inDB )
+                {
+                    logger?.Info( $"Media count has changed since last run, re-running Complete Statistical Analysis" );
+                    runFullAnalysis = true;
+                }
+            }
+
+            if( !runFullAnalysis )
+            {
                 var latestItem = getLastItemOfConsequenceAdded( embyInterfaces );
                 if( latestItem != null && latestItem.DateCreated != DateTimeOffset.MinValue )
                     runFullAnalysis = lastAnalysisAdded < latestItem.DateCreated;
@@ -550,7 +562,7 @@ namespace Statistics2026.Utilities
 
             if( !runFullAnalysis )
             {
-                logger?.Info( "No media or users have been added since last run, not re-running Complete Statistical Analysis" );
+                logger?.Info( "No media or users have been added or removed since last run, not re-running Complete Statistical Analysis" );
             }
             else
             {
@@ -647,13 +659,13 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static List<User> GetAllUsers( EmbyInterfaces? embyInterfaces, bool limitToRemoteAccess = true)
+        public static List<User> GetAllUsers( EmbyInterfaces? embyInterfaces, bool limitToRemoteAccess = true )
         {
-            if ( embyInterfaces == null )
+            if( embyInterfaces == null )
                 return [];
 
             var userQuery = new UserQuery();
-            if ( limitToRemoteAccess )
+            if( limitToRemoteAccess )
             {
                 userQuery.EnableRemoteAccess = true;
             }
@@ -663,6 +675,23 @@ namespace Statistics2026.Utilities
             retVal = retVal.Where( u => u.Name == "scott" ).ToList();
 #endif
             return retVal;
+        }
+
+        public static string PrettyPrintFileSize( this long bytes )
+        {
+            string[] suffixes = { "bytes", "Kb", "Mb", "Gb", "Tb", "Pb", "Eb" };
+
+            if( bytes == 0 )
+                return "0 B";
+
+            long absBytes = Math.Abs( bytes );
+            // Calculate the index in the suffixes array
+            int place = Convert.ToInt32( Math.Floor( Math.Log( absBytes, 1024 ) ) );
+            // Adjust the magnitude
+            double num = Math.Round( absBytes / Math.Pow( 1024, place ), 1 );
+
+            // Retain the original sign for negative byte configurations, if applicable
+            return $"{Math.Sign( bytes ) * num} {suffixes[ place ]}";
         }
     }
 }
