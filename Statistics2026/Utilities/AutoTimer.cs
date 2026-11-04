@@ -20,6 +20,11 @@ namespace Statistics2026.Utilities
             SendMessage( $"Starting {Text}" );
         }
 
+        public void Restart()
+        {
+            _stopWatch?.Restart();
+        }
+
         public long ElapsedMilliseconds()
         {
             return _stopWatch?.ElapsedMilliseconds ?? 0;
