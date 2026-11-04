@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Common;
+﻿//#define DEBUG_PLUGIN
+using MediaBrowser.Common;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Common.Plugins;
@@ -70,7 +71,7 @@ namespace Statistics2026
                 _apiService = apiService
             };
 
-#if DEBUG
+#if DEBUG_PLUGIN
             EmbyHelperFuncs.PreDebugRun( _embyInterfaces );
 #endif
         }

@@ -1,4 +1,5 @@
-﻿//#define DEBUG_DB
+﻿//#define DEBUG_PLUGIN
+//#define DEBUG_DB
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
@@ -29,7 +30,7 @@ namespace Statistics2026.Utilities
     {
         public static void AttachDebugger()
         {
-#if DEBUG
+#if DEBUG_PLUGIN
             // Check if a debugger is already attached
             if( !Debugger.IsAttached )
             {
@@ -47,7 +48,7 @@ namespace Statistics2026.Utilities
 
         public static void PreDebugRun( EmbyInterfaces embyInterfaces )
         {
-#if DEBUG
+#if DEBUG_PLUGIN
             if( !Debugger.IsAttached )
             {
                 AttachDebugger();
@@ -59,7 +60,7 @@ namespace Statistics2026.Utilities
 
         public static async Task MoveMediaLocations( EmbyInterfaces embyInterfaces )
         {
-#if DEBUG
+#if DEBUG_PLUGIN
             bool copyImages( BaseItem item )
             {
                 if( item == null )
