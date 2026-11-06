@@ -97,8 +97,8 @@
 
             var movieStats_size = "";
             movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Largest", "", "", "largest_movie");
-            movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Smallest", "", "", "smallest_movie");
             movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Longest", "", "", "longest_movie");
+            movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Smallest", "", "", "smallest_movie");
             movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Shortest", "", "", "shortest_movie");
             view.querySelector("#movieStats_size").innerHTML = movieStats_size;
 
@@ -135,8 +135,8 @@
 
             var seriesStats_size = "";
             seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Largest", "", "", "largest_series");
-            seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Smallest", "", "", "smallest_series");
             seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Longest", "", "", "longest_series");
+            seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Smallest", "", "", "smallest_series");
             seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Shortest", "", "", "shortest_series");
             view.querySelector("#seriesStats_size").innerHTML = seriesStats_size;
 

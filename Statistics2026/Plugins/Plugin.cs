@@ -75,7 +75,7 @@ namespace Statistics2026
 
         public IEnumerable<PluginPageInfo> GetPages()
         {
-            return new PluginPageInfo[]
+            var retVal = new PluginPageInfo[]
             {
                 new() {
                     Name = "style.css",
@@ -169,6 +169,16 @@ namespace Statistics2026
                 },
 
             };
+
+            foreach( var page in retVal )
+            {
+                var path = page.EmbeddedResourcePath;
+                if( GetType().Assembly.GetManifestResourceInfo( path ) == null )
+                {
+                    throw new Exception( "Could not find embedded resource: " + path );
+                }
+            }
+            return retVal;
         }
 
         public override Guid Id => new( "23ADB024-F759-438F-B9A7-D5912A75596C" );
