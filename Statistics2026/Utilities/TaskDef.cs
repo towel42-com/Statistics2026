@@ -3,6 +3,7 @@ using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Tasks;
 using ServiceStack.Text;
 using Statistics2026.Configuration;
+using Statistics2026.EventMonitorEntryPoints;
 using Statistics2026.ScheduledTasks;
 using Statistics2026.Utilities;
 using System;
@@ -75,7 +76,7 @@ namespace Statistics2026.Utilities
 
             if( runAllOkIfRunning )
             {
-                okIfRunning.AddRange( [ typeof( PostMediaScanTask ), typeof( RunAllTasksTask ) ] );
+                okIfRunning.AddRange( [ typeof( ItemAddedMonitorEntryPoint ), typeof( RunAllTasksTask ) ] );
             }
             var knownTasks = TaskDef.GetKnownTasks( true );
 
@@ -141,14 +142,14 @@ namespace Statistics2026.Utilities
             };
             if( includeRunAll )
             {
-                tasks.Add( new TaskDef( $"PostMediaScan", typeof( PostMediaScanTask ) ) );
+                tasks.Add( new TaskDef( $"PostMediaScan", typeof( ItemAddedMonitorEntryPoint ) ) );
                 tasks.Add( new TaskDef( $"RunAll", typeof( RunAllTasksTask ) ) );
             }
 
             return tasks;
         }
 
-        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<Type> taskTypes, CancellationToken cancellationToken, bool runAllOkIfRunning )
+        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<Type> taskTypes, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
             List<TaskDef?> taskDefs = [];
             foreach( var taskType in taskTypes )
@@ -160,7 +161,7 @@ namespace Statistics2026.Utilities
             return await ExecuteSubTasksAsync( embyInterfaces, taskDefs, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
         }
 
-        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<TaskDef?> taskDefs, CancellationToken cancellationToken, bool runAllOkIfRunning )
+        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<TaskDef?> taskDefs, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
             List<TaskResult> retVal = [];
             var beenCanceled = false;
@@ -175,13 +176,13 @@ namespace Statistics2026.Utilities
                     var taskResult = await ExecuteSubTaskAsync( embyInterfaces, taskDef, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
                     beenCanceled = beenCanceled || ( taskResult.Status == TaskCompletionStatus.Cancelled );
                     retVal.Add( taskResult );
-                    cancellationToken.ThrowIfCancellationRequested();
+                    cancellationToken?.ThrowIfCancellationRequested();
                 }
             }
             return retVal;
         }
 
-        public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, Type taskType, CancellationToken cancellationToken, bool runAllOkIfRunning )
+        public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, Type taskType, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
             var taskDef = GetTaskDef( taskType );
             if( taskDef == null )
@@ -192,7 +193,7 @@ namespace Statistics2026.Utilities
             return await ExecuteSubTaskAsync( embyInterfaces, taskDef, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
         }
 
-        public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, TaskDef? task, CancellationToken cancellationToken, bool runAllOkIfRunning )
+        public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, TaskDef? task, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
             TaskResult retVal = TaskDef.EmptyTaskResult;
             if( task == null )
@@ -219,7 +220,7 @@ namespace Statistics2026.Utilities
                 var options = new TaskOptions() { HasManualInteraction = false };
                 await embyInterfaces.TaskManager().Execute( taskToRun, options ).ConfigureAwait( false );
 
-                cancellationToken.ThrowIfCancellationRequested();
+                cancellationToken?.ThrowIfCancellationRequested();
 
                 var taskResult = taskToRun.LastExecutionResult;
                 switch( taskResult.Status )
@@ -236,7 +237,7 @@ namespace Statistics2026.Utilities
                 }
 
                 retVal = taskResult;
-                cancellationToken.ThrowIfCancellationRequested();
+                cancellationToken?.ThrowIfCancellationRequested();
             }
 
             return retVal;

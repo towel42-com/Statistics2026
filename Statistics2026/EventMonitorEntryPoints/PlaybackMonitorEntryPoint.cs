@@ -21,13 +21,13 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.EventMonitorEntryPoints
 {
-    internal class EventMonitorEntryPoint : IServerEntryPoint
+    internal class PlaybackMonitorEntryPoint : IServerEntryPoint
     {
         private readonly EmbyInterfaces? _embyInterfaces;
 
         private readonly object syncLock = new();
 
-        public EventMonitorEntryPoint(
+        public PlaybackMonitorEntryPoint(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,

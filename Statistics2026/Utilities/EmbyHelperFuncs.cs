@@ -1,5 +1,5 @@
 ﻿#if DEBUG
-//#define DEBUG_PLUGIN
+#define DEBUG_PLUGIN
 //#define DEBUG_DB
 #endif
 using MediaBrowser.Controller.Dto;
