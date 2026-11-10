@@ -172,12 +172,12 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private List<StreamingProvider>? GetStreamingProviders( List<int> ids )
+        public List<StreamingProvider>? GetStreamingProviders( List<int> ids )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var cmd = SQLCmdDef.CreateSQLCmdDef( "SELECT ProviderId, Name, LogoPath, DisplayPriority FROM StreamingProviders WHERE ProviderId IN (<KEYLIST>) ORDER BY DisplayPriority ASC", "<KEYLIST>", ids.ConvertAll( x => (object)x ) );
-            List<StreamingProvider>? retVal = null;
+            var cmd = SQLCmdDef.CreateSQLCmdDef( "SELECT ProviderId, Name, LogoPath, DisplayPriority, UrlTemplate FROM StreamingProviders WHERE ProviderId IN (<KEYLIST>) ORDER BY DisplayPriority ASC", "<KEYLIST>", ids.ConvertAll( x => (object)x ) );
+            List<StreamingProvider> retVal = [];
             ExecuteCommand( cmd, statement =>
             {
                 var row = statement.Current;
@@ -186,6 +186,7 @@ namespace Statistics2026.Data
                 var name = row.GetString( curr++ );
                 var logoPath = row.GetString( curr++ );
                 var displayPriority = row.GetInt( curr++ );
+                var urlTemplate = row.GetString( curr++ );
 
                 var currProvider = new StreamingProvider()
                 {
@@ -193,14 +194,15 @@ namespace Statistics2026.Data
                     ProviderName = name,
                     LogoPath = logoPath,
                     DisplayPriority = displayPriority,
-                    ProviderType = string.Empty
+                    ProviderType = string.Empty,
+                    UrlTemplate = urlTemplate
                 };
-                if( retVal == null )
-                    retVal = [];
                 retVal.Add( currProvider );
                 return true;
             } );
 
+            if( retVal.Count() == 0 )
+                return null;
             return retVal;
         }
     }
