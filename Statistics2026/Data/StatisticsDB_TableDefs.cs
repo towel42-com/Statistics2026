@@ -1,16 +1,34 @@
-﻿using Statistics2026.Utilities;
+﻿using MediaBrowser.Controller.Entities;
+using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public class TableDefs
     {
         public const string sUserMediaTablePrefix = "UserMedia_";
+        private readonly Dictionary<string, TableDef> _tableMap = [];
+        private List<TableDef> _tableList = [];
+        private TableDef? _userMediaTemplate = null;
+        private Statistics2026DB? _db = null;
+        private readonly EmbyInterfaces? _embyInterfaces = null;
 
+        public TableDefs( EmbyInterfaces embyInterfaces )
+        {
+            _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
+            ConstructTables();
+        }
 
-        private void ConstructTableList()
+        public void SetDatabase( Statistics2026DB db )
+        {
+            _db = db ?? throw new ArgumentNullException( "db is null." );
+        }
+
+        private void ConstructTables()
         {
             _tableList =
             [
@@ -50,7 +68,7 @@ namespace Statistics2026.Data
                         new TableColDef( "DolbyVisionProfile", "TEXT", true ),
                         new TableColDef( "StudioNames", "TEXT", true ),  // json array of text
                         new TableColDef( "Genres", "TEXT", true ), // json array of text
-                        new TableColDef( "StreamingServices", "TEXT", true ), // json array of text, only filled in for movies
+                        new TableColDef( "StreamingProviders", "TEXT", true ){FormerColumnName="StreamingServices"}, // json array of text
                         new TableColDef( "ServerLocation", "TEXT", true ),
                         new TableColDef( "FileSize", "INT", true),
                         new TableColDef( "ImageUrl", "TEXT", true ),
@@ -79,7 +97,7 @@ namespace Statistics2026.Data
                         new TableColDef( "Rating", "REAL", true ),
                         new TableColDef( "Status", "TEXT" , true ),
                         new TableColDef( "AverageBitrate", "INT", true ),
-                        new TableColDef( "StreamingServices", "TEXT", true ), // json array of text, only filled in for movies
+                        new TableColDef( "StreamingProviders", "TEXT", true ){FormerColumnName="StreamingServices"}, // json array
 
                     ]
                 ),
@@ -121,7 +139,7 @@ namespace Statistics2026.Data
                         new TableColDef( "SeasonNum", "INT", true ),
                         new TableColDef( "EpisodeNum", "INT", true ),
                         new TableColDef( "StudioNames", "TEXT", true ),
-                        new TableColDef( "StreamingServices", "TEXT", true ), // json array of text
+                        new TableColDef( "StreamingProviders", "TEXT", true ){FormerColumnName="StreamingServices"}, // json array of text
                     ]
                 ){ ValidationRequiresData = false },
                 new TableDef("Collections",
@@ -180,6 +198,14 @@ namespace Statistics2026.Data
                         new TableColDef( "PercentWatchedPerUser", "DOUBLE", true ),
                     ]
                 ){ DeprecatedTable = true },
+                new TableDef( "StreamingProviders",
+                [
+                    new TableColDef( "ProviderId", "INT", true, true ),
+                    new TableColDef( "Name", "TEXT", false, false ),
+                    new TableColDef( "LogoPath", "TEXT", true, false ),
+                    new TableColDef( "DisplayPriority", "INT", false, false, "32767" ),
+                    new TableColDef( "UrlTemplate", "TEXT", true )
+                ])
             ];
 
             _userMediaTemplate = new TableDef( $"{sUserMediaTablePrefix}<USER_ID>",
@@ -209,7 +235,7 @@ namespace Statistics2026.Data
             }
         }
 
-        private List<string> tableNames()
+        public List<string> tableNames()
         {
             var retVal = new List<string>();
             foreach( var table in _tableList )
@@ -222,8 +248,14 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private void CreateTables( TableDef.EAction action )
+        public List<string> UserMediaUsageColumnNames()
         {
+            return _userMediaTemplate!.ColumnNames();
+        }
+
+        public void CreateTables( TableDef.EAction action, CancellationToken? cancellationToken, IProgress<double>? progress )
+        {
+            CheckIsValid();
             if( action != TableDef.EAction.eRecreate && action != TableDef.EAction.eCreate )
                 throw new InvalidEnumArgumentException( $"Action must be {TableDef.EAction.eRecreate} or {TableDef.EAction.eCreate}" );
 
@@ -245,18 +277,47 @@ namespace Statistics2026.Data
                     Plugin.Instance.RemoveDBState( EDBState.eUserTablesCreated | EDBState.eUserDataInitialized );
                 }
 
-                ExecuteCommands( sqlCmds );
+                _db.ExecuteCommands( sqlCmds );
 
                 Plugin.Instance.AddDBState( EDBState.eSystemTablesCreated );
             }
 
-            InitWatchedMediaTables();
+            InitWatchedMediaTables( cancellationToken, progress );
+        }
+
+        public TableDef? getTableDef( string tableName, bool isUserMediaTable = false, User? user = null )
+        {
+            if( isUserMediaTable )
+            {
+                return getUserMediaTableDef( user );
+            }
+
+            if( _tableMap.TryGetValue( tableName, out var tableDef ) )
+            {
+                return tableDef;
+            }
+            return null;
+        }
+
+        public TableDef? getUserMediaTableDef( User? user = null )
+        {
+            if( user == null )
+                return null;
+            if( _userMediaTemplate == null )
+                return null;
+
+            var tableName = getUserTableName( user );
+            var retVal = new TableDef( _userMediaTemplate );
+            return retVal;
         }
 
         public void ClearTable( string tableName )
         {
+            CheckIsValid();
+
             List<SQLCmdDef> sqlCmds = [];
-            if( _tableMap.TryGetValue( tableName, out var tableDef ) )
+            var tableDef = getTableDef( tableName );
+            if( tableDef != null )
             {
                 sqlCmds.AddRange( tableDef.GetSQLCommands( TableDef.EAction.eClear ) );
             }
@@ -265,12 +326,13 @@ namespace Statistics2026.Data
                 sqlCmds.Add( new SQLCmdDef( TableDef.clearTable( tableName ) ) );
             }
 
-            ExecuteCommands( sqlCmds );
+            _db.ExecuteCommands( sqlCmds );
         }
 
         public List<SQLCmdDef> DropTableCmds( string tableName )
         {
-            if( _tableMap.TryGetValue( tableName, out var tableDef ) )
+            var tableDef = getTableDef( tableName );
+            if( tableDef != null )
             {
                 var sqlCmds = tableDef.GetSQLCommands( TableDef.EAction.eDrop );
                 return sqlCmds;
@@ -281,12 +343,16 @@ namespace Statistics2026.Data
 
         public void DropTable( string tableName )
         {
+            CheckIsValid();
+
             var cmds = DropTableCmds( tableName );
-            ExecuteCommands( cmds );
+            _db.ExecuteCommands( cmds );
         }
 
         public List<string> allTables( (string regex, bool like)? regex = null )
         {
+            CheckIsValid();
+
             var retVal = new List<string>();
             var clauses = new List<string>() { "type='table'", "name NOT LIKE 'sqlite_%'" };
             if( regex != null )
@@ -295,15 +361,165 @@ namespace Statistics2026.Data
                 clauses.Add( clause );
             }
 
-            var sql = "SELECT name FROM sqlite_master " + JoinClauses( clauses );
+            var sql = "SELECT name FROM sqlite_master " + HelperFuncs.JoinClauses( clauses );
 
-            ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            _db.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
                 retVal.Add( row.GetString( 0 ) );
                 return true;
             } );
             return retVal;
+        }
+
+        public List<SQLCmdDef> DropAllUserMediaCmds()
+        {
+            var retVal = new List<SQLCmdDef>();
+            if( _userMediaTemplate == null )
+                return retVal;
+
+            var tables = allUserMediaTables( false );
+
+            foreach( var table in tables )
+                retVal.AddRange( DropTableCmds( table ) );
+
+            return retVal;
+        }
+
+        public List<string> allUserMediaTables( bool existingOnly = true )
+        {
+            CheckIsValid();
+
+            if( existingOnly )
+                return allTables( (regex: $"{sUserMediaTablePrefix}%", like: true) );
+            else
+            {
+                var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
+
+                HashSet<string> tableNameSet = [];
+                foreach( var user in users ?? [] )
+                {
+                    var tableName = getUserTableName( user );
+                    if( tableName != null )
+                        tableNameSet.Add( tableName );
+                }
+                return tableNameSet.ToList();
+            }
+        }
+
+        public User? getUserForTableName( string tableName )
+        {
+            CheckIsValid();
+            if( !tableName.StartsWith( sUserMediaTablePrefix ) )
+                return null;
+
+            var idString = tableName.Substring( sUserMediaTablePrefix.Length );
+            var guid = new Guid( idString );
+
+            return _embyInterfaces.GetUserById( guid );
+
+        }
+
+        public string? getUserTableName( User? user )
+        {
+            CheckIsValid();
+
+            return user == null ? null : getUserTableName( user.Id.ToString() );
+        }
+
+        public string getUserTableName( string userId )
+        {
+            CheckIsValid();
+
+            userId = userId.ToString().Replace( "-", string.Empty );
+            return $"{sUserMediaTablePrefix}{userId}";
+        }
+
+        public void InitWatchedMediaTables( CancellationToken? cancellationToken, IProgress<double>? progress )
+        {
+            CheckIsValid();
+
+            if( Plugin.Instance == null )
+                throw new NullReferenceException( $"Plugin.Instance is null" );
+
+            if( !Plugin.Instance.IsDBStateSet( EDBState.eUserTablesCreated ) )
+            {
+
+                progress?.Report( 0 );
+                var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
+                if( users == null )
+                {
+                    progress?.Report( 100 );
+                    return;
+                }
+
+                progress?.Report( 100 );
+
+                var sqlCmds = new List<SQLCmdDef>();
+                var curr = 0.0;
+                double count = users.Count;
+
+                using( var timer = new AutoTimer( $"    Analyze User Watch Data - Getting Init Table Commands", _embyInterfaces.Logger() ) )
+                {
+                    curr = 0;
+                    foreach( var user in users )
+                    {
+                        progress?.Report( 80.0 * ( ++curr ) / count );
+                        using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces.Logger() ) )
+                        {
+                            sqlCmds.AddRange( GetInitWatchedMediaTableCommands( user ) );
+                            cancellationToken?.ThrowIfCancellationRequested();
+                        }
+                    }
+
+                    cancellationToken?.ThrowIfCancellationRequested();
+                }
+
+                using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Init Table Commands", _embyInterfaces.Logger() ) )
+                {
+                    progress?.Report( 80 );
+                    _db.ExecuteCommands( sqlCmds );
+                    progress?.Report( 100 );
+                }
+
+                Plugin.Instance.AddDBState( EDBState.eUserTablesCreated );
+            }
+        }
+
+
+        [MemberNotNull( nameof( _userMediaTemplate ), nameof( _db ), nameof( _embyInterfaces ) )]
+        public void CheckIsValid()
+        {
+            if( _userMediaTemplate == null )
+                throw new Exception( $"_userMediaTemplate is null" );
+            if( _db == null )
+                throw new Exception( $"_db is null" );
+            if( _embyInterfaces == null )
+                throw new Exception( $"_embyInterfaces is null" );
+        }
+
+        public List<SQLCmdDef> GetInitWatchedMediaTableCommands( User? user )
+        {
+            CheckIsValid();
+
+            if( user == null )
+                throw new Exception( $"GetInitWatchedMediaTableCommands: User is null" );
+
+            var userTableName = getUserTableName( user );
+            if( userTableName == null )
+                return [];
+
+            var sqlCmds = new List<SQLCmdDef>();
+
+            var cmds = _userMediaTemplate.GetSQLCommands( TableDef.EAction.eCreate );
+            for( var ii = 0; ii < cmds.Count(); ++ii )
+            {
+                var cmd = new SQLCmdDef( cmds[ ii ] );
+                cmd.Replace( $"{sUserMediaTablePrefix}<USER_ID>", userTableName );
+                sqlCmds.Add( cmd );
+            }
+
+            return sqlCmds;
         }
     }
 }

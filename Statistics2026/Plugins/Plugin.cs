@@ -16,6 +16,7 @@ using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
 using Statistics2026.Configuration;
+using Statistics2026.Data;
 using Statistics2026.Features;
 using Statistics2026.ScheduledTasks;
 using Statistics2026.Utilities;
@@ -25,6 +26,7 @@ namespace Statistics2026
     public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
         public readonly EmbyInterfaces _embyInterfaces;
+        public readonly TableDefs _tableDefs;
 
         public Plugin(
             IApplicationPaths applicationPaths,
@@ -69,8 +71,9 @@ namespace Statistics2026
                 _userManager = userManager,
                 _apiService = apiService
             };
+            _tableDefs = new TableDefs( _embyInterfaces );
 
-            EmbyHelperFuncs.PreDebugRun( _embyInterfaces );
+            HelperFuncs.PreDebugRun( _embyInterfaces );
         }
 
         public IEnumerable<PluginPageInfo> GetPages()

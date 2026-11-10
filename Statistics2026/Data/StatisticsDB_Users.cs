@@ -12,7 +12,7 @@ using System.Linq;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         public async Task AddAllUsersTaskImplAsync()
         {
@@ -149,7 +149,7 @@ namespace Statistics2026.Data
                 ( "@UserName", user.Name),
                 ( "@ConnectUserId", user.ConnectUserId),
                 ( "@IsAdministrator", isAdmin),
-                ( "@MediaTableName", getUserTableName( user ) )
+                ( "@MediaTableName", TableDefs().getUserTableName( user ) )
             ] );
         }
 
@@ -167,7 +167,7 @@ namespace Statistics2026.Data
             if( excludeAdmin )
                 conditions.Add( "NOT IsAdministrator" );
 
-            sql += JoinClauses( conditions );
+            sql += HelperFuncs.JoinClauses( conditions );
 
             return GetSingleValueFromSQL( sql ).ToInt64();
         }
@@ -189,7 +189,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var tables = allUserMediaTables();
+            var tables = TableDefs().allUserMediaTables();
 
             var sqlBase =
                 $"SELECT " +
@@ -207,7 +207,7 @@ namespace Statistics2026.Data
             if( Statistics2026.Plugin.Instance!.Configuration.excludeAdmin )
                 conditions.Add( "NOT IsAdministrator" );
 
-            sqlBase += JoinClauses( conditions );
+            sqlBase += HelperFuncs.JoinClauses( conditions );
 
             var playTimeMap = new SortedDictionary<long, List<(string userId, string userName, long ticksPlayed)>>();
             foreach( var tableName in tables )

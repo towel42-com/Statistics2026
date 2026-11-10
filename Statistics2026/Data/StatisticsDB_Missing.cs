@@ -24,7 +24,7 @@ using static ServiceStack.Diagnostics;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         private const string kSQLAddToMissing =
             "INSERT INTO Missing" +
@@ -41,6 +41,7 @@ namespace Statistics2026.Data
                 ", SeasonNum" +
                 ", EpisodeNum" +
                 ", StudioNames" +
+                ", StreamingProviders" +
             ")" +
             " VALUES " +
             "(" +
@@ -56,6 +57,7 @@ namespace Statistics2026.Data
                 ", @SeasonNum" +
                 ", @EpisodeNum" +
                 ", @StudioNames" +
+                ", @StreamingProviders" +
             ")" +
             " ON CONFLICT(Key) " +
             " DO UPDATE " +
@@ -70,7 +72,8 @@ namespace Statistics2026.Data
                 ", IsEpisode=@IsEpisode" +
                 ", SeasonNum=@SeasonNum" +
                 ", EpisodeNum=@EpisodeNum" +
-                ", StudioNames=@StudioNames"
+                ", StudioNames=@StudioNames" +
+                ", StreamingProviders=@StreamingProviders"
                 ;
 
         private bool IsFilteredCollection( string collectionName )

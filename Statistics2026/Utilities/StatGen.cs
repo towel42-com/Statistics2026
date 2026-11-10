@@ -34,8 +34,8 @@ namespace Statistics2026.Utilities
         private EStatisticType WhichStatistic { get; set; }
         private EVideoType VideoType { get; set; }
 
-        private StatisticsDB _Database { get; set; }
-        public StatGen( EStatisticType statType, EVideoType videoType, StatisticsDB db )
+        private Statistics2026DB _Database { get; set; }
+        public StatGen( EStatisticType statType, EVideoType videoType, Statistics2026DB db )
         {
             WhichStatistic = statType;
             VideoType = videoType;
@@ -264,7 +264,7 @@ namespace Statistics2026.Utilities
             else if( VideoType == EVideoType.Episode )
                 whereClauseList.Add( "IsEpisode" );
 
-            return whereClauseList.Count > 0 ? StatisticsDB.JoinClauses( whereClauseList ) + " " : string.Empty;
+            return whereClauseList.Count > 0 ? HelperFuncs.JoinClauses( whereClauseList ) + " " : string.Empty;
         }
 
         private string Title()
@@ -456,7 +456,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.Largest:
                 {
                     var size = sqlResultValue.GetInt64( index );
-                    value = EmbyHelperFuncs.PrettyPrintFileSize( size );
+                    value = HelperFuncs.PrettyPrintFileSize( size );
                 }
 
                 break;
