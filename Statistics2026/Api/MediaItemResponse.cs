@@ -1,5 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Logging;
+using MediaBrowser.Model.Serialization;
 using ServiceStack;
 using SQLitePCL;
 using SQLitePCL.pretty;
@@ -7,6 +8,7 @@ using Statistics2026;
 using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Utilities;
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Nodes;
@@ -23,6 +25,7 @@ namespace Statistics2026.Api
         public string DolbyVisionProfile { get; set; } = string.Empty;
 
         public SortByText StudioNames { get; set; } = new();
+        public SortByText StreamingProviders { get; set; } = new();
         public SortByText ServerLocation { get; set; } = new();
         public SortByText SearchLocation { get; set; } = new();
         public SortByText ParentName { get; set; } = new();
@@ -123,8 +126,11 @@ namespace Statistics2026.Api
             return retVal;
         }
 
-        public static MediaItemResponse? CreateFromStatementRow( IResultSet row, bool isEpisode, Func<string, int, bool> isSeriesFiltered, Func<string, bool> isCollectionFiltered, Func<string, SortByText?> getCollectionName )
+        public static (MediaItemResponse?, List<int>? streamingProviders) CreateFromStatementRow( IResultSet row, bool isEpisode, string isoCode, Func<string, int, bool> isSeriesFiltered, Func<string, bool> isCollectionFiltered, Func<string, SortByText?> getCollectionName, EmbyInterfaces? embyInterfaces )
         {
+            if( embyInterfaces == null )
+                return (null,null);
+
             var col = 0;
             var isMissing = row.GetBoolean( col++ );
             var title = CleanSortName( row.GetString( col++ ) );
@@ -133,6 +139,18 @@ namespace Statistics2026.Api
             var premiereDate = HelperFuncs.ReadDateTime( row.GetString( col++ ) ) ?? DateTimeOffset.MinValue;
             var premiereYear = premiereDate == DateTimeOffset.MinValue ? 0 : premiereDate.Year;
             var studioNames = HelperFuncs.JsonToStringArray( row.GetString( col++ ) ).Join( ", " );
+            var streamingProvidersString = row.GetString( col++ );
+            
+            List<int>? streamingProviders = null;
+
+            var allStreamingProviders = embyInterfaces.JsonSerializer().DeserializeFromString<Dictionary<string, List<int>>>( streamingProvidersString );
+            if( allStreamingProviders != null )
+            {
+                if( allStreamingProviders.TryGetValue( isoCode, out var streamingProvidersList ) )
+                {
+                    streamingProviders = streamingProvidersList;
+                }
+            }
             var resolutionDetail = row.GetString( col++ ); // blank for missing
             var codec = row.GetString( col++ ); // blank for missing
             var dolbyVisionProfile = row.GetString( col++ ); // blank for missing
@@ -149,6 +167,7 @@ namespace Statistics2026.Api
             retVal.DisplayName = new SortByText( title );
             retVal.PremiereDate = ( premiereDate == DateTimeOffset.MinValue ) ? string.Empty : premiereDate.ToTZShortString( true, true );
             retVal.StudioNames = new SortByText( studioNames );
+
             retVal.ResolutionDetail = resolutionDetail;
             retVal.Codec = codec;
             retVal.DolbyVisionProfile = dolbyVisionProfile;
@@ -168,7 +187,7 @@ namespace Statistics2026.Api
                     foreach( var parentName in parentNames )
                     {
                         if( isCollectionFiltered( parentName ) )
-                            return null;
+                            return (null, null);
                     }
                     var collections = getCollectionName( retVal.ParentId );
                     retVal.ParentName = collections ?? new();
@@ -177,7 +196,7 @@ namespace Statistics2026.Api
                 {
                     if( isSeriesFiltered( retVal.ParentId, seasonNum ) )
                     {
-                        return null;
+                        return (null,null);
                     }
                 }
 
@@ -255,7 +274,7 @@ namespace Statistics2026.Api
                 }
             }
 
-            return retVal;
+            return (retVal, streamingProviders);
         }
     }
 }

@@ -164,7 +164,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
             if( !Plugin.Instance.DBStateInitialized() )
             {
-                _ = StatisticsDB.GetInstance( _embyInterfaces );
+                _ = Statistics2026DB.GetInstance( _embyInterfaces );
                 if( !Plugin.Instance.DBStateInitialized() )
                 {
                     _embyInterfaces.Logger().Warn( "Databases have not been initialized" );

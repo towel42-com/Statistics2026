@@ -3,6 +3,7 @@ using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Session;
 using ServiceStack;
@@ -19,7 +20,7 @@ using System.Text.RegularExpressions;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         public async Task AddAllMediaTaskImplAsync()
         {
@@ -47,7 +48,7 @@ namespace Statistics2026.Data
 
             using( var timer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = new SemaphoreSlim( 10, 10 );
+                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
 
                 var pool = videoList.Select( ( video, index ) => Task.Run( async () =>
                 {
@@ -64,8 +65,8 @@ namespace Statistics2026.Data
                         existing.TryAdd( video.Id.ToString(), true );
                         validIds.Add( video.Id.ToString() );
 
-                        var mediaInfo = await MediaInfo.CreateAsync( Logger(), video ).ConfigureAwait( false );
-                        if( !mediaInfo.aOK )
+                        var mediaInfo = MediaInfo.Create( Logger(), video );
+                        if( (mediaInfo == null )|| !mediaInfo.aOK )
                             return retVal;
 
                         retVal.cmd = AddMediaInfo( mediaInfo );
@@ -75,7 +76,6 @@ namespace Statistics2026.Data
                         Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
 
                         Logger().Debug( $"    Processed Video ({currProgress} of {count}) - {mediaInfo.DescriptiveName}" );
-                        //await Task.Delay( 10, CancellationToken.None );
                         return retVal;
                     }
                     finally
@@ -135,7 +135,6 @@ namespace Statistics2026.Data
                     ", DolbyVisionProfile\n" +
                     ", StudioNames \n" +
                     ", Genres \n" +
-                    ", StreamingServices \n" +
                     ", ServerLocation\n" +
                     ", FileSize\n" +
                     ", ImageUrl\n" +
@@ -164,7 +163,6 @@ namespace Statistics2026.Data
                     ", @DolbyVisionProfile\n" +
                     ", @StudioNames \n" +
                     ", @Genres \n" +
-                    ", @StreamingServices \n" +
                     ", @ServerLocation\n" +
                     ", @FileSize\n" +
                     ", @ImageUrl\n" +
@@ -193,7 +191,6 @@ namespace Statistics2026.Data
                     ", DolbyVisionProfile=@DolbyVisionProfile\n" +
                     ", StudioNames=@StudioNames \n" +
                     ", Genres=@Genres \n" +
-                    ", StreamingServices=@StreamingServices \n" +
                     ", ServerLocation=@ServerLocation\n" +
                     ", FileSize=@FileSize\n" +
                     ", ImageUrl=@ImageUrl\n" +
@@ -203,8 +200,6 @@ namespace Statistics2026.Data
                     ", PremiereDate=@PremiereDate\n" +
                     ", DateAdded=@DateAdded"
                     ;
-
-            var services = JsonSerializer.Serialize( mediaInfo.StreamingServices );
 
             var retVal = new SQLCmdDef( sql,
             [
@@ -225,7 +220,6 @@ namespace Statistics2026.Data
                 ("@DolbyVisionProfile", mediaInfo.DolbyVisionProfile),
                 ("@StudioNames", JsonSerializer.Serialize(mediaInfo.StudioNames)),
                 ("@Genres", JsonSerializer.Serialize(mediaInfo.Genres)),
-                ("@StreamingServices", JsonSerializer.Serialize(mediaInfo.StreamingServices)),
                 ("@ServerLocation", mediaInfo.ServerLocation),
                 ("@FileSize", mediaInfo.FileSize),
                 ("@ImageUrl",  mediaInfo.ImageUrl ?? string.Empty ),
@@ -359,14 +353,14 @@ namespace Statistics2026.Data
                 title = watched ? Constants.TotalUserMoviesWatched : Constants.TotalUserMovies;
                 help = watched ? Constants.HelpTotalUserMoviesWatched : Constants.HelpTotalUserMovies;
 
-                sql = $"SELECT SUM(NOT IsEpisode) FROM {getUserTableName( user )} WHERE UserId=@UserId";
+                sql = $"SELECT SUM(NOT IsEpisode) FROM {TableDefs().getUserTableName( user )} WHERE UserId=@UserId";
                 if( watched )
                     sql += " AND IsPlayed";
                 parameters.Add( ("@UserId", user.Id.ToString()) );
 
                 if( watched )
                 {
-                    total = GetSingleValueFromSQL( $"SELECT SUM(NOT IsEpisode) FROM {getUserTableName( user )} WHERE UserId=@UserId", parameters ).ToLong();
+                    total = GetSingleValueFromSQL( $"SELECT SUM(NOT IsEpisode) FROM {TableDefs().getUserTableName( user )} WHERE UserId=@UserId", parameters ).ToLong();
                 }
             }
 
@@ -400,7 +394,7 @@ namespace Statistics2026.Data
 
             List<(string name, object? value)>? paramList = null;
 
-            var tableName = getUserTableName( user );
+            var tableName = TableDefs().getUserTableName( user );
 
             string? seriesColumn;
 
@@ -521,7 +515,7 @@ namespace Statistics2026.Data
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var tableName = getUserTableName( user );
+            var tableName = TableDefs().getUserTableName( user );
             var sql =
                 "SELECT COUNT(*) as NumVideos, StartYear From Media "
                 + $"INNER JOIN {tableName} On Media.ItemId={tableName}.ItemId "
@@ -583,7 +577,7 @@ namespace Statistics2026.Data
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var tableName = getUserTableName( user );
+            var tableName = TableDefs().getUserTableName( user );
             var sql =
                 "SELECT Genres From Media "
                 + $"INNER JOIN {tableName} On Media.ItemId={tableName}.ItemId "

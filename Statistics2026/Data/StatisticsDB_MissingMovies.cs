@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
 using Statistics2026.Api;
@@ -14,10 +15,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         public async Task AnalyzeMissingMoviesTaskImplAsync()
         {
@@ -40,7 +42,7 @@ namespace Statistics2026.Data
             Progress?.Report( 0 );
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = new SemaphoreSlim( 10, 10 );
+                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
 
                 var pool = collections.Select( ( collection, index ) => Task.Run( async () =>
                 {
@@ -119,12 +121,24 @@ namespace Statistics2026.Data
                     continue;
 
                 var movieTmdbId = tmdbMovie.Id;
+
                 Logger().Debug( $"        Checking for movie {tmdbMovie.Title} for {collection.Name} on server" );
                 var embyMovie = EmbyHelperFuncs.GetMovieByTmdbId( LibraryManager(), movieTmdbId );
 
                 if( embyMovie == null )
                 {
                     Logger().Info( $"            {tmdbMovie.Title} is missing" );
+                    AddStreamingProvidersInfo? addStreamingProviderInfo= null;
+                    try
+                    {
+                        addStreamingProviderInfo = await reader.GetStreamingProvidersAsync( Logger(), movieTmdbId, false, tmdbMovie.Title ).ConfigureAwait( false );
+                        retVal.AddRange( addStreamingProviderInfo?.addProviderCmds ?? [] );
+                    }
+                    catch( Exception ex )
+                    {
+                        Logger().Error( ex.ToString() );
+                    }
+
                     var key = $"{tmdbCollection.Id}-{tmdbMovie.Id}";
                     retVal.Add( new SQLCmdDef( kSQLAddToMissing,
                     [
@@ -137,7 +151,9 @@ namespace Statistics2026.Data
                         ("@PosterPath", tmdbMovie.PosterPath ),
                         ("@ParentId", collection.Id.ToString() ),
                         ("@IsEpisode", false ),
-                        ("@StudioNames", tmdbMovie.StudioNames() )
+                        ("@StudioNames", tmdbMovie.StudioNames() ),
+                        ("@StreamingProviders", JsonSerializer.Serialize(addStreamingProviderInfo?.allProviders ?? new object()))
+
                     ] ) );
                 }
             }

@@ -18,7 +18,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         public async Task AddAllCollectionsTaskImplAsync()
         {

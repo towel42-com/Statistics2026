@@ -18,7 +18,7 @@ using WatchedMediaValueItemData = (string id, string name, long playCount, long 
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         public async Task AnalyzeWatchedMediaDataTaskImplAsync()
         {
@@ -42,7 +42,7 @@ namespace Statistics2026.Data
             var sqlCmds = new List<SQLCmdDef>();
             using( var listTimer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = new SemaphoreSlim( 10, 10 );
+                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
                 var pool = users.Select( ( user, index ) => Task.Run( async () =>
                 {
                     await gatekeeper.WaitAsync();
@@ -112,9 +112,11 @@ namespace Statistics2026.Data
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var userTableName = getUserTableName( user );
-            if( _userMediaTemplate == null )
-                throw new Exception( $"AddWatchedDataForUser: TableDef for {sUserMediaTablePrefix}<USER_ID> is null" );
+            var userTableName = TableDefs().getUserTableName( user );
+            if( userTableName == null )
+            {
+                throw new Exception( $"AddWatchedDataForUser: TableDef for {user.Name} is null" );
+            }
 
             var config = Statistics2026.Plugin.Instance!.Configuration;
 
@@ -252,60 +254,9 @@ namespace Statistics2026.Data
             return sqlCmds;
         }
 
-        public void InitWatchedMediaTables()
-        {
-            CheckIsValid( ECheckLevel.eInit );
-
-            if( Plugin.Instance == null )
-                throw new NullReferenceException( $"Plugin.Instance is null" );
-
-            if( !Plugin.Instance.IsDBStateSet( EDBState.eUserTablesCreated ) )
-            {
-
-                Progress?.Report( 0 );
-                var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
-                if( users == null )
-                {
-                    Progress?.Report( 100 );
-                    return;
-                }
-
-                Progress?.Report( 100 );
-
-                var sqlCmds = new List<SQLCmdDef>();
-                var curr = 0.0;
-                double count = users.Count;
-
-                using( var timer = new AutoTimer( $"    Analyze User Watch Data - Getting Init Table Commands", Logger() ) )
-                {
-                    curr = 0;
-                    foreach( var user in users )
-                    {
-                        Progress?.Report( 80.0 * ( ++curr ) / count );
-                        using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", Logger() ) )
-                        {
-                            sqlCmds.AddRange( GetInitWatchedMediaTableCommands( user ) );
-                            CancellationToken?.ThrowIfCancellationRequested();
-                        }
-                    }
-
-                    CancellationToken?.ThrowIfCancellationRequested();
-                }
-
-                using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Init Table Commands", Logger() ) )
-                {
-                    Progress?.Report( 80 );
-                    ExecuteCommands( sqlCmds );
-                    Progress?.Report( 100 );
-                }
-
-                Plugin.Instance.AddDBState( EDBState.eUserTablesCreated );
-            }
-        }
-
         public long? GetTotalTicksPlayed( string userId, string itemId )
         {
-            var tableName = getUserTableName( userId );
+            var tableName = TableDefs().getUserTableName( userId );
 
             var sql =
                 "SELECT " +
@@ -329,7 +280,7 @@ namespace Statistics2026.Data
 
         public void UpdateTotalTicksPlayed( string userId, string itemId, long totalTicksPlayed )
         {
-            var tableName = getUserTableName( userId );
+            var tableName = TableDefs().getUserTableName( userId );
 
             var sql =
                 $"UPDATE {tableName} " +
@@ -346,62 +297,6 @@ namespace Statistics2026.Data
             ExecuteCommand( new SQLCmdDef( sql, parameters ) );
         }
 
-        public List<SQLCmdDef> DropAllUserMediaCmds()
-        {
-            var retVal = new List<SQLCmdDef>();
-            if( _userMediaTemplate == null )
-                return retVal;
-
-            var tables = allUserMediaTables( false );
-
-            foreach( var table in tables )
-                retVal.AddRange( DropTableCmds( table ) );
-
-            return retVal;
-        }
-
-        public List<string> allUserMediaTables( bool existingOnly = true )
-        {
-            if( existingOnly )
-                return allTables( (regex: $"{sUserMediaTablePrefix}%", like: true) );
-            else
-            {
-                var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
-
-                HashSet<string> tableNameSet = [];
-                foreach( var user in users ?? [] )
-                {
-                    var tableName = getUserTableName( user );
-                    tableNameSet.Add( tableName );
-                }
-                return tableNameSet.ToList();
-            }
-        }
-
-        public User? getUserForTableName( string tableName )
-        {
-            CheckIsValid( ECheckLevel.eEmbyInterfaceOnly );
-            if( !tableName.StartsWith( sUserMediaTablePrefix ) )
-                return null;
-
-            var idString = tableName.Substring( sUserMediaTablePrefix.Length );
-            var guid = new Guid( idString );
-
-            return _embyInterfaces.GetUserById( guid );
-
-        }
-
-        public string getUserTableName( User? user )
-        {
-            return user == null ? string.Empty : getUserTableName( user.Id.ToString() );
-        }
-
-        public string getUserTableName( string userId )
-        {
-            userId = userId.ToString().Replace( "-", string.Empty );
-
-            return $"{sUserMediaTablePrefix}{userId}";
-        }
 
 #if DEBUG_PLUGIN
         private readonly Dictionary<string, (bool hit, int playCount)> _baseCount = new()
@@ -631,29 +526,6 @@ namespace Statistics2026.Data
             UserDataManager().SaveUserData( user, video, userData, UserDataSaveReason.Import, token );
         }
 
-        public List<SQLCmdDef> GetInitWatchedMediaTableCommands( User? user )
-        {
-            if( _userMediaTemplate == null )
-                throw new Exception( $"GetInitWatchedMediaTableCommands: TableDef for {sUserMediaTablePrefix}<USER_ID> is null" );
-
-            if( user == null )
-                throw new Exception( $"GetInitWatchedMediaTableCommands: User is null" );
-
-            var userTableName = getUserTableName( user );
-
-            var sqlCmds = new List<SQLCmdDef>();
-
-            var cmds = _userMediaTemplate.GetSQLCommands( TableDef.EAction.eCreate );
-            for( var ii = 0; ii < cmds.Count(); ++ii )
-            {
-                var cmd = new SQLCmdDef( cmds[ ii ] );
-                cmd.Replace( $"{sUserMediaTablePrefix}<USER_ID>", userTableName );
-                sqlCmds.Add( cmd );
-            }
-
-            return sqlCmds;
-        }
-
         public StatCard TotalFinishedSeries( User? user )
         {
             CheckIsValid( ECheckLevel.eReport );
@@ -661,7 +533,7 @@ namespace Statistics2026.Data
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var tableName = getUserTableName( user );
+            var tableName = TableDefs().getUserTableName( user );
             var sql =
                 "SELECT " +
                     "  PrimaryName" +
@@ -733,11 +605,13 @@ namespace Statistics2026.Data
             var tableNames = new List<string>();
             if( user != null )
             {
-                tableNames.Add( getUserTableName( user ) );
+                var name = TableDefs().getUserTableName( user );
+                if( name != null )
+                    tableNames.Add( name );
             }
             else
             {
-                tableNames = allUserMediaTables();
+                tableNames = TableDefs().allUserMediaTables();
             }
 
             var playMap = new Dictionary<string, WatchedMediaValueItemData>();
@@ -757,7 +631,7 @@ namespace Statistics2026.Data
                     $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId ";
 
                     var clauses = getClauses( tableName, true, user );
-                    sql += JoinClauses( clauses );
+                    sql += HelperFuncs.JoinClauses( clauses );
 
                     sql += $"GROUP BY SeriesId " +
                            $"ORDER BY PerUser ";
@@ -779,7 +653,7 @@ namespace Statistics2026.Data
                         ;
 
                     var clauses = getClauses( tableName, false, user );
-                    sql += JoinClauses( clauses );
+                    sql += HelperFuncs.JoinClauses( clauses );
 
                     sql += $"GROUP BY {tableName}.ItemId " +
                            $"ORDER BY PerUser ";
@@ -938,7 +812,7 @@ namespace Statistics2026.Data
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var tableName = getUserTableName( user );
+            var tableName = TableDefs().getUserTableName( user );
             var sql = string.Empty;
 
             if( played )
@@ -975,7 +849,7 @@ namespace Statistics2026.Data
             if( played )
                 clauses.Add( $"{tableName}.IsPlayed" );
 
-            sql += JoinClauses( clauses );
+            sql += HelperFuncs.JoinClauses( clauses );
 
             return ValueGroupForSingleItem( title, null, sql, [ ("@UserId", user.Id.ToString()) ], FormatTicks );
         }
@@ -997,7 +871,7 @@ namespace Statistics2026.Data
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var tableName = getUserTableName( user );
+            var tableName = TableDefs().getUserTableName( user );
 
             var sql = "SELECT ";
             if( movies )
@@ -1115,7 +989,7 @@ namespace Statistics2026.Data
             List<List<object>>? missing = null;
             if( ticksPlayed != systemPlayed && ticksPlayed != 0 )
             {
-                var user = getUserForTableName( tableName );
+                var user = TableDefs().getUserForTableName( tableName );
                 if( user == null )
                 {
                     Logger().Warn( $"Invalid user table name {tableName}" );
@@ -1237,7 +1111,7 @@ namespace Statistics2026.Data
             var sqlBtoA = sqlPlayed + " EXCEPT \n" + sqlTicks;
 
             List<SQLCmdDef> sqlCmds = [];
-            var tables = allUserMediaTables();
+            var tables = TableDefs().allUserMediaTables();
             foreach( var tableName in tables )
             {
 #if DEBUG_PLUGIN
@@ -1282,7 +1156,7 @@ namespace Statistics2026.Data
                 var totalTicksPlayed = row.GetInt64( col++ );
 
                 var mediaName = MediaInfo.GetDisplayName( primaryName, secondaryName, season, episode );
-                if ( mediaName == null || mediaName == "" )
+                if( mediaName == null || mediaName == "" )
                 {
                     return true;
                 }
@@ -1308,7 +1182,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var tables = allUserMediaTables();
+            var tables = TableDefs().allUserMediaTables();
 
             var sqlBase =
                 $"SELECT \n" +

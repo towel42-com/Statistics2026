@@ -165,7 +165,7 @@ namespace Statistics2026.Utilities
             return copy;
         }
 
-        public async static Task<MediaInfo> CreateAsync( ILogger logger, Video video )
+        public static MediaInfo Create( ILogger logger, Video video, TableDef? tableDef = null )
         {
             var cachedValue = GetCachedValue( video, false );
             if( cachedValue != null )
@@ -201,10 +201,6 @@ namespace Statistics2026.Utilities
             if( video.PremiereDate.HasValue )
                 retVal.PremiereDate = video.PremiereDate.Value;
 
-            if( !( video is Episode ) )
-            {
-                retVal.StreamingServices = await streamingServicesAsync( logger, video ).ConfigureAwait( false );
-            }
             retVal.ImageUrl = ItemImageUrl._ItemImageUrl( video );
 
             if( retVal.PremiereDate == null )
@@ -255,12 +251,6 @@ namespace Statistics2026.Utilities
             }
 
             return retVal;
-        }
-
-        public static async Task<List<TmdbStreamingProvider>> streamingServicesAsync( ILogger logger, Video video )
-        {
-            var tmdbService = new TmdbInterface();
-            return await tmdbService.GetStreamingServicesAsync( logger, video ).ConfigureAwait( false );
         }
 
         public static double communityRating( Video video )
@@ -443,7 +433,6 @@ namespace Statistics2026.Utilities
         public string DolbyVisionProfile { get; set; } = string.Empty;
         public string[] StudioNames { get; set; } = { };
         public string[] Genres { get; set; } = { };
-        public List<TmdbStreamingProvider> StreamingServices { get; set; } = [];
         public string ServerLocation { get; set; } = string.Empty;
         public long FileSize { get; set; } = 0;
         public string? ImageUrl { get; set; } = null;

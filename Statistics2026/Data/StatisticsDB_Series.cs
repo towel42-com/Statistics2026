@@ -3,10 +3,13 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Logging;
+using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
+using System.Text;
+using System.Text.Json;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +18,7 @@ using System.Runtime.InteropServices.ComTypes;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         private class SeriesInfo
         {
@@ -153,8 +156,8 @@ namespace Statistics2026.Data
             var libraryOptions = LibraryManager().GetLibraryOptions( series );
             var allEpisodes = await ProviderManager().GetAllEpisodes( series, libraryOptions, CancellationToken!.Value ).ConfigureAwait( false );
 
-            var episodes = allEpisodes.Where( e => !MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTimeOffset.Now ) ).Count();
-            var specials = allEpisodes.Where( e => MediaInfo.isTVSpecial( e ) ).Count();
+            var episodes = allEpisodes.Where( e => !Statistics2026.Utilities.MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTimeOffset.Now ) ).Count();
+            var specials = allEpisodes.Where( e => Statistics2026.Utilities.MediaInfo.isTVSpecial( e ) ).Count();
 
             if( episodes == 0 && specials == 0 )// when providers are disabled
             {
@@ -273,7 +276,6 @@ namespace Statistics2026.Data
             var (numSeasons, hasSpecials) = GetSeasonCount( series );
 
             var tmdbService = new TmdbInterface();
-            var streamingServices = await tmdbService.GetStreamingServicesAsync( Logger(), series ).ConfigureAwait( false );
 
             var (numEpisodes, numSpecials) = await GetCountForSeriesAsync( series ).ConfigureAwait( false );
             List<(string name, object? value)>? paramsList = null;
@@ -294,7 +296,6 @@ namespace Statistics2026.Data
                 ", Rating" +
                 ", Status" +
                 ", AverageBitrate" +
-                ", StreamingServices" +
             ")" +
             " VALUES " +
             "(" +
@@ -313,7 +314,6 @@ namespace Statistics2026.Data
                 ", @Rating" +
                 ", @Status" +
                 ", @AverageBitrate" +
-                ", @StreamingServices" +
             ")" +
             " ON CONFLICT(ItemId) " +
             " DO UPDATE " +
@@ -331,8 +331,7 @@ namespace Statistics2026.Data
                 ", RunTimeTicks=@RunTimeTicks" +
                 ", Rating=@Rating" +
                 ", Status=@Status" +
-                ", AverageBitrate=@AverageBitrate" +
-                ", StreamingServices=@StreamingServices";
+                ", AverageBitrate=@AverageBitrate" ;
 
             paramsList =
                    [
@@ -351,7 +350,6 @@ namespace Statistics2026.Data
                         ("@Rating", seriesInfo.averageRating),
                         ("@Status", seriesStatus),
                         ("@AverageBitrate", seriesInfo.averageBitrate),
-                        ("@StreamingServices", streamingServices)
                     ];
 
             Logger().Debug( $"   AddSeries - Successfully Added Series {series.Name}" );
@@ -414,7 +412,7 @@ namespace Statistics2026.Data
                 return true;
             } );
 
-            var tableName = getUserTableName( user );
+            var tableName = TableDefs().getUserTableName( user );
             var sqlBase = "SELECT " +
                 $"  SUM({tableName}.NumEpisodes) " +
                 $", {tableName}.SeriesId " +

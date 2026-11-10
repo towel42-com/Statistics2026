@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         public async Task AnalyzeMissingEpisodesTaskImplAsync()
         {
@@ -42,7 +42,7 @@ namespace Statistics2026.Data
             Progress?.Report( 0 );
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = new SemaphoreSlim( 10, 10 );
+                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
 
                 var pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
                 {
@@ -112,10 +112,15 @@ namespace Statistics2026.Data
             if( string.IsNullOrEmpty( seriesTmbdId ) )
                 return [];
 
+            List<SQLCmdDef> retVal = [];
+
             TmdbSeries? tmdbSeries = null;
+            AddStreamingProvidersInfo? streamingProviders = null;
             try
             {
                 tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId ).ConfigureAwait( false );
+                streamingProviders = await reader.GetStreamingProvidersAsync( Logger(), series ).ConfigureAwait( false );
+                retVal.AddRange( streamingProviders?.addProviderCmds ?? []);
             }
             catch( Exception ex )
             {
@@ -129,7 +134,6 @@ namespace Statistics2026.Data
                 return [];
             }
 
-            List<SQLCmdDef> retVal = [];
             foreach( var tmdbSeason in tmdbSeries.Seasons )
             {
                 if( tmdbSeason.SeasonNumber == 0 && !Plugin.Instance!.Configuration.reportOnMissingSpecials )
@@ -168,7 +172,8 @@ namespace Statistics2026.Data
                             ("@IsEpisode", true ),
                             ("@SeasonNum", tmdbSeason.SeasonNumber ),
                             ("@EpisodeNum", tmdbEpisode.EpisodeNumber ),
-                            ("@StudioNames", JsonSerializer.Serialize(series.Studios))
+                            ("@StudioNames", JsonSerializer.Serialize(series.Studios)),
+                            ("@StreamingProviders", JsonSerializer.Serialize(streamingProviders?.allProviders ?? new object()))
                         ] ) );
                     }
 
