@@ -255,9 +255,9 @@ namespace Statistics2026.Api
                 var imageUrl = provider.ImageUrl();
                 var providerUrl = provider.StreamUrl( retVal.DisplayName.SortBy, isoCode );
 
-                var itemUrl = ItemImageUrl.ItemUrlFromHref( imageUrl, providerUrl, provider.ProviderName, target: "_blank" );
+                //var itemUrl = ItemImageUrl.ItemUrlFromUrl( imageUrl, providerUrl, provider.ProviderName, target: "_blank" );
 
-                itemUrl = $"<a is=\"emby-linkbutton\" target=\"_blank\" href=\"{providerUrl}\">{provider.ProviderName}</a>";
+                var itemUrl = $"<a is=\"emby-linkbutton\" target=\"_blank\" href=\"{providerUrl}\">{provider.ProviderName}</a>";
 
                 html += HelperFuncs.addToHtml( depth++, "<li>" );
                 html += HelperFuncs.addToHtml( depth, $"<span>{itemUrl}</span>" );
