@@ -267,115 +267,116 @@ namespace Statistics2026.Utilities
 
         static private readonly Dictionary<int, string> ProviderTemplates = new()
         {
-            { 1, "https://vudu.com{encoded_title}" },
-            { 2, "https://apple.com{encoded_title}" },
-            { 3, "https://google.com{encoded_title}&c=movies" },
-            { 7, "https://viki.com{encoded_title}" },
-            { 8, "https://netflix.com{encoded_title}" },
-            { 9, "https://amazon.com{encoded_title}&i=instant-video" },
-            { 10, "https://amazon.com{encoded_title}&i=movies-tv" },
-            { 11, "https://mubi.com{encoded_title}" },
-            { 15, "https://hulu.com{encoded_title}" },
-            { 26, "https://youtube.com{encoded_title}" },
-            { 34, "https://mgmplus.com{encoded_title}" },
-            { 35, "https://rakuten.tv{encoded_title}" },
-            { 37, "https://paramountplus.com{encoded_title}" },
-            { 43, "https://starz.com{encoded_title}" },
-            { 68, "https://microsoft.com{encoded_title}&form=apps" },
-            { 73, "https://tubitv.com/search/{encoded_title}" },
-            { 76, "https://viaplay.com{encoded_title}" },
-            { 84, "https://unext.jp{encoded_title}" },
-            { 100, "https://bbc.co.uk{encoded_title}" },
-            { 118, "https://www.max.com/search/{encoded_title}/" },
-            { 119, "https://amazon.com{encoded_title}&i=instant-video" },
-            { 124, "https://crave.ca{encoded_title}" },
-            { 130, "https://sky.com{encoded_title}" },
-            { 155, "https://cineplex.com{encoded_title}" },
-            { 175, "https://netflix.com{encoded_title}" },
-            { 177, "https://pantaflix.com{encoded_title}" },
-            { 182, "https://hollywoodsuite.ca{encoded_title}" },
-            { 190, "https://curiositystream.com/search/{encoded_title}" },
-            { 192, "https://youtube.com{encoded_title}" },
-            { 200, "https://www.film1.nl/zoeken/{encoded_title}" },
-            { 207, "https://therokuchannel.roku.com/search/{encoded_title}" },
-            { 209, "https://britbox.com{encoded_title}" },
-            { 210, "https://amcplus.com{encoded_title}" },
-            { 212, "https://hoopladigital.com{encoded_title}" },
-            { 215, "https://kanopy.com{encoded_title}" },
-            { 232, "https://www.max.com/search/{encoded_title}/" },
-            { 234, "https://hotstar.com{encoded_title}" },
-            { 243, "https://vudu.com{encoded_title}" },
-            { 257, "https://fubo.tv{encoded_title}" },
-            { 258, "https://criterionchannel.com{encoded_title}" },
-            { 268, "https://www.dazn.com/en-US/search/{encoded_title}" },
-            { 283, "https://crunchyroll.com{encoded_title}" },
-            { 300, "https://pluto.tv/search/details/movies/{encoded_title}" },
-            { 309, "https://sunnxt.com{encoded_title}" },
-            { 315, "https://hoichoi.tv{encoded_title}" },
-            { 329, "https://www.jiocinema.com/search/{encoded_title}" },
-            { 337, "https://disneyplus.com{encoded_title}" },
-            { 341, "https://zee5.com{encoded_title}" },
-            { 350, "https://apple.com{encoded_title}" },
-            { 352, "https://docplay.com{encoded_title}" },
-            { 358, "https://www.dailymotion.com/search/{encoded_title}" },
-            { 384, "https://www.max.com/search/{encoded_title}/" },
-            { 386, "https://peacocktv.com{encoded_title}" },
-            { 387, "https://peacocktv.com{encoded_title}" },
-            { 393, "https://altt.co.in{encoded_title}" },
-            { 396, "https://shoutfactorytv.com{encoded_title}" },
-            { 424, "https://www.flixfling.com/search/{encoded_title}" },
-            { 429, "https://cineverse.com{encoded_title}" },
-            { 430, "https://hiyahtv.com{encoded_title}" },
-            { 432, "https://flixole.com{encoded_title}" },
-            { 436, "https://fetchtv.com.au{encoded_title}" },
-            { 444, "https://topic.com{encoded_title}" },
-            { 445, "https://paramountplus.com{encoded_title}" },
-            { 454, "https://stan.com.au{encoded_title}" },
-            { 464, "https://kinonow.com{encoded_title}" },
-            { 475, "https://docsville.com{encoded_title}" },
-            { 521, "https://erosnow.com{encoded_title}" },
-            { 531, "https://paramountplus.com{encoded_title}" },
-            { 546, "https://wowpresentsplus.com{encoded_title}" },
-            { 551, "https://magellantv.com{encoded_title}" },
-            { 554, "https://broadpix.com{encoded_title}" },
-            { 559, "https://filmzie.com/search/{encoded_title}" },
-            { 567, "https://truestory.film{encoded_title}" },
-            { 569, "https://cultpix.com{encoded_title}" },
-            { 606, "https://dekkoo.com{encoded_title}" },
-            { 613, "https://redbox.com{encoded_title}" },
-            { 632, "https://broadwayhd.com{encoded_title}" },
-            { 633, "https://filmatique.com{encoded_title}" },
-            { 634, "https://nightflightplus.com{encoded_title}" },
-            { 677, "https://classixapp.com{encoded_title}" },
-            { 692, "https://arrow-player.com{encoded_title}" },
-            { 1773, "https://plex.tv{encoded_title}" },
-            { 1794, "https://viendomovies.com{encoded_title}" },
-            { 1796, "https://semillitas.tv{encoded_title}" },
-            { 1853, "https://darkmatteritv.com{encoded_title}" },
-            { 1960, "https://amazon.com{encoded_title}&i=freevee-tv" },
-            { 1962, "https://retrocrush.tv{encoded_title}" },
-            { 1967, "https://midnightpulp.com{encoded_title}" },
-            { 1973, "https://asiancrush.com{encoded_title}" },
-            { 1985, "https://amazon.co.uk{encoded_title}&i=freevee-tv" },
-            { 2014, "https://cocoatv.com{encoded_title}" },
-            { 2016, "https://reby.com{encoded_title}" },
-            { 2065, "https://freemoviesplus.com{encoded_title}" },
-            { 2186, "https://fandor.com{encoded_title}" },
-            { 2187, "https://screambox.com{encoded_title}" },
-            { 2188, "https://cinehouse.tv{encoded_title}" },
+            {  0, "https://justwatch.com/{isoCode}/search?q={encodedTitle}" },
+            {  1, "https://vudu.com" },
+            {  2, "https://tv.apple.com" },
+            {  3, "https://tv.google" },
+            {  7, "https://viki.com" },
+            {  8, "https://netflix.com" },
+            {  9, "https://www.amazon.com/gp/video/storefront?k={searchInfo}" },
+            { 10, "https://www.amazon.com/gp/video/storefront?k={searchInfo}" },
+            { 11, "https://mubi.com" },
+            { 15, "https://hulu.com" },
+            { 26, "https://tv.youtube.com" },
+            { 34, "https://mgmplus.com" },
+            { 35, "https://rakuten.tv" },
+            { 37, "https://paramountplus.com" },
+            { 43, "https://starz.com" },
+            { 68, "https://microsoft.com" },
+            { 73, "https://tubitv.com" },
+            { 76, "https://viaplay.com" },
+            { 84, "https://unext.jp" },
+            { 100, "https://bbc.co.uk" },
+            { 118, "https://www.hbomax.com/search?q={searchInfo}" },
+            { 119, "https://www.amazon.com/gp/video/storefront?k={searchInfo}" },
+            { 124, "https://crave.ca" },
+            { 130, "https://sky.com" },
+            { 155, "https://cineplex.com" },
+            { 175, "https://netflix.com" },
+            { 177, "https://pantaflix.com" },
+            { 182, "https://hollywoodsuite.ca" },
+            { 190, "https://curiositystream.com/search" },
+            { 192, "https://tv.youtube.com" },
+            { 200, "https://www.film1.nl/zoeken" },
+            { 207, "https://therokuchannel.roku.com/search" },
+            { 209, "https://britbox.com" },
+            { 210, "https://amcplus.com" },
+            { 212, "https://hoopladigital.com" },
+            { 215, "https://kanopy.com" },
+            { 232, "https://www.hbomax.com/search?q={searchInfo}" },
+            { 234, "https://hotstar.com" },
+            { 243, "https://vudu.com" },
+            { 257, "https://fubo.tv" },
+            { 258, "https://criterionchannel.com" },
+            { 268, "https://www.dazn.com/en-US/search" },
+            { 283, "https://crunchyroll.com" },
+            { 300, "https://pluto.tv/search/details/movies" },
+            { 309, "https://sunnxt.com" },
+            { 315, "https://hoichoi.tv" },
+            { 329, "https://www.jiocinema.com/search" },
+            { 337, "https://disneyplus.com" },
+            { 341, "https://zee5.com" },
+            { 350, "https://tv.apple.com" },
+            { 352, "https://docplay.com" },
+            { 358, "https://www.dailymotion.com/search" },
+            { 384, "https://www.hbomax.com/search?q={searchInfo}" },
+            { 386, "https://peacocktv.com" },
+            { 387, "https://peacocktv.com" },
+            { 393, "https://altt.co.in" },
+            { 396, "https://shoutfactorytv.com" },
+            { 424, "https://www.flixfling.com/search" },
+            { 429, "https://cineverse.com" },
+            { 430, "https://hiyahtv.com" },
+            { 432, "https://flixole.com" },
+            { 436, "https://fetchtv.com.au" },
+            { 444, "https://topic.com" },
+            { 445, "https://paramountplus.com" },
+            { 454, "https://stan.com.au" },
+            { 464, "https://kinonow.com" },
+            { 475, "https://docsville.com" },
+            { 521, "https://erosnow.com" },
+            { 531, "https://paramountplus.com" },
+            { 546, "https://wowpresentsplus.com" },
+            { 551, "https://magellantv.com" },
+            { 554, "https://broadpix.com" },
+            { 559, "https://filmzie.com/search" },
+            { 567, "https://truestory.film" },
+            { 569, "https://cultpix.com" },
+            { 606, "https://dekkoo.com" },
+            { 613, "https://redbox.com" },
+            { 632, "https://broadwayhd.com" },
+            { 633, "https://filmatique.com" },
+            { 634, "https://nightflightplus.com" },
+            { 677, "https://classixapp.com" },
+            { 692, "https://arrow-player.com" },
+            { 1773, "https://plex.tv" },
+            { 1794, "https://viendomovies.com" },
+            { 1796, "https://semillitas.tv" },
+            { 1853, "https://darkmatteritv.com" },
+            { 1960, "https://www.amazon.com/gp/video/storefront?k={searchInfo}" },
+            { 1962, "https://retrocrush.tv" },
+            { 1967, "https://midnightpulp.com" },
+            { 1973, "https://asiancrush.com" },
+            { 1985, "https://www.amazon.co.uk/gp/video/storefront?k={searchInfo}" },
+            { 2014, "https://cocoatv.com" },
+            { 2016, "https://reby.com" },
+            { 2065, "https://freemoviesplus.com" },
+            { 2186, "https://fandor.com" },
+            { 2187, "https://screambox.com" },
+            { 2188, "https://cinehouse.tv" },
         };
 
-        public static string GetProviderTemplateUrl( int providerId, string title )
+        public static string GetProviderSearchUrl( int providerId, string isoCode, string title )
         {
             string encodedTitle = System.Uri.EscapeDataString( title );
 
             if( ProviderTemplates.TryGetValue( providerId, out var template ) )
             {
-                return template.Replace( "{encoded_title}", encodedTitle );
+                return template.Replace( "{searchInfo}", encodedTitle ).Replace( "{isoCode}", isoCode );
             }
 
-            // Fallback default system lookup engine if provider id isn't mapped
-            return $"https://google.com+{encodedTitle}";
+            encodedTitle = System.Uri.EscapeDataString( title );
+            return $"https://justwatch.com/{isoCode}/search?q={encodedTitle}";
         }
 
 
@@ -386,7 +387,7 @@ namespace Statistics2026.Utilities
                 return template;
             }
 
-            return string.Empty;
+            return "https://justwatch.com/{isoCode}/search?q={searchInfo}";
         }
 
         public static string addToHtml( int depth, string _html )
@@ -443,13 +444,14 @@ namespace Statistics2026.Utilities
             return $"{Math.Sign( bytes ) * num} {suffixes[ place ]}";
         }
 
-        public static SemaphoreSlim CreateSemaphoreSlim()
+        public static SemaphoreSlim CreateSemaphoreSlim( bool forceDebug = false)
         {
+            int numThreads = forceDebug ? 1 : 10;
 #if DEBUG_PLUGIN_ASYNC
-            return new SemaphoreSlim( 1, 1 );
-#else
-            return new SemaphoreSlim( 10, 10 );
+            numThreads = 1;
 #endif
+
+            return new SemaphoreSlim( numThreads, numThreads );
         }
     }
 }
