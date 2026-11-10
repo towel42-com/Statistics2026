@@ -62,13 +62,14 @@ namespace Statistics2026.ScheduledTasks
                 _userManager = userManager,
                 _apiService = apiService,
             };
+            this.Name = TaskDef.GetTaskName( this.GetType() );
+            this.Description = TaskDef.GetTaskDescription( this.GetType() );
         }
 
-        string IScheduledTask.Name => "\u2022 3 - Analyze User Watched Data Information";
+        public string Name { get; private set; } = "";
+        public string Description { get; private set; } = "";
 
         string IScheduledTask.Key => "Statistics2026_UserWatchedDataTask";
-
-        string IScheduledTask.Description => "Task that will analyze the user watch data.";
 
         string IScheduledTask.Category => "Statistics 2026";
 
@@ -82,9 +83,9 @@ namespace Statistics2026.ScheduledTasks
             var taskName = "Analyze User Watch Data";
             _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
-            using var db = StatisticsDB.GetInstance( _embyInterfaces );
+            using var db = Statistics2026DB.GetInstance( _embyInterfaces );
             db.Initialize( this, cancellationToken, progress );
-            db.ClearLastUpdated( StatisticsDB.EAction.UserWatchDataAnalysis );
+            db.ClearLastUpdated( Statistics2026DB.EAction.UserWatchDataAnalysis );
 
             long addUsers = 0;
             using( var timer = new AutoTimer( $"Adding User Watch Data", _embyInterfaces.Logger() ) )
@@ -106,7 +107,7 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces.Logger().Info( $"=======================================" );
             _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.UserWatchDataAnalysis, addUsers );
+            db.UpdateLastUpdated( Statistics2026DB.EAction.UserWatchDataAnalysis, addUsers );
 
             db.ResetCancellationToken();
             Plugin.Instance?.AddDBState( EDBState.eUserTablesCreated );
