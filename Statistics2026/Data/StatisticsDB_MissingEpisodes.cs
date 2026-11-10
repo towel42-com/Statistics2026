@@ -27,7 +27,7 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting Analysis" );
             Progress?.Report( 0 );
-            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
+            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
             seriesList.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             Progress?.Report( 100 );
 
@@ -120,7 +120,7 @@ namespace Statistics2026.Data
             {
                 tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId ).ConfigureAwait( false );
                 streamingProviders = await reader.GetStreamingProvidersAsync( Logger(), series ).ConfigureAwait( false );
-                retVal.AddRange( streamingProviders?.addProviderCmds ?? []);
+                retVal.AddRange( streamingProviders?.addProviderCmds ?? [] );
             }
             catch( Exception ex )
             {
@@ -153,10 +153,9 @@ namespace Statistics2026.Data
 
                     if( embyEpisode == null )
                     {
-                        Logger().Info( $"             {series.Name} - {episodeIdent} is missing" );
+                        Logger().Info( $"             {series.Name} - {episodeIdent} is missing - Series ID: {series.Id.ToString()}" );
 
                         var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
-                        //return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";
 
                         var title = $"{tmdbSeries.Name} - S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2} - {tmdbEpisode.Name}";
                         retVal.Add( new SQLCmdDef( kSQLAddToMissing,
