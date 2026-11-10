@@ -473,7 +473,7 @@ namespace Statistics2026.Utilities
             if( providerResponse == null )
                 return new AddStreamingProvidersInfo();
 
-            var retVal = providerResponse.Convert();
+            var retVal = providerResponse.GetProvidersAndSqlForProviders();
             return retVal;
         }
     }
@@ -501,7 +501,7 @@ namespace Statistics2026.Utilities
         }
 
         static readonly object _padlock = new();
-        public AddStreamingProvidersInfo Convert()
+        public AddStreamingProvidersInfo GetProvidersAndSqlForProviders()
         {
             Dictionary<string, HashSet<int>> currServiceMap = [];
             List<SQLCmdDef> cmds = [];
@@ -510,7 +510,7 @@ namespace Statistics2026.Utilities
                 if( regionKeyValuePair.Value != null )
                 {
                     var key = regionKeyValuePair.Key;
-                    var value = regionKeyValuePair.Value.Convert( key );
+                    var value = regionKeyValuePair.Value.GetProvidersAndSqlForProviders( key );
                     currServiceMap.Add( key, value.providerIds );
                     cmds.AddRange( value.sqlCmds );
                 }
@@ -577,16 +577,16 @@ namespace Statistics2026.Utilities
         }
 
 
-        public (HashSet<int> providerIds, List<SQLCmdDef> sqlCmds) Convert( string region )
+        public (HashSet<int> providerIds, List<SQLCmdDef> sqlCmds) GetProvidersAndSqlForProviders( string region )
         {
             UpdateProviderTypes();
             HashSet<int> providerIds = [];
             List<SQLCmdDef> sqlCmds = [];
-            
+
             var allProviders = GetAllProviders();
             foreach( var tmdbProvider in allProviders )
             {
-                var current = tmdbProvider.Convert( region );
+                var current = tmdbProvider.GetProvidersAndSqlForProviders( region );
                 if( current.providerId != -1 )
                 {
                     providerIds.Add( current.providerId );
@@ -647,13 +647,25 @@ namespace Statistics2026.Utilities
         public string LogoPath { get; set; } = string.Empty;
         public int DisplayPriority { get; set; } = int.MaxValue; // Pushes uninitialized items to the end of custom sorting layouts
         public string ProviderType { get; set; } = string.Empty;
+        public string UrlTemplate { get; set; } = string.Empty;
+
+        public string StreamUrl( string title, string isoCode )
+        {
+            if( UrlTemplate.IsNullOrEmpty() )
+                return string.Empty;
+
+            string encodedTitle = System.Uri.EscapeDataString( title );
+
+            return UrlTemplate.Replace( "{searchInfo}", encodedTitle ).Replace( "{isoCode}", isoCode );
+        }
 
         public string ImageUrl()
         {
             if( LogoPath.IsNullOrEmpty() )
                 return string.Empty;
-            var path = LogoPath.TrimStart( '/' );
-            return $"https://tmdb.org/{path}";
+
+            var logoPath = LogoPath.TrimStart( '/' );
+            return $"https://image.tmdb.org/t/p/original/" + logoPath;
         }
     }
 
@@ -687,21 +699,21 @@ namespace Statistics2026.Utilities
         public string ProviderType { get; set; } = string.Empty;
         static public ConcurrentDictionary<string, (int providerId, List<SQLCmdDef> sqlCmds)> sProviderCache = [];
 
-        public string key( string region ) { return $"{ProviderName.Trim()}_{LogoPath.Trim()}"; }
+        public string key() { return $"{ProviderName.Trim()}_{LogoPath.Trim()}"; }
 
         static public void ClearCache()
         {
             sProviderCache.Clear();
         }
 
-        public (int providerId, List<SQLCmdDef> sqlCmds) Convert( string region )
+        public (int providerId, List<SQLCmdDef> sqlCmds) GetProvidersAndSqlForProviders( string region )
         {
             if( ProviderId < 0 )
             {
                 return (-1, []);
             }
 
-            var key = this.key( region );
+            var key = this.key();
             if( sProviderCache.TryGetValue( key, out var retVal ) )
             {
                 return (retVal.providerId, []);
