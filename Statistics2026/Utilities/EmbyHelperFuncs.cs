@@ -237,9 +237,36 @@ namespace Statistics2026.Utilities
             return boxSets;
         }
 
-        public static List<Series> GetAllSeries( User? user, ILibraryManager libManager )
+        public static List<Episode> GetAllEpisodesForSeries( User? user, ILibraryManager libManager, Series series )
+        {
+            var query = new InternalItemsQuery( user )
+            {
+                IncludeItemTypes = new[] { typeof( Episode ).Name },
+                Recursive = true,
+                IsVirtualItem = false,
+                Parent = series
+            };
+
+            var episodes = libManager.GetItemList( query ).OfType<Episode>().ToList();
+            return episodes;
+        }
+
+        public static List<Series> GetAllSeries( User? user, ILibraryManager libManager, bool includeEmptySeries )
         {
             var series = GetLibraryItems<Series>( user, libManager );
+            if( !includeEmptySeries )
+                return series;
+
+
+            series = series.Where( series =>
+            {
+                var episodes = GetAllEpisodesForSeries( user, libManager, series );
+                return ( episodes.Count() != 0 );
+            } ).ToList();
+
+            if( series == null )
+                return [];
+
             return series;
         }
 
