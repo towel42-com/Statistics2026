@@ -16,6 +16,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
@@ -109,7 +110,8 @@ namespace Statistics2026.Data
                 orderBy.Add( "EpisodeNum ASC" );
             }
             var groupByClauses = new List<string>() { "Missing.Title" };
-            return SQLCmdDef.CreateCmd( from, columns, joins, whereClauses, groupByClauses, null );
+            var retVal = SQLCmdDef.CreateCmd( from, columns, joins, whereClauses, groupByClauses, null );
+            return retVal;
         }
 
         private string getMediaListResponseMissingCmd( EWhichMediaList whichMedia )
@@ -218,32 +220,22 @@ namespace Statistics2026.Data
             ExecuteCommand( new SQLCmdDef( sqlCmd ), statement =>
             {
                 var row = statement.Current;
-                var (response, streamingProviders) = MediaItemResponse.CreateFromStatementRow( row, episodes, isoCode, IsFilteredSeries, IsFilteredCollection, GetCollectionName, _embyInterfaces );
-                if( response != null )
+                var mediaInfoResponse = MediaItemResponse.CreateFromStatementRow( row, episodes, isoCode, IsFilteredSeries, IsFilteredCollection, GetCollectionName, _embyInterfaces, this );
+                if( mediaInfoResponse != null )
                 {
-                    if( streamingProviders != null )
-                    {
-                        var providerInfos = GetStreamingProviders( streamingProviders! );
-
-                        List<string> providerNames = [];
-                        foreach( var provider in ( providerInfos ?? [] ) )
-                        {
-                            providerNames.Add( provider.ProviderName );
-                        }
-                        response.StreamingProviders = new SortByText( providerNames.Join( ", " ) );
-                    }
-                    retVal.Add( response );
+                    retVal.Add( mediaInfoResponse );
                 }
+                
                 return true;
             } );
 
 
             retVal.Sort(
-                ( x, y ) =>
+                (x, y) =>
                 {
                     var lhs = x.DisplayName.SortBy;
-                    var rhs = y.DisplayName.SortBy;
-                    return lhs.CompareTo( rhs );
+        var rhs = y.DisplayName.SortBy;
+                    return lhs.CompareTo(rhs );
                 } );
             return retVal;
         }
