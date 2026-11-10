@@ -338,7 +338,7 @@ namespace Statistics2026.Data
                 {
                     var collectionId = row.GetString( col++ );
                     var collectionUrl = row.GetString( col++ );
-                    images.Add( ItemImageUrl.ItemUrl( collectionId, collectionUrl, name ) );
+                    images.Add( ItemImageUrl.ItemUrlFromItemId( collectionId, collectionUrl, name ) );
                 }
                 return true;
             }, false );
