@@ -1,5 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
 using ServiceStack;
@@ -67,6 +68,7 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
+
         public static string ItemUrlFromItemId( string itemId, string itemUrl, string text = "", string height = "105px", string target = "" )
         {
             if( ( Plugin.Instance == null ) || ( Plugin.Instance.ServerId == null ) )
@@ -77,13 +79,15 @@ namespace Statistics2026.Utilities
 
             var serverId = Plugin.Instance.ServerId;
             var imageUrl = $"/item?id={itemId}&serverId={serverId}";
-            return ItemUrlFromImageUrl( imageUrl, itemUrl, text, height);
+            var retVal = ItemUrlFromImageUrl( itemUrl, imageUrl, text, height );
+
+            return retVal;
         }
 
         public static string ItemUrlFromImageUrl( string imageUrl, string targetUrl, string text = "", string height = "105px", string target = "" )
         {
             string retVal = $"<a is=\"emby-linkbutton\" ";
-            if ( !target.IsEmpty() )
+            if( !target.IsEmpty() )
             {
                 retVal += "target=\"{target}\" ";
             }
