@@ -188,18 +188,18 @@ namespace Statistics2026.Utilities
 
         static string? ServerCountryCode = null;
 
-        public static string GetServerCountryCode( IHttpClient httpClient )
+        public static string GetServerCountryCode( IHttpClient httpClient, CancellationToken? _cancellationToken = null )
         {
             if( ServerCountryCode != null )
                 return ServerCountryCode;
 
             RegionInfo currentRegion = RegionInfo.CurrentRegion;
             var defaultIsoCode = currentRegion.TwoLetterISORegionName;
-            var isoCode = HelperFuncs.GetServerCountryCodeAsync( httpClient, defaultIsoCode ).GetAwaiter().GetResult();
+            var isoCode = HelperFuncs.GetServerCountryCodeAsync( httpClient, defaultIsoCode, _cancellationToken ).GetAwaiter().GetResult();
             return isoCode;
         }
 
-        public static async Task<string> GetServerCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode = "US" )
+        public static async Task<string> GetServerCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode = "US", CancellationToken? _cancellationToken=null )
         {
             // Provide a default fallback region code in case the network request is rate-limited or fails
 
@@ -222,14 +222,7 @@ namespace Statistics2026.Utilities
                 };
 
                 var url = builder.Uri.ToString();
-                var options = new HttpRequestOptions
-                {
-                    Url = url,
-                    CancellationToken = CancellationToken.None,
-                    // Optional: Set cache timeout if you don't want to hit TMDB constantly
-                    CacheLength = System.TimeSpan.FromDays( 1 ),
-                    CacheMode = CacheMode.None
-                };
+                var options = getRequestOptions( url, _cancellationToken );
 
                 using( var response = await httpClient.Get( options ).ConfigureAwait( false ) )
                 {
@@ -488,6 +481,18 @@ namespace Statistics2026.Utilities
                 itemUrl = itemUrl.Replace( "<TARGET_TEXT>", itemText );
             }
             return (imageUrl, itemText, itemUrl);
+        }
+
+        public static HttpRequestOptions getRequestOptions( string url, CancellationToken? _cancellationToken )
+        {
+            var options = new HttpRequestOptions
+            {
+                Url = url,
+                CancellationToken = _cancellationToken ?? CancellationToken.None,
+                CacheLength = System.TimeSpan.FromDays( 30 ),
+                CacheMode = CacheMode.Unconditional
+            };
+            return options;
         }
     }
 }
