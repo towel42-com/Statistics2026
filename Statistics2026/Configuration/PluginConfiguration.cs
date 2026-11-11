@@ -43,6 +43,9 @@ namespace Statistics2026.Configuration
         public bool showUnknownDVProfiles { get; set; } = false;
         public bool showAllResolutions { get; set; } = false;
 
+        public bool alwaysShowJustWatch { get; set; } = true;
+        public int maxNumStreamingProviders { get; set; } = 3;
+
         public bool reportOnMissingSpecials { get; set; } = false;
         public string searchLocation { get; set; } = string.Empty;
         public int numDaysFutureForMissing { get; set; } = 0;
