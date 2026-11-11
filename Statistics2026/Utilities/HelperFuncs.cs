@@ -1,5 +1,5 @@
 ﻿#if DEBUG
-#define DEBUG_PLUGIN
+//#define DEBUG_PLUGIN
 //#define DEBUG_PLUGIN_ASYNC
 //#define DEBUG_DB
 #endif
@@ -32,7 +32,6 @@ namespace Statistics2026.Utilities
 {
     public static class HelperFuncs
     {
-
         public static void AttachDebugger()
         {
 #if DEBUG_PLUGIN
