@@ -174,7 +174,7 @@ namespace Statistics2026.Utilities
             };
             if( includeRunAll )
             {
-                tasks.Add( new TaskDef( $"Run All Tasks", "Run all the tasks for Statistical Analysis", typeof( RunAllTasksTask ) ) );
+                tasks.Add( new TaskDef( $"Run All Statistics 2026 Tasks", "Run all the tasks for Statistical Analysis", typeof( RunAllTasksTask ) ) );
             }
 
             return tasks;
