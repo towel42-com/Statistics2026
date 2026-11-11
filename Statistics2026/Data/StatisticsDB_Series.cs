@@ -85,7 +85,7 @@ namespace Statistics2026.Data
             Logger().Debug( $"Starting Series Analysis" );
 
             Progress?.Report( 0 );
-            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager() );
+            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
             Progress?.Report( 100 );
             if( seriesList == null )
                 return;

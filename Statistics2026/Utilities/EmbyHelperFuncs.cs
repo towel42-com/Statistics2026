@@ -257,7 +257,6 @@ namespace Statistics2026.Utilities
             if( !includeEmptySeries )
                 return series;
 
-
             series = series.Where( series =>
             {
                 var episodes = GetAllEpisodesForSeries( user, libManager, series );
