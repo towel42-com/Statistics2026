@@ -256,7 +256,7 @@ namespace Statistics2026.Api
             var html = HelperFuncs.addToHtml( depth++, "<ul>" );
             List<string> providerNames = [];
             int maxNumProviders = config?.maxNumStreamingProviders ?? 3;
-            for( int ii = 0; ii < maxNumProviders && ii < providerInfos.Count(); ++ii )
+            for( int ii = 0; ( ( maxNumProviders == -1 ) || ( ii < maxNumProviders ) ) && ii < providerInfos.Count(); ++ii )
             {
                 var provider = providerInfos[ ii ];
                 var providerUrl = provider.TargetUrl( retVal.DisplayName.SortBy, isoCode );
