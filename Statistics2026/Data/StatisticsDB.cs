@@ -259,12 +259,15 @@ namespace Statistics2026.Data
 
         public void CloseConnection()
         {
-            dbStatusMessage( "Cleaning up" );
-            if( Connection != null )
+            lock( _padlock )
             {
-                Connection.Close();
-                dbStatusMessage( "DB Connection Closed" );
-                Connection = null;
+                dbStatusMessage( "Cleaning up" );
+                if( Connection != null )
+                {
+                    Connection.Close();
+                    dbStatusMessage( "DB Connection Closed" );
+                    Connection = null;
+                }
             }
         }
 
