@@ -46,6 +46,15 @@ namespace Statistics2026.Data
             Progress?.Report( 0 );
             var existing = new ConcurrentDictionary<string, bool>();
             var sqlCmds = new List<SQLCmdDef>();
+            TmdbStreamingProvider justWatchProvider = new()
+            {
+                ProviderId = 0,
+                ProviderName = "JustWatch Store",
+                LogoPath = "/aaFIYn2NGPCo0rpLiWokbvNqNJd.png",
+                DisplayPriority = -1,
+                ProviderType = string.Empty
+            };
+            sqlCmds.AddRange( justWatchProvider.GetAddProviderCmds() );
 
             using( var timer = new AutoTimer( $"    Analyze Streaming Providers - Getting Commands", Logger() ) )
             {
@@ -172,9 +181,16 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public List<StreamingProvider>? GetStreamingProviders( List<int> ids )
+        public List<StreamingProvider> GetStreamingProviders( List<int> ids, bool forceIncludeJustWatch )
         {
             CheckIsValid( ECheckLevel.eReport );
+
+            if( forceIncludeJustWatch )
+            {
+                ids.Insert( 0, 0 );
+            }
+
+            ids = ids.Distinct().ToList();
 
             var cmd = SQLCmdDef.CreateSQLCmdDef( "SELECT ProviderId, Name, LogoPath, DisplayPriority, UrlTemplate FROM StreamingProviders WHERE ProviderId IN (<KEYLIST>) ORDER BY DisplayPriority ASC", "<KEYLIST>", ids.ConvertAll( x => (object)x ) );
             List<StreamingProvider> retVal = [];
@@ -201,8 +217,7 @@ namespace Statistics2026.Data
                 return true;
             } );
 
-            if( retVal.Count() == 0 )
-                return null;
+            retVal = retVal.OrderBy( provider => provider.DisplayPriority ).ToList();
             return retVal;
         }
     }
