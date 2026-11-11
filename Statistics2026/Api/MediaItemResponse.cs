@@ -262,6 +262,7 @@ namespace Statistics2026.Api
                 html += HelperFuncs.addToHtml( depth++, "<li>" );
                 html += HelperFuncs.addToHtml( depth, $"<span>{itemUrl}</span>" );
                 html += HelperFuncs.addToHtml( --depth, "</li>" );
+                break;
             }
             html += HelperFuncs.addToHtml( --depth, "</ul>" );
 
