@@ -30,6 +30,8 @@
                 view.querySelector("#resetDBState").checked = config.resetDBState;
                 view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
                 view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
+                view.querySelector("#alwaysShowJustWatch").checked = config.alwaysShowJustWatch;
+                view.querySelector("#maxNumStreamingProviders").value = config.maxNumStreamingProviders;
 
                 const collectionFilters = config.CollectionNamesToIgnoreFromMissingEpisodes || [];
                 view.querySelector("#collectionFilterList").value = collectionFilters.join('\n');
@@ -270,6 +272,27 @@
                 }
             );
 
+            view.querySelector("#alwaysShowJustWatch").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.alwaysShowJustWatch = view.querySelector("#alwaysShowJustWatch").checked;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
+            view.querySelector("#maxNumStreamingProviders").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        const parsed = parseInt(view.querySelector("#maxNumStreamingProviders").value);
+                        const value = Number.isNaN(parsed) ? 3 : parsed;
+
+                        config.maxNumStreamingProviders = value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
             view.querySelector("#showDebugInfo").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -291,7 +314,10 @@
             view.querySelector("#numMostActive").addEventListener("input",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.numMostActiveUsers = parseInt(view.querySelector("#numMostActive").value) || 5;
+                        const parsed = parseInt(view.querySelector("#numMostActive").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.numMostActiveUsers = value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
@@ -318,7 +344,10 @@
             view.querySelector("#numWatchedToReport").addEventListener("input",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.numWatchedToReport = parseInt(view.querySelector("#numWatchedToReport").value) || 5;
+                        const parsed = parseInt(view.querySelector("#numWatchedToReport").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.numWatchedToReport = value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
@@ -327,7 +356,10 @@
             view.querySelector("#numTiedToReport").addEventListener("input",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.numTiedToReport = parseInt(view.querySelector("#numTiedToReport").value) || 5;
+                        const parsed = parseInt(view.querySelector("#numTiedToReport").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.numTiedToReport = value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
@@ -393,6 +425,16 @@
             view.querySelector("#reportOnMissingSpecialsHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Report on Missing Specials", "When analyzing missing episodes, check for episodes that are considered special (Season 0)");
+                });
+
+            view.querySelector("#alwaysShowJustWatchHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Always Show Just Watch", "When listing media streaming services always show a link for the Just Watch website");
+                });
+
+            view.querySelector("#maxNumStreamingProvidersHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Streaming Providers", "How many Streaming Providers to show when listing media");
                 });
 
             view.querySelector("#showDebugInfoHelp").addEventListener("click",

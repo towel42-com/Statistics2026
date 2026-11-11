@@ -49,6 +49,20 @@
                 </label>
             </div>
 
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="alwaysShowJustWatch" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Always show JustWatch as a Streaming Provider?</span>
+                    <i class="md-icon" id="alwaysShowJustWatchHelp">info</i>
+                </label>
+
+            </div>
+            <div class="inputContainer">
+                How many Streaming Providers to Show (-1 for all):
+                <i class="md-icon" id="maxNumStreamingProvidersHelp">info</i>
+                <input type="number" id="maxNumStreamingProviders" min="-1" max="10" placeholder="# of Streaming Providers" title="Number of Streaming Providers" />
+            </div>
+
             <div class="sectionTitle" style="margin-top: 2em; margin-bottom: 0.5em;">Series Filter</div>
             <p class="fieldDescription" style="margin-top: 0; margin-bottom: 1.5em;">
                 Set the seasons to track missing episodes.  Uncheck to no longer track.  Set the minimum and/or maximum season to track.
