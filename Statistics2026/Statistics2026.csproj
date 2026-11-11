@@ -102,7 +102,7 @@
 		<Compile Include="$(SolutionDir)\TimeZoneInfo\TimeZoneConverter\src\TimeZoneConverter\**\*.cs">
 			<Link>TimeZoneInfo\TimeZoneConverter\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</Compile>
-		<EmbeddedResource Include="$(SolutionDir)\TimeZoneInfo\TimeZoneConverter\src\TimeZoneConverter\Data\TimeZoneData.zip" >
+		<EmbeddedResource Include="$(SolutionDir)\TimeZoneInfo\TimeZoneConverter\src\TimeZoneConverter\Data\TimeZoneData.zip">
 			<LogicalName>TimeZoneConverter.Data.TimeZoneData.zip</LogicalName>
 			<Link>TimeZoneInfo\TimeZoneNames\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</EmbeddedResource>
@@ -112,6 +112,14 @@
 		<!-- CS0122: Inaccessible protection level -->
 		<!-- CS0433: Type exists in both assemblies/files -->
 		<NoWarn>$(NoWarn);CS0122;CS0433</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
+	  <DebugType>embedded</DebugType>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">
+	  <DebugType>embedded</DebugType>
 	</PropertyGroup>
 
 	<ItemGroup>
