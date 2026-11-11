@@ -127,8 +127,17 @@ namespace Statistics2026.Api
             return retVal;
         }
 
-        private static MediaItemResponse? SetMissingData( MediaItemResponse retVal, DateTimeOffset? premiereDate, string posterPath, bool isEpisode, int seasonNum, int episodeNum, List<string> parentNames, Func<string, int, bool> isSeriesFiltered, Func<string, bool> isCollectionFiltered, Func<string, SortByText?> getCollectionName )
+        private static MediaItemResponse? SetMissingData( MediaItemResponse retVal, IResultSet row, ref int col, DateTimeOffset? premiereDate, bool isEpisode, Func<string, int, bool> isSeriesFiltered, Func<string, bool> isCollectionFiltered, Func<string, SortByText?> getCollectionName )
         {
+            var parentInfo = row.GetString( col++ );
+            var tmdbPosterPath = row.GetString( col++ ); // blank for onServer 
+            var seasonNum = row.GetInt( col++ );
+            var episodeNum = row.GetInt( col++ );
+            var parentId = row.GetString( col++ );  // blank for onServer
+
+            var parentNames = new List<string>();
+            retVal.setParentInfo( parentInfo, ref parentNames );
+
             if( isEpisode )
             {
                 if( isSeriesFiltered( retVal.ParentId, seasonNum ) )
@@ -149,13 +158,10 @@ namespace Statistics2026.Api
 
 
             var futureDate = InvalidDateForMissingAnalysis( premiereDate, true );
-            if( posterPath != null && !futureDate )
+            if( !tmdbPosterPath.IsNullOrEmpty() )
             {
-                if( !posterPath.StartsWith( "/" ) )
-                    posterPath = "/" + posterPath;
-
-                retVal.ItemUrl = "https://image.tmdb.org/t/p/w185" + posterPath;
-                retVal.DisplayName.Text = $"<img loading=\"lazy\" src=\"{retVal.ItemUrl}\" height=\"105px\"/>{retVal.DisplayName.SortBy}";
+                var tmp = string.Empty;
+                (retVal.ItemUrl, retVal.DisplayName.Text, tmp) = HelperFuncs.GetTMDBUrl( tmdbPosterPath, retVal.DisplayName.SortBy );
             }
 
             var searchKey = retVal.DisplayName.SortBy;
@@ -226,43 +232,45 @@ namespace Statistics2026.Api
             return retVal;
         }
 
-        private static MediaItemResponse? AddStreamingProviders( MediaItemResponse retVal, string isoCode, List<int>? streamingProviders, Statistics2026DB db )
+        private static MediaItemResponse? AddStreamingProviders( MediaItemResponse retVal, string isoCode, string streamingProvidersString, EmbyInterfaces embyInterfaces, Statistics2026DB db )
         {
-            if( streamingProviders == null )
-                return retVal;
+            List<int>? streamingProviders = null;
 
-            var providerInfos = db.GetStreamingProviders( streamingProviders! );
-            if( providerInfos == null )
-                providerInfos = [];
-
-            providerInfos.Insert( 0,
-                new StreamingProvider()
+            var allStreamingProviders = embyInterfaces.JsonSerializer().DeserializeFromString<Dictionary<string, List<int>>>( streamingProvidersString );
+            if( allStreamingProviders != null )
+            {
+                if( allStreamingProviders.TryGetValue( isoCode, out var streamingProvidersList ) )
                 {
-                    ProviderId = 0,
-                    ProviderName = "Just Watch",
-                    LogoPath = string.Empty,
-                    DisplayPriority = -1,
-                    UrlTemplate = "https://justwatch.com/{isoCode}/search?q={searchInfo}"
+                    streamingProviders = streamingProvidersList;
                 }
-            );
+            }
+
+            if( streamingProviders == null )
+                streamingProviders = [];
+
+            PluginConfiguration? config = Plugin.Instance?.Configuration ?? null;
+
+            var providerInfos = db.GetStreamingProviders( streamingProviders, ( config?.alwaysShowJustWatch ?? true ) );
 
             var depth = 0;
             var html = HelperFuncs.addToHtml( depth++, "<ul>" );
             List<string> providerNames = [];
-            foreach( var provider in providerInfos )
+            int maxNumProviders = config?.maxNumStreamingProviders ?? 3;
+            for( int ii = 0; ii < maxNumProviders && ii < providerInfos.Count(); ++ii )
             {
+                var provider = providerInfos[ ii ];
+                var providerUrl = provider.TargetUrl( retVal.DisplayName.SortBy, isoCode );
+
                 providerNames.Add( provider.ProviderName );
-                var imageUrl = provider.ImageUrl();
-                var providerUrl = provider.StreamUrl( retVal.DisplayName.SortBy, isoCode );
 
-                //var itemUrl = ItemImageUrl.ItemUrlFromUrl( imageUrl, providerUrl, provider.ProviderName, target: "_blank" );
-
-                var itemUrl = $"<a is=\"emby-linkbutton\" target=\"_blank\" href=\"{providerUrl}\">{provider.ProviderName}</a>";
-
+                var htmlTemplate =
+                    "<a is=\"emby-linkbutton\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"<TARGET_URL>\" class=\"emby-button emby-button-focusscale\">" +
+                    "   <TARGET_TEXT>" +
+                    "</a>";
+                var (imageUrl, itemText, itemUrl) = provider.ImageUrl( targetUrl: providerUrl, targetHtml: htmlTemplate, imageHeight: "45px" );
                 html += HelperFuncs.addToHtml( depth++, "<li>" );
-                html += HelperFuncs.addToHtml( depth, $"<span>{itemUrl}</span>" );
+                html += HelperFuncs.addToHtml( depth, itemUrl );
                 html += HelperFuncs.addToHtml( --depth, "</li>" );
-                break;
             }
             html += HelperFuncs.addToHtml( --depth, "</ul>" );
 
@@ -284,28 +292,12 @@ namespace Statistics2026.Api
             var studioNames = HelperFuncs.JsonToStringArray( row.GetString( col++ ) ).Join( ", " );
             var streamingProvidersString = row.GetString( col++ );
 
-            List<int>? streamingProviders = null;
-
-            var allStreamingProviders = embyInterfaces.JsonSerializer().DeserializeFromString<Dictionary<string, List<int>>>( streamingProvidersString );
-            if( allStreamingProviders != null )
-            {
-                if( allStreamingProviders.TryGetValue( isoCode, out var streamingProvidersList ) )
-                {
-                    streamingProviders = streamingProvidersList;
-                }
-            }
-
             var resolutionDetail = row.GetString( col++ ); // blank for missing
             var codec = row.GetString( col++ ); // blank for missing
             var dolbyVisionProfile = row.GetString( col++ ); // blank for missing
             var serverLocation = row.GetString( col++ ); // blank for missing
             var itemId = row.GetString( col++ ); // blank for missing
             var itemImageUrl = row.GetString( col++ ); // blank for missing
-            var parentInfo = row.GetString( col++ );
-            var posterPath = row.GetString( col++ ); // blank for onServer 
-            var seasonNum = row.GetInt( col++ );
-            var episodeNum = row.GetInt( col++ );
-            var parentId = row.GetString( col++ );  // blank for onServer
 
             var retVal = new MediaItemResponse();
             retVal.DisplayName = new SortByText( title );
@@ -321,17 +313,15 @@ namespace Statistics2026.Api
             retVal.ItemId = itemId;
             if( itemId != null && !itemId.IsEmpty() )
                 retVal.ItemUrl = ItemImageUrl.ItemUrlFromItemId( itemId, itemImageUrl, title );
-            var parentNames = new List<string>();
-            retVal.setParentInfo( parentInfo, ref parentNames );
 
             if( isMissing )
             {
-                retVal = SetMissingData( retVal, premiereDate, posterPath, isEpisode, seasonNum, episodeNum, parentNames, isSeriesFiltered, isCollectionFiltered, getCollectionName );
+                retVal = SetMissingData( retVal, row, ref col, premiereDate, isEpisode, isSeriesFiltered, isCollectionFiltered, getCollectionName );
                 if( retVal == null )
                     return null;
             }
 
-            retVal = AddStreamingProviders( retVal, isoCode, streamingProviders, db );
+            retVal = AddStreamingProviders( retVal, isoCode, streamingProvidersString, embyInterfaces, db );
 
             return retVal;
         }
