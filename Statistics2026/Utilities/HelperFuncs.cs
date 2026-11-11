@@ -1,6 +1,6 @@
 ﻿#if DEBUG
-//#define DEBUG_PLUGIN
-//#define DEBUG_PLUGIN_ASYNC
+#define DEBUG_PLUGIN
+#define DEBUG_PLUGIN_ASYNC
 //#define DEBUG_DB
 #endif
 
@@ -25,6 +25,7 @@ using System.Runtime.Serialization;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Web;
+using System.Xml;
 using TimeZoneNames;
 using static Statistics2026.Utilities.StatGen;
 
@@ -266,12 +267,12 @@ namespace Statistics2026.Utilities
 
         static private readonly Dictionary<int, string> ProviderTemplates = new()
         {
-            {  0, "https://justwatch.com/{isoCode}/search?q={encodedTitle}" },
+            {  0, "https://justwatch.com/{isoCode}/search?q={searchInfo}" },
             {  1, "https://vudu.com" },
-            {  2, "https://tv.apple.com" },
+            {  2, "https://tv.apple.com/{isoCode}/search?term={searchInfo}" },
             {  3, "https://tv.google" },
             {  7, "https://viki.com" },
-            {  8, "https://netflix.com" },
+            {  8, "https://netflix.com/browse?q={searchInfo}" },
             {  9, "https://www.amazon.com/gp/video/storefront?k={searchInfo}" },
             { 10, "https://www.amazon.com/gp/video/storefront?k={searchInfo}" },
             { 11, "https://mubi.com" },
@@ -291,7 +292,7 @@ namespace Statistics2026.Utilities
             { 124, "https://crave.ca" },
             { 130, "https://sky.com" },
             { 155, "https://cineplex.com" },
-            { 175, "https://netflix.com" },
+            { 175, "https://netflix.com/browse?q={searchInfo}" },
             { 177, "https://pantaflix.com" },
             { 182, "https://hollywoodsuite.ca" },
             { 190, "https://curiositystream.com/search" },
@@ -315,7 +316,7 @@ namespace Statistics2026.Utilities
             { 329, "https://www.jiocinema.com/search" },
             { 337, "https://disneyplus.com" },
             { 341, "https://zee5.com" },
-            { 350, "https://tv.apple.com" },
+            { 350, "https://tv.apple.com/{isoCode}/search?term={searchInfo}" },
             { 352, "https://docplay.com" },
             { 358, "https://www.dailymotion.com/search" },
             { 384, "https://www.hbomax.com/search?q={searchInfo}" },
@@ -443,7 +444,7 @@ namespace Statistics2026.Utilities
             return $"{Math.Sign( bytes ) * num} {suffixes[ place ]}";
         }
 
-        public static SemaphoreSlim CreateSemaphoreSlim( bool forceDebug = false)
+        public static SemaphoreSlim CreateSemaphoreSlim( bool forceDebug = false )
         {
             int numThreads = forceDebug ? 1 : 10;
 #if DEBUG_PLUGIN_ASYNC
@@ -451,6 +452,42 @@ namespace Statistics2026.Utilities
 #endif
 
             return new SemaphoreSlim( numThreads, numThreads );
+        }
+
+        public static (string imageUrl, string itemText, string itemUrl) GetTMDBUrl( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize="original", string? imageHeight="105px", string? imageWidth=null )
+        {
+            string imageUrl = string.Empty;
+            if( !posterPath.IsNullOrEmpty() && posterPath != "/" )
+            {
+                if( !posterPath.StartsWith( "/" ) )
+                    posterPath = "/" + posterPath;
+
+                imageUrl = $"https://image.tmdb.org/t/p/{posterSize}" + posterPath;
+            }
+            string itemText = string.Empty;
+            if( !imageUrl.IsNullOrEmpty() )
+            {
+                itemText = $"<img loading=\"lazy\" src=\"{imageUrl}\" ";
+                if( imageHeight != null )
+                {
+                    itemText += $"height=\"{imageHeight}\" ";
+                }
+                if( imageWidth != null )
+                {
+                    itemText += "width=\"{imageWidth}\" ";
+                }
+                itemText += "/>";
+            }
+            itemText += text;
+
+            string itemUrl = string.Empty;
+            if ( targetInfo != null )
+            {
+                itemUrl = targetInfo.Value.targetHtml;
+                itemUrl = itemUrl.Replace( "<TARGET_URL>", targetInfo.Value.targetUrl );
+                itemUrl = itemUrl.Replace( "<TARGET_TEXT>", itemText );
+            }
+            return (imageUrl, itemText, itemUrl);
         }
     }
 }
