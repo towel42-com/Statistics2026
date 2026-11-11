@@ -26,6 +26,8 @@ namespace Statistics2026.Data
         public void SetDatabase( Statistics2026DB db )
         {
             _db = db ?? throw new ArgumentNullException( "db is null." );
+            if ( !_db.HasConnection() )
+                throw new ArgumentNullException( "db has no connection." );
         }
 
         private void ConstructTables()

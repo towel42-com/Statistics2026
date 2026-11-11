@@ -58,12 +58,12 @@ namespace Statistics2026.Data
             lock( _padlock )
             {
                 _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
-                Plugin.Instance?._tableDefs.SetDatabase( this );
 #if DEBUG_DB
                 _DBConnLogger = embyInterfaces.LogManager().GetLogger( "Statistics2026 - DBMonitor" );
 #endif
                 dbStatusMessage( "Creating Database", true );
                 CreateConnection();
+                Plugin.Instance?._tableDefs.SetDatabase( this );
                 dbStatusMessage( "Finished Creating Database" );
                 ComputeDBState();
             }
@@ -98,7 +98,7 @@ namespace Statistics2026.Data
 
         public TableDefs TableDefs()
         {
-            if ( ( Plugin.Instance?._tableDefs ?? null ) == null )
+            if( ( Plugin.Instance?._tableDefs ?? null ) == null )
                 throw new ArgumentNullException( "TableDefs is null" );
             return Plugin.Instance!._tableDefs;
         }
@@ -264,6 +264,7 @@ namespace Statistics2026.Data
             {
                 Connection.Close();
                 dbStatusMessage( "DB Connection Closed" );
+                Connection = null;
             }
         }
 
@@ -588,6 +589,11 @@ namespace Statistics2026.Data
                 CancellationToken?.ThrowIfCancellationRequested();
                 Logger().Debug( $"Finished Series Analysis" );
             }
+        }
+
+        public bool HasConnection()
+        {
+            return Connection != null;
         }
     }
 }
