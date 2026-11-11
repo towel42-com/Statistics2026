@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         public enum EAction
         {
@@ -22,7 +22,8 @@ namespace Statistics2026.Data
             SeriesAnalysis,
             UserAnalysis,
             UserWatchDataAnalysis,
-            LastMediaOrUserAdded
+            LastMediaOrUserAdded,
+            StreamingProviders
         }
 
         public (DateTimeOffset? when, long ms) GetLastUpdated( EAction action )
@@ -45,7 +46,7 @@ namespace Statistics2026.Data
 
         public string GetLastRunInfo( string actionString, ref bool ok )
         {
-            if( Enum.TryParse( actionString, true, out StatisticsDB.EAction whichRunEnum ) )
+            if( Enum.TryParse( actionString, true, out Statistics2026DB.EAction whichRunEnum ) )
             {
                 ok = true;
                 return GetLastRunInfo( whichRunEnum );
@@ -67,10 +68,10 @@ namespace Statistics2026.Data
 
             var depth = 0;
 
-            var systemHtml = EmbyHelperFuncs.addToHtml( depth++, "<ul>" );
-            systemHtml += EmbyHelperFuncs.addToHtml( depth, $"<li>Version: {version}</li>" );
-            systemHtml += EmbyHelperFuncs.addToHtml( depth, $"<li>Build Date: {buildDate}</li>" );
-            systemHtml += EmbyHelperFuncs.addToHtml( --depth, "</ul>" );
+            var systemHtml = HelperFuncs.addToHtml( depth++, "<ul>" );
+            systemHtml += HelperFuncs.addToHtml( depth, $"<li>Version: {version}</li>" );
+            systemHtml += HelperFuncs.addToHtml( depth, $"<li>Build Date: {buildDate}</li>" );
+            systemHtml += HelperFuncs.addToHtml( --depth, "</ul>" );
 
             retVal.html = systemHtml + retVal.html;
 
@@ -90,7 +91,7 @@ namespace Statistics2026.Data
                 }
             }
 
-            retVal.html += EmbyHelperFuncs.MakeTableHtml( "Database State:", dbStates );
+            retVal.html += HelperFuncs.MakeTableHtml( "Database State:", dbStates );
 
             retVal.html = retVal.html.Replace( "</br>", "" );
             return retVal;
@@ -111,6 +112,7 @@ namespace Statistics2026.Data
                         EAction.UserWatchDataAnalysis.ToString(),
                         EAction.CollectionsAnalysis.ToString(),
                         EAction.SeriesAnalysis.ToString(),
+                        EAction.StreamingProviders.ToString(),
                         EAction.MissingEpisodesAnalysis.ToString(),
                         EAction.MissingMoviesAnalysis.ToString(),
                         EAction.LastMediaOrUserAdded.ToString(),
@@ -127,9 +129,9 @@ namespace Statistics2026.Data
                 else
                     errors.Add( currData );
             }
-            var resultText = EmbyHelperFuncs.MakeTableHtml( "Analsys Last Run:", results );
+            var resultText = HelperFuncs.MakeTableHtml( "Analsys Last Run:", results );
 
-            var errorText = EmbyHelperFuncs.MakeTableHtml( "Error Getting Last Run Information:", errors );
+            var errorText = HelperFuncs.MakeTableHtml( "Error Getting Last Run Information:", errors );
             return new HtmlJsonResponse() { html = resultText, error = errorText };
         }
 
@@ -242,7 +244,9 @@ namespace Statistics2026.Data
                 ", @BuildDate\n" +
                 ", @Version\n" +
                 ")\n" +
-                "ON CONFLICT(Action) DO UPDATE SET \n" +
+                "ON CONFLICT(Action) " +
+                "DO UPDATE " +
+                "SET \n" +
                 "  LastUpdated = @LastUpdated\n" +
                 ", RunTimeMS = @RunTimeMS\n" +
                 ", BuildDate = @BuildDate\n" +

@@ -1,5 +1,6 @@
 ﻿#if DEBUG
 #define DEBUG_PLUGIN
+#define DEBUG_PLUGIN_ASYNC
 //#define DEBUG_DB
 #endif
 using MediaBrowser.Controller.Dto;
@@ -24,42 +25,12 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
-using static Statistics2026.Data.StatisticsDB;
+using static Statistics2026.Data.Statistics2026DB;
 
 namespace Statistics2026.Utilities
 {
     public static class EmbyHelperFuncs
     {
-        public static void AttachDebugger()
-        {
-#if DEBUG_PLUGIN
-            // Check if a debugger is already attached
-            if( !Debugger.IsAttached )
-            {
-                // This forces the server startup thread to halt and pop up a
-                // "Choose Just-In-Time Debugger" window or wait for an attachment
-                Debugger.Launch();
-            }
-            else
-            {
-                // If already attached, instantly trigger a breakpoint break
-                Debugger.Break();
-            }
-#endif
-        }
-
-        public static void PreDebugRun( EmbyInterfaces embyInterfaces )
-        {
-#if DEBUG_PLUGIN
-            if( !Debugger.IsAttached )
-            {
-                AttachDebugger();
-            }
-
-            EmbyHelperFuncs.MoveMediaLocations( embyInterfaces ).GetAwaiter().GetResult();
-#endif
-        }
-
         public static async Task MoveMediaLocations( EmbyInterfaces embyInterfaces )
         {
 #if DEBUG_PLUGIN
@@ -266,9 +237,35 @@ namespace Statistics2026.Utilities
             return boxSets;
         }
 
-        public static List<Series> GetAllSeries( User? user, ILibraryManager libManager )
+        public static List<Episode> GetAllEpisodesForSeries( User? user, ILibraryManager libManager, Series series )
+        {
+            var query = new InternalItemsQuery( user )
+            {
+                IncludeItemTypes = new[] { typeof( Episode ).Name },
+                Recursive = true,
+                IsVirtualItem = false,
+                Parent = series
+            };
+
+            var episodes = libManager.GetItemList( query ).OfType<Episode>().ToList();
+            return episodes;
+        }
+
+        public static List<Series> GetAllSeries( User? user, ILibraryManager libManager, bool includeEmptySeries )
         {
             var series = GetLibraryItems<Series>( user, libManager );
+            if( !includeEmptySeries )
+                return series;
+
+            series = series.Where( series =>
+            {
+                var episodes = GetAllEpisodesForSeries( user, libManager, series );
+                return ( episodes.Count() != 0 );
+            } ).ToList();
+
+            if( series == null )
+                return [];
+
             return series;
         }
 
@@ -438,7 +435,7 @@ namespace Statistics2026.Utilities
         }
 
 
-        public static void UpdateLastAdded( EmbyInterfaces? embyInterfaces, StatisticsDB db )
+        public static void UpdateLastAdded( EmbyInterfaces? embyInterfaces, Statistics2026DB db )
         {
             var lastMediaAdded = EmbyHelperFuncs.GetLastMovieOrEpisodeAdded( embyInterfaces );
             DateTimeOffset? lastAdded = null;
@@ -456,7 +453,7 @@ namespace Statistics2026.Utilities
             }
             if( lastAdded != null && lastAdded != DateTimeOffset.MinValue )
             {
-                db.UpdateLastUpdated( StatisticsDB.EAction.LastMediaOrUserAdded, 0, lastAdded.Value );
+                db.UpdateLastUpdated( Statistics2026DB.EAction.LastMediaOrUserAdded, 0, lastAdded.Value );
             }
         }
 
@@ -521,7 +518,7 @@ namespace Statistics2026.Utilities
             return latestItem;
         }
 
-        public static (bool runFullAnalysis, bool runMissingAnalysis) AnalysisOutOfDate( EmbyInterfaces? embyInterfaces, StatisticsDB db )
+        public static (bool runFullAnalysis, bool runMissingAnalysis) AnalysisOutOfDate( EmbyInterfaces? embyInterfaces, Statistics2026DB db )
         {
             if( embyInterfaces == null )
                 return (false, false);
@@ -623,42 +620,6 @@ namespace Statistics2026.Utilities
             return (runFullAnalysis, runMissingAnalysis);
         }
 
-        public static string addToHtml( int depth, string _html )
-        {
-            if( _html.IsNullOrEmpty() )
-                return string.Empty;
-
-            var retVal = string.Empty;
-            if( depth > 0 )
-                retVal += new string( ' ', 4 * depth );
-            retVal += _html;
-            if( !retVal.EndsWith( "\n" ) )
-                retVal += "\n";
-            return retVal;
-        }
-
-        public static string MakeTableHtml( string title, List<string> values )
-        {
-            if( values.IsNullOrEmpty() )
-                return string.Empty;
-
-            var depth = 0;
-            var retVal = addToHtml( depth++, "</br>\n<div>" );
-            if( !title.IsEmpty() )
-            {
-                retVal += addToHtml( depth, $"<h3>{title}</h3>" );
-            }
-
-            retVal += addToHtml( depth++, "<ul>" );
-            foreach( var curr in values )
-            {
-                retVal += addToHtml( depth, $"<li>{curr}</li>" );
-            }
-            retVal += addToHtml( --depth, "</ul>" );
-            retVal += addToHtml( --depth, "</div>" );
-            return retVal;
-        }
-
         public static List<User> GetAllUsers( EmbyInterfaces? embyInterfaces, bool limitToRemoteAccess = true )
         {
             if( embyInterfaces == null )
@@ -675,23 +636,6 @@ namespace Statistics2026.Utilities
             retVal = retVal.Where( u => u.Name == "scott" ).ToList();
 #endif
             return retVal;
-        }
-
-        public static string PrettyPrintFileSize( this long bytes )
-        {
-            string[] suffixes = { "bytes", "Kb", "Mb", "Gb", "Tb", "Pb", "Eb" };
-
-            if( bytes == 0 )
-                return "0 B";
-
-            long absBytes = Math.Abs( bytes );
-            // Calculate the index in the suffixes array
-            int place = Convert.ToInt32( Math.Floor( Math.Log( absBytes, 1024 ) ) );
-            // Adjust the magnitude
-            double num = Math.Round( absBytes / Math.Pow( 1024, place ), 1 );
-
-            // Retain the original sign for negative byte configurations, if applicable
-            return $"{Math.Sign( bytes ) * num} {suffixes[ place ]}";
         }
     }
 }

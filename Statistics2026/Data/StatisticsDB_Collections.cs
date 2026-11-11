@@ -18,7 +18,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         public async Task AddAllCollectionsTaskImplAsync()
         {
@@ -338,7 +338,7 @@ namespace Statistics2026.Data
                 {
                     var collectionId = row.GetString( col++ );
                     var collectionUrl = row.GetString( col++ );
-                    images.Add( ItemImageUrl.ItemUrl( collectionId, collectionUrl, name ) );
+                    images.Add( ItemImageUrl.ItemUrlFromItemId( collectionId, collectionUrl, name ) );
                 }
                 return true;
             }, false );

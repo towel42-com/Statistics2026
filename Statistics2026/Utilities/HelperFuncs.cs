@@ -1,4 +1,10 @@
-﻿using MediaBrowser.Common.Net;
+﻿#if DEBUG
+#define DEBUG_PLUGIN
+//#define DEBUG_PLUGIN_ASYNC
+//#define DEBUG_DB
+#endif
+
+using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
@@ -26,6 +32,37 @@ namespace Statistics2026.Utilities
 {
     public static class HelperFuncs
     {
+
+        public static void AttachDebugger()
+        {
+#if DEBUG_PLUGIN
+            // Check if a debugger is already attached
+            if( !Debugger.IsAttached )
+            {
+                // This forces the server startup thread to halt and pop up a
+                // "Choose Just-In-Time Debugger" window or wait for an attachment
+                Debugger.Launch();
+            }
+            else
+            {
+                // If already attached, instantly trigger a breakpoint break
+                Debugger.Break();
+            }
+#endif
+        }
+
+        public static void PreDebugRun( EmbyInterfaces embyInterfaces )
+        {
+#if DEBUG_PLUGIN
+            if( !Debugger.IsAttached )
+            {
+                AttachDebugger();
+            }
+
+            EmbyHelperFuncs.MoveMediaLocations( embyInterfaces ).GetAwaiter().GetResult();
+#endif
+        }
+
         private static readonly string[] _datetimeFormats = new string[] {
             "THHmmssK",
             "THHmmK",
@@ -118,7 +155,7 @@ namespace Statistics2026.Utilities
             var dt = local ? dto.LocalDateTime : dto.UtcDateTime;
 
             var retVal = dt.ToShortDateString();
-            if ( !dateOnly )
+            if( !dateOnly )
                 retVal += " " + dt.ToString( "HH:mm" ) + $" {tzAbbreviation}";
             return retVal;
         }
@@ -150,7 +187,19 @@ namespace Statistics2026.Utilities
         }
 
         static string? ServerCountryCode = null;
-        public static async Task<string> GetServerCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode="US" )
+
+        public static string GetServerCountryCode( IHttpClient httpClient )
+        {
+            if( ServerCountryCode != null )
+                return ServerCountryCode;
+
+            RegionInfo currentRegion = RegionInfo.CurrentRegion;
+            var defaultIsoCode = currentRegion.TwoLetterISORegionName;
+            var isoCode = HelperFuncs.GetServerCountryCodeAsync( httpClient, defaultIsoCode ).GetAwaiter().GetResult();
+            return isoCode;
+        }
+
+        public static async Task<string> GetServerCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode = "US" )
         {
             // Provide a default fallback region code in case the network request is rate-limited or fails
 
@@ -201,6 +250,208 @@ namespace Statistics2026.Utilities
             }
 
             return ServerCountryCode;
+        }
+
+        public static string JoinClauses( List<string> clauses )
+        {
+            if( clauses.IsNullOrEmpty() )
+                return string.Empty;
+
+            for( var ii = 0; ii < clauses.Count; ++ii )
+            {
+                clauses[ ii ] = $"( {clauses[ ii ]} )";
+            }
+
+            return " WHERE " + string.Join( " AND ", clauses ) + " ";
+        }
+
+        static private readonly Dictionary<int, string> ProviderTemplates = new()
+        {
+            {  0, "https://justwatch.com/{isoCode}/search?q={encodedTitle}" },
+            {  1, "https://vudu.com" },
+            {  2, "https://tv.apple.com" },
+            {  3, "https://tv.google" },
+            {  7, "https://viki.com" },
+            {  8, "https://netflix.com" },
+            {  9, "https://www.amazon.com/gp/video/storefront?k={searchInfo}" },
+            { 10, "https://www.amazon.com/gp/video/storefront?k={searchInfo}" },
+            { 11, "https://mubi.com" },
+            { 15, "https://hulu.com" },
+            { 26, "https://tv.youtube.com" },
+            { 34, "https://mgmplus.com" },
+            { 35, "https://rakuten.tv" },
+            { 37, "https://paramountplus.com" },
+            { 43, "https://starz.com" },
+            { 68, "https://microsoft.com" },
+            { 73, "https://tubitv.com" },
+            { 76, "https://viaplay.com" },
+            { 84, "https://unext.jp" },
+            { 100, "https://bbc.co.uk" },
+            { 118, "https://www.hbomax.com/search?q={searchInfo}" },
+            { 119, "https://www.amazon.com/gp/video/storefront?k={searchInfo}" },
+            { 124, "https://crave.ca" },
+            { 130, "https://sky.com" },
+            { 155, "https://cineplex.com" },
+            { 175, "https://netflix.com" },
+            { 177, "https://pantaflix.com" },
+            { 182, "https://hollywoodsuite.ca" },
+            { 190, "https://curiositystream.com/search" },
+            { 192, "https://tv.youtube.com" },
+            { 200, "https://www.film1.nl/zoeken" },
+            { 207, "https://therokuchannel.roku.com/search" },
+            { 209, "https://britbox.com" },
+            { 210, "https://amcplus.com" },
+            { 212, "https://hoopladigital.com" },
+            { 215, "https://kanopy.com" },
+            { 232, "https://www.hbomax.com/search?q={searchInfo}" },
+            { 234, "https://hotstar.com" },
+            { 243, "https://vudu.com" },
+            { 257, "https://fubo.tv" },
+            { 258, "https://criterionchannel.com" },
+            { 268, "https://www.dazn.com/en-US/search" },
+            { 283, "https://crunchyroll.com" },
+            { 300, "https://pluto.tv/search/details/movies" },
+            { 309, "https://sunnxt.com" },
+            { 315, "https://hoichoi.tv" },
+            { 329, "https://www.jiocinema.com/search" },
+            { 337, "https://disneyplus.com" },
+            { 341, "https://zee5.com" },
+            { 350, "https://tv.apple.com" },
+            { 352, "https://docplay.com" },
+            { 358, "https://www.dailymotion.com/search" },
+            { 384, "https://www.hbomax.com/search?q={searchInfo}" },
+            { 386, "https://peacocktv.com" },
+            { 387, "https://peacocktv.com" },
+            { 393, "https://altt.co.in" },
+            { 396, "https://shoutfactorytv.com" },
+            { 424, "https://www.flixfling.com/search" },
+            { 429, "https://cineverse.com" },
+            { 430, "https://hiyahtv.com" },
+            { 432, "https://flixole.com" },
+            { 436, "https://fetchtv.com.au" },
+            { 444, "https://topic.com" },
+            { 445, "https://paramountplus.com" },
+            { 454, "https://stan.com.au" },
+            { 464, "https://kinonow.com" },
+            { 475, "https://docsville.com" },
+            { 521, "https://erosnow.com" },
+            { 531, "https://paramountplus.com" },
+            { 546, "https://wowpresentsplus.com" },
+            { 551, "https://magellantv.com" },
+            { 554, "https://broadpix.com" },
+            { 559, "https://filmzie.com/search" },
+            { 567, "https://truestory.film" },
+            { 569, "https://cultpix.com" },
+            { 606, "https://dekkoo.com" },
+            { 613, "https://redbox.com" },
+            { 632, "https://broadwayhd.com" },
+            { 633, "https://filmatique.com" },
+            { 634, "https://nightflightplus.com" },
+            { 677, "https://classixapp.com" },
+            { 692, "https://arrow-player.com" },
+            { 1773, "https://plex.tv" },
+            { 1794, "https://viendomovies.com" },
+            { 1796, "https://semillitas.tv" },
+            { 1853, "https://darkmatteritv.com" },
+            { 1960, "https://www.amazon.com/gp/video/storefront?k={searchInfo}" },
+            { 1962, "https://retrocrush.tv" },
+            { 1967, "https://midnightpulp.com" },
+            { 1973, "https://asiancrush.com" },
+            { 1985, "https://www.amazon.co.uk/gp/video/storefront?k={searchInfo}" },
+            { 2014, "https://cocoatv.com" },
+            { 2016, "https://reby.com" },
+            { 2065, "https://freemoviesplus.com" },
+            { 2186, "https://fandor.com" },
+            { 2187, "https://screambox.com" },
+            { 2188, "https://cinehouse.tv" },
+        };
+
+        public static string GetProviderSearchUrl( int providerId, string isoCode, string title )
+        {
+            string encodedTitle = System.Uri.EscapeDataString( title );
+
+            if( ProviderTemplates.TryGetValue( providerId, out var template ) )
+            {
+                return template.Replace( "{searchInfo}", encodedTitle ).Replace( "{isoCode}", isoCode );
+            }
+
+            encodedTitle = System.Uri.EscapeDataString( title );
+            return $"https://justwatch.com/{isoCode}/search?q={encodedTitle}";
+        }
+
+
+        public static string GetProviderTemplateUrl( int providerId )
+        {
+            if( ProviderTemplates.TryGetValue( providerId, out var template ) )
+            {
+                return template;
+            }
+
+            return "https://justwatch.com/{isoCode}/search?q={searchInfo}";
+        }
+
+        public static string addToHtml( int depth, string _html )
+        {
+            if( _html.IsNullOrEmpty() )
+                return string.Empty;
+
+            var retVal = string.Empty;
+            if( depth > 0 )
+                retVal += new string( ' ', 4 * depth );
+            retVal += _html;
+            if( !retVal.EndsWith( "\n" ) )
+                retVal += "\n";
+            return retVal;
+        }
+
+        public static string MakeTableHtml( string title, List<string> values )
+        {
+            if( values.IsNullOrEmpty() )
+                return string.Empty;
+
+            var depth = 0;
+            var retVal = addToHtml( depth++, "</br>\n<div>" );
+            if( !title.IsEmpty() )
+            {
+                retVal += addToHtml( depth, $"<h3>{title}</h3>" );
+            }
+
+            retVal += addToHtml( depth++, "<ul>" );
+            foreach( var curr in values )
+            {
+                retVal += addToHtml( depth, $"<li>{curr}</li>" );
+            }
+            retVal += addToHtml( --depth, "</ul>" );
+            retVal += addToHtml( --depth, "</div>" );
+            return retVal;
+        }
+
+
+        public static string PrettyPrintFileSize( this long bytes )
+        {
+            string[] suffixes = { "bytes", "Kb", "Mb", "Gb", "Tb", "Pb", "Eb" };
+
+            if( bytes == 0 )
+                return "0 B";
+
+            long absBytes = Math.Abs( bytes );
+            // Calculate the index in the suffixes array
+            int place = Convert.ToInt32( Math.Floor( Math.Log( absBytes, 1024 ) ) );
+            // Adjust the magnitude
+            double num = Math.Round( absBytes / Math.Pow( 1024, place ), 1 );
+
+            // Retain the original sign for negative byte configurations, if applicable
+            return $"{Math.Sign( bytes ) * num} {suffixes[ place ]}";
+        }
+
+        public static SemaphoreSlim CreateSemaphoreSlim( bool forceDebug = false)
+        {
+            int numThreads = forceDebug ? 1 : 10;
+#if DEBUG_PLUGIN_ASYNC
+            numThreads = 1;
+#endif
+
+            return new SemaphoreSlim( numThreads, numThreads );
         }
     }
 }

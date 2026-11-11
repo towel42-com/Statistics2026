@@ -34,7 +34,7 @@ namespace Statistics2026.Data
         eThrowOnFailure = 0x00010000,
     }
 
-    public sealed partial class StatisticsDB : IDisposable
+    public sealed partial class Statistics2026DB : IDisposable
     {
         public string ToString( ECheckLevel checkLevel )
         {

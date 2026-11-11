@@ -19,8 +19,9 @@ namespace Statistics2026.Utilities
     public class TaskDef
     {
         public TaskDef() { }
-        public TaskDef( string description, Type? typeOf )
+        public TaskDef( string name, string description, Type typeOf )
         {
+            Name = name;
             Description = description;
             TaskType = typeOf;
         }
@@ -39,6 +40,7 @@ namespace Statistics2026.Utilities
             }
         }
 
+        public string Name { get; private set; } = string.Empty;
         public string Description { get; private set; } = string.Empty;
         public Type? TaskType { get; private set; } = null;
         public TaskResult Result { get; set; } = EmptyTaskResult;
@@ -114,36 +116,65 @@ namespace Statistics2026.Utilities
             return false;
         }
 
-        public static TaskDef? GetTaskDef( Type taskType )
+        public static TaskDef? GetTaskDef( Type taskType, ref int pos )
         {
+            pos = -1;
             var tasks = GetKnownTasks( true );
-            foreach( var task in tasks )
+            for( int ii = 0; ii < tasks.Count(); ++ii )
             {
-                if( task == null )
-                    continue;
-
+                var task = tasks[ ii ];
                 if( task.TaskType == taskType )
+                {
+                    pos = ii;
                     return task;
+                }
             }
             return null;
         }
 
-        public static List<TaskDef?> GetKnownTasks( bool includeRunAll )
+        public static TaskDef? GetTaskDef( Type taskType )
         {
-            var tasks = new List<TaskDef?>
+            int pos = -1;
+            return GetTaskDef( taskType, ref pos );
+        }
+
+        public static string GetTaskName( Type taskType )
+        {
+            int pos = -1;
+            var task = GetTaskDef( taskType, ref pos );
+            if( task == null )
+                throw new Exception( $"Could not find task defintion for type '{taskType}'" );
+
+            if ( taskType != typeof( RunAllTasksTask ) )
+                return $"\u2022 {pos + 1} - {task.Name}";
+            return task.Name;
+        }
+
+        public static string GetTaskDescription( Type taskType )
+        {
+            var task = GetTaskDef( taskType );
+            if( task == null )
+                throw new Exception( $"Could not find task defintion for type '{taskType}'" );
+
+            return task.Description;
+        }
+
+        public static List<TaskDef> GetKnownTasks( bool includeRunAll )
+        {
+            var tasks = new List<TaskDef>
             {
-                new($"Analyzing Users", typeof(AnalyzeUsersTask)),
-                new($"Analyzing Media", typeof(AnalyzeMediaTask)),
-                new($"Analyzing Watched Media Data", typeof(AnalyzeWatchedMediaDataTask)),
-                new($"Analyzing Collections", typeof(AnalyzeCollectionsTask)),
-                new($"Analyzing Series", typeof(AnalyzeSeriesTask)),
-                new($"Analyzing Missing Episodes", typeof(AnalyzeMissingEpisodesTask)),
-                new($"Analyzing Missing Movies", typeof(AnalyzeMissingMoviesTask)),
+                new($"Analyze User Information", "Analyze the users on the server for use in the analysis.", typeof(AnalyzeUsersTask)),
+                new($"Analyze Media Information", "Analyze the video media on the server use in the analysis.", typeof(AnalyzeMediaTask)),
+                new($"Analyze User Watched Data Information", "Analyze the users watched/played information.", typeof(AnalyzeWatchedMediaDataTask)),
+                new($"Analyze Collection Information", "Analyze the library's collections.", typeof(AnalyzeCollectionsTask)),
+                new($"Analyzing Series Information", "Analyze the library's series.", typeof(AnalyzeSeriesTask)),
+                new($"Analyze Streaming Providers for Media", "Find streaming providers for the media in the library.", typeof(AnalyzeStreamingProvidersTask)),
+                new($"Analyze Missing Episodes", "Analyze the library for missing episodes from existing series.", typeof(AnalyzeMissingEpisodesTask)),
+                new($"Analyze Missing Movies", "Analyze the library for missing movies from existing collections.", typeof(AnalyzeMissingMoviesTask)),
             };
             if( includeRunAll )
             {
-                tasks.Add( new TaskDef( $"PostMediaScan", typeof( ItemAddedMonitorEntryPoint ) ) );
-                tasks.Add( new TaskDef( $"RunAll", typeof( RunAllTasksTask ) ) );
+                tasks.Add( new TaskDef( $"Run All Tasks", "Run all the tasks for Statistical Analysis", typeof( RunAllTasksTask ) ) );
             }
 
             return tasks;

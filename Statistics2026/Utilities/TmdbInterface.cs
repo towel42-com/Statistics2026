@@ -1,20 +1,33 @@
-﻿using MediaBrowser.Common.Net;
+﻿#if DEBUG
+#define DEBUG_PLUGIN
+//#define DEBUG_DB
+#endif
+
+global using AddStreamingProvidersInfo = (
+    System.Collections.Generic.Dictionary<string, System.Collections.Generic.HashSet<int>> allProviders,
+    System.Collections.Generic.List<Statistics2026.Utilities.SQLCmdDef> addProviderCmds
+    );
+using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
-using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
+using RestSharp;
 using ServiceStack;
 using ServiceStack.Text.Common;
+using Statistics2026.Data;
 using Statistics2026.Secrets;
+using Statistics2026.Utilities;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
@@ -22,7 +35,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
-using System.Collections.Concurrent;
+using System.Xml.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Utilities
 {
@@ -346,69 +360,69 @@ namespace Statistics2026.Utilities
             }
         }
 
-        private static readonly ConcurrentDictionary<string, TmdbStreamingProvidersResponse> _ProviderCache = new ConcurrentDictionary<string, TmdbStreamingProvidersResponse>();
+        private static readonly ConcurrentDictionary<string, string> _ProviderCache = new ConcurrentDictionary<string, string>();
 
-        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Video video, string language = "en-US" )
+        public async Task<AddStreamingProvidersInfo> GetStreamingProvidersAsync( ILogger logger, Video video, string language = "en-US" )
         {
             if( video == null )
-                return [];
-            if ( video is Movie )
-                return await GetStreamingServicesAsync( logger, (video as Movie)!, language );
+                return new AddStreamingProvidersInfo();
+            if( video is Movie )
+                return await GetStreamingProvidersAsync( logger, ( video as Movie )!, language ).ConfigureAwait( false );
             if( video is Episode )
-                return await GetStreamingServicesAsync( logger, ( video as Episode )!, language );
-            return [];
+                return await GetStreamingProvidersAsync( logger, ( video as Episode )!, language ).ConfigureAwait( false );
+            return new AddStreamingProvidersInfo();
         }
 
-        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Movie movie, string language = "en-US" )
+        public async Task<AddStreamingProvidersInfo> GetStreamingProvidersAsync( ILogger logger, Movie movie, string language = "en-US" )
         {
             if( !CheckIsValid() )
-                return [];
+                return new AddStreamingProvidersInfo();
 
             if( movie == null )
-                return [];
+                return new AddStreamingProvidersInfo();
 
             var dispName = MediaInfo.GetDisplayName( movie );
             var tmdbId = movie.GetProviderId( MetadataProviders.Tmdb );
 
-            return await GetStreamingServicesAsync( logger, tmdbId, false, dispName, language ).ConfigureAwait( false );
+            return await GetStreamingProvidersAsync( logger, tmdbId, false, dispName, language ).ConfigureAwait( false );
         }
 
-        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Episode? episode, string language = "en-US" )
+        public async Task<AddStreamingProvidersInfo> GetStreamingProvidersAsync( ILogger logger, Episode? episode, string language = "en-US" )
         {
             if( !CheckIsValid() )
-                return [];
+                return new AddStreamingProvidersInfo();
 
             if( episode == null || episode.Series == null )
-                return [];
+                return new AddStreamingProvidersInfo();
 
-            return await GetStreamingServicesAsync( logger, episode.Series, language ).ConfigureAwait( false );
+            return await GetStreamingProvidersAsync( logger, episode.Series, language ).ConfigureAwait( false );
         }
 
-        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, Series? series, string language = "en-US" )
+        public async Task<AddStreamingProvidersInfo> GetStreamingProvidersAsync( ILogger logger, Series? series, string language = "en-US" )
         {
             if( !CheckIsValid() )
-                return [];
+                return new AddStreamingProvidersInfo();
 
             if( series == null )
-                return [];
+                return new AddStreamingProvidersInfo();
 
             var dispName = series.Name;
             var tmdbId = series.GetProviderId( MetadataProviders.Tmdb );
 
-            return await GetStreamingServicesAsync( logger, tmdbId, true, dispName, language );
+            return await GetStreamingProvidersAsync( logger, tmdbId, true, dispName, language ).ConfigureAwait( false );
         }
 
-        public async Task<List<TmdbStreamingProvider>> GetStreamingServicesAsync( ILogger logger, string? tmdbId, bool isEpisode, string dispName, string language )
+        public async Task<AddStreamingProvidersInfo> GetStreamingProvidersAsync( ILogger logger, string? tmdbId, bool isEpisode, string dispName, string language = "en-US" )
         {
             if( !CheckIsValid() )
-                return [];
+                return new AddStreamingProvidersInfo();
 
             if( ( tmdbId == null ) || tmdbId.IsEmpty() || !long.TryParse( tmdbId, out _ ) )
             {
-                return [];
+                return new AddStreamingProvidersInfo();
             }
 
-            if( !_ProviderCache.TryGetValue( tmdbId, out var providerResponse ) )
+            if( !_ProviderCache.TryGetValue( tmdbId, out var providerResponseText ) )
             {
                 //string url = https://themoviedb.org/3/movie|tv|series/{tmdbid}/watch/providers?api_key={kApiKeyV3}&language={language}";
                 var videoType = isEpisode ? "tv" : "movie";
@@ -441,42 +455,34 @@ namespace Statistics2026.Utilities
                         _cancellationToken?.ThrowIfCancellationRequested();
                         var text = HelperFuncs.StreamToString( response );
 
-                        providerResponse = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbStreamingProvidersResponse>( text );
-                        if( providerResponse == null )
-                            return [];
-
-                        providerResponse.UpdateProviderTypes();
-                        _ProviderCache[ tmdbId ] = providerResponse;
+                        providerResponseText = text;
+                        _ProviderCache[ tmdbId ] = providerResponseText;
                     }
                 }
                 catch( Exception )
                 {
                     logger.Error( $"Could not get streaming services for video: '{dispName} - {tmdbId} - {url}'" );
-                    return [];
+                    return new AddStreamingProvidersInfo();
                 }
             }
+
+            if( providerResponseText == null )
+                return new AddStreamingProvidersInfo();
+
+            var providerResponse = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbStreamingProviders>( providerResponseText );
             if( providerResponse == null )
-                return [];
+                return new AddStreamingProvidersInfo();
 
-            RegionInfo currentRegion = RegionInfo.CurrentRegion;
-            var defaultIsoCode = currentRegion.TwoLetterISORegionName;
-            var isoCode = await HelperFuncs.GetServerCountryCodeAsync( _embyInterfaces.HttpClient(), defaultIsoCode );
-
-            if( providerResponse.Results.TryGetValue( isoCode, out var region ) )
-            {
-                return region.GetAllProviders();
-            }
-
-            return [];
+            var retVal = providerResponse.GetProvidersAndSqlForProviders();
+            return retVal;
         }
     }
-
 
     /// <summary>
     /// Root response wrapper returned by the /watch/providers endpoints.
     /// </summary>
     [DataContract]
-    public class TmdbStreamingProvidersResponse
+    public class TmdbStreamingProviders
     {
         [DataMember( Name = "id" )]
         public int Id { get; set; } = -1; // -1 indicates an uninitialized or missing ID
@@ -494,15 +500,22 @@ namespace Statistics2026.Utilities
             Results = new Dictionary<string, TmdbStreamingProviderRegion>();
         }
 
-        public void UpdateProviderTypes()
+        static readonly object _padlock = new();
+        public AddStreamingProvidersInfo GetProvidersAndSqlForProviders()
         {
+            Dictionary<string, HashSet<int>> currServiceMap = [];
+            List<SQLCmdDef> cmds = [];
             foreach( var regionKeyValuePair in Results )
             {
                 if( regionKeyValuePair.Value != null )
                 {
-                    regionKeyValuePair.Value.UpdateProviderTypes();
+                    var key = regionKeyValuePair.Key;
+                    var value = regionKeyValuePair.Value.GetProvidersAndSqlForProviders( key );
+                    currServiceMap.Add( key, value.providerIds );
+                    cmds.AddRange( value.sqlCmds );
                 }
             }
+            return (currServiceMap, cmds);
         }
     }
 
@@ -563,7 +576,30 @@ namespace Statistics2026.Utilities
             Free = new List<TmdbStreamingProvider>();
         }
 
-        public void UpdateProviderTypes()
+
+        public (HashSet<int> providerIds, List<SQLCmdDef> sqlCmds) GetProvidersAndSqlForProviders( string region )
+        {
+            UpdateProviderTypes();
+            HashSet<int> providerIds = [];
+            List<SQLCmdDef> sqlCmds = [];
+
+            var allProviders = GetAllProviders();
+            foreach( var tmdbProvider in allProviders )
+            {
+                var current = tmdbProvider.GetProvidersAndSqlForProviders( region );
+                if( current.providerId != -1 )
+                {
+                    providerIds.Add( current.providerId );
+                }
+                if( current.sqlCmds != null && current.sqlCmds.Count() > 0 )
+                {
+                    sqlCmds.AddRange( current.sqlCmds );
+                }
+            }
+            return (providerIds, sqlCmds);
+        }
+
+        private void UpdateProviderTypes()
         {
             UpdateProviderType( FlatRate, "flatrate" );
             UpdateProviderType( Rent, "rent" );
@@ -573,7 +609,7 @@ namespace Statistics2026.Utilities
             UpdateProviderType( Free, "free" );
         }
 
-        public List<TmdbStreamingProvider> GetAllProviders()
+        private List<TmdbStreamingProvider> GetAllProviders()
         {
             var retVal = new List<TmdbStreamingProvider>();
 
@@ -601,6 +637,35 @@ namespace Statistics2026.Utilities
                     providersList[ ii ].ProviderType = typeName;
                 }
             }
+        }
+    }
+
+    public class StreamingProvider
+    {
+        public int ProviderId { get; set; } = -1;
+        public string ProviderName { get; set; } = string.Empty;
+        public string LogoPath { get; set; } = string.Empty;
+        public int DisplayPriority { get; set; } = int.MaxValue; // Pushes uninitialized items to the end of custom sorting layouts
+        public string ProviderType { get; set; } = string.Empty;
+        public string UrlTemplate { get; set; } = string.Empty;
+
+        public string StreamUrl( string title, string isoCode )
+        {
+            if( UrlTemplate.IsNullOrEmpty() )
+                return string.Empty;
+
+            string encodedTitle = System.Uri.EscapeDataString( title );
+
+            return UrlTemplate.Replace( "{searchInfo}", encodedTitle ).Replace( "{isoCode}", isoCode );
+        }
+
+        public string ImageUrl()
+        {
+            if( LogoPath.IsNullOrEmpty() )
+                return string.Empty;
+
+            var logoPath = LogoPath.TrimStart( '/' );
+            return $"https://image.tmdb.org/t/p/original/" + logoPath;
         }
     }
 
@@ -632,12 +697,54 @@ namespace Statistics2026.Utilities
         }
 
         public string ProviderType { get; set; } = string.Empty;
-        public string ProviderUrl()
+        static public ConcurrentDictionary<string, (int providerId, List<SQLCmdDef> sqlCmds)> sProviderCache = [];
+
+        public string key() { return $"{ProviderName.Trim()}_{LogoPath.Trim()}"; }
+
+        static public void ClearCache()
         {
-            if( LogoPath.IsNullOrEmpty() )
-                return string.Empty;
-            var path = LogoPath.TrimStart( '/' );
-            return $"https://tmdb.org/{path}";
+            sProviderCache.Clear();
+        }
+
+        public (int providerId, List<SQLCmdDef> sqlCmds) GetProvidersAndSqlForProviders( string region )
+        {
+            if( ProviderId < 0 )
+            {
+                return (-1, []);
+            }
+
+            var key = this.key();
+            if( sProviderCache.TryGetValue( key, out var retVal ) )
+            {
+                return (retVal.providerId, []);
+            }
+
+            var templateUrl = HelperFuncs.GetProviderTemplateUrl( ProviderId );
+
+            List<(string name, object? value)> parameters =
+                [
+                    ("@ProviderId", ProviderId),
+                    ("@Name", ProviderName.Trim()),
+                    ("@LogoPath", LogoPath.Trim()),
+                    ("@DisplayPriority", DisplayPriority),
+                    ("@UrlTemplate", templateUrl)
+                ];
+
+            var tableDef = Plugin.Instance?._tableDefs.getTableDef( "StreamingProviders" ) ?? null;
+            if( tableDef == null )
+            {
+                throw new Exception( "Could not find table defintion for StreamingProviders" );
+            }
+
+            var addProviderCmds = tableDef.GetSQLCommands( TableDef.EAction.eInsertUpdateOnConflict, parameters );
+            if( addProviderCmds == null )
+            {
+                throw new Exception( "Could not insert into table StreamingProviders" );
+            }
+
+            var cmds = addProviderCmds;
+            sProviderCache[ key ] = (ProviderId, cmds);
+            return (ProviderId, cmds);
         }
     }
 

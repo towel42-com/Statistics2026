@@ -9,16 +9,18 @@ using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         public enum EWhichMediaList
         {
@@ -60,6 +62,7 @@ namespace Statistics2026.Data
             columns.Add( "Missing.Title AS SortName" );
             columns.Add( "Missing.ReleaseDate AS PremiereDate" );
             columns.Add( "Missing.StudioNames" );
+            columns.Add( "Missing.StreamingProviders AS StreamingProviders" );
             columns.Add( "'' AS ResolutionDetail" );
             columns.Add( "'' AS Codec" );
             columns.Add( "'' AS DolbyVisionProfile" );
@@ -107,7 +110,8 @@ namespace Statistics2026.Data
                 orderBy.Add( "EpisodeNum ASC" );
             }
             var groupByClauses = new List<string>() { "Missing.Title" };
-            return SQLCmdDef.CreateCmd( from, columns, joins, whereClauses, groupByClauses, null );
+            var retVal = SQLCmdDef.CreateCmd( from, columns, joins, whereClauses, groupByClauses, null );
+            return retVal;
         }
 
         private string getMediaListResponseMissingCmd( EWhichMediaList whichMedia )
@@ -126,6 +130,10 @@ namespace Statistics2026.Data
             columns.Add( "Media.SortName as SortName" );
             columns.Add( "Media.PremiereDate AS PremiereDate" );
             columns.Add( "Media.StudioNames AS StudioNames" );
+            if( episodes )
+                columns.Add( "Series.StreamingProviders AS StreamingProviders" );
+            else
+                columns.Add( "Media.StreamingProviders AS StreamingProviders" );
             columns.Add( "Media.ResolutionDetail AS ResolutionDetail" );
             columns.Add( "Media.Codec AS Codec" );
             columns.Add( "Media.DolbyVisionProfile AS DolbyVisionProfile" );
@@ -186,8 +194,11 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public List<MediaItemResponse> getMediaListResponse( EWhichMediaList whichMedia )
+        public List<MediaItemResponse> getMediaListResponseAsync( EWhichMediaList whichMedia )
         {
+            if( _embyInterfaces == null )
+                return [];
+
             List<string> sqlCmds = [];
             if( ( whichMedia & EWhichMediaList.eMissing ) != 0 )
             {
@@ -203,23 +214,28 @@ namespace Statistics2026.Data
 
             var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
 
+            var isoCode = HelperFuncs.GetServerCountryCode( _embyInterfaces!.HttpClient() );
+
             List<MediaItemResponse> retVal = [];
             ExecuteCommand( new SQLCmdDef( sqlCmd ), statement =>
             {
                 var row = statement.Current;
-                var response = MediaItemResponse.CreateFromStatementRow( row, episodes, IsFilteredSeries, IsFilteredCollection, GetCollectionName );
-                if ( response != null )
-                    retVal.Add( response );
+                var mediaInfoResponse = MediaItemResponse.CreateFromStatementRow( row, episodes, isoCode, IsFilteredSeries, IsFilteredCollection, GetCollectionName, _embyInterfaces, this );
+                if( mediaInfoResponse != null )
+                {
+                    retVal.Add( mediaInfoResponse );
+                }
+                
                 return true;
             } );
 
 
             retVal.Sort(
-                ( x, y ) =>
+                (x, y) =>
                 {
                     var lhs = x.DisplayName.SortBy;
-                    var rhs = y.DisplayName.SortBy;
-                    return lhs.CompareTo( rhs );
+        var rhs = y.DisplayName.SortBy;
+                    return lhs.CompareTo(rhs );
                 } );
             return retVal;
         }

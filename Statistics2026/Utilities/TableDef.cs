@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ServiceStack;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,7 +7,7 @@ namespace Statistics2026.Utilities
 {
     public class TableColDef
     {
-        public TableColDef( string columnName, string columnType, bool allowNull, bool isPrimaryIndex = false, string defaultValue="" )
+        public TableColDef( string columnName, string columnType, bool allowNull, bool isPrimaryIndex = false, string defaultValue = "" )
         {
             if( columnName == null || columnName == string.Empty )
                 throw new ArgumentException( "TableColDef: Must define the column name" );
@@ -61,7 +62,7 @@ namespace Statistics2026.Utilities
         public string ToString( bool alter )
         {
             var retVal = $"{Name} {Type}";
-            if ( DefaultValue != null && DefaultValue != string.Empty )
+            if( DefaultValue != null && DefaultValue != string.Empty )
                 retVal += $" DEFAULT '{DefaultValue}'";
             if( !alter && !AllowNull )
                 retVal += " NOT NULL";
@@ -72,6 +73,18 @@ namespace Statistics2026.Utilities
         public override string ToString()
         {
             return ToString( false );
+        }
+
+        public TableColDef( TableColDef other )
+        {
+            Name = other.Name;
+            Type = other.Type;
+            AllowNull = other.AllowNull;
+            IsPrimaryIndex = other.IsPrimaryIndex;
+            DeprecatedColumn = other.DeprecatedColumn;
+            FormerColumnName = other.FormerColumnName ?? null;
+            DefaultValue = other.DefaultValue ?? null;
+
         }
 
         public string Name { get; private set; } = string.Empty;
@@ -91,6 +104,8 @@ namespace Statistics2026.Utilities
             eCreate,   // only calls create
             eDrop,      // only drops the table and indexes
             eClear,      // deletes all from table
+            eInsertNoConflict,
+            eInsertUpdateOnConflict
         }
 
         public TableDef( string name, List<TableColDef> cols, List<string>? indexes = null )
@@ -174,7 +189,7 @@ namespace Statistics2026.Utilities
                 }
                 );
 
-            if ( CompositeIndex != null )
+            if( CompositeIndex != null )
             {
                 sql = $"CREATE UNIQUE INDEX IF NOT EXISTS {Name}_CompositeIndex ON {Name} ({string.Join( ", ", CompositeIndex )})";
                 retVal.Add( new SQLCmdDef( sql ) );
@@ -201,6 +216,71 @@ namespace Statistics2026.Utilities
             return clearTable( Name );
         }
 
+        private string insert( bool doNothingOnConflict )
+        {
+            List<string> colNames = [];
+            string primaryIndexColumnName = String.Empty;
+            foreach( var col in Columns )
+            {
+                if( col.DeprecatedColumn )
+                    continue;
+                if( col.IsPrimaryIndex )
+                    primaryIndexColumnName = col.Name;
+                colNames.Add( col.Name );
+            }
+
+            var sql =
+                $"INSERT INTO \n" +
+                $"    {Name}\n" +
+                $"(\n     ";
+            sql += String.Join( "\n    ,", colNames ) + "\n" +
+                 $")\n" +
+                 $"    VALUES\n" +
+                 $"(\n"
+                 ;
+
+            bool first = true;
+            foreach( var colName in colNames )
+            {
+                sql += "    ";
+                if( first )
+                    sql += " @";
+                else
+                    sql += ",@";
+                sql += colName + "\n";
+                first = false;
+            }
+            sql += $")\n";
+            if( !primaryIndexColumnName.IsEmpty())
+            {
+                sql += 
+                    $"ON CONFLICT({primaryIndexColumnName})\n" +
+                    "DO";
+                if ( doNothingOnConflict )
+                    sql += " NOTHING\n";
+                else
+                {
+                    sql += " UPDATE\n" +
+                        "SET\n";
+                    first = true;
+                    foreach( var colName in colNames )
+                    {
+                        if( colName == primaryIndexColumnName )
+                            continue;
+
+                        sql += "    ";
+                        if( first )
+                            sql += " ";
+                        else
+                            sql += ",";
+                        sql += $"{colName}=@{colName}\n";
+                        first = false;
+                    }
+                }
+            }
+            return sql;
+        }
+
         public static string dropTable( string tableName )
         {
             var sql = $"DROP TABLE IF EXISTS {tableName}";
@@ -212,7 +292,7 @@ namespace Statistics2026.Utilities
             return dropTable( Name );
         }
 
-        public List<SQLCmdDef> GetSQLCommands( EAction action )
+        public List<SQLCmdDef> GetSQLCommands( EAction action, List<(string name, object? value)>? parameters=null )
         {
             var retVal = new List<SQLCmdDef>();
             switch( action )
@@ -229,15 +309,20 @@ namespace Statistics2026.Utilities
                         retVal.Add( new SQLCmdDef( dropTable() ) );
                     else
                         retVal.AddRange( createTable() );
+                    break;
                 }
-
-                break;
                 case EAction.eRecreate:
                 {
                     retVal.AddRange( GetSQLCommands( EAction.eDrop ) );
                     retVal.AddRange( GetSQLCommands( EAction.eCreate ) );
+                    break;
                 }
-
+                case EAction.eInsertNoConflict:
+                case EAction.eInsertUpdateOnConflict:
+                {
+                    if( !DeprecatedTable )
+                        retVal.Add( new SQLCmdDef( insert( action == EAction.eInsertNoConflict ), parameters ) );
+                }
                 break;
             }
 
@@ -255,6 +340,20 @@ namespace Statistics2026.Utilities
             }
 
             return retVal;
+        }
+
+        public TableDef( TableDef other )
+        {
+            Name = other.Name;
+            Indexes = new List<string>( other.Indexes );
+            Columns = [];
+            foreach( var col in other.Columns )
+            {
+                Columns.Add( new TableColDef( col ) );
+            }
+            CompositeIndex = other.CompositeIndex ?? new List<string>( other.CompositeIndex );
+            DeprecatedTable = other.DeprecatedTable;
+            ValidationRequiresData = other.ValidationRequiresData;
         }
 
         public string Name { get; private set; }

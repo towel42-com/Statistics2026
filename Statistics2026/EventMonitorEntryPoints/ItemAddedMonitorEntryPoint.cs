@@ -103,7 +103,8 @@ namespace Statistics2026.EventMonitorEntryPoints
                 if( _embyInterfaces == null || TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
                     return;
 
-                using var db = StatisticsDB.GetInstance( _embyInterfaces );
+                _debounceTimer.Stop();
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 db.Initialize( null, null, null, false );
 
                 var currLogger = _embyInterfaces.Logger();

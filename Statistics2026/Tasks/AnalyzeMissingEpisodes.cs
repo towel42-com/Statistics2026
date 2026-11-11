@@ -61,13 +61,14 @@ namespace Statistics2026.ScheduledTasks
                 _userManager = userManager,
                 _apiService = apiService,
             };
+            this.Name = TaskDef.GetTaskName( this.GetType() );
+            this.Description = TaskDef.GetTaskDescription( this.GetType() );
         }
 
-        string IScheduledTask.Name => "\u2022 6 - Analyze Missing Episodes";
+        public string Name { get; private set; } = "";
+        public string Description { get; private set; } = "";
 
         string IScheduledTask.Key => "Statistics2026_MissingEpisodesTask";
-
-        string IScheduledTask.Description => "Task that will analyze the library's missing episodes.";
 
         string IScheduledTask.Category => "Statistics 2026";
 
@@ -81,9 +82,9 @@ namespace Statistics2026.ScheduledTasks
             var taskName = "Analyze Missing Episodes";
             _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
-            using var db = StatisticsDB.GetInstance( _embyInterfaces );
+            using var db = Statistics2026DB.GetInstance( _embyInterfaces );
             db.Initialize( this, cancellationToken, progress );
-            db.ClearLastUpdated( StatisticsDB.EAction.MissingEpisodesAnalysis );
+            db.ClearLastUpdated( Statistics2026DB.EAction.MissingEpisodesAnalysis );
 
             long runtimeMS = 0;
             using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces.Logger() ) )
@@ -106,7 +107,7 @@ namespace Statistics2026.ScheduledTasks
             _embyInterfaces.Logger().Info( $"=======================================" );
             _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
-            db.UpdateLastUpdated( StatisticsDB.EAction.MissingEpisodesAnalysis, runtimeMS );
+            db.UpdateLastUpdated( Statistics2026DB.EAction.MissingEpisodesAnalysis, runtimeMS );
 
             db.ResetCancellationToken();
         }

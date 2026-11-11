@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         public async Task AnalyzeMissingEpisodesTaskImplAsync()
         {
@@ -27,7 +27,33 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting Analysis" );
             Progress?.Report( 0 );
-            var seriesList = EmbyHelperFuncs.GetLibraryItems<Series>( null, LibraryManager() );
+            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), true );
+            //Dictionary<string, List<(Series series, int episodeCount)>> seriesToEpisodeMap = [];
+            //foreach( var series in seriesList )
+            //{
+            //    var currValue = (series, EmbyHelperFuncs.GetAllEpisodesForSeries( null, LibraryManager(), series ).Count());
+
+            //    var key = series.GetProviderId( MetadataProviders.Tmdb );
+            //    if( key.IsEmpty() )
+            //    {
+
+            //        key = $"{series.SortName}";
+            //        if (series.PremiereDate != null )
+            //            key += $"_{series.PremiereDate}";
+            //    }
+
+            //    if( seriesToEpisodeMap.TryGetValue( key, out var curr ) )
+            //    {
+            //        curr.Add( currValue );
+            //    }
+            //    else
+            //    {
+            //        curr = new List<(Series series, int episodeCount)>() { currValue };
+            //        seriesToEpisodeMap.Add( key, curr );
+            //    }
+            //}
+            //seriesToEpisodeMap = seriesToEpisodeMap.Where( kvp => kvp.Value.Count() >= 2 ).ToDictionary( kvp => kvp.Key, kvp => kvp.Value );
+
             seriesList.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             Progress?.Report( 100 );
 
@@ -42,7 +68,7 @@ namespace Statistics2026.Data
             Progress?.Report( 0 );
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = new SemaphoreSlim( 10, 10 );
+                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
 
                 var pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
                 {
@@ -112,10 +138,15 @@ namespace Statistics2026.Data
             if( string.IsNullOrEmpty( seriesTmbdId ) )
                 return [];
 
+            List<SQLCmdDef> retVal = [];
+
             TmdbSeries? tmdbSeries = null;
+            AddStreamingProvidersInfo? streamingProviders = null;
             try
             {
                 tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId ).ConfigureAwait( false );
+                streamingProviders = await reader.GetStreamingProvidersAsync( Logger(), series ).ConfigureAwait( false );
+                retVal.AddRange( streamingProviders?.addProviderCmds ?? [] );
             }
             catch( Exception ex )
             {
@@ -129,7 +160,6 @@ namespace Statistics2026.Data
                 return [];
             }
 
-            List<SQLCmdDef> retVal = [];
             foreach( var tmdbSeason in tmdbSeries.Seasons )
             {
                 if( tmdbSeason.SeasonNumber == 0 && !Plugin.Instance!.Configuration.reportOnMissingSpecials )
@@ -149,10 +179,9 @@ namespace Statistics2026.Data
 
                     if( embyEpisode == null )
                     {
-                        Logger().Info( $"             {series.Name} - {episodeIdent} is missing" );
+                        Logger().Info( $"             {series.Name} - {episodeIdent} is missing - Series ID: {series.Id.ToString()}" );
 
                         var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
-                        //return $"{primaryName} - S{season:D2}E{episode:D2} - {secondaryName}";
 
                         var title = $"{tmdbSeries.Name} - S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2} - {tmdbEpisode.Name}";
                         retVal.Add( new SQLCmdDef( kSQLAddToMissing,
@@ -168,7 +197,8 @@ namespace Statistics2026.Data
                             ("@IsEpisode", true ),
                             ("@SeasonNum", tmdbSeason.SeasonNumber ),
                             ("@EpisodeNum", tmdbEpisode.EpisodeNumber ),
-                            ("@StudioNames", JsonSerializer.Serialize(series.Studios))
+                            ("@StudioNames", JsonSerializer.Serialize(series.Studios)),
+                            ("@StreamingProviders", JsonSerializer.Serialize(streamingProviders?.allProviders ?? new object()))
                         ] ) );
                     }
 

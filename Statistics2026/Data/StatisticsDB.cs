@@ -23,15 +23,12 @@ namespace Statistics2026.Data
         eEpisode
     }
 
-    public sealed partial class StatisticsDB : IDisposable
+    public sealed partial class Statistics2026DB : IDisposable
     {
         private bool _disposed = false;
         EmbyInterfaces? _embyInterfaces = null;
         ILogger? _DBConnLogger = null;
         private static readonly object _padlock = new();
-        private readonly Dictionary<string, TableDef> _tableMap = [];
-        private List<TableDef> _tableList = [];
-        private TableDef? _userMediaTemplate = null;
         private MediaBrowser.Model.Tasks.IScheduledTask? _currentTask = null;
 
         public bool AllTablesExisted { get; private set; } = false;
@@ -42,21 +39,21 @@ namespace Statistics2026.Data
         public CancellationToken? CancellationToken { get; set; } = null;
         public IProgress<double>? Progress { get; set; } = null;
 
-        public static StatisticsDB GetInstance( EmbyInterfaces? embyInterfaces )
+        public static Statistics2026DB GetInstance( EmbyInterfaces? embyInterfaces )
         {
             lock( _padlock )
             {
                 if( embyInterfaces == null )
                     throw new ArgumentNullException( "EmbyInterfaces is null." );
 
-                var retVal = new StatisticsDB( embyInterfaces );
+                var retVal = new Statistics2026DB( embyInterfaces );
                 retVal.dbStatusMessage( "New Instance Created" );
                 Plugin.Instance?.Configuration.UpdateBuildDateAndVersionInfo();
                 return retVal;
             }
         }
 
-        private StatisticsDB( EmbyInterfaces embyInterfaces )
+        private Statistics2026DB( EmbyInterfaces embyInterfaces )
         {
             lock( _padlock )
             {
@@ -64,11 +61,9 @@ namespace Statistics2026.Data
 #if DEBUG_DB
                 _DBConnLogger = embyInterfaces.LogManager().GetLogger( "Statistics2026 - DBMonitor" );
 #endif
-
-                ConstructTableList();
-
                 dbStatusMessage( "Creating Database", true );
                 CreateConnection();
+                Plugin.Instance?._tableDefs.SetDatabase( this );
                 dbStatusMessage( "Finished Creating Database" );
                 ComputeDBState();
             }
@@ -80,7 +75,7 @@ namespace Statistics2026.Data
             GC.SuppressFinalize( this );
         }
 
-        ~StatisticsDB()
+        ~Statistics2026DB()
         {
             Dispose( false );
         }
@@ -100,7 +95,14 @@ namespace Statistics2026.Data
         {
             return _DBConnLogger;
         }
-        
+
+        public TableDefs TableDefs()
+        {
+            if( ( Plugin.Instance?._tableDefs ?? null ) == null )
+                throw new ArgumentNullException( "TableDefs is null" );
+            return Plugin.Instance!._tableDefs;
+        }
+
         public ILogger Logger()
         {
             CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );
@@ -232,7 +234,7 @@ namespace Statistics2026.Data
 
         private void dbStatusMessage( string message, bool includeStack = false )
         {
-            DBLogger()?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4} - StatisticsDB Hash: 0x{GetHashCode():X16} - DB Hash: 0x{GetDBHashCode():X16} : '{message}'" );
+            DBLogger()?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4} - Statistics2026DB Hash: 0x{GetHashCode():X16} - DB Hash: 0x{GetDBHashCode():X16} : '{message}'" );
             if( includeStack )
             {
                 string currentStack = Environment.StackTrace;
@@ -242,11 +244,11 @@ namespace Statistics2026.Data
                 {
                     if( list[ ii ].Contains( "get_StackTrace" ) )
                         continue;
-                    else if( list[ ii ].Contains( "StatisticsDB.dbStatusMessage" ) )
+                    else if( list[ ii ].Contains( "Statistics2026DB.dbStatusMessage" ) )
                         continue;
-                    else if( list[ ii ].Contains( "StatisticsDB..ctor" ) )
+                    else if( list[ ii ].Contains( "Statistics2026DB..ctor" ) )
                         continue;
-                    else if( list[ ii ].Contains( "StatisticsDB.GetInstance" ) )
+                    else if( list[ ii ].Contains( "Statistics2026DB.GetInstance" ) )
                         continue;
 
                     DBLogger()?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4}        {list[ ii ].Trim()}" );
@@ -262,6 +264,7 @@ namespace Statistics2026.Data
             {
                 Connection.Close();
                 dbStatusMessage( "DB Connection Closed" );
+                Connection = null;
             }
         }
 
@@ -269,7 +272,7 @@ namespace Statistics2026.Data
         {
             _currentTask = runningTask;
             SetCancellationToken( cancellationToken, progress );
-            CreateTables( reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate );
+            TableDefs().CreateTables( reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate, cancellationToken, progress );
         }
 
         public void ResetCancellationToken()
@@ -446,19 +449,6 @@ namespace Statistics2026.Data
             return runtime.ToLongString();
         }
 
-        public static string JoinClauses( List<string> clauses )
-        {
-            if( clauses.IsNullOrEmpty() )
-                return string.Empty;
-
-            for( var ii = 0; ii < clauses.Count; ++ii )
-            {
-                clauses[ ii ] = $"( {clauses[ ii ]} )";
-            }
-
-            return " WHERE " + string.Join( " AND ", clauses ) + " ";
-        }
-
         public void ValidateTables( List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState )
         {
             if( tables.IsNullOrEmpty() )
@@ -599,6 +589,11 @@ namespace Statistics2026.Data
                 CancellationToken?.ThrowIfCancellationRequested();
                 Logger().Debug( $"Finished Series Analysis" );
             }
+        }
+
+        public bool HasConnection()
+        {
+            return Connection != null;
         }
     }
 }

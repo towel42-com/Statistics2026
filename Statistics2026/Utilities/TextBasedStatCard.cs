@@ -76,7 +76,7 @@ namespace Statistics2026.Utilities
             var showImage = !currValue.url.IsNullOrEmpty() && !currValue.itemId.IsNullOrEmpty();
             if( showImage )
             {
-                dataHtml = ItemImageUrl.ItemUrl( currValue.itemId, currValue.url, dataHtml, "50px" );
+                dataHtml = ItemImageUrl.ItemUrlFromItemId( currValue.itemId, currValue.url, dataHtml, "50px" );
             }
 
             return dataHtml;
@@ -92,7 +92,7 @@ namespace Statistics2026.Utilities
             var retVal = string.Empty;
             if( ListType == EListType.eNumbered )
             {
-                retVal += EmbyHelperFuncs.addToHtml( depth++, "<ol>" );
+                retVal += HelperFuncs.addToHtml( depth++, "<ol>" );
             }
 
             for( var ii = 0; ii < ValueLines.Count; ++ii )
@@ -102,12 +102,12 @@ namespace Statistics2026.Utilities
                 {
                     html = $"<li>{html}</li>";
                 }
-                retVal += EmbyHelperFuncs.addToHtml( depth, html );
+                retVal += HelperFuncs.addToHtml( depth, html );
             }
 
             if( ListType == EListType.eNumbered )
             {
-                retVal += EmbyHelperFuncs.addToHtml( --depth, "</ol>" );
+                retVal += HelperFuncs.addToHtml( --depth, "</ol>" );
             }
 
             return retVal;

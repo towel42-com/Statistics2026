@@ -83,7 +83,7 @@ namespace Statistics2026.Utilities
             var showImage = !currValue.url.IsNullOrEmpty() && !currValue.itemId.IsNullOrEmpty();
             if( showImage )
             {
-                dataHtml = ItemImageUrl.ItemUrl( currValue.itemId, currValue.url, dataHtml, "50px" );
+                dataHtml = ItemImageUrl.ItemUrlFromItemId( currValue.itemId, currValue.url, dataHtml, "50px" );
             }
 
             return dataHtml;
@@ -112,7 +112,7 @@ namespace Statistics2026.Utilities
             }
 
             var retVal = string.Empty;
-            retVal += EmbyHelperFuncs.addToHtml( depth++, $"<{rootListType}>" );
+            retVal += HelperFuncs.addToHtml( depth++, $"<{rootListType}>" );
 
             for( var ii = 0; ii < Values.Count; ++ii )
             {
@@ -120,40 +120,40 @@ namespace Statistics2026.Utilities
                 {
                     if( ( ListType == EListType.eUnordered ) || getKeyCount( Values[ ii - 1 ].key ) > 1 )
                     {
-                        retVal += EmbyHelperFuncs.addToHtml( --depth, "</ul>" );
-                        retVal += EmbyHelperFuncs.addToHtml( --depth, "</li>" );
+                        retVal += HelperFuncs.addToHtml( --depth, "</ul>" );
+                        retVal += HelperFuncs.addToHtml( --depth, "</li>" );
                     }
                 }
 
                 if( ListType == EListType.eUnordered )
                 {
                     //if( ii != 0 )
-                    //    retVal += EmbyHelperFuncs.addToHtml( --depth, "</ul>" );
+                    //    retVal += HelperFuncs.addToHtml( --depth, "</ul>" );
 
-                    retVal += EmbyHelperFuncs.addToHtml( depth++, $"<li {style}>" + getDataHtmlForItem( Values[ ii ].key, style ) );
+                    retVal += HelperFuncs.addToHtml( depth++, $"<li {style}>" + getDataHtmlForItem( Values[ ii ].key, style ) );
                 }
 
                 if( ( ListType == EListType.eUnordered ) || ( Values[ ii ].values.Count > 1 ) )
                 {
-                    retVal += EmbyHelperFuncs.addToHtml( depth++, $"<li {style}>" );
-                    retVal += EmbyHelperFuncs.addToHtml( depth++, "<ul>" );
+                    retVal += HelperFuncs.addToHtml( depth++, $"<li {style}>" );
+                    retVal += HelperFuncs.addToHtml( depth++, "<ul>" );
                 }
 
                 for( var jj = 0; jj < Values[ ii ].values.Count; ++jj )
                 {
                     var dataHtml = getDataHtmlForItem( Values[ ii ].values[ jj ], style );
                     var html = $"<li {style}>" + dataHtml + "</li>";
-                    retVal += EmbyHelperFuncs.addToHtml( depth, html );
+                    retVal += HelperFuncs.addToHtml( depth, html );
                 }
             }
 
             if( ( ListType == EListType.eUnordered ) || getKeyCount( Values[ Values.Count - 1 ].key ) > 1 )
             {
-                retVal += EmbyHelperFuncs.addToHtml( --depth, "</ul>" );
-                retVal += EmbyHelperFuncs.addToHtml( --depth, "</li>" );
+                retVal += HelperFuncs.addToHtml( --depth, "</ul>" );
+                retVal += HelperFuncs.addToHtml( --depth, "</li>" );
             }
 
-            retVal += EmbyHelperFuncs.addToHtml( --depth, $"</{rootListType}>" );
+            retVal += HelperFuncs.addToHtml( --depth, $"</{rootListType}>" );
 
             return retVal;
         }

@@ -67,7 +67,7 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static string ItemUrl( string itemId, string itemUrl, string text = "", string height = "105px" )
+        public static string ItemUrlFromItemId( string itemId, string itemUrl, string text = "", string height = "105px", string target = "" )
         {
             if( ( Plugin.Instance == null ) || ( Plugin.Instance.ServerId == null ) )
                 throw new ArgumentNullException( "Plugin.Instance or Plugin.Instance.ServerId is null." );
@@ -76,9 +76,24 @@ namespace Statistics2026.Utilities
                 return "";
 
             var serverId = Plugin.Instance.ServerId;
-
-            return $"<a is=\"emby-linkbutton\" href=\"/item?id={itemId}&serverId={serverId}\"><img loading=\"lazy\" src=\"{itemUrl}\" height=\"{height}\"/>{text}</a>";
+            var imageUrl = $"/item?id={itemId}&serverId={serverId}";
+            return ItemUrlFromImageUrl( imageUrl, itemUrl, text, height);
         }
 
+        public static string ItemUrlFromImageUrl( string imageUrl, string targetUrl, string text = "", string height = "105px", string target = "" )
+        {
+            string retVal = $"<a is=\"emby-linkbutton\" ";
+            if ( !target.IsEmpty() )
+            {
+                retVal += "target=\"{target}\" ";
+            }
+            retVal += $"href=\"{targetUrl}\">";
+            if( !imageUrl.IsEmpty() )
+            {
+                retVal += $"<img loading=\"lazy\" src=\"{imageUrl}\" height=\"{height}\"/>";
+            }
+            retVal += $"{text}</a>";
+            return retVal;
+        }
     }
 }

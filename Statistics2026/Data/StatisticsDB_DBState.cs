@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Statistics2026.Data
 {
-    public sealed partial class StatisticsDB
+    public sealed partial class Statistics2026DB
     {
         private void ComputeDBState()
         {
@@ -17,30 +17,16 @@ namespace Statistics2026.Data
 
             Plugin.Instance.ResetDBState();
 
-            var tableNames = this.tableNames();
+            var tableNames = TableDefs().tableNames();
 
             ValidateTables( tableNames,
                 tableName =>
                 {
-                    if( _tableMap.TryGetValue( tableName, out var tableDef ) )
-                    {
-                        return tableDef.ColumnNames();
-                    }
-                    else
-                    {
-                        return [];
-                    }
+                    return TableDefs().getTableDef( tableName )?.ColumnNames() ?? [];
                 },
                 tableName =>
                 {
-                    if( _tableMap.TryGetValue( tableName, out var tableDef ) )
-                    {
-                        return tableDef.ValidationRequiresData;
-                    }
-                    else
-                    {
-                        return false;
-                    }
+                    return TableDefs().getTableDef( tableName )?.ValidationRequiresData ?? false;
                 },
                 null,
                 ( createTableNeeded, initDataNeeded ) =>
@@ -72,12 +58,12 @@ namespace Statistics2026.Data
                 return;
             }
 
-            var tableNames = allUserMediaTables( false );
+            var tableNames = TableDefs().allUserMediaTables( false );
             var missing = new List<List<object>>();
             ValidateTables( tableNames,
                 tableName =>
                 {
-                    return _userMediaTemplate!.ColumnNames();
+                    return TableDefs().UserMediaUsageColumnNames();
                 },
                 tableName =>
                 {
@@ -85,7 +71,7 @@ namespace Statistics2026.Data
                 },
                 tableName =>
                 {
-                    var user = getUserForTableName( tableName );
+                    var user = TableDefs().getUserForTableName( tableName );
                     if( ( user != null ) && ( user.Policy.IsAdministrator ) )
                         return false;
 

@@ -88,7 +88,7 @@ namespace Statistics2026.Utilities
             return null;
         }
 
-        private void _Execute( IDatabaseConnection connection, StatisticsDB db, Func<IStatement, bool>? onStatement )
+        private void _Execute( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, bool>? onStatement )
         {
             using( var statement = connection.PrepareStatement( Statement ) )
             {
@@ -126,7 +126,7 @@ namespace Statistics2026.Utilities
                 }
             }
         }
-        public void Execute( IDatabaseConnection connection, StatisticsDB db, Func<IStatement, bool>? onStatement )
+        public void Execute( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, bool>? onStatement )
         {
             if( FailureAllowed )
             {

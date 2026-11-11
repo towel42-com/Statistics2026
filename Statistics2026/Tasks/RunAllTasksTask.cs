@@ -68,14 +68,16 @@ namespace Statistics2026.ScheduledTasks
                 _userManager = userManager,
                 _apiService = apiService,
             };
+            this.Name = TaskDef.GetTaskName( this.GetType() );
+            this.Description = TaskDef.GetTaskDescription( this.GetType() );
         }
 
+        public string Name { get; private set; } = "";
+        public string Description { get; private set; } = "";
+
         private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
-        string IScheduledTask.Name => "Calculate Media and User Information for all library media and users";
 
         string IScheduledTask.Key => "Statistics2026CalculateStatsTask";
-
-        string IScheduledTask.Description => "Task that will calculate Statistics for all media in library.";
 
         string IScheduledTask.Category => "Statistics 2026";
 
@@ -89,7 +91,7 @@ namespace Statistics2026.ScheduledTasks
             if( PluginConfiguration == null )
                 throw new ArgumentNullException( nameof( PluginConfiguration ) );
 
-            using var db = StatisticsDB.GetInstance( _embyInterfaces );
+            using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
             db.Initialize( this, cancellationToken, progress, PluginConfiguration.resetPlayCount );
             cancellationToken.ThrowIfCancellationRequested();
@@ -97,7 +99,7 @@ namespace Statistics2026.ScheduledTasks
             var taskName = "Analyze All";
             _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
-            db.ClearLastUpdated( StatisticsDB.EAction.System );
+            db.ClearLastUpdated( Statistics2026DB.EAction.System );
 
             var overAllTimer = new AutoTimer( $"Adding All Data", _embyInterfaces.Logger(), false );
             var tasks = TaskDef.GetKnownTasks( false );
@@ -114,7 +116,7 @@ namespace Statistics2026.ScheduledTasks
             }
 
             var overall = overAllTimer.ElapsedMilliseconds();
-            db.UpdateLastUpdated( StatisticsDB.EAction.System, overall );
+            db.UpdateLastUpdated( Statistics2026DB.EAction.System, overall );
             EmbyHelperFuncs.UpdateLastAdded( _embyInterfaces, db );
 
             overAllTimer.Dispose();
