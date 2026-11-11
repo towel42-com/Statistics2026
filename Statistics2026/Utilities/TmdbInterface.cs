@@ -505,6 +505,7 @@ namespace Statistics2026.Utilities
         {
             Dictionary<string, HashSet<int>> currServiceMap = [];
             List<SQLCmdDef> cmds = [];
+
             foreach( var regionKeyValuePair in Results )
             {
                 if( regionKeyValuePair.Value != null )
@@ -649,7 +650,7 @@ namespace Statistics2026.Utilities
         public string ProviderType { get; set; } = string.Empty;
         public string UrlTemplate { get; set; } = string.Empty;
 
-        public string StreamUrl( string title, string isoCode )
+        public string TargetUrl( string title, string isoCode )
         {
             if( UrlTemplate.IsNullOrEmpty() )
                 return string.Empty;
@@ -659,13 +660,15 @@ namespace Statistics2026.Utilities
             return UrlTemplate.Replace( "{searchInfo}", encodedTitle ).Replace( "{isoCode}", isoCode );
         }
 
-        public string ImageUrl()
+        public (string imageUrl, string itemText) ImageUrl()
         {
-            if( LogoPath.IsNullOrEmpty() )
-                return string.Empty;
+            var retVal = HelperFuncs.GetTMDBUrl( LogoPath, ProviderName );
+            return (retVal.imageUrl, retVal.itemText);
+        }
 
-            var logoPath = LogoPath.TrimStart( '/' );
-            return $"https://image.tmdb.org/t/p/original/" + logoPath;
+        public (string imageUrl, string itemText, string itemUrl) ImageUrl(string targetUrl, string targetHtml, string posterSize = "original", string? imageHeight = "105px", string? imageWidth = null ) //html uses <TARGET_URL> and <TARGET_TEXT> as placeholders
+        {
+            return HelperFuncs.GetTMDBUrl( LogoPath, ProviderName, (targetUrl, targetHtml), posterSize, imageHeight, imageWidth );
         }
     }
 
@@ -730,6 +733,25 @@ namespace Statistics2026.Utilities
                     ("@UrlTemplate", templateUrl)
                 ];
 
+
+            var cmds = GetAddProviderCmds();
+            sProviderCache[ key ] = (ProviderId, cmds);
+            return (ProviderId, cmds);
+        }
+
+        public List<SQLCmdDef> GetAddProviderCmds()
+        {
+            var templateUrl = HelperFuncs.GetProviderTemplateUrl( ProviderId );
+
+            List<(string name, object? value)> parameters =
+                [
+                    ("@ProviderId", ProviderId),
+                    ("@Name", ProviderName.Trim()),
+                    ("@LogoPath", LogoPath.Trim()),
+                    ("@DisplayPriority", DisplayPriority),
+                    ("@UrlTemplate", templateUrl)
+                ];
+
             var tableDef = Plugin.Instance?._tableDefs.getTableDef( "StreamingProviders" ) ?? null;
             if( tableDef == null )
             {
@@ -741,10 +763,7 @@ namespace Statistics2026.Utilities
             {
                 throw new Exception( "Could not insert into table StreamingProviders" );
             }
-
-            var cmds = addProviderCmds;
-            sProviderCache[ key ] = (ProviderId, cmds);
-            return (ProviderId, cmds);
+            return addProviderCmds!;
         }
     }
 
