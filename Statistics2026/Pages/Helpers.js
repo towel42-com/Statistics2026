@@ -230,7 +230,6 @@ define([
                 <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
                 <th data-column="ParentName" data-type="string" class="info_cell_heading">${parentName}<span class="sort-icon"></span></th>
                 <th data-column="PremiereDate" data-type="date" class="info_cell_heading">Premiere Date<span class="sort-icon"></span></th>
-                <th data-column="StreamingServies" data-type="string" class="info_cell_heading">Streaming Services(s)<span class="sort-icon"></span></th>
                 `
 
             if (showOnServer) {
