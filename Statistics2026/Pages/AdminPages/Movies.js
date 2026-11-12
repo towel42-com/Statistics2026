@@ -12,7 +12,9 @@
         const filterId = 'movieDisplay';
         const baseUrl = "Statistics2026/movie_list";
         const tabName = "Movies";
-        const lastRunArray =  ["MediaAnalysis", "MissingMoviesAnalysis"];
+        const lastRunArray = ["MediaAnalysis", "MissingMoviesAnalysis"];
+        let showStreaming = true;
+
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
@@ -39,6 +41,7 @@
                     }
 
                     Helpers.insertGetLastRunInfo(view, lastRunArray, "lastRunInfo");
+                    showStreaming = config.maxNumStreamingProviders != 0;
                     loadTableDataAsync();
                 });
             });
@@ -54,7 +57,7 @@
                 var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
                 var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
 
-                return Helpers.getMediaHeader("Collection", showOnServer, showMissing);
+                return Helpers.getMediaHeader("Collection", showOnServer, showMissing, showStreaming);
             }
 
             function getMediaRowData(info) {
@@ -62,7 +65,7 @@
                 var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
                 var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
 
-                return Helpers.getMediaRowData(info, showOnServer, showMissing);
+                return Helpers.getMediaRowData(info, showOnServer, showMissing, showStreaming);
             }
 
             async function loadTableDataAsync() {

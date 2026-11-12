@@ -52,6 +52,27 @@ namespace Statistics2026.Data
             return string.Join( ", ", retVal );
         }
 
+        public enum EMediaListResponseColumns
+        { 
+            eMissing,
+            eTitle,
+            eSortName,
+            ePremiereDate,
+            eStudioNames,
+            eStreamingProviders,
+            eResolutionDetail,
+            eCodec,
+            eDolbyVisionProfile,
+            eServerLocation,
+            eItemId,
+            eItemImageUrl,
+            eParentInfoJSON,
+            ePosterPath,
+            eSeasonNum,
+            eEpisodeNum,
+            eParentId, // empty if on server
+        };
+
         private string getMediaListResponseMissingCmd( EWhichMediaList whichMedia, ref List<string> orderBy )
         {
             var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;

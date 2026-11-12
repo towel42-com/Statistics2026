@@ -192,7 +192,7 @@ define([
             }
         }
 
-        function getMediaRowData(info, showOnServer, showMissing) {
+        function getMediaRowData(info, showOnServer, showMissing, showStreaming) {
             var retVal = `
             <td style="align=left" sort-value="${info.DisplayName.SortBy}">${info.DisplayName.Text}</td>
             <td style="align=left" sort-value="${info.ParentName.SortBy}">${info.ParentName.Text}</td>
@@ -202,10 +202,7 @@ define([
                 premiereDateClass = `class='${calculateMediaStatusClass(new Date(info.PremiereDate))}'`;
             }
 
-            retVal += `
-                <td style="align=right" sort-value="${info.PremiereDate}" ${premiereDateClass}> ${info.PremiereDate}</td>
-                <td style="align=left"  sort-value="${info.StreamingProviders.SortBy}">${info.StreamingProviders.Text}</td>
-                `;
+            retVal += `<td style="align=right" sort-value="${info.PremiereDate}" ${premiereDateClass}> ${info.PremiereDate}</td>`;
 
             if (showOnServer) {
                 retVal += `
@@ -216,6 +213,10 @@ define([
                 `;
             }
 
+            if (showStreaming) {
+                retVal += `<td style="align=left"  sort-value="${info.StreamingProviders.SortBy}">${info.StreamingProviders.Text}</td>`;
+            }
+
             if (showMissing) {
                 retVal += `<td style="align=left" sort-value="${info.SearchLocation.SortBy}">${info.SearchLocation.Text}</td>`;
             }
@@ -223,7 +224,7 @@ define([
             return retVal;
         }
 
-        function getMediaHeader(parentName, showOnServer, showMissing) {
+        function getMediaHeader(parentName, showOnServer, showMissing, showStreaming) {
             var retVal =
                 `<tr style="text-align: left;">
                 <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
@@ -234,11 +235,15 @@ define([
 
             if (showOnServer) {
                 retVal += `
-                    <th data-column="Resolution" data-type="string" class="info_cell_heading">Resolution<span class="sort-icon"></span></th>
-                    <th data-column="Codec" data-type="string" class="info_cell_heading">Codec<span class="sort-icon"></span></th>
-                    <th data-column="DolbyVisionProfile" data-type="string" class="info_cell_heading">Dolby Vision Profile<span class="sort-icon"></span></th>
-                    <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
-                    `;
+                <th data-column="Resolution" data-type="string" class="info_cell_heading">Resolution<span class="sort-icon"></span></th>
+                <th data-column="Codec" data-type="string" class="info_cell_heading">Codec<span class="sort-icon"></span></th>
+                <th data-column="DolbyVisionProfile" data-type="string" class="info_cell_heading">Dolby Vision Profile<span class="sort-icon"></span></th>
+                <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
+                `;
+            }
+
+            if (showStreaming) {
+                retVal += `<th data-column="StreamingServies" data-type="string" class="info_cell_heading">Streaming Services(s)<span class="sort-icon"></span></th>`;
             }
 
             if (showMissing) {

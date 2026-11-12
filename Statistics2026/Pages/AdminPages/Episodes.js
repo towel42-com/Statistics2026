@@ -13,6 +13,7 @@
         const baseUrl = "Statistics2026/episode_list";
         const tabName = "Episodes";
         const lastRunArray = ["MediaAnalysis", "MissingEpisodesAnalysis"];
+        let showStreaming = true;
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
@@ -39,6 +40,7 @@
                     }
 
                     Helpers.insertGetLastRunInfo(view, lastRunArray, "lastRunInfo");
+                    showStreaming = config.maxNumStreamingProviders != 0;
                     loadTableDataAsync();
                 });
             });
@@ -54,7 +56,7 @@
                 var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
                 var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
 
-                return Helpers.getMediaHeader("Series", showOnServer, showMissing);
+                return Helpers.getMediaHeader("Series", showOnServer, showMissing, showStreaming);
             }
 
             function getMediaRowData(info) {
@@ -62,7 +64,7 @@
                 var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
                 var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
 
-                return Helpers.getMediaRowData(info, showOnServer, showMissing);
+                return Helpers.getMediaRowData(info, showOnServer, showMissing, showStreaming, showStreaming);
             }
 
             async function loadTableDataAsync() {

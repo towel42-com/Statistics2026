@@ -7,13 +7,14 @@ using SQLitePCL.pretty;
 using Statistics2026;
 using Statistics2026.Api;
 using Statistics2026.Configuration;
-using Statistics2026.Utilities;
 using Statistics2026.Data;
+using Statistics2026.Utilities;
 using System.Globalization;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using static Statistics2026.Data.Statistics2026DB;
 
 namespace Statistics2026.Api
 {
@@ -31,7 +32,7 @@ namespace Statistics2026.Api
         public SortByText SearchLocation { get; set; } = new();
         public SortByText ParentName { get; set; } = new();
         public string ParentUrl { get; set; } = string.Empty;
-        public string ParentId { get; set; } = string.Empty;
+        public List<string> ParentIds { get; set; } = [];
 
         public string ItemUrl
         {
@@ -47,62 +48,85 @@ namespace Statistics2026.Api
         } = string.Empty;
         public string ItemId { get; set; } = string.Empty;
 
-        public void setParentInfo( string parentJson, ref List<string> parentNames )
+        public static List<(string id, string name, string sortName, string displayText, string url)>? getParentInfo( string parentJson, Func<string, string, string, bool> isFiltered )
         {
-            ParentUrl = string.Empty;
-            ParentName = new();
+            List<(string id, string name, string sortName, string displayText, string url)> retVal = [];
+
+            JsonArray? parentArray = null;
             try
             {
                 var jsonNode = JsonNode.Parse( parentJson );
-
-                var parentArray = jsonNode?.AsArray();
-                if( parentArray == null )
-                    return;
-
-                List<SortByText> sortByTexts = [];
-                List<(string id, string url)> urls = [];
-                foreach( var parentNode in parentArray )
-                {
-                    if( parentNode == null )
-                        continue;
-
-                    var name = parentNode[ "name" ]?.GetValue<string>() ?? string.Empty;
-                    var sortName = parentNode[ "sort_name" ]?.GetValue<string>() ?? string.Empty;
-                    var id = parentNode[ "id" ]?.GetValue<string>() ?? string.Empty;
-                    var url = parentNode[ "url" ]?.GetValue<string>() ?? string.Empty;
-                    if( name.IsNullOrEmpty() || sortName.IsNullOrEmpty() )
-                        continue;
-
-
-                    if( ParentName.SortBy != string.Empty )
-                        ParentName.SortBy += ", ";
-                    ParentName.SortBy += sortName;
-                    parentNames.Add( sortName );
-
-                    ParentId = id;
-                    var currParentUrl = ItemImageUrl.ItemUrlFromItemId( id, url, name );
-                    if( currParentUrl != null && currParentUrl != string.Empty )
-                    {
-                        if( ParentUrl != string.Empty )
-                            ParentUrl += "\n";
-                        ParentUrl += currParentUrl;
-                        if( !ParentName.Text.IsEmpty() )
-                            ParentName.Text += "\n";
-                        ParentName.Text += currParentUrl;
-                    }
-                    else
-                    {
-                        if( ParentName.Text != string.Empty )
-                            ParentName.Text += ", ";
-                        ParentName.Text += name;
-                    }
-                }
-
+                parentArray = jsonNode?.AsArray();
             }
             catch( Exception )
             {
+                return retVal;
             }
+
+            if( parentArray == null )
+                return retVal;
+
+            for( int ii = 0; ii < parentArray.Count(); ++ii )
+            {
+                var parentNode = parentArray[ ii ];
+                if( parentNode == null )
+                    continue;
+
+                var name = parentNode[ "name" ]?.GetValue<string>() ?? string.Empty;
+                var sortName = parentNode[ "sort_name" ]?.GetValue<string>() ?? string.Empty;
+                var id = parentNode[ "id" ]?.GetValue<string>() ?? string.Empty;
+                var url = parentNode[ "url" ]?.GetValue<string>() ?? string.Empty;
+                if( name.IsNullOrEmpty() || sortName.IsNullOrEmpty() )
+                    continue;
+
+                if( isFiltered( id, name, sortName ) )
+                    return null;
+
+                string parentUrl = string.Empty;
+                var displayText = name;
+
+                var urlName = name;
+                if( ii != 0 )
+                    urlName = $", {urlName}";
+                var currParentUrl = ItemImageUrl.ItemUrlFromItemId( id, url, urlName ) ?? string.Empty;
+
+                if( currParentUrl.IsNullOrEmpty() )
+                {
+                    currParentUrl = string.Empty;
+                }
+                else
+                {
+                    displayText = currParentUrl;
+                }
+
+                retVal.Add( (id, name, sortName, displayText, currParentUrl) );
+
+            }
+            return retVal;
         }
+
+        public void setParentInfo( List<(string id, string name, string sortName, string displayText, string url)> parentInfo )
+        {
+            ParentIds = [];
+
+            var parentNamesText = new List<string>();
+            var parentNamesSortBy = new List<string>();
+            var parentUrls = new List<string>();
+
+            foreach( var currParentInfo in parentInfo )
+            {
+                ParentIds.Add( currParentInfo.id );
+                parentNamesText.Add( currParentInfo.displayText );
+                parentNamesSortBy.Add( currParentInfo.sortName );
+
+                if( !currParentInfo.url.IsEmpty() )
+                    parentUrls.Add( currParentInfo.url );
+            }
+
+            ParentName = new() { SortBy = parentNamesSortBy.Join( ", " ), Text = parentNamesText.Join( ", " ) };
+            ParentUrl = parentUrls.Join( "\n" );
+        }
+
 
         private static bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
         {
@@ -129,31 +153,31 @@ namespace Statistics2026.Api
 
         private static MediaItemResponse? SetMissingData( MediaItemResponse retVal, IResultSet row, ref int col, DateTimeOffset? premiereDate, bool isEpisode, Func<string, int, bool> isSeriesFiltered, Func<string, bool> isCollectionFiltered, Func<string, SortByText?> getCollectionName )
         {
-            var parentInfo = row.GetString( col++ );
-            var tmdbPosterPath = row.GetString( col++ ); // blank for onServer 
+            if( col != (int)Statistics2026DB.EMediaListResponseColumns.ePosterPath )
+                throw new Exception( "SetMissingData called with the wrong column" );
+
+            var tmdbPosterPath = row.GetString( col++ ); // blank for onServer
             var seasonNum = row.GetInt( col++ );
             var episodeNum = row.GetInt( col++ );
             var parentId = row.GetString( col++ );  // blank for onServer
 
-            var parentNames = new List<string>();
-            retVal.setParentInfo( parentInfo, ref parentNames );
+            if( !isEpisode )
+            {
+                List<SortByText> collectionNames = [];
+                foreach( var currParentId in retVal.ParentIds )
+                {
+                    var currCollectionNames = getCollectionName( currParentId );
+                    if( currCollectionNames != null )
+                    {
+                        collectionNames.Add( currCollectionNames );
+                    }
+                }
 
-            if( isEpisode )
-            {
-                if( isSeriesFiltered( retVal.ParentId, seasonNum ) )
+                retVal.ParentName = new();
+                foreach( var curr in collectionNames )
                 {
-                    return null;
+                    retVal.ParentName += curr;
                 }
-            }
-            else
-            {
-                foreach( var parentName in parentNames )
-                {
-                    if( isCollectionFiltered( parentName ) )
-                        return null;
-                }
-                var collections = getCollectionName( retVal.ParentId );
-                retVal.ParentName = collections ?? new();
             }
 
 
@@ -161,7 +185,7 @@ namespace Statistics2026.Api
             if( !tmdbPosterPath.IsNullOrEmpty() )
             {
                 var tmp = string.Empty;
-                (retVal.ItemUrl, retVal.DisplayName.Text, tmp) = HelperFuncs.GetTMDBUrl( tmdbPosterPath, retVal.DisplayName.SortBy );
+                (retVal.ItemUrl, retVal.DisplayName.Text, tmp) = HelperFuncs.GetTMDBUrl( tmdbPosterPath, retVal.DisplayName.Text );
             }
 
             var searchKey = retVal.DisplayName.SortBy;
@@ -314,8 +338,31 @@ namespace Statistics2026.Api
             if( itemId != null && !itemId.IsEmpty() )
                 retVal.ItemUrl = ItemImageUrl.ItemUrlFromItemId( itemId, itemImageUrl, title );
 
+
             if( isMissing )
             {
+                var parentInfoJSON = row.GetString( col++ );
+                var seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
+
+                var parentInfo = getParentInfo( parentInfoJSON, 
+                    ( string id, string name, string sortName ) =>
+                    {
+                        if( isEpisode )
+                        {
+                            return isSeriesFiltered( id, seasonNum );
+                        }
+                        else
+                        {
+                            return isCollectionFiltered( name ) || isCollectionFiltered( sortName );
+                        }
+                    }
+                );
+
+                if( parentInfo == null )
+                    return null;
+
+                retVal.setParentInfo( parentInfo );
+
                 retVal = SetMissingData( retVal, row, ref col, premiereDate, isEpisode, isSeriesFiltered, isCollectionFiltered, getCollectionName );
                 if( retVal == null )
                     return null;

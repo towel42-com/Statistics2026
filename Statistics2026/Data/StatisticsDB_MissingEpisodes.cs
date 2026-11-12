@@ -28,32 +28,6 @@ namespace Statistics2026.Data
             Logger().Debug( $"Starting Analysis" );
             Progress?.Report( 0 );
             var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), true );
-            //Dictionary<string, List<(Series series, int episodeCount)>> seriesToEpisodeMap = [];
-            //foreach( var series in seriesList )
-            //{
-            //    var currValue = (series, EmbyHelperFuncs.GetAllEpisodesForSeries( null, LibraryManager(), series ).Count());
-
-            //    var key = series.GetProviderId( MetadataProviders.Tmdb );
-            //    if( key.IsEmpty() )
-            //    {
-
-            //        key = $"{series.SortName}";
-            //        if (series.PremiereDate != null )
-            //            key += $"_{series.PremiereDate}";
-            //    }
-
-            //    if( seriesToEpisodeMap.TryGetValue( key, out var curr ) )
-            //    {
-            //        curr.Add( currValue );
-            //    }
-            //    else
-            //    {
-            //        curr = new List<(Series series, int episodeCount)>() { currValue };
-            //        seriesToEpisodeMap.Add( key, curr );
-            //    }
-            //}
-            //seriesToEpisodeMap = seriesToEpisodeMap.Where( kvp => kvp.Value.Count() >= 2 ).ToDictionary( kvp => kvp.Key, kvp => kvp.Value );
-
             seriesList.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             Progress?.Report( 100 );
 

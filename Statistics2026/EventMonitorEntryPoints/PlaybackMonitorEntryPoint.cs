@@ -45,7 +45,6 @@ namespace Statistics2026.EventMonitorEntryPoints
             IAuthenticationRepository authenticationRepository
             )
         {
-            // missing one
             _embyInterfaces = new EmbyInterfaces()
             {
                 _logger = logManager.GetLogger( "Statistics2026 - PlaybackMonitorEntryPoint" ),
