@@ -121,7 +121,7 @@ namespace Statistics2026.ScheduledTasks
 
             overAllTimer.Dispose();
             _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"Time to Add: {overall} ms" );
+            _embyInterfaces.Logger().Info( $"Time to Analyze: {overall} ms" );
             if( tasks != null )
             {
                 var maxLen = 0;
