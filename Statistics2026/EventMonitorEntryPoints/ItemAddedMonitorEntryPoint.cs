@@ -2,11 +2,13 @@
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
 using MediaBrowser.Controller.Session;
+using MediaBrowser.Model.Events;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
@@ -22,9 +24,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Timers;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace Statistics2026.EventMonitorEntryPoints
 {
@@ -53,7 +55,7 @@ namespace Statistics2026.EventMonitorEntryPoints
         {
             _embyInterfaces = new EmbyInterfaces()
             {
-                _logger = logManager.GetLogger( "Statistics2026 - PostMediaScanTask" ),
+                _logger = logManager.GetLogger( "Statistics2026 - MediaOrUserAddMonitorEntryPoint" ),
                 _appHost = appHost,
                 _authenticationRepository = authenticationRepository,
                 _fileSystem = fileSystem,
@@ -80,11 +82,13 @@ namespace Statistics2026.EventMonitorEntryPoints
         public void Run()
         {
             _embyInterfaces.LibraryManager().ItemAdded += OnItemAdded;
+            _embyInterfaces.UserManager().UserCreated += OnUserCreated;
         }
 
         public void Dispose()
         {
             _embyInterfaces.LibraryManager().ItemAdded -= OnItemAdded;
+            _embyInterfaces.UserManager().UserCreated -= OnUserCreated;
             _debounceTimer.Dispose();
         }
 
@@ -92,6 +96,19 @@ namespace Statistics2026.EventMonitorEntryPoints
         {
             if( e.Item == null )
                 return;
+            var enabledStr = _debounceTimer.Enabled ? "Enabled" : "NOT Enabled";
+            _embyInterfaces.Logger().Debug( $"Notification of item added: Timer currently {enabledStr}" );
+            _debounceTimer.Stop();
+            _debounceTimer.Start();
+        }
+
+        private void OnUserCreated( object sender, GenericEventArgs<User> e )
+        {
+            if( e.Argument == null )
+                return;
+
+            var enabledStr = _debounceTimer.Enabled ? "Enabled" : "NOT Enabled";
+            _embyInterfaces.Logger().Debug( $"Notification of user added: Timer currently {enabledStr}" );
             _debounceTimer.Stop();
             _debounceTimer.Start();
         }
@@ -100,9 +117,16 @@ namespace Statistics2026.EventMonitorEntryPoints
         {
             try
             {
-                if( _embyInterfaces == null || TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
+                _embyInterfaces.Logger().Debug( $"Timer Expired" );
+                if( _embyInterfaces == null )
                     return;
+                if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
+                {
+                    _embyInterfaces.Logger().Debug( $"System currently running" );
+                    return;
+                }
 
+                _embyInterfaces.Logger().Debug( $"System currently NOT running" );
                 _debounceTimer.Stop();
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 db.Initialize( null, null, null, false );
@@ -110,7 +134,7 @@ namespace Statistics2026.EventMonitorEntryPoints
                 var currLogger = _embyInterfaces.Logger();
                 var (runFullAnalysis, runMissingAnalysis) = EmbyHelperFuncs.AnalysisOutOfDate( _embyInterfaces, db );
                 _embyInterfaces._logger = currLogger;
-                _embyInterfaces.Logger().Info( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis}" );
+                _embyInterfaces.Logger().Debug( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis}" );
 
                 List<Type> tasks = [];
                 if( !runFullAnalysis && runMissingAnalysis )
