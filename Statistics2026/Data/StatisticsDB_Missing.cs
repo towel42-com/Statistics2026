@@ -11,6 +11,7 @@ using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.SymbolStore;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -165,7 +166,7 @@ namespace Statistics2026.Data
             return filtered;
         }
 
-        private StatCard TotalMissingMedia( bool episodes )
+        private ((int numItems, int numParents) unfiltered, (int numItems, int numParents) filtered) MediaMissingInfo( bool episodes )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -173,21 +174,89 @@ namespace Statistics2026.Data
 
             var sql = $"SELECT COUNT( * ) FROM Missing WHERE {whereClause}";
             var value = GetSingleValueFromSQL( sql );
-            var numMissing = value.ToInt64();
+            var numMissingUnfiltered = value.ToInt();
 
             sql = $"SELECT COUNT( DISTINCT ParentId ) FROM Missing WHERE {whereClause}";
             value = GetSingleValueFromSQL( sql );
-            var numCollections = value.ToInt64();
+            var numParentsUnfiltered = value.ToInt();
+
+            int numMissingFiltered = 0;
+            HashSet<string> filteredParents = [];
+            sql = getMediaListResponseMissingCmd( episodes ? EWhichMediaList.eEpisodesMissing : EWhichMediaList.eMoviesMissing );
+            RunSQLOnRow( sql, row =>
+            {
+                HashSet<string> currParentIds = [];
+                bool filtered = false;
+
+                var name = row.GetString( (int)EMediaListResponseColumns.eTitle );
+                var seasonNum = -1;
+                if( episodes )
+                {
+                    seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
+                    var parentId = row.GetString( (int)EMediaListResponseColumns.eParentId );
+                    filtered = IsFilteredSeries( parentId, seasonNum );
+                    currParentIds.Add( parentId );
+                }
+                else
+                {
+                    var parentInfoJSON = row.GetString( (int)EMediaListResponseColumns.eParentInfoJSON );
+                    var parentInfos = MediaItemResponse.getParentInfo( parentInfoJSON,
+                        ( string id, string name, string sortName ) =>
+                        {
+                            return IsFilteredCollection( name ) || IsFilteredCollection( sortName );
+                        }
+                    );
+                    filtered = ( parentInfos == null );
+                    currParentIds = parentInfos?.Select( pi => pi.id ).ToHashSet() ?? [];
+                }
+
+                Logger().Debug( $"{( episodes ? "Series" : "Movie" )} : {name}{( episodes ? $" Season: {seasonNum}" : "" )} - {( filtered ? "" : "NOT " )}Filtered" );
+                if( !filtered )
+                {
+                    numMissingFiltered++;
+                    filteredParents.UnionWith( currParentIds );
+                }
+
+                return true;
+            } );
+
+            return ((numMissingUnfiltered, numParentsUnfiltered), (numMissingFiltered, filteredParents.Count()));
+        }
+
+        private StatCard TotalMissingMedia( bool episodes )
+        {
+            CheckIsValid( ECheckLevel.eReport );
+
+            var info = MediaMissingInfo( episodes );
 
             var title = episodes ? Constants.MissingEpisodes : Constants.MissingMovies;
             var subTitle = episodes ? Constants.MissingEpisodesSubTitle : Constants.MissingMoviesSubTitle;
+            var titleFiltered = episodes ? Constants.MissingEpisodesFiltered : Constants.MissingMoviesFiltered;
+            var subTitleFiltered = episodes ? Constants.MissingEpisodesSubTitleFiltered : Constants.MissingMoviesSubTitleFiltered;
+
             var help = episodes ? Constants.MissingEpisodesHelp : Constants.MissingMoviesHelp;
 
-            var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eCompact );
+            if( ( info.unfiltered.numItems == info.filtered.numItems ) &&
+                ( info.unfiltered.numParents == info.filtered.numParents ) )
+            {
+                titleFiltered = title;
+                subTitleFiltered = subTitle;
+            }
 
-            retVal.AddLine( numMissing.ToString(), false );
-            retVal.AddLine( subTitle, true );
-            retVal.AddLine( numCollections.ToString(), false );
+            var retVal = new TextBasedStatCard( titleFiltered, help, EStatCardStyle.eCompact );
+
+            retVal.AddLine( info.filtered.numItems.ToString(), false );
+            retVal.AddLine( subTitleFiltered, true );
+            retVal.AddLine( info.filtered.numParents.ToString(), false );
+
+            if( ( info.unfiltered.numItems != info.filtered.numItems ) ||
+                ( info.unfiltered.numParents != info.filtered.numParents ) )
+            {
+                retVal.AddLine( title, true );
+                retVal.AddLine( info.unfiltered.numItems.ToString(), false );
+                retVal.AddLine( subTitle, true );
+                retVal.AddLine( info.unfiltered.numParents.ToString(), false );
+            }
             return retVal;
         }
 
