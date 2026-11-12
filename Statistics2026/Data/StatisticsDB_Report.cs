@@ -1,12 +1,29 @@
 ﻿using MediaBrowser.Controller.Entities;
+using SQLitePCL;
+using SQLitePCL.pretty;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace Statistics2026.Data
 {
     public sealed partial class Statistics2026DB
     {
+        private void RunSQLOnRow( string sql, Func<IResultSet, bool> onRow, List<(string name, object? value)>? parameters = null )
+        {
+            CheckIsValid( ECheckLevel.eReport );
+
+            var cmd = new SQLCmdDef( sql, parameters );
+
+            var retVal = string.Empty;
+            ExecuteCommand( cmd, statement =>
+            {
+                var row = statement.Current;
+                return onRow( row );
+            } );
+        }
+
         private string GetSingleValueFromSQL( string sql, List<(string name, object? value)>? parameters = null, Func<long, string>? formatter = null )
         {
             CheckIsValid( ECheckLevel.eReport );
