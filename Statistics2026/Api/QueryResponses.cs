@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Entities.TV;
+﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Logging;
 using ServiceStack;
 using SQLitePCL;
@@ -7,10 +8,12 @@ using Statistics2026;
 using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Utilities;
+using System.Data.Common;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace Statistics2026.Api
 {
@@ -85,20 +88,5 @@ namespace Statistics2026.Api
         public string ScoreStr { get; set; } = string.Empty;
         public string SeriesStatus { get; set; } = string.Empty;
     }
-
-    public class SortByText
-    {
-        public SortByText( string sortBy = "", string text = "" )
-        {
-            this.SortBy = sortBy;
-            this.Text = text;
-            if( Text.IsEmpty() )
-                Text = SortBy;
-            if( SortBy.IsEmpty() )
-                SortBy = Text;
-        }
-
-        public string SortBy { get; set; } = string.Empty;
-        public string Text { get; set; } = string.Empty;
-    }
+   
 }
