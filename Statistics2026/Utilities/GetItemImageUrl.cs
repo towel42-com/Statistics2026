@@ -94,7 +94,7 @@ namespace Statistics2026.Utilities
             retVal += $"href=\"{targetUrl}\">";
             if( !imageUrl.IsEmpty() )
             {
-                retVal += $"<img loading=\"lazy\" src=\"{imageUrl}\" height=\"{height}\"/>";
+                retVal += $"<img referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"{imageUrl}\" height=\"{height}\"/>";
             }
             retVal += $"{text}</a>";
             return retVal;

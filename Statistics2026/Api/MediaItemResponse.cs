@@ -288,7 +288,7 @@ namespace Statistics2026.Api
                 providerNames.Add( provider.ProviderName );
 
                 var htmlTemplate =
-                    "<a is=\"emby-linkbutton\" target=\"_blank\" rel=\"noopener noreferrer\" href=\"<TARGET_URL>\" class=\"emby-button emby-button-focusscale\">" +
+                    "<a is=\"emby-linkbutton\" target=\"_blank\" referrerpolicy=\"no-referrer\" rel=\"noopener noreferrer\" href=\"<TARGET_URL>\" class=\"emby-button emby-button-focusscale\">" +
                     "   <TARGET_TEXT>" +
                     "</a>";
                 var (imageUrl, itemText, itemUrl) = provider.ImageUrl( targetUrl: providerUrl, targetHtml: htmlTemplate, imageHeight: "45px" );

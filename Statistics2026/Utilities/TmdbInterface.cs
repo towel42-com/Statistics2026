@@ -630,7 +630,7 @@ namespace Statistics2026.Utilities
             return (retVal.imageUrl, retVal.itemText);
         }
 
-        public (string imageUrl, string itemText, string itemUrl) ImageUrl(string targetUrl, string targetHtml, string posterSize = "original", string? imageHeight = "105px", string? imageWidth = null ) //html uses <TARGET_URL> and <TARGET_TEXT> as placeholders
+        public (string imageUrl, string itemText, string itemUrl) ImageUrl(string targetUrl, string targetHtml, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null ) //html uses <TARGET_URL> and <TARGET_TEXT> as placeholders
         {
             return HelperFuncs.GetTMDBUrl( LogoPath, ProviderName, (targetUrl, targetHtml), posterSize, imageHeight, imageWidth );
         }

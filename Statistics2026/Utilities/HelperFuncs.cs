@@ -447,7 +447,7 @@ namespace Statistics2026.Utilities
             return new SemaphoreSlim( numThreads, numThreads );
         }
 
-        public static (string imageUrl, string itemText, string itemUrl) GetTMDBUrl( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize="original", string? imageHeight="105px", string? imageWidth=null )
+        public static (string imageUrl, string itemText, string itemUrl) GetTMDBUrl( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize="w300", string? imageHeight="105px", string? imageWidth=null )
         {
             string imageUrl = string.Empty;
             if( !posterPath.IsNullOrEmpty() && posterPath != "/" )
@@ -460,7 +460,7 @@ namespace Statistics2026.Utilities
             string itemText = string.Empty;
             if( !imageUrl.IsNullOrEmpty() )
             {
-                itemText = $"<img loading=\"lazy\" src=\"{imageUrl}\" ";
+                itemText = $"<img referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"{imageUrl}\" ";
                 if( imageHeight != null )
                 {
                     itemText += $"height=\"{imageHeight}\" ";
