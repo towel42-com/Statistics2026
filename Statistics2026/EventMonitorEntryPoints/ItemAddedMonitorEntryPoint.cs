@@ -3,6 +3,7 @@ using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Plugins;
 using MediaBrowser.Controller.Providers;
@@ -34,6 +35,7 @@ namespace Statistics2026.EventMonitorEntryPoints
     {
         private readonly EmbyInterfaces _embyInterfaces;
         private readonly System.Timers.Timer _debounceTimer;
+        private List<string> Reasons = [];
 
         public ItemAddedMonitorEntryPoint(
             IFileSystem fileSystem,
@@ -75,6 +77,13 @@ namespace Statistics2026.EventMonitorEntryPoints
             _debounceTimer = new System.Timers.Timer( 30000 );
             _debounceTimer.AutoReset = false;
             _debounceTimer.Elapsed += OnTimerElapsed;
+
+            var debouncer = new Debouncer();
+            debouncer.RunLaterAsync( 1000, async ( cancellationToken ) => {
+                Reasons.Add( "Startup" );
+                CheckForOOD();
+                return false;
+            } );
         }
 
         private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
@@ -98,6 +107,7 @@ namespace Statistics2026.EventMonitorEntryPoints
                 return;
             var enabledStr = _debounceTimer.Enabled ? "Enabled" : "NOT Enabled";
             _embyInterfaces.Logger().Debug( $"Notification of item added: Timer currently {enabledStr}" );
+            Reasons.Add( "Item Added" );
             _debounceTimer.Stop();
             _debounceTimer.Start();
         }
@@ -109,12 +119,18 @@ namespace Statistics2026.EventMonitorEntryPoints
 
             var enabledStr = _debounceTimer.Enabled ? "Enabled" : "NOT Enabled";
             _embyInterfaces.Logger().Debug( $"Notification of user added: Timer currently {enabledStr}" );
+            Reasons.Add( "User Added" );
             _debounceTimer.Stop();
             _debounceTimer.Start();
         }
 
         private void OnTimerElapsed( object sender, ElapsedEventArgs e )
         {
+            CheckForOOD();
+        }
+
+        private void CheckForOOD()
+        { 
             try
             {
                 _embyInterfaces.Logger().Debug( $"Timer Expired" );
@@ -132,9 +148,11 @@ namespace Statistics2026.EventMonitorEntryPoints
                 db.Initialize( null, null, null, false );
 
                 var currLogger = _embyInterfaces.Logger();
-                var (runFullAnalysis, runMissingAnalysis) = EmbyHelperFuncs.AnalysisOutOfDate( _embyInterfaces, db );
+                var (runFullAnalysis, runMissingAnalysis, reasons) = EmbyHelperFuncs.AnalysisOutOfDate( _embyInterfaces, db );
                 _embyInterfaces._logger = currLogger;
-                _embyInterfaces.Logger().Debug( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis}" );
+                Reasons.AddRange( reasons );
+                var oodReasons = string.Join( ", ", Reasons ) ;
+                _embyInterfaces.Logger().Debug( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis} reasons={oodReasons}" );
 
                 List<Type> tasks = [];
                 if( !runFullAnalysis && runMissingAnalysis )
@@ -146,7 +164,8 @@ namespace Statistics2026.EventMonitorEntryPoints
                     tasks.Add( typeof( RunAllTasksTask ) );
                 }
 
-                _ = TaskDef.ExecuteSubTasksAsync( _embyInterfaces, tasks, null, false );
+                _ = TaskDef.ExecuteSubTasksAsync( _embyInterfaces, tasks, reasons, null, false );
+                Reasons.Clear();
             }
             catch( Exception )
             {
