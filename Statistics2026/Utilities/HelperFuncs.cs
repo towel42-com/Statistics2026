@@ -399,19 +399,25 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static string MakeTableHtml( List<string> values, bool inDiv = true, int depth = 0 )
+        public static string MakeTableHtml( List<(string key, string value)> rows, bool inDiv = true, int depth = 0 )
         {
-            if( values.IsNullOrEmpty() )
+            if( rows.IsNullOrEmpty() )
                 return string.Empty;
 
             var retVal = string.Empty;
             if( inDiv )
                 retVal += addToHtml( depth++, "<div>" );
 
-            retVal += addToHtml( depth++, "<ul>" );
-            foreach( var curr in values )
+            retVal += addToHtml( depth++, "<ul class=\"dynamic-list\">" );
+            foreach( var curr in rows )
             {
-                retVal += addToHtml( depth, $"<li>{curr}</li>" );
+                retVal += addToHtml( depth++, "<li>" );
+                retVal += addToHtml( depth++, "<div class=\"row\">" );
+                retVal += addToHtml( depth, $"<span class=\"label\">{curr.key}</span>" );
+                if ( !curr.value.IsNullOrEmpty() )
+                    retVal += addToHtml( depth, $"<span class=\"value\">{curr.value}</span>" );
+                retVal += addToHtml( --depth, "</div>" );
+                retVal += addToHtml( --depth, "</li>" );
             }
             retVal += addToHtml( --depth, "</ul>" );
             if( inDiv )
@@ -419,24 +425,44 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static string MakeTableHtml( string title, List<string> values )
+        public static string MakeTableHtml( List<string> values, bool inDiv = true, int depth = 0 )
         {
-            if( values.IsNullOrEmpty() )
+            List<(string key, string value)> rows = [];
+            foreach( var curr in values )
+            {
+                rows.Add( (curr, "") );
+            }
+            return MakeTableHtml( rows, inDiv, depth );
+        }
+
+        public static string MakeTableHtml( string title, List<(string key, string value)> rows )
+        {
+            if( rows.IsNullOrEmpty() )
                 return string.Empty;
 
             var depth = 0;
-            var retVal = addToHtml( depth++, "</br>\n<div>" );
+            var retVal = addToHtml( depth++, "<br>\n<div>" );
             if( !title.IsEmpty() )
             {
                 retVal += addToHtml( depth, $"<h3>{title}</h3>" );
             }
 
-            retVal += MakeTableHtml( values, false, depth );
+            retVal += MakeTableHtml( rows, false, depth );
 
             retVal += addToHtml( --depth, "</div>" );
             return retVal;
         }
 
+
+        public static string MakeTableHtml( string title, List<string> values )
+        {
+            List<(string key, string value)> rows = [];
+            foreach( var curr in values )
+            {
+                rows.Add( (curr, "") );
+            }
+            return MakeTableHtml( title, rows );
+        }
 
         public static string PrettyPrintFileSize( this long bytes )
         {

@@ -2,13 +2,15 @@
 using MediaBrowser.Model.Services;
 using ServiceStack;
 using Statistics2026.Api;
+using Statistics2026.ScheduledTasks;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Net.Http.Headers;
 using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
-using System.Text.RegularExpressions;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Statistics2026.Data
 {
@@ -83,22 +85,23 @@ namespace Statistics2026.Data
             retVal.html = systemHtml + retVal.html;
 
             var status = Plugin.Instance?.CurrDBState() ?? EDBState.eEmpty;
-            List<string> dbStates = [];
+            List<(string key, string value)> dbStates = [];
             foreach( var curr in new[] { EDBState.eSystemTablesCreated, EDBState.eUserTablesCreated, EDBState.eSystemDataInitialized, EDBState.eUserDataInitialized } )
             {
                 var currState = curr.ToString();
-                currState = Regex.Replace( currState, "^e", "" );
+                currState = Regex.Replace( currState, "^e", "" ) + ":";
                 if( ( curr & status ) != 0 )
                 {
-                    dbStates.Add( currState + " = <b>true</b>" );
+                    dbStates.Add( (currState, "<b>true</b>") );
                 }
                 else
                 {
-                    dbStates.Add( currState + " = <b>false</b>" );
+                    dbStates.Add( (currState, "<b>false</b>") );
                 }
             }
 
-            retVal.html += HelperFuncs.MakeTableHtml( "Database State:", dbStates );
+            var dbStateHtml = HelperFuncs.MakeTableHtml( "Database State:", dbStates );
+            retVal.html += dbStateHtml;
 
             retVal.html = retVal.html.Replace( "</br>", "" );
             return retVal;
@@ -136,10 +139,97 @@ namespace Statistics2026.Data
                 else
                     errors.Add( currData );
             }
-            var resultText = HelperFuncs.MakeTableHtml( "Analsys Last Run:", results );
+            var resultText = string.Empty;
+            var depth = 0;
+
+            resultText = HelperFuncs.addToHtml( depth++, "<br>\n<div>" );
+            resultText += HelperFuncs.addToHtml( depth, $"<h3>Last Analysis:</h3>" );
+
+            resultText += HelperFuncs.addToHtml( depth++, "<ul class=\"dynamic-list\">" );
+            resultText += string.Join( "\n", results );
+            resultText += HelperFuncs.addToHtml( --depth, "</ul>" );
+            resultText += HelperFuncs.addToHtml( --depth, "</div>" );
 
             var errorText = HelperFuncs.MakeTableHtml( "Error Getting Last Run Information:", errors );
             return new HtmlJsonResponse() { html = resultText, error = errorText };
+        }
+
+        System.Type? TypeForAction( EAction action )
+        {
+            System.Type? retVal = null;
+            switch( action )
+            {
+                case EAction.System:
+                    retVal = typeof( RunAllTasksTask );
+                    break;
+                case EAction.LastMediaOrUserAdded:
+                    retVal = null;
+                    break;
+                case EAction.CollectionsAnalysis:
+                    retVal = typeof( AnalyzeCollectionsTask );
+                    break;
+                case EAction.MediaAnalysis:
+                    retVal = typeof( AnalyzeMediaTask );
+                    break;
+                case EAction.MissingEpisodesAnalysis:
+                    retVal = typeof( AnalyzeMissingEpisodesTask );
+                    break;
+                case EAction.MissingMoviesAnalysis:
+                    retVal = typeof( AnalyzeMissingMoviesTask );
+                    break;
+                case EAction.SeriesAnalysis:
+                    retVal = typeof( AnalyzeSeriesTask );
+                    break;
+                case EAction.UserAnalysis:
+                    retVal = typeof( AnalyzeUsersTask );
+                    break;
+                case EAction.UserWatchDataAnalysis:
+                    retVal = typeof( AnalyzeWatchedMediaDataTask );
+                    break;
+                case EAction.StreamingProviders:
+                    retVal = typeof( AnalyzeStreamingProvidersTask );
+                    break;
+            }
+            return retVal;
+        }
+
+        string TitleForAction( EAction action )
+        {
+            string retVal = string.Empty;
+            switch( action )
+            {
+                case EAction.System:
+                    retVal = "System Analysis";
+                    break;
+                case EAction.LastMediaOrUserAdded:
+                    retVal = "Last Media or User Added";
+                    break;
+                case EAction.CollectionsAnalysis:
+                    retVal = "Collection Analysis";
+                    break;
+                case EAction.MediaAnalysis:
+                    retVal = "Media Analysis";
+                    break;
+                case EAction.MissingEpisodesAnalysis:
+                    retVal = "Missing Episode Analysis";
+                    break;
+                case EAction.MissingMoviesAnalysis:
+                    retVal = "Missing Movie Analysis";
+                    break;
+                case EAction.SeriesAnalysis:
+                    retVal = "Series Analysis";
+                    break;
+                case EAction.UserAnalysis:
+                    retVal = "User Analysis";
+                    break;
+                case EAction.UserWatchDataAnalysis:
+                    retVal = "User Watch Data Analysis";
+                    break;
+                case EAction.StreamingProviders:
+                    retVal = "Streaming Provider Analysis";
+                    break;
+            }
+            return retVal;
         }
 
         public string GetLastRunInfo( EAction action )
@@ -147,57 +237,47 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eReport );
 
             var (lastUpdated, runtimeMS, reason) = GetLastUpdated( action );
-            const string notRun = "Not Run";
-            var lastUpdateText = notRun;
-            if( lastUpdated != null && lastUpdated.HasValue && lastUpdated.Value != DateTimeOffset.MinValue )
+            var updateText = string.Empty;
+            bool run = ( lastUpdated != null && lastUpdated.HasValue && lastUpdated.Value != DateTimeOffset.MinValue );
+            if( run )
             {
-                lastUpdateText = lastUpdated.Value.ToTZShortString( true );
+                updateText = $"Finished at <b>{lastUpdated!.Value.ToTZShortString( true )}</b>";
+            }
+            else if( TaskDef.IsTaskRunning( _embyInterfaces, TypeForAction( action ) ) )
+            {
+                updateText = "<b>Currently Running</b>";
+            }
+            else
+            {
+                updateText = "<b>Not Run</b>";
             }
 
-            var titleText = string.Empty;
-            switch( action )
-            {
-                case EAction.System:
-                    titleText = "System Analysis";
-                    break;
-                case EAction.LastMediaOrUserAdded:
-                    titleText = "Last Media or User Added";
-                    break;
-                case EAction.CollectionsAnalysis:
-                    titleText = "Collection Analysis";
-                    break;
-                case EAction.MediaAnalysis:
-                    titleText = "Media Analysis";
-                    break;
-                case EAction.MissingEpisodesAnalysis:
-                    titleText = "Missing Episode Analysis";
-                    break;
-                case EAction.MissingMoviesAnalysis:
-                    titleText = "Missing Movie Analysis";
-                    break;
-                case EAction.SeriesAnalysis:
-                    titleText = "Series Analysis";
-                    break;
-                case EAction.UserAnalysis:
-                    titleText = "User Analysis";
-                    break;
-                case EAction.UserWatchDataAnalysis:
-                    titleText = "User Watch Data Analysis";
-                    break;
-            }
-
+            var titleText = TitleForAction( action );
             var rt = RunTime.CreateFromMS( runtimeMS );
-            var retVal = $"Last {titleText} finished at <b>{lastUpdateText}</b>";
+            int depth = 2; // div and ul
+            var retVal = string.Empty;
 
+            retVal += HelperFuncs.addToHtml( depth++, "<li>" );
+            retVal += HelperFuncs.addToHtml( depth++, "<div class=\"row\">" );
+            retVal += HelperFuncs.addToHtml( depth, $"<span class=\"label\">{titleText}:</span>" );
+
+            var data = updateText;
             if( Plugin.Instance!.Configuration.showDebugInfo )
             {
-                retVal += $" taking <b>{rt.ToShortString( false )}</b>";
-                if( reason.Count > 0 )
+                if( run )
                 {
-                    var reasonHtml = HelperFuncs.MakeTableHtml( reason, true, 0 );
-                    retVal += reasonHtml;
+                    data += $" taking <b>{rt.ToShortString( false )}ms</b>";
+                    if( reason.Count > 0 )
+                    {
+                        data += "<div>Reasons for Run:</b></div>";
+                        data += HelperFuncs.MakeTableHtml( reason, true, 0 );
+                    }
                 }
             }
+
+            retVal += HelperFuncs.addToHtml( depth, $"<span class=\"value\">{data}</span>" );
+            retVal += HelperFuncs.addToHtml( --depth, "</div>" );
+            retVal += HelperFuncs.addToHtml( --depth, "</li>" );
             return retVal;
         }
 
@@ -235,12 +315,12 @@ namespace Statistics2026.Data
             ExecuteCommands( sqlCmds );
         }
 
-        public void UpdateLastUpdated( EAction action, List<string> reasons, long runtimeMS )
+        public void SetLastUpdated( EAction action, List<string> reasons, long runtimeMS )
         {
-            UpdateLastUpdated( action, reasons, runtimeMS, DateTimeOffset.UtcNow );
+            SetLastUpdated( action, reasons, runtimeMS, DateTimeOffset.UtcNow );
         }
 
-        public void UpdateLastUpdated( EAction action, List<string> reasons, long runtimeMS, DateTimeOffset updateTime )
+        public void SetLastUpdated( EAction action, List<string> reasons, long runtimeMS, DateTimeOffset updateTime )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 

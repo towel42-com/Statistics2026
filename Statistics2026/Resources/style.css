@@ -496,3 +496,44 @@ td.statCard-stats-numbersep:empty {
         opacity: 1;
         color: var(--local-theme-primary-color);
     }
+
+    /* dynamic list*/
+.dynamic-list {
+    display: table;
+    border-collapse: collapse;
+    padding-left: 1.5rem; /* Space for the bullets */
+    margin: 0;
+}
+
+    .dynamic-list li {
+        display: table-row;
+    }
+
+        /* Re-add the bullet in its own table cell */
+        .dynamic-list li::before {
+            content: "•";
+            display: table-cell;
+            padding-right: 0.5rem;
+            font-weight: bold;
+        }
+
+    /* Let .row pass its children directly into the table row */
+    .dynamic-list .row {
+        display: contents;
+    }
+
+    .dynamic-list .label {
+        display: table-cell;
+        width: auto; /* Overrides any global 100% width rules */
+        white-space: nowrap; /* Keeps the label on one line */
+        text-align: left;
+        font-weight: normal;
+        padding-right: 0.75rem;
+        padding-bottom: 0.4rem;
+    }
+
+    .dynamic-list .value {
+        display: table-cell;
+        width: auto;
+        padding-bottom: 0.4rem;
+    }
