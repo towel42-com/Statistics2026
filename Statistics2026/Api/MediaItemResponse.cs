@@ -192,6 +192,9 @@ namespace Statistics2026.Api
             var subKey = string.Empty;
             if( isEpisode )
             {
+                if( retVal.ParentName.SortBy.IsNullOrEmpty() )
+                    return null;
+
                 searchKey = retVal.ParentName.SortBy;
                 if( seasonNum != 0 )
                     subKey += $"S{seasonNum:D2}";
