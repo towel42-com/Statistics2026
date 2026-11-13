@@ -4,6 +4,7 @@ using MediaBrowser.Common.Net;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
@@ -74,6 +75,13 @@ namespace Statistics2026
             _tableDefs = new TableDefs( _embyInterfaces );
 
             HelperFuncs.PreDebugRun( _embyInterfaces );
+
+            var debouncer = new Debouncer();
+            debouncer.RunLaterAsync( 500, async ( cancellationToken ) => {
+                HelperFuncs.CheckForOOD( _embyInterfaces, true, ["Startup"], GetType() );
+                return false;
+            } );
+
         }
 
         public IEnumerable<PluginPageInfo> GetPages()

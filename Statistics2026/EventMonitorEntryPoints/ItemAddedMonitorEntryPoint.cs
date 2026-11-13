@@ -77,13 +77,6 @@ namespace Statistics2026.EventMonitorEntryPoints
             _debounceTimer = new System.Timers.Timer( 30000 );
             _debounceTimer.AutoReset = false;
             _debounceTimer.Elapsed += OnTimerElapsed;
-
-            var debouncer = new Debouncer();
-            debouncer.RunLaterAsync( 1000, async ( cancellationToken ) => {
-                Reasons.Add( "Startup" );
-                CheckForOOD();
-                return false;
-            } );
         }
 
         private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
@@ -130,47 +123,10 @@ namespace Statistics2026.EventMonitorEntryPoints
         }
 
         private void CheckForOOD()
-        { 
-            try
-            {
-                _embyInterfaces.Logger().Debug( $"Timer Expired" );
-                if( _embyInterfaces == null )
-                    return;
-                if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
-                {
-                    _embyInterfaces.Logger().Debug( $"System currently running" );
-                    return;
-                }
-
-                _embyInterfaces.Logger().Debug( $"System currently NOT running" );
-                _debounceTimer.Stop();
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                db.Initialize( null, null, null, false );
-
-                var currLogger = _embyInterfaces.Logger();
-                var (runFullAnalysis, runMissingAnalysis, reasons) = EmbyHelperFuncs.AnalysisOutOfDate( _embyInterfaces, db );
-                _embyInterfaces._logger = currLogger;
-                Reasons.AddRange( reasons );
-                var oodReasons = string.Join( ", ", Reasons ) ;
-                _embyInterfaces.Logger().Debug( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis} reasons={oodReasons}" );
-
-                List<Type> tasks = [];
-                if( !runFullAnalysis && runMissingAnalysis )
-                {
-                    tasks.AddRange( [ typeof( AnalyzeMissingEpisodesTask ), typeof( AnalyzeMissingMoviesTask ) ] );
-                }
-                else if( runFullAnalysis )
-                {
-                    tasks.Add( typeof( RunAllTasksTask ) );
-                }
-
-                _ = TaskDef.ExecuteSubTasksAsync( _embyInterfaces, tasks, reasons, null, false );
-                Reasons.Clear();
-            }
-            catch( Exception )
-            {
-                // Always wrap timer callbacks in try-catch blocks to keep the server stable
-            }
+        {
+            HelperFuncs.CheckForOOD( _embyInterfaces, false, Reasons, GetType() );
+            Reasons.Clear();
+            _debounceTimer.Stop();
         }
     }
 }

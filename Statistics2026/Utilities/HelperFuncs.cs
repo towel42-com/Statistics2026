@@ -14,6 +14,8 @@ using MediaBrowser.Model.Entities;
 using ServiceStack;
 using SQLitePCL;
 using SQLitePCL.pretty;
+using Statistics2026.Data;
+using Statistics2026.ScheduledTasks;
 using Statistics2026.Secrets;
 using System;
 using System.Collections.Generic;
@@ -27,7 +29,6 @@ using System.Threading;
 using System.Web;
 using System.Xml;
 using TimeZoneNames;
-
 using static Statistics2026.Utilities.StatGen;
 
 namespace Statistics2026.Utilities
@@ -518,6 +519,47 @@ namespace Statistics2026.Utilities
             embyInterfaces.Logger().Info( $"           {runtimeMS} ms" );
             embyInterfaces.Logger().Info( $"=======================================" );
             embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
+        }
+
+        static public void CheckForOOD( EmbyInterfaces embyInterfaces, bool initDB, List<string> reasons, System.Type okIfRunning )
+        {
+            try
+            {
+                embyInterfaces.Logger().Debug( $"Timer Expired" );
+                if( embyInterfaces == null )
+                    return;
+                if( TaskDef.IsStatistics2026TaskRunning( embyInterfaces, okIfRunning, false ) )
+                {
+                    embyInterfaces.Logger().Debug( $"System currently running" );
+                    return;
+                }
+
+                embyInterfaces.Logger().Debug( $"System currently NOT running" );
+                using var db = Statistics2026DB.GetInstance( embyInterfaces );
+                db.Initialize( null, null, null, false );
+
+                var currLogger = embyInterfaces.Logger();
+                var (runFullAnalysis, runMissingAnalysis, oodReasons) = EmbyHelperFuncs.AnalysisOutOfDate( embyInterfaces, db );
+                embyInterfaces._logger = currLogger;
+                reasons.AddRange( oodReasons );
+                embyInterfaces.Logger().Debug( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis} reasons={string.Join( ", ", reasons )}" );
+
+                List<Type> tasks = [];
+                if( !runFullAnalysis && runMissingAnalysis )
+                {
+                    tasks.AddRange( [ typeof( AnalyzeMissingEpisodesTask ), typeof( AnalyzeMissingMoviesTask ) ] );
+                }
+                else if( runFullAnalysis )
+                {
+                    tasks.Add( typeof( RunAllTasksTask ) );
+                }
+
+                _ = TaskDef.ExecuteSubTasksAsync( embyInterfaces, tasks, reasons, null, false );
+            }
+            catch( Exception )
+            {
+                // Always wrap timer callbacks in try-catch blocks to keep the server stable
+            }
         }
     }
 }
