@@ -1,6 +1,6 @@
 ﻿#if DEBUG
 #define DEBUG_PLUGIN
-#define DEBUG_PLUGIN_ASYNC
+//#define DEBUG_PLUGIN_ASYNC
 //#define DEBUG_DB
 #endif
 
