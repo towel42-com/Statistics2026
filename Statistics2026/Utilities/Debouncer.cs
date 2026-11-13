@@ -6,7 +6,7 @@ namespace Statistics2026.Utilities
         public CancellationTokenSource? CancellationToken = null;
         private readonly object _lock = new object();
 
-        public void RunLater( int ms, Func<CancellationToken, Task<bool>> func )
+        public void RunLaterAsync( int ms, Func<CancellationToken, Task<bool>> func )
         {
             lock( _lock )
             {
