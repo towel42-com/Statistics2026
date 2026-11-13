@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Model.Services;
+﻿using MediaBrowser.Model.MediaInfo;
+using MediaBrowser.Model.Services;
 using ServiceStack;
 using Statistics2026.Api;
 using Statistics2026.Utilities;
@@ -7,6 +8,7 @@ using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace Statistics2026.Data
 {
@@ -26,22 +28,27 @@ namespace Statistics2026.Data
             StreamingProviders
         }
 
-        public (DateTimeOffset? when, long ms) GetLastUpdated( EAction action )
+        public (DateTimeOffset? when, long ms, List<string> reasons) GetLastUpdated( EAction action )
         {
-            var sql = "SELECT LastUpdated, RunTimeMS FROM \n" +
+            var sql = "SELECT LastUpdated, RunTimeMS, Reason FROM \n" +
                 "LastUpdateTable \n" +
                 $"WHERE Action = '{action.ToString()}'\n"
                 ;
             DateTimeOffset? lastUpdated = DateTimeOffset.MinValue;
             long ms = 0;
+            List<string> reasons = [];
             ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
                 var row = statement.Current;
-                lastUpdated = HelperFuncs.ReadDateTime( row.GetString( 0 ) );
-                ms = row.GetInt64( 1 );
+                var count = 0;
+                lastUpdated = HelperFuncs.ReadDateTime( row.GetString( count++ ) );
+                ms = row.GetInt64( count++ );
+                reasons = HelperFuncs.JsonToStringArray( row.GetString( count++ ) );
+                if( reasons.IsNullOrEmpty() )
+                    reasons = [ row.GetString( count - 1 ) ];
                 return false;
             } );
-            return (lastUpdated, ms);
+            return (lastUpdated, ms, reasons);
         }
 
         public string GetLastRunInfo( string actionString, ref bool ok )
@@ -139,7 +146,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var (lastUpdated, runtimeMS) = GetLastUpdated( action );
+            var (lastUpdated, runtimeMS, reason) = GetLastUpdated( action );
             const string notRun = "Not Run";
             var lastUpdateText = notRun;
             if( lastUpdated != null && lastUpdated.HasValue && lastUpdated.Value != DateTimeOffset.MinValue )
@@ -180,7 +187,18 @@ namespace Statistics2026.Data
             }
 
             var rt = RunTime.CreateFromMS( runtimeMS );
-            return $"Last {titleText} finished at <b>{lastUpdateText}</b> taking <b>{rt.ToShortString( false )}</b>";
+            var retVal = $"Last {titleText} finished at <b>{lastUpdateText}</b>";
+
+            if( Plugin.Instance!.Configuration.showDebugInfo )
+            {
+                retVal += $" taking <b>{rt.ToShortString( false )}</b>";
+                if( reason.Count > 0 )
+                {
+                    var reasonHtml = HelperFuncs.MakeTableHtml( reason, true, 0 );
+                    retVal += reasonHtml;
+                }
+            }
+            return retVal;
         }
 
         public void ClearLastUpdated( EAction action )
@@ -195,6 +213,7 @@ namespace Statistics2026.Data
                 "SET \n" +
                 "  LastUpdated = @LastUpdated\n" +
                 ", RunTimeMS = @RunTimeMS\n" +
+                ", Reason = @Reason\n" +
                 ", BuildDate = @BuildDate\n" +
                 ", Version = @Version\n" +
                 "WHERE Action = @Action\n"
@@ -207,6 +226,7 @@ namespace Statistics2026.Data
                             ("@Action", action.ToString()),
                             ("@LastUpdated", null),
                             ("@RunTimeMS", null),
+                            ("@Reason", null),
                             ("@BuildDate", null),
                             ("@Version", null)
                         ] )
@@ -215,12 +235,12 @@ namespace Statistics2026.Data
             ExecuteCommands( sqlCmds );
         }
 
-        public void UpdateLastUpdated( EAction action, long runtimeMS )
+        public void UpdateLastUpdated( EAction action, List<string> reasons, long runtimeMS )
         {
-            UpdateLastUpdated( action, runtimeMS, DateTimeOffset.UtcNow );
+            UpdateLastUpdated( action, reasons, runtimeMS, DateTimeOffset.UtcNow );
         }
 
-        public void UpdateLastUpdated( EAction action, long runtimeMS, DateTimeOffset updateTime )
+        public void UpdateLastUpdated( EAction action, List<string> reasons, long runtimeMS, DateTimeOffset updateTime )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -232,6 +252,7 @@ namespace Statistics2026.Data
                 "(\n" +
                 "  Action\n" +
                 ", LastUpdated\n" +
+                ", Reason\n" +
                 ", RunTimeMS\n" +
                 ", BuildDate\n" +
                 ", Version\n" +
@@ -240,6 +261,7 @@ namespace Statistics2026.Data
                 "(\n" +
                 "  @Action\n" +
                 ", @LastUpdated\n" +
+                ", @Reason\n" +
                 ", @RunTimeMS\n" +
                 ", @BuildDate\n" +
                 ", @Version\n" +
@@ -248,6 +270,7 @@ namespace Statistics2026.Data
                 "DO UPDATE " +
                 "SET \n" +
                 "  LastUpdated = @LastUpdated\n" +
+                ", Reason = @Reason\n" +
                 ", RunTimeMS = @RunTimeMS\n" +
                 ", BuildDate = @BuildDate\n" +
                 ", Version = @Version\n"
@@ -259,6 +282,7 @@ namespace Statistics2026.Data
                         [
                             ("@Action", action.ToString()),
                             ("@LastUpdated", HelperFuncs.ToDateTimeParamValue( updateTime )),
+                            ("@Reason", JsonSerializer.Serialize( reasons )),
                             ("@RunTimeMS", runtimeMS),
                             ("@BuildDate", HelperFuncs.ToDateTimeParamValue( buildDate )),
                             ("@Version", version)

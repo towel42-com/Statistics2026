@@ -435,7 +435,7 @@ namespace Statistics2026.Utilities
         }
 
 
-        public static void UpdateLastAdded( EmbyInterfaces? embyInterfaces, Statistics2026DB db )
+        public static void UpdateLastAdded( EmbyInterfaces? embyInterfaces, List<string> reason, Statistics2026DB db )
         {
             var lastMediaAdded = EmbyHelperFuncs.GetLastMovieOrEpisodeAdded( embyInterfaces );
             DateTimeOffset? lastAdded = null;
@@ -453,7 +453,7 @@ namespace Statistics2026.Utilities
             }
             if( lastAdded != null && lastAdded != DateTimeOffset.MinValue )
             {
-                db.UpdateLastUpdated( Statistics2026DB.EAction.LastMediaOrUserAdded, 0, lastAdded.Value );
+                db.UpdateLastUpdated( Statistics2026DB.EAction.LastMediaOrUserAdded, reason, 0, lastAdded.Value );
             }
         }
 
@@ -473,7 +473,7 @@ namespace Statistics2026.Utilities
             return rhs;
         }
 
-        public static BaseItem? getLastItemOfConsequenceAdded( EmbyInterfaces? embyInterfaces )
+        public static (BaseItem? item, string reason) getLastItemOfConsequenceAdded( EmbyInterfaces? embyInterfaces )
         {
             BaseItem? latestItem = null;
 
@@ -500,39 +500,49 @@ namespace Statistics2026.Utilities
                 latestItem = getLatestItem( latestItem, lastUserAddedToServer );
             }
 
+            if( latestItem == null )
+            {
+                return (null, "<No Item Found>");
+            }
+
             var name = string.Empty;
             var dateCreated = latestItem?.DateCreated;
+            if( latestItem is Video )
+            {
 
-            if( latestItem != null && ( latestItem is Video ) )
                 name = MediaInfo.GetDisplayName( latestItem as Video );
-            else if( latestItem != null )
-                name = latestItem.Name;
+                if( name.IsNullOrEmpty() )
+                    name = latestItem!.Name;
+            }
             else
-                name = "<No Item Found>";
+                name = latestItem!.Name;
 
-            var msg = $"Last Item Added: '{name}'";
+            var msg = $"Last Item Added: {latestItem.GetType().Name} - '{name}'";
             if( dateCreated != null )
                 msg += $" on '{dateCreated?.LocalDateTime}'";
             embyInterfaces?.Logger().Info( msg );
 
-            return latestItem;
+            return (latestItem, msg);
         }
 
-        public static (bool runFullAnalysis, bool runMissingAnalysis) AnalysisOutOfDate( EmbyInterfaces? embyInterfaces, Statistics2026DB db )
+        public static (bool runFullAnalysis, bool runMissingAnalysis, List<string> reasons) AnalysisOutOfDate( EmbyInterfaces? embyInterfaces, Statistics2026DB db )
         {
             if( embyInterfaces == null )
-                return (false, false);
+                return (false, false, []);
 
             var logger = embyInterfaces.LogManager().GetLogger( "Statistics2026 - OOD Analysis" ) ?? null;
             embyInterfaces._logger = logger;
 
             logger?.Info( $"Starting OOD Analysis" );
 
+            List<string> reasons = [];
             bool runFullAnalysis = false;
             var lastAnalysisAdded = db.GetLastUpdated( EAction.LastMediaOrUserAdded ).when;
             if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTimeOffset.MinValue )
             {
-                logger?.Info( "Analysis has not been run yet" );
+                var msg = "Analysis has not been run yet";
+                logger?.Info( msg );
+                reasons.Add( msg );
                 runFullAnalysis = true;
             }
             else
@@ -545,16 +555,26 @@ namespace Statistics2026.Utilities
                 var (curr, inDB) = db.totalMediaCount();
                 if( curr != inDB )
                 {
-                    logger?.Info( $"Media count has changed since last run, re-running Complete Statistical Analysis" );
+                    var msg = $"Media count has changed since last run, re-running Complete Statistical Analysis";
+                    logger?.Info( msg );
+                    reasons.Add( msg );
                     runFullAnalysis = true;
                 }
             }
 
+            bool runMissingAnalysis = false;
             if( !runFullAnalysis )
             {
-                var latestItem = getLastItemOfConsequenceAdded( embyInterfaces );
+                var (latestItem, reason) = getLastItemOfConsequenceAdded( embyInterfaces );
                 if( latestItem != null && latestItem.DateCreated != DateTimeOffset.MinValue )
+                {
                     runFullAnalysis = lastAnalysisAdded < latestItem.DateCreated;
+                    var msg = $"Media count has changed since last run, re-running Complete Statistical Analysis";
+                    logger?.Info( msg );
+                    reasons.Add( reason );
+                    reasons.Add( msg );
+                    runMissingAnalysis = true;
+                }
             }
 
             if( !runFullAnalysis )
@@ -563,10 +583,8 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                return (runFullAnalysis, runFullAnalysis);
+                return (runFullAnalysis, runFullAnalysis, reasons);
             }
-
-            bool runMissingAnalysis = false;
 
             DateTimeOffset? lastMissingAnalysis = null;
             var lastMissingEpisodeAnalysis = db.GetLastUpdated( EAction.MissingEpisodesAnalysis ).when;
@@ -617,7 +635,7 @@ namespace Statistics2026.Utilities
                 }
             }
 
-            return (runFullAnalysis, runMissingAnalysis);
+            return (runFullAnalysis, runMissingAnalysis, reasons);
         }
 
         public static List<User> GetAllUsers( EmbyInterfaces? embyInterfaces, bool limitToRemoteAccess = true )

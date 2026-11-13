@@ -20,7 +20,7 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeMissingMoviesTask : IScheduledTask
+    public class AnalyzeMissingMoviesTask : IStatistics2026ScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
@@ -67,6 +67,7 @@ namespace Statistics2026.ScheduledTasks
 
         public string Name { get; private set; } = "";
         public string Description { get; private set; } = "";
+        public List<string> ReasonsForExecute { get; set; } = TaskDef.DefaultTaskReasons;
 
         string IScheduledTask.Key => "Statistics2026_MissingMoviesTask";
 
@@ -102,12 +103,8 @@ namespace Statistics2026.ScheduledTasks
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"    Missing Movies: {runtimeMS} ms" );
-            _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
-
-            db.UpdateLastUpdated( Statistics2026DB.EAction.MissingMoviesAnalysis, runtimeMS );
+            HelperFuncs.RunTimeSummary( runtimeMS, taskName, _embyInterfaces );
+            db.UpdateLastUpdated( Statistics2026DB.EAction.MissingMoviesAnalysis, ReasonsForExecute, runtimeMS );
 
             db.ResetCancellationToken();
         }

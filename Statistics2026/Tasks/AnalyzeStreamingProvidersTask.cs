@@ -13,14 +13,10 @@ using MediaBrowser.Model.Tasks;
 using Statistics2026.Api;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
-//using System;
-//using System.Collections.Generic;
-//using System.Threading;
-//using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeStreamingProvidersTask : IScheduledTask
+    public class AnalyzeStreamingProvidersTask : IStatistics2026ScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
@@ -67,6 +63,7 @@ namespace Statistics2026.ScheduledTasks
 
         public string Name { get; private set; } = "";
         public string Description { get; private set; } = "";
+        public List<string> ReasonsForExecute { get; set; } = TaskDef.DefaultTaskReasons;
 
         string IScheduledTask.Key => "Statistics2026_StreamingProvidersTask";
 
@@ -102,12 +99,8 @@ namespace Statistics2026.ScheduledTasks
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"   Streaming providers: {runtimeMS} ms" );
-            _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
-
-            db.UpdateLastUpdated( Statistics2026DB.EAction.StreamingProviders, runtimeMS );
+            HelperFuncs.RunTimeSummary( runtimeMS, taskName, _embyInterfaces );
+            db.UpdateLastUpdated( Statistics2026DB.EAction.StreamingProviders, ReasonsForExecute, runtimeMS );
 
             db.ResetCancellationToken();
         }

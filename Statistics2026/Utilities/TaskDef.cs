@@ -18,6 +18,8 @@ namespace Statistics2026.Utilities
 {
     public class TaskDef
     {
+        public static List<string> DefaultTaskReasons = new List<string> { "Task" };
+
         public TaskDef() { }
         public TaskDef( string name, string description, Type typeOf )
         {
@@ -145,7 +147,7 @@ namespace Statistics2026.Utilities
             if( task == null )
                 throw new Exception( $"Could not find task defintion for type '{taskType}'" );
 
-            if ( taskType != typeof( RunAllTasksTask ) )
+            if( taskType != typeof( RunAllTasksTask ) )
                 return $"\u2022 {pos + 1} - {task.Name}";
             return task.Name;
         }
@@ -180,7 +182,7 @@ namespace Statistics2026.Utilities
             return tasks;
         }
 
-        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<Type> taskTypes, CancellationToken? cancellationToken, bool runAllOkIfRunning )
+        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<Type> taskTypes, List<string> reasons, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
             List<TaskDef?> taskDefs = [];
             foreach( var taskType in taskTypes )
@@ -189,10 +191,10 @@ namespace Statistics2026.Utilities
                 taskDefs.Add( taskDef );
             }
 
-            return await ExecuteSubTasksAsync( embyInterfaces, taskDefs, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
+            return await ExecuteSubTasksAsync( embyInterfaces, taskDefs, reasons, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
         }
 
-        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<TaskDef?> taskDefs, CancellationToken? cancellationToken, bool runAllOkIfRunning )
+        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<TaskDef?> taskDefs, List<string> reasons, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
             List<TaskResult> retVal = [];
             var beenCanceled = false;
@@ -204,7 +206,7 @@ namespace Statistics2026.Utilities
                 }
                 else
                 {
-                    var taskResult = await ExecuteSubTaskAsync( embyInterfaces, taskDef, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
+                    var taskResult = await ExecuteSubTaskAsync( embyInterfaces, taskDef, reasons, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
                     beenCanceled = beenCanceled || ( taskResult.Status == TaskCompletionStatus.Cancelled );
                     retVal.Add( taskResult );
                     cancellationToken?.ThrowIfCancellationRequested();
@@ -213,7 +215,7 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, Type taskType, CancellationToken? cancellationToken, bool runAllOkIfRunning )
+        public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, Type taskType, List<string> reasons, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
             var taskDef = GetTaskDef( taskType );
             if( taskDef == null )
@@ -221,10 +223,10 @@ namespace Statistics2026.Utilities
                 return TaskDef.EmptyTaskResult;
             }
 
-            return await ExecuteSubTaskAsync( embyInterfaces, taskDef, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
+            return await ExecuteSubTaskAsync( embyInterfaces, taskDef, reasons, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
         }
 
-        public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, TaskDef? task, CancellationToken? cancellationToken, bool runAllOkIfRunning )
+        public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, TaskDef? task, List<string> reasons, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
             TaskResult retVal = TaskDef.EmptyTaskResult;
             if( task == null )
@@ -233,7 +235,7 @@ namespace Statistics2026.Utilities
             if( TaskDef.IsStatistics2026TaskRunning( embyInterfaces, runAllOkIfRunning ) )
             {
                 var debouncer = new Debouncer();
-                debouncer.RunLater( 5000, async ( cancellationToken ) =>
+                debouncer.RunLaterAsync( 5000, async ( cancellationToken ) =>
                 {
                     if( TaskDef.IsStatistics2026TaskRunning( embyInterfaces, runAllOkIfRunning ) )
                         return true;
@@ -242,13 +244,22 @@ namespace Statistics2026.Utilities
                 } );
             }
 
+            if( reasons.Count() == 0 )
+            {
+                reasons = DefaultTaskReasons;
+            }
+
             using( var timer = new AutoTimer( task.Description, embyInterfaces.Logger() ) )
             {
-                var taskToRun = embyInterfaces.TaskManager().ScheduledTasks.FirstOrDefault( taskToRun => taskToRun.ScheduledTask.GetType() == task.TaskType );
+                var taskToRun = embyInterfaces.TaskManager().ScheduledTasks.FirstOrDefault( currTask => currTask.ScheduledTask.GetType() == task.TaskType );
                 if( taskToRun == null )
                     throw new Exception( $"Task not found {task.TaskType?.Name}" );
 
                 var options = new TaskOptions() { HasManualInteraction = false };
+                if( taskToRun.ScheduledTask is IStatistics2026ScheduledTask )
+                {
+                    ( taskToRun.ScheduledTask as IStatistics2026ScheduledTask )!.ReasonsForExecute = reasons;
+                }
                 await embyInterfaces.TaskManager().Execute( taskToRun, options ).ConfigureAwait( false );
 
                 cancellationToken?.ThrowIfCancellationRequested();
@@ -265,6 +276,11 @@ namespace Statistics2026.Utilities
                     case TaskCompletionStatus.Aborted:
                     default:
                         throw new Exception( $"{task.TaskType?.Name} failed to run successfully" );
+                }
+
+                if( taskToRun.ScheduledTask is IStatistics2026ScheduledTask )
+                {
+                    ( taskToRun.ScheduledTask as IStatistics2026ScheduledTask )!.ReasonsForExecute = DefaultTaskReasons;
                 }
 
                 retVal = taskResult;

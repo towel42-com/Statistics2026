@@ -38,6 +38,7 @@ namespace Statistics2026.Data
                     [
                         new TableColDef( "Action", "TEXT", false, true, "System" ),
                         new TableColDef( "LastUpdated", "DATETIME", true ),
+                        new TableColDef( "Reason", "TEXT", true ),
                         new TableColDef( "RunTimeMS", "INT", true ),
                         new TableColDef( "Version", "TEXT", true ),
                         new TableColDef( "BuildDate", "DATETIME", true )

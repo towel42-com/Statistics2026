@@ -231,7 +231,7 @@ namespace Statistics2026
                     return;
 
                 Debouncer debouncer = new Debouncer();
-                debouncer.RunLater( 5000, async ( cancellationToken ) =>
+                debouncer.RunLaterAsync( 5000, async ( cancellationToken ) =>
                 {
                     if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, false ) )
                         return true;
@@ -245,7 +245,7 @@ namespace Statistics2026
                     {
                         taskTypes.Add( typeof( AnalyzeMissingMoviesTask ) );
                     }
-                    await TaskDef.ExecuteSubTasksAsync( _embyInterfaces, taskTypes, cancellationToken, false ).ConfigureAwait( false );
+                    await TaskDef.ExecuteSubTasksAsync( _embyInterfaces, taskTypes, [ "ConfigUpdated" ], cancellationToken, false ).ConfigureAwait( false );
                     return false;
                 } );
             }

@@ -20,7 +20,7 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class AnalyzeUsersTask : IScheduledTask
+    public class AnalyzeUsersTask : IStatistics2026ScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
@@ -67,6 +67,7 @@ namespace Statistics2026.ScheduledTasks
 
         public string Name { get; private set; } = "";
         public string Description { get; private set; } = "";
+        public List<string> ReasonsForExecute { get; set; } = TaskDef.DefaultTaskReasons;
 
         string IScheduledTask.Key => "Statistics2026_UsersTask";
 
@@ -86,13 +87,13 @@ namespace Statistics2026.ScheduledTasks
             db.Initialize( this, cancellationToken, progress );
             db.ClearLastUpdated( Statistics2026DB.EAction.UserAnalysis );
 
-            long addUsers = 0;
+            long runtimeMS = 0;
             using( var timer = new AutoTimer( $"Adding All Users", _embyInterfaces.Logger() ) )
             {
                 try
                 {
                     await db.AddAllUsersTaskImplAsync().ConfigureAwait( false );
-                    addUsers = timer.ElapsedMilliseconds();
+                    runtimeMS = timer.ElapsedMilliseconds();
                 }
                 catch( Exception ex )
                 {
@@ -101,14 +102,8 @@ namespace Statistics2026.ScheduledTasks
             }
             cancellationToken.ThrowIfCancellationRequested();
 
-            _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"Analyze all users" );
-            _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"          Users: {addUsers} ms" );
-            _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
-
-            db.UpdateLastUpdated( Statistics2026DB.EAction.UserAnalysis, addUsers );
+            HelperFuncs.RunTimeSummary( runtimeMS, taskName, _embyInterfaces );
+            db.UpdateLastUpdated( Statistics2026DB.EAction.UserAnalysis, ReasonsForExecute, runtimeMS );
 
             db.ResetCancellationToken();
         }

@@ -27,7 +27,7 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
-    public class RunAllTasksTask : IScheduledTask
+    public class RunAllTasksTask : IStatistics2026ScheduledTask
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
@@ -74,6 +74,7 @@ namespace Statistics2026.ScheduledTasks
 
         public string Name { get; private set; } = "";
         public string Description { get; private set; } = "";
+        public List<string> ReasonsForExecute { get; set; } = TaskDef.DefaultTaskReasons;
 
         private static PluginConfiguration? PluginConfiguration => Plugin.Instance?.Configuration ?? null;
 
@@ -110,14 +111,14 @@ namespace Statistics2026.ScheduledTasks
                 var task = tasks[ ii ];
                 if( task != null )
                 {
-                    task.Result = await TaskDef.ExecuteSubTaskAsync( _embyInterfaces, task, cancellationToken, true ).ConfigureAwait( false );
+                    task.Result = await TaskDef.ExecuteSubTaskAsync( _embyInterfaces, task, ReasonsForExecute, cancellationToken, true ).ConfigureAwait( false );
                     tasks[ ii ] = task;
                 }
             }
 
             var overall = overAllTimer.ElapsedMilliseconds();
-            db.UpdateLastUpdated( Statistics2026DB.EAction.System, overall );
-            EmbyHelperFuncs.UpdateLastAdded( _embyInterfaces, db );
+            db.UpdateLastUpdated( Statistics2026DB.EAction.System, ReasonsForExecute, overall );
+            EmbyHelperFuncs.UpdateLastAdded( _embyInterfaces, ReasonsForExecute, db );
 
             overAllTimer.Dispose();
             _embyInterfaces.Logger().Info( $"=======================================" );
