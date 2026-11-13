@@ -453,7 +453,7 @@ namespace Statistics2026.Utilities
             }
             if( lastAdded != null && lastAdded != DateTimeOffset.MinValue )
             {
-                db.UpdateLastUpdated( Statistics2026DB.EAction.LastMediaOrUserAdded, reason, 0, lastAdded.Value );
+                db.SetLastUpdated( Statistics2026DB.EAction.LastMediaOrUserAdded, reason, 0, lastAdded.Value );
             }
         }
 
@@ -631,7 +631,7 @@ namespace Statistics2026.Utilities
                 }
                 else
                 {
-                    msg = "Missing Analysis has already been run since new items added, not running missing analysis.";
+                    logger?.Info( "Missing Analysis has already been run since new items added, not running missing analysis." );
                 }
                 if( !msg.IsEmpty() )
                 {
