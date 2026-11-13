@@ -103,7 +103,7 @@ namespace Statistics2026.ScheduledTasks
             cancellationToken.ThrowIfCancellationRequested();
 
             HelperFuncs.RunTimeSummary( runtimeMS, taskName, _embyInterfaces );
-            db.UpdateLastUpdated( Statistics2026DB.EAction.UserAnalysis, ReasonsForExecute, runtimeMS );
+            db.SetLastUpdated( Statistics2026DB.EAction.UserAnalysis, ReasonsForExecute, runtimeMS );
 
             db.ResetCancellationToken();
         }

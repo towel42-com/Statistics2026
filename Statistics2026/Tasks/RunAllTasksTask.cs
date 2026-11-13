@@ -117,7 +117,7 @@ namespace Statistics2026.ScheduledTasks
             }
 
             var overall = overAllTimer.ElapsedMilliseconds();
-            db.UpdateLastUpdated( Statistics2026DB.EAction.System, ReasonsForExecute, overall );
+            db.SetLastUpdated( Statistics2026DB.EAction.System, ReasonsForExecute, overall );
             EmbyHelperFuncs.UpdateLastAdded( _embyInterfaces, ReasonsForExecute, db );
 
             overAllTimer.Dispose();
