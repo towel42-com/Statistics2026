@@ -27,7 +27,7 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting Analysis" );
             Progress?.Report( 0 );
-            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), true );
+            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
             seriesList.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             Progress?.Report( 100 );
 

@@ -405,7 +405,7 @@ namespace Statistics2026.Data
 
             var changedFilterMap = new List<SeriesFilterResponse>();
 
-            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), true );
+            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
 
             foreach( var series in seriesList )
             {

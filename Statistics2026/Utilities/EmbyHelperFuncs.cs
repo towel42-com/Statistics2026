@@ -254,7 +254,7 @@ namespace Statistics2026.Utilities
         public static List<Series> GetAllSeries( User? user, ILibraryManager libManager, bool includeEmptySeries )
         {
             var series = GetLibraryItems<Series>( user, libManager );
-            if( !includeEmptySeries )
+            if( includeEmptySeries )
                 return series;
 
             series = series.Where( series =>
