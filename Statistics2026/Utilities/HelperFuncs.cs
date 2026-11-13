@@ -525,7 +525,6 @@ namespace Statistics2026.Utilities
         {
             try
             {
-                embyInterfaces.Logger().Debug( $"Timer Expired" );
                 if( embyInterfaces == null )
                     return;
                 if( TaskDef.IsStatistics2026TaskRunning( embyInterfaces, okIfRunning, false ) )
