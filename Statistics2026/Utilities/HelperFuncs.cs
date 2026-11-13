@@ -27,6 +27,7 @@ using System.Threading;
 using System.Web;
 using System.Xml;
 using TimeZoneNames;
+
 using static Statistics2026.Utilities.StatGen;
 
 namespace Statistics2026.Utilities
@@ -160,16 +161,13 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static List<string> JsonToStringArray( string json )
+        public static List<string> JsonToStringArray( string json, char splitter = ',' )
         {
+            List<string> retVal = [];
             try
             {
                 var node = JsonNode.Parse( json );
-                if( node == null )
-                    return [];
-
-                var retVal = new List<string>();
-                if( node is JsonArray jsonArray )
+                if( node != null && ( node is JsonArray jsonArray ) )
                 {
                     foreach( var studio in jsonArray )
                     {
@@ -178,12 +176,15 @@ namespace Statistics2026.Utilities
                         retVal.Add( studio.ToString() );
                     }
                 }
-                return retVal;
             }
             catch( Exception )
             {
-                return json.Split( ',' ).ToList();
+                if( !json.IsNullOrEmpty() )
+                    retVal = json.Split( splitter ).ToList();
             }
+
+            retVal = retVal.Where( s => !string.IsNullOrWhiteSpace( s ) ).Select( s => s.Trim() ).ToList();
+            return retVal;
         }
 
         static string? ServerCountryCode = null;
@@ -199,7 +200,7 @@ namespace Statistics2026.Utilities
             return isoCode;
         }
 
-        public static async Task<string> GetServerCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode = "US", CancellationToken? _cancellationToken=null )
+        public static async Task<string> GetServerCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode = "US", CancellationToken? _cancellationToken = null )
         {
             // Provide a default fallback region code in case the network request is rate-limited or fails
 
@@ -397,6 +398,26 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
+        public static string MakeTableHtml( List<string> values, bool inDiv = true, int depth = 0 )
+        {
+            if( values.IsNullOrEmpty() )
+                return string.Empty;
+
+            var retVal = string.Empty;
+            if( inDiv )
+                retVal += addToHtml( depth++, "<div>" );
+
+            retVal += addToHtml( depth++, "<ul>" );
+            foreach( var curr in values )
+            {
+                retVal += addToHtml( depth, $"<li>{curr}</li>" );
+            }
+            retVal += addToHtml( --depth, "</ul>" );
+            if( inDiv )
+                retVal += addToHtml( --depth, "</div>" );
+            return retVal;
+        }
+
         public static string MakeTableHtml( string title, List<string> values )
         {
             if( values.IsNullOrEmpty() )
@@ -409,12 +430,8 @@ namespace Statistics2026.Utilities
                 retVal += addToHtml( depth, $"<h3>{title}</h3>" );
             }
 
-            retVal += addToHtml( depth++, "<ul>" );
-            foreach( var curr in values )
-            {
-                retVal += addToHtml( depth, $"<li>{curr}</li>" );
-            }
-            retVal += addToHtml( --depth, "</ul>" );
+            retVal += MakeTableHtml( values, false, depth );
+
             retVal += addToHtml( --depth, "</div>" );
             return retVal;
         }
@@ -447,7 +464,7 @@ namespace Statistics2026.Utilities
             return new SemaphoreSlim( numThreads, numThreads );
         }
 
-        public static (string imageUrl, string itemText, string itemUrl) GetTMDBUrl( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize="w300", string? imageHeight="105px", string? imageWidth=null )
+        public static (string imageUrl, string itemText, string itemUrl) GetTMDBUrl( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null )
         {
             string imageUrl = string.Empty;
             if( !posterPath.IsNullOrEmpty() && posterPath != "/" )
@@ -474,7 +491,7 @@ namespace Statistics2026.Utilities
             itemText += text;
 
             string itemUrl = string.Empty;
-            if ( targetInfo != null )
+            if( targetInfo != null )
             {
                 itemUrl = targetInfo.Value.targetHtml;
                 itemUrl = itemUrl.Replace( "<TARGET_URL>", targetInfo.Value.targetUrl );
@@ -493,6 +510,14 @@ namespace Statistics2026.Utilities
                 CacheMode = CacheMode.Unconditional
             };
             return options;
+        }
+
+        public static void RunTimeSummary( long runtimeMS, string taskName, EmbyInterfaces embyInterfaces )
+        {
+            embyInterfaces.Logger().Info( $"=======================================" );
+            embyInterfaces.Logger().Info( $"           {runtimeMS} ms" );
+            embyInterfaces.Logger().Info( $"=======================================" );
+            embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
         }
     }
 }
