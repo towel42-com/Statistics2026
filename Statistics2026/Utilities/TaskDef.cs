@@ -55,6 +55,33 @@ namespace Statistics2026.Utilities
             }
         }
 
+        public static bool IsTaskRunning( EmbyInterfaces embyInterfaces, MediaBrowser.Model.Tasks.IScheduledTask runningTask )
+        {
+            return IsTaskRunning( embyInterfaces, runningTask.GetType() );
+        }
+
+        public static bool IsTaskRunning( EmbyInterfaces embyInterfaces, System.Type? runningTask )
+        {
+            if( runningTask == null )
+                return false;
+
+            if( embyInterfaces._taskManager == null )
+                return false;
+
+            var allTasks = embyInterfaces.TaskManager().ScheduledTasks;
+            foreach( var task in allTasks )
+            {
+                if( task.State == MediaBrowser.Model.Tasks.TaskState.Idle )
+                    continue;
+
+                if( runningTask == task.ScheduledTask.GetType() )
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public static bool IsStatistics2026TaskRunning( EmbyInterfaces embyInterfaces, bool runAllOkIfRunning )
         {
             return IsStatistics2026TaskRunning( embyInterfaces, [], runAllOkIfRunning );
