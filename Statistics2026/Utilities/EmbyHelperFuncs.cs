@@ -568,20 +568,18 @@ namespace Statistics2026.Utilities
                 var (latestItem, reason) = getLastItemOfConsequenceAdded( embyInterfaces );
                 if( latestItem != null && latestItem.DateCreated != DateTimeOffset.MinValue )
                 {
-                    runFullAnalysis = lastAnalysisAdded < latestItem.DateCreated;
-                    var msg = $"Media count has changed since last run, re-running Complete Statistical Analysis";
-                    logger?.Info( msg );
-                    reasons.Add( reason );
-                    reasons.Add( msg );
-                    runMissingAnalysis = true;
+                    if( lastAnalysisAdded < latestItem.DateCreated )
+                    {
+                        var msg = $"Last analysys was run before the latest item was added, running Missing Analysis";
+                        logger?.Info( msg );
+                        reasons.Add( reason );
+                        reasons.Add( msg );
+                        runMissingAnalysis = true;
+                    }
                 }
             }
 
-            if( !runFullAnalysis )
-            {
-                logger?.Info( "No media or users have been added or removed since last run, not re-running Complete Statistical Analysis" );
-            }
-            else
+            if( runFullAnalysis )
             {
                 return (runFullAnalysis, runFullAnalysis, reasons);
             }
@@ -591,7 +589,9 @@ namespace Statistics2026.Utilities
             if( lastMissingEpisodeAnalysis == null || lastMissingEpisodeAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;
-                logger?.Info( "Missing Episode Analysis has not been run yet" );
+                var msg = "Missing Episode Analysis has not been run yet";
+                logger?.Info(  msg );
+                reasons.Add( msg );
             }
             else
             {
@@ -603,7 +603,9 @@ namespace Statistics2026.Utilities
             if( lastMissingMovieAnalysis == null || lastMissingMovieAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;
-                logger?.Info( "Missing Movie Analysis has not been run yet" );
+                var msg = "Missing Movie Analysis has not been run yet";
+                logger?.Info( msg );
+                reasons.Add( msg );
             }
             else
             {
@@ -618,20 +620,24 @@ namespace Statistics2026.Utilities
 
             if( !runMissingAnalysis )
             {
+                string msg = string.Empty;
                 if( lastMissingAnalysis == null || lastMissingAnalysis == DateTimeOffset.MinValue )
                 {
-                    logger?.Info( "Missing Analysis has not been run, running missing analysis." );
-                    runMissingAnalysis = true;
+                    msg = "Missing Analysis has not been run, running missing analysis.";
                 }
                 else if( lastMissingAnalysis.Value.UtcDateTime.Date != DateTimeOffset.UtcNow.Date )
                 {
-                    logger?.Info( "Missing Analysis has not been run today, running missing analysis." );
-                    runMissingAnalysis = true;
+                    msg = "Missing Analysis has not been run today, running missing analysis.";
                 }
                 else
                 {
-                    logger?.Info( "Missing Analysis has already been run since new items added, not running missing analysis." );
-                    runMissingAnalysis = false;
+                    msg = "Missing Analysis has already been run since new items added, not running missing analysis.";
+                }
+                if( !msg.IsEmpty() )
+                {
+                    logger?.Info( msg );
+                    reasons.Add( msg );
+                    runMissingAnalysis = true;
                 }
             }
 
