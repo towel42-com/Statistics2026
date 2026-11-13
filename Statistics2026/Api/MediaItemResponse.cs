@@ -193,7 +193,9 @@ namespace Statistics2026.Api
             if( isEpisode )
             {
                 if( retVal.ParentName.SortBy.IsNullOrEmpty() )
+                {
                     return null;
+                }
 
                 searchKey = retVal.ParentName.SortBy;
                 if( seasonNum != 0 )
@@ -347,7 +349,7 @@ namespace Statistics2026.Api
                 var parentInfoJSON = row.GetString( col++ );
                 var seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
 
-                var parentInfo = getParentInfo( parentInfoJSON, 
+                var parentInfo = getParentInfo( parentInfoJSON,
                     ( string id, string name, string sortName ) =>
                     {
                         if( isEpisode )
