@@ -58,7 +58,6 @@ namespace Statistics2026
             IUserDataManager userDataManager,
             IUserManager userManager,
             IApplicationHost appHost,
-            Statistics2026API apiService,
             IJsonSerializer jsonSerializer,
             IProviderManager providerManager,
             IServerConfigurationManager configManager,
@@ -91,7 +90,6 @@ namespace Statistics2026
                 _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _apiService = apiService
             };
             _tableDefs = new TableDefs( _embyInterfaces );
 

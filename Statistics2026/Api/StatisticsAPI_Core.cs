@@ -62,7 +62,6 @@ namespace Statistics2026.Api
                 _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _apiService = this
             };
         }
 

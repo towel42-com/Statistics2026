@@ -33,7 +33,6 @@ namespace Statistics2026.ScheduledTasks
             IUserDataManager userDataManager,
             IUserManager userManager,
             IApplicationHost appHost,
-            Statistics2026API apiService,
             IJsonSerializer jsonSerializer,
             IProviderManager providerManager,
             IServerConfigurationManager configManager,
@@ -62,7 +61,6 @@ namespace Statistics2026.ScheduledTasks
                 _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _apiService = apiService,
             };
             this.Name = TaskDef.GetTaskName( this.GetType() );
             this.Description = TaskDef.GetTaskDescription( this.GetType() );

@@ -36,7 +36,6 @@ namespace Statistics2026.EventMonitorEntryPoints
             IUserDataManager userDataManager,
             IUserManager userManager,
             IApplicationHost appHost,
-            Statistics2026API apiService,
             IJsonSerializer jsonSerializer,
             IProviderManager providerManager,
             IServerConfigurationManager configManager,
@@ -65,7 +64,6 @@ namespace Statistics2026.EventMonitorEntryPoints
                 _taskManager = taskManager,
                 _userDataManager = userDataManager,
                 _userManager = userManager,
-                _apiService = apiService,
             };
         }
 

@@ -67,7 +67,6 @@ namespace Statistics2026.Utilities
         public required ITaskManager? _taskManager = null;
         public required IUserDataManager? _userDataManager = null;
         public required IUserManager? _userManager = null;
-        public required Statistics2026API? _apiService = null;
 
         [MemberNotNullWhen( true, nameof( _authenticationRepository ) )]
         public IAuthenticationRepository AuthenticationRepository()
@@ -174,21 +173,14 @@ namespace Statistics2026.Utilities
             return _userDataManager!;
         }
 
-        [MemberNotNullWhen( true, nameof( _userManager ), nameof( _apiService ) )]
+        [MemberNotNullWhen( true, nameof( _userManager ) )]
         public IUserManager UserManager()
         {
             CheckIsValidWithThrow();
             return _userManager!;
         }
 
-        [MemberNotNullWhen( true, nameof( _apiService ) )]
-        public Statistics2026API _ApiService()
-        {
-            CheckIsValidWithThrow();
-            return _apiService!;
-        }
-
-        [MemberNotNullWhen( true, nameof( _logger ), nameof( _appHost ), nameof( _authenticationRepository ), nameof( _fileSystem ), nameof( _httpClient ), nameof( _jsonSerializer ), nameof( _libraryManager ), nameof( _logManager ), nameof( _providerManager ), nameof( _serverApplicationPaths ), nameof( _configManager ), nameof( _sessionManager ), nameof( _taskManager ), nameof( _userDataManager ), nameof( _userManager ), nameof( _apiService ) )]
+        [MemberNotNullWhen( true, nameof( _logger ), nameof( _appHost ), nameof( _authenticationRepository ), nameof( _fileSystem ), nameof( _httpClient ), nameof( _jsonSerializer ), nameof( _libraryManager ), nameof( _logManager ), nameof( _providerManager ), nameof( _serverApplicationPaths ), nameof( _configManager ), nameof( _sessionManager ), nameof( _taskManager ), nameof( _userDataManager ), nameof( _userManager ) )]
         public bool CheckIsValid( ref List<string> msgs )
         {
             if( _logger == null )
@@ -254,10 +246,6 @@ namespace Statistics2026.Utilities
             if( _userManager == null )
             {
                 msgs.Add( "_embyInterfaces._userManager is null" );
-            }
-            if( _apiService == null )
-            {
-                msgs.Add( "_embyInterfaces._apiService is null" );
             }
             return msgs.Count == 0;
         }
