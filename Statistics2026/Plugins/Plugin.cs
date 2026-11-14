@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Common;
+﻿using Emby.Notifications;
+using MediaBrowser.Common;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Common.Plugins;
@@ -6,6 +7,7 @@ using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Notifications;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
 using MediaBrowser.Controller.Session;
@@ -29,6 +31,23 @@ namespace Statistics2026
         public readonly EmbyInterfaces _embyInterfaces;
         public readonly TableDefs _tableDefs;
 
+        public class NotificationTypeFactory : INotificationTypeFactory
+        {
+            public List<NotificationTypeInfo> GetNotificationTypes( string locale )
+            {
+                return new List<NotificationTypeInfo>
+                {
+                    new NotificationTypeInfo
+                    {
+                        Id = "Statistics20206.EpisodeNowAvailable",
+                        Name = "Episode Now Available",
+                        CategoryId = "Statistics20206.Statistics2026",
+                        CategoryName = "Statistics 2026",
+                    }
+                };
+            }
+        }
+
         public Plugin(
             IApplicationPaths applicationPaths,
             IXmlSerializer xmlSerializer,
@@ -46,7 +65,8 @@ namespace Statistics2026
             ITaskManager taskManager,
             ISessionManager sessionManager,
             IHttpClient httpClient,
-            IAuthenticationRepository authenticationRepository
+            IAuthenticationRepository authenticationRepository,
+            INotificationManager notificationManager
             )
             : base( applicationPaths, xmlSerializer )
         {
@@ -63,6 +83,7 @@ namespace Statistics2026
                 _jsonSerializer = jsonSerializer,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
+                _notificationManager = notificationManager,
                 _providerManager = providerManager,
                 _serverApplicationPaths = serverApplicationPaths,
                 _configManager = configManager,

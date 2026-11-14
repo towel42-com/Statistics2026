@@ -4,6 +4,7 @@ using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Notifications;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
 using MediaBrowser.Controller.Session;
@@ -58,6 +59,7 @@ namespace Statistics2026.Utilities
         public required IJsonSerializer? _jsonSerializer = null;
         public required ILibraryManager? _libraryManager = null;
         public required ILogManager? _logManager = null;
+        public required INotificationManager? _notificationManager = null;
         public required IProviderManager? _providerManager = null;
         public required IServerApplicationPaths? _serverApplicationPaths = null;
         public required IServerConfigurationManager? _configManager = null;
@@ -121,6 +123,13 @@ namespace Statistics2026.Utilities
         {
             CheckIsValidWithThrow();
             return _logManager!;
+        }
+
+        [MemberNotNullWhen( true, nameof( _notificationManager ) )]
+        public INotificationManager NotificationManager()
+        {
+            CheckIsValidWithThrow();
+            return _notificationManager!;
         }
 
         [MemberNotNullWhen( true, nameof( _providerManager ) )]
@@ -213,6 +222,10 @@ namespace Statistics2026.Utilities
             if( _logManager == null )
             {
                 msgs.Add( "_embyInterfaces._logManager is null" );
+            }
+            if ( _notificationManager == null )
+            {
+                msgs.Add( "_embyInterfaces._notificationManager is null" );
             }
             if( _providerManager == null )
             {

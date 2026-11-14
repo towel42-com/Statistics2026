@@ -4,6 +4,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
 using Statistics2026.Api;
+using Statistics2026.Notifications;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Concurrent;
@@ -37,6 +38,7 @@ namespace Statistics2026.Data
             var completedCount = 0;
 
             List<SQLCmdDef> sqlCmds = [];
+            List<string> nowAvailable = [];
             ConcurrentBag<object> validIds = [];
 
             Progress?.Report( 0 );
@@ -49,11 +51,12 @@ namespace Statistics2026.Data
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        var retVal = (index: index, series: series, cmds: new List<SQLCmdDef>());
+                        var retVal = (index: index, series: series, cmds: new List<SQLCmdDef>(), nowAvailable: new List<string>());
                         if( series == null )
                             return retVal;
 
-                        retVal.cmds = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
+                        (retVal.cmds, retVal.nowAvailable) = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
+
                         CancellationToken?.ThrowIfCancellationRequested();
                         validIds.Add( series.Id.ToString() );
 
@@ -76,6 +79,7 @@ namespace Statistics2026.Data
                 foreach( var result in results )
                 {
                     sqlCmds.AddRange( result.cmds );
+                    nowAvailable.AddRange( result.nowAvailable );
                     CancellationToken?.ThrowIfCancellationRequested();
                 }
             }
@@ -86,6 +90,7 @@ namespace Statistics2026.Data
                 Progress?.Report( 100 );
                 Logger().Debug( $"Finished Missing Episodes Analysis" );
             }
+            NotificationSender.SendEpisodesAvailableNotification( nowAvailable, _embyInterfaces );
         }
 
         bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
@@ -104,15 +109,16 @@ namespace Statistics2026.Data
             return false;
         }
 
-        private async Task<List<SQLCmdDef>> AnalyzeMissingEpisodesAsync( TmdbInterface reader, Series series )
+        private async Task<(List<SQLCmdDef> cmds, List<string> episodesNowAvailable)> AnalyzeMissingEpisodesAsync( TmdbInterface reader, Series series )
         {
             Logger().Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
 
             var seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( seriesTmbdId ) )
-                return [];
+                return ([], []);
 
-            List<SQLCmdDef> retVal = [];
+            List<SQLCmdDef> sqlCmds = [];
+            List<string> episodesNowAvailable = [];
 
             TmdbSeries? tmdbSeries = null;
             AddStreamingProvidersInfo? streamingProviders = null;
@@ -120,7 +126,7 @@ namespace Statistics2026.Data
             {
                 tmdbSeries = await reader.GetRemoteSeriesAsync( seriesTmbdId ).ConfigureAwait( false );
                 streamingProviders = await reader.GetStreamingProvidersAsync( Logger(), series ).ConfigureAwait( false );
-                retVal.AddRange( streamingProviders?.addProviderCmds ?? [] );
+                sqlCmds.AddRange( streamingProviders?.addProviderCmds ?? [] );
             }
             catch( Exception ex )
             {
@@ -131,7 +137,7 @@ namespace Statistics2026.Data
             if( tmdbSeries == null )
             {
                 Logger().Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
-                return [];
+                return ([], []);
             }
 
             foreach( var tmdbSeason in tmdbSeries.Seasons )
@@ -158,7 +164,11 @@ namespace Statistics2026.Data
                         var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
 
                         var title = $"{tmdbSeries.Name} - S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2} - {tmdbEpisode.Name}";
-                        retVal.Add( new SQLCmdDef( kSQLAddToMissing,
+                        if( tmdbEpisode.AirDate()?.LocalDateTime.Date == DateTimeOffset.Now.Date )
+                        {
+                            episodesNowAvailable.Add( title );
+                        }
+                        sqlCmds.Add( new SQLCmdDef( kSQLAddToMissing,
                         [
                             ("@Key", key ),
                             ("@TmdbId", tmdbEpisode.Id ),
@@ -180,7 +190,7 @@ namespace Statistics2026.Data
                 }
             }
 
-            return retVal;
+            return (sqlCmds, episodesNowAvailable);
         }
     }
 }

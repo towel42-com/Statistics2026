@@ -3,6 +3,7 @@ using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Library;
+using MediaBrowser.Controller.Notifications;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
 using MediaBrowser.Controller.Session;
@@ -39,7 +40,8 @@ namespace Statistics2026.ScheduledTasks
             ITaskManager taskManager,
             ISessionManager sessionManager,
             IHttpClient httpClient,
-            IAuthenticationRepository authenticationRepository
+            IAuthenticationRepository authenticationRepository,
+            INotificationManager notificationManager
             )
         {
             _embyInterfaces = new EmbyInterfaces()
@@ -52,6 +54,7 @@ namespace Statistics2026.ScheduledTasks
                 _jsonSerializer = jsonSerializer,
                 _libraryManager = libraryManager,
                 _logManager = logManager,
+                _notificationManager = notificationManager,
                 _providerManager = providerManager,
                 _serverApplicationPaths = serverApplicationPaths,
                 _configManager = configManager,
