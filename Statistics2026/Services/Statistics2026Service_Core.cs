@@ -22,11 +22,11 @@ using System.Linq;
 
 namespace Statistics2026.Api
 {
-    public partial class Statistics2026API : IService, IRequiresRequest
+    public partial class Statistics2026Service : IService, IRequiresRequest
     {
         private readonly EmbyInterfaces _embyInterfaces;
 
-        public Statistics2026API(
+        public Statistics2026Service(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -46,7 +46,7 @@ namespace Statistics2026.Api
         {
             _embyInterfaces = new EmbyInterfaces()
             {
-                _logger = logManager.GetLogger( "Statistics2026 - Statistics2026API" ),
+                _logger = logManager.GetLogger( "Statistics2026 - Statistics2026Service" ),
                 _appHost = appHost,
                 _authenticationRepository = authenticationRepository,
                 _fileSystem = fileSystem,

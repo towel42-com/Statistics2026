@@ -12,7 +12,7 @@ using static Statistics2026.Data.Statistics2026DB;
 
 namespace Statistics2026.Api
 {
-    public partial class Statistics2026API : IService, IRequiresRequest
+    public partial class Statistics2026Service : IService, IRequiresRequest
     {
         public object Get( GetSystemStatus request )
         {
