@@ -19,10 +19,15 @@ namespace Statistics2026.Notifications
 
         private async Task SendEpisodesAvailableNotification( List<string> episodesAvailable )
         {
+            if( episodesAvailable.Count() == 0 )
+            {
+                return;
+            }
+
             var notificationRequest = new Emby.Notifications.NotificationRequest
             {
                 EventId = "Statistics20206.EpisodeNowAvailable",
-                
+
                 Title = "New Episodes will be available today",
                 Description = string.Join( "\n", episodesAvailable ),
 
