@@ -185,7 +185,7 @@ namespace Statistics2026.Api
             if( !tmdbPosterPath.IsNullOrEmpty() )
             {
                 var tmp = string.Empty;
-                (retVal.ItemUrl, retVal.DisplayName.Text, tmp) = HelperFuncs.GetTMDBUrl( tmdbPosterPath, retVal.DisplayName.Text );
+                (retVal.ItemUrl, retVal.DisplayName.Text, tmp) = HelperFuncs.GetTMDBLink( tmdbPosterPath, retVal.DisplayName.Text );
             }
 
             var searchKey = retVal.DisplayName.SortBy;

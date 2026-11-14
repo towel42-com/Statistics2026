@@ -14,39 +14,9 @@ namespace Statistics2026.Api
 {
     public partial class Statistics2026API : IService, IRequiresRequest
     {
-        private object HandleRequest( string requestName, Func<AutoTimer, object> requestFunc )
-        {
-            using( var timer = new AutoTimer( $"Request: {requestName}", _embyInterfaces.Logger() ) )
-            {
-                try
-                {
-                    return requestFunc( timer );
-                }
-                catch( Exception )
-                {
-                    throw;
-                }
-            }
-        }
-
-        //private object HandleRequest( string requestName, Func<AutoTimer, Task<object>> requestFunc )
-        //{
-        //    using( var timer = new AutoTimer( $"Request: {requestName}", _embyInterfaces.Logger() ) )
-        //    {
-        //        try
-        //        {
-        //            return requestFunc( timer ).GetAwaiter().GetResult();
-        //        }
-        //        catch( Exception )
-        //        {
-        //            throw;
-        //        }
-        //    }
-        //}
-
         public object Get( GetSystemStatus request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -56,7 +26,7 @@ namespace Statistics2026.Api
 
         public object Get( GetLastRunInfo request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -66,7 +36,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTVSeriesProgress request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -81,7 +51,7 @@ namespace Statistics2026.Api
 
         public object Get( GetSeriesFilter request )
         {
-            var retVal = HandleRequest( request.GetType().Name, timer =>
+            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -92,7 +62,7 @@ namespace Statistics2026.Api
 
         public object Post( SetSeriesFilter request )
         {
-            var retVal = HandleRequest( request.GetType().Name, timer =>
+            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -115,7 +85,7 @@ namespace Statistics2026.Api
 
         public async Task<object> Get( GetEpisodeList request )
         {
-            var retVal = HandleRequest( request.GetType().Name, timer =>
+            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var showOnServer = request.showOnServer;
@@ -142,7 +112,7 @@ namespace Statistics2026.Api
 
         public async Task<object> Get( GetMovieList request )
         {
-            var retVal = HandleRequest( request.GetType().Name, timer =>
+            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var showOnServer = request.showOnServer;
@@ -168,7 +138,7 @@ namespace Statistics2026.Api
 
         public object Get( GetCodecSummary request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -184,7 +154,7 @@ namespace Statistics2026.Api
 
         public object Get( GetResolutionSummary request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -200,7 +170,7 @@ namespace Statistics2026.Api
 
         public object Get( GetDVProfileSummary request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -216,7 +186,7 @@ namespace Statistics2026.Api
 
         public object Get( GetUserCount request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -231,7 +201,7 @@ namespace Statistics2026.Api
 
         public object Get( GetPlayedUserMedia request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -246,7 +216,7 @@ namespace Statistics2026.Api
 
         public object Get( GetUserWatchMediaIssues request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -261,7 +231,7 @@ namespace Statistics2026.Api
 
         public object Get( GetMostActiveUsers request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -290,7 +260,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalMovieCount request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 var userName = request.user;
                 var user = GetUserByName( userName );
@@ -300,7 +270,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalMovieCountNoUser request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 return TotalMovieCount( null );
             } );
@@ -308,7 +278,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalMoviesWatched request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -327,7 +297,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalMissingMovies request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -342,7 +312,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalMissingEpisodes request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -357,7 +327,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalCollectionCount request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -372,7 +342,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalMovieStudioCount request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -399,7 +369,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalTVCount request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 var userName = request.user;
                 var user = GetUserByName( userName );
@@ -409,7 +379,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalTVCountNoUser request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 return TotalTVCount( null, false );
             } );
@@ -417,7 +387,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalTVWatched request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -436,7 +406,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalSeriesFinished request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -455,7 +425,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalTVStudioCount request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var groupData = db.TotalTVStudioCount( null );
@@ -469,7 +439,7 @@ namespace Statistics2026.Api
 
         public object Get( GetLeastWatchedMovies request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var groupData = db.WatchedMedia( null, true, EMediaType.eMovie );
@@ -483,7 +453,7 @@ namespace Statistics2026.Api
 
         public object Get( GetMostWatchedMovies request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -503,7 +473,7 @@ namespace Statistics2026.Api
 
         public object Get( GetMostWatchedMoviesNoUser request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -518,7 +488,7 @@ namespace Statistics2026.Api
 
         public object Get( GetLeastWatchedShows request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -533,7 +503,7 @@ namespace Statistics2026.Api
 
         public object Get( GetMostWatchedShows request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -552,7 +522,7 @@ namespace Statistics2026.Api
 
         public object Get( GetMostWatchedShowsNoUser request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -567,7 +537,7 @@ namespace Statistics2026.Api
 
         public object Get( GetMultiCollectionMovies request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
@@ -582,7 +552,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalTimeWatched request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -609,7 +579,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTotalWatchableTime request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -636,7 +606,7 @@ namespace Statistics2026.Api
 
         public object Get( GetLastSeen request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -657,7 +627,7 @@ namespace Statistics2026.Api
 
         public object Get( GetDatabaseStatus request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 if( Plugin.Instance == null )
                     return new GetDatabaseStatusReponse();
@@ -668,7 +638,7 @@ namespace Statistics2026.Api
 
         public object Get( GetMovieFavoriteYears request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -687,7 +657,7 @@ namespace Statistics2026.Api
 
         public object Get( GetMovieFavoriteGenres request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -706,7 +676,7 @@ namespace Statistics2026.Api
 
         public object Get( GetTVFavoriteGenres request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var userName = request.user;
@@ -725,7 +695,7 @@ namespace Statistics2026.Api
 
         public object Get( GetMovie request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var whichStatistic = request.whichStatistic;
@@ -741,7 +711,7 @@ namespace Statistics2026.Api
 
         public object Get( GetSeries request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var whichStatistic = request.whichStatistic;
@@ -757,7 +727,7 @@ namespace Statistics2026.Api
 
         public object Get( GetEpisode request )
         {
-            return HandleRequest( request.GetType().Name, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
                 var whichStatistic = request.whichStatistic;

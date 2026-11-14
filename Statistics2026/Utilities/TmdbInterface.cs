@@ -626,13 +626,13 @@ namespace Statistics2026.Utilities
 
         public (string imageUrl, string itemText) ImageUrl()
         {
-            var retVal = HelperFuncs.GetTMDBUrl( LogoPath, ProviderName );
+            var retVal = HelperFuncs.GetTMDBLink( LogoPath, ProviderName );
             return (retVal.imageUrl, retVal.itemText);
         }
 
         public (string imageUrl, string itemText, string itemUrl) ImageUrl(string targetUrl, string targetHtml, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null ) //html uses <TARGET_URL> and <TARGET_TEXT> as placeholders
         {
-            return HelperFuncs.GetTMDBUrl( LogoPath, ProviderName, (targetUrl, targetHtml), posterSize, imageHeight, imageWidth );
+            return HelperFuncs.GetTMDBLink( LogoPath, ProviderName, (targetUrl, targetHtml), posterSize, imageHeight, imageWidth );
         }
     }
 

@@ -4,6 +4,7 @@
 //#define DEBUG_DB
 #endif
 
+using MediaBrowser.Common.Extensions;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
@@ -11,6 +12,7 @@ using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Services;
 using ServiceStack;
 using SQLitePCL;
 using SQLitePCL.pretty;
@@ -414,7 +416,7 @@ namespace Statistics2026.Utilities
                 retVal += addToHtml( depth++, "<li>" );
                 retVal += addToHtml( depth++, "<div class=\"row\">" );
                 retVal += addToHtml( depth, $"<span class=\"label\">{curr.key}</span>" );
-                if ( !curr.value.IsNullOrEmpty() )
+                if( !curr.value.IsNullOrEmpty() )
                     retVal += addToHtml( depth, $"<span class=\"value\">{curr.value}</span>" );
                 retVal += addToHtml( --depth, "</div>" );
                 retVal += addToHtml( --depth, "</li>" );
@@ -491,20 +493,49 @@ namespace Statistics2026.Utilities
             return new SemaphoreSlim( numThreads, numThreads );
         }
 
-        public static (string imageUrl, string itemText, string itemUrl) GetTMDBUrl( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null )
-        {
-            string imageUrl = string.Empty;
-            if( !posterPath.IsNullOrEmpty() && posterPath != "/" )
+        static HashSet<string> AllowedTMDBSizes = new HashSet<string>( StringComparer.OrdinalIgnoreCase )
             {
-                if( !posterPath.StartsWith( "/" ) )
-                    posterPath = "/" + posterPath;
+                "w45", "w92", "w154", "w185", "w300", "w342", "w500", "w780", "h632", "original"
+            };
+        public static string GetTMDBUrl( string posterPath, string posterSize, bool proxy )
+        {
+            if( posterPath.IsNullOrEmpty() )
+                return string.Empty;
 
-                imageUrl = $"https://image.tmdb.org/t/p/{posterSize}" + posterPath;
+            if( posterSize.IsNullOrEmpty() )
+            {
+                posterSize = "original";
             }
+
+            if( !AllowedTMDBSizes.Contains( posterSize ) )
+            {
+                throw new ResourceNotFoundException( "Invalid image size." );
+            }
+
+
+            posterPath = posterPath.TrimStart( '/' ).TrimEnd( '/' );
+            posterSize = posterSize.TrimStart( '/' ).TrimEnd( '/' );
+
+            var urlBase = string.Empty;
+            if( proxy )
+            {
+                urlBase = $"/emby/Statistics2026/tmdbimage";
+            }
+            else
+            {
+                urlBase = $"https://image.tmdb.org/t/p";
+            }
+            var retVal = $"{urlBase}/{posterSize}/{posterPath}";
+            return retVal;
+        }
+
+        public static (string imageUrl, string itemText, string itemUrl) GetTMDBLink( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null )
+        {
+            string imageUrl = GetTMDBUrl( posterPath, posterSize, true );
             string itemText = string.Empty;
             if( !imageUrl.IsNullOrEmpty() )
             {
-                itemText = $"<img referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"{imageUrl}\" ";
+                itemText = $"<img loading=\"lazy\" class=\"image-proxy\" data-src=\"{imageUrl}\" ";
                 if( imageHeight != null )
                 {
                     itemText += $"height=\"{imageHeight}\" ";
@@ -584,6 +615,21 @@ namespace Statistics2026.Utilities
             catch( Exception )
             {
                 // Always wrap timer callbacks in try-catch blocks to keep the server stable
+            }
+        }
+
+        public static object HandleRequest( string requestName, EmbyInterfaces embyInterfaces, Func<AutoTimer, object> requestFunc )
+        {
+            using( var timer = new AutoTimer( $"Request: {requestName}", embyInterfaces.Logger() ) )
+            {
+                try
+                {
+                    return requestFunc( timer );
+                }
+                catch( Exception )
+                {
+                    throw;
+                }
             }
         }
     }
