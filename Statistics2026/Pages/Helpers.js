@@ -186,8 +186,7 @@ define([
                 seriesMostWatchedStats += getSummaryInfo(view, "most_watched_shows", userName, "");
                 view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
 
-                hideLoadingFunc();
-            } catch {
+            } finally {
                 hideLoadingFunc();
             }
         }
@@ -339,6 +338,8 @@ define([
                             showInfo(v.title, v.info);
                         });
                 });
+
+                injectImageProxy(div, view);
             }).catch(error => {
                 var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
                 console.error("getSummaryInfo failed:", errorMessage);
@@ -361,6 +362,35 @@ define([
         }
 
         const STYLE_ID = 'statistics2026-stylesheet';
+        function injectImageProxy(target, view) {
+            let root = view || document;
+
+            if (typeof target === 'string') {
+                // Supports passing either "myDivId", "#myDivId", or ".myClass"
+                const selector = (target.startsWith('#') || target.startsWith('.')) ? target : '#' + target;
+                root = root.querySelector(selector);
+                if (!root) {
+                    return;
+                }
+            } else if (target instanceof Node) {
+                root = target;
+            }
+
+            const token = ApiClient.accessToken();
+
+            root.querySelectorAll('img.image-proxy:not([data-proxy-injected="true"])').forEach(function (img) {
+                const baseUrl = img.dataset.src;
+                if (!baseUrl || img.getAttribute('src')) {
+                    return;
+                }
+
+                const separator = baseUrl.includes('?') ? '&' : '?';
+                img.src = baseUrl + separator + 'api_key=' + encodeURIComponent(token);
+                img.dataset.proxyInjected = 'true';
+            });
+        }
+
+
         function injectStyleSheet() {
             if (document.getElementById(STYLE_ID))  // already added
                 return;
@@ -406,14 +436,12 @@ define([
 
                     var errorMessage = "'" + error + "' - '" + url + "'";
                     console.error("loadTableDataAsync failed:", errorMessage, "url:", url);
-                    hideLoadingFunc();
                     return;
                 });
 
                 if (resultData === undefined || signal.aborted) {
                     if (!signal.aborted)
                         console.error("loadTableDataAsync failed: result data was undefined", "url:", url);
-                    hideLoadingFunc();
                     return;
                 }
 
@@ -459,6 +487,7 @@ define([
                         fragment.appendChild(tr);
                     }
 
+                    injectImageProxy(fragment);
                     tbody.appendChild(fragment);
                     currentIndex = endIndex;
 
@@ -493,7 +522,6 @@ define([
                         if (load_status !== undefined && load_status != null) {
                             load_status.style.display = 'none';
                         }
-                        hideLoadingFunc();
                     }
                 }
                 requestAnimationFrame(renderNextChunk);
@@ -626,38 +654,6 @@ define([
                 });
             });
         }
-
-        // function showInfo(_title, _text) {
-        //     ApiClient.getJSON(ApiClient.getUrl('Sessions'))
-        //         .then((sessions) => {
-        //             // 2. Find the session that matches this browser's unique Device ID
-        //             const myCurrentDevice = ApiClient.deviceId();
-        //             const mySession = sessions.find(s => s.DeviceId === myCurrentDevice);
-
-        //             if (mySession) {
-        //                 const urlString = ApiClient.getUrl(`Sessions/${mySession.Id}/Message`);
-        //                 const payload = {
-        //                     Header: _title,
-        //                     Text: _text
-        //                 };
-        //                 ApiClient.ajax(
-        //                     {
-        //                         type: 'POST',
-        //                         url: urlString,
-        //                         data: JSON.stringify(payload),
-        //                         contentType: 'application/json'
-        //                     })
-        //                     .then(function (response) {
-        //                         console.log("Message sent successfully!");
-        //                     })
-        //                     .catch(function (error) {
-        //                         console.error("Failed to send message:", error);
-        //                     });
-        //             } else {
-        //             }
-        //         })
-        //         .catch((err) => console.error("Error fetching sessions:", err));
-        // }
 
         const sortDirections = new Map();
         async function sortTable(columnIndex, dataType, baseId, showLoadingFunc, hideLoadingFunc, forcedDir) {

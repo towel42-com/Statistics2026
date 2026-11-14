@@ -20,7 +20,7 @@
                 view.querySelector(`#debugInfo`).style.display = 'none';
                 view.querySelector(`#playedUserMedia`).style.display = 'none';
                 view.querySelector(`#userWatchMediaIssues`).style.display = 'none';
-                view.querySelector(`#multiCollectionMovies`).style.display = 'none'; 
+                view.querySelector(`#multiCollectionMovies`).style.display = 'none';
                 return;
             }
 
@@ -194,6 +194,6 @@
             });
 
             loadStats(view);
-        }
+       }
     }
 );
