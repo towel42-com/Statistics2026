@@ -17,7 +17,6 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.Features;
@@ -26,9 +25,9 @@ using Statistics2026.Utilities;
 
 namespace Statistics2026
 {
-    public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
+    public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage, IHasEmbyInterface
     {
-        public readonly EmbyInterfaces _embyInterfaces;
+        public EmbyInterfaces _embyInterfaces { get; }
         public readonly TableDefs _tableDefs;
 
         public class NotificationTypeFactory : INotificationTypeFactory

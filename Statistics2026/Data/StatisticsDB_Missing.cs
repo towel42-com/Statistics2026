@@ -6,9 +6,9 @@ using MediaBrowser.Model.Entities;
 using RestSharp;
 using ServiceStack;
 using ServiceStack.Text;
-using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Utilities;
+using Statistics2026.Responses;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.SymbolStore;
@@ -364,7 +364,7 @@ namespace Statistics2026.Data
             return cmd;
         }
 
-        public List<SQLCmdDef> UpdateSeriesFilter( bool nested = false )
+        private List<SQLCmdDef> UpdateSeriesFilter( bool nested = false )
         {
             bool filterChanged( ref string msg, ref SeriesFilterResponse lhs, int numSeasons, bool hasSpecials )
             {

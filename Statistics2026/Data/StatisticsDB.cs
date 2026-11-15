@@ -23,10 +23,10 @@ namespace Statistics2026.Data
         eEpisode
     }
 
-    public sealed partial class Statistics2026DB : IDisposable
+    public sealed partial class Statistics2026DB : IDisposable, IHasEmbyInterface
     {
+        public EmbyInterfaces _embyInterfaces { get; }
         private bool _disposed = false;
-        EmbyInterfaces? _embyInterfaces = null;
         ILogger? _DBConnLogger = null;
         private static readonly object _padlock = new();
         private MediaBrowser.Model.Tasks.IScheduledTask? _currentTask = null;

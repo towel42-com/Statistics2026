@@ -6,7 +6,6 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
-using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Concurrent;
@@ -568,7 +567,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public List<List<WatchedMediaValue>> WatchedMediaValues( User? user, bool leastWatched, EMediaType mediaType )
+        private List<List<WatchedMediaValue>> WatchedMediaValues( User? user, bool leastWatched, EMediaType mediaType )
         {
             List<string> getClauses( string tableName, bool episodes, User? user )
             {
@@ -805,7 +804,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard TotalTime( User? user, bool? episodesOnly, bool played )
+        private StatCard TotalTime( User? user, bool? episodesOnly, bool played )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -864,7 +863,7 @@ namespace Statistics2026.Data
             return TotalTime( user, episodesOnly, false );
         }
 
-        public List<(string name, DateTimeOffset lastPlayed)> LastSeenValues( User? user, bool movies )
+        private List<(string name, DateTimeOffset lastPlayed)> LastSeenValues( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 

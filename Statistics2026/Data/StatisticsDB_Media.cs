@@ -7,7 +7,6 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Session;
 using ServiceStack;
-using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Concurrent;
@@ -460,7 +459,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public long TotalStudioCountValue( User? user, bool movies )
+        private long TotalStudioCountValue( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -484,7 +483,7 @@ namespace Statistics2026.Data
             return studios.Count();
         }
 
-        public StatCard TotalStudioCount( User? user, bool movies )
+        private StatCard TotalStudioCount( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -508,7 +507,7 @@ namespace Statistics2026.Data
             return TotalStudioCount( user, false );
         }
 
-        public List<(int year, long count)> FavoriteYearValues( User? user, bool movies )
+        private List<(int year, long count)> FavoriteYearValues( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -570,7 +569,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public List<(string genre, long count)> FavoriteGenreValues( User? user, bool movies )
+        private List<(string genre, long count)> FavoriteGenreValues( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 

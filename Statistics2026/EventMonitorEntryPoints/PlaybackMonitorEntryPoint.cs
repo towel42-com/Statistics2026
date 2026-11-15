@@ -12,7 +12,6 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using Statistics2026.Api;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
 using System;
@@ -22,9 +21,9 @@ using System.Threading.Tasks;
 
 namespace Statistics2026.EventMonitorEntryPoints
 {
-    internal class PlaybackMonitorEntryPoint : IServerEntryPoint
+    internal class PlaybackMonitorEntryPoint : IServerEntryPoint, IHasEmbyInterface
     {
-        private readonly EmbyInterfaces? _embyInterfaces;
+        public EmbyInterfaces _embyInterfaces { get; }
 
         private readonly object syncLock = new();
 

@@ -15,7 +15,6 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.ScheduledTasks;
@@ -32,9 +31,9 @@ using System.Timers;
 
 namespace Statistics2026.EventMonitorEntryPoints
 {
-    public class ItemAddedMonitorEntryPoint : IServerEntryPoint
+    public class ItemAddedMonitorEntryPoint : IServerEntryPoint, IHasEmbyInterface
     {
-        private readonly EmbyInterfaces _embyInterfaces;
+        public EmbyInterfaces _embyInterfaces { get; }
         private readonly System.Timers.Timer _debounceTimer;
         private List<string> Reasons = [];
 

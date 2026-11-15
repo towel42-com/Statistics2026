@@ -78,16 +78,7 @@ namespace Statistics2026.Services
         public async Task<object> Get( GetTmdbImage request )
         {
             _embyInterfaces.Logger().Info( $"Request for TMDB image: {request.path} - {request.size}" );
-            var options = new HttpRequestOptions
-            {
-                Url = HelperFuncs.GetTMDBUrl( request.path, request.size, false ),
-                CancellationToken = CancellationToken.None,
-
-                CacheMode = CacheMode.Unconditional,
-                CacheLength = TimeSpan.FromDays( 30 ),
-
-                UserAgent = "Mozilla/5.0"
-            };
+            var options = HelperFuncs.getRequestOptions( HelperFuncs.GetTMDBUrl( request.path, request.size, false ), CancellationToken.None );
 
             try
             {

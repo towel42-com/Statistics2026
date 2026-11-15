@@ -115,11 +115,6 @@ namespace Statistics2026.Utilities
             return true;
         }
 
-        private HttpRequestOptions getRequestOptions( string url )
-        {
-            return HelperFuncs.getRequestOptions( url, _cancellationToken );
-        }
-
         private async Task loginAsync()
         {
             if( !CheckIsValid() )
@@ -134,7 +129,7 @@ namespace Statistics2026.Utilities
             };
 
             var url = builder.Uri.ToString();
-            var options = getRequestOptions( url );
+            var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
             try
             {
@@ -169,7 +164,7 @@ namespace Statistics2026.Utilities
             builder.Query = query.ToString();
 
             var url = builder.Uri.ToString();
-            var options = getRequestOptions( url );
+            var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
             using( var response = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false ) )
             {
@@ -211,7 +206,7 @@ namespace Statistics2026.Utilities
             builder.Query = query.ToString();
 
             var url = builder.Uri.ToString();
-            var options = getRequestOptions( url );
+            var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
             using( var response = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false ) )
             {
@@ -249,7 +244,7 @@ namespace Statistics2026.Utilities
             builder.Query = query.ToString();
 
             var url = builder.Uri.ToString();
-            var options = getRequestOptions( url );
+            var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
             using( var response = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false ) )
             {
@@ -320,7 +315,7 @@ namespace Statistics2026.Utilities
             builder.Query = query.ToString();
 
             var url = builder.Uri.ToString();
-            var options = getRequestOptions( url );
+            var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
             using( var response = await _embyInterfaces.HttpClient().Get( options ).ConfigureAwait( false ) )
             {
@@ -410,7 +405,7 @@ namespace Statistics2026.Utilities
                 builder.Query = query.ToString();
 
                 var url = builder.Uri.ToString();
-                var options = getRequestOptions( url );
+                var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
                 try
                 {

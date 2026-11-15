@@ -5,7 +5,6 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
 using SQLitePCL.pretty;
-using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Concurrent;

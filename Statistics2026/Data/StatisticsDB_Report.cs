@@ -60,20 +60,20 @@ namespace Statistics2026.Data
             return retVal;
         }
 
+        private StatGen.StatCardValues StatCardValuesFor( User? user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType )
+        {
+            CheckIsValid( ECheckLevel.eReport );
+
+            var statGen = new StatGen( whichStatistic, videoType, this );
+            return statGen.GetStatCardValues();
+        }
+
         public StatCard StatisticFor( User? user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             var statGen = new StatGen( whichStatistic, videoType, this );
             return statGen.GetStatCard();
-        }
-
-        public StatGen.StatCardValues StatCardValuesFor( User? user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType )
-        {
-            CheckIsValid( ECheckLevel.eReport );
-
-            var statGen = new StatGen( whichStatistic, videoType, this );
-            return statGen.GetStatCardValues();
         }
     }
 }

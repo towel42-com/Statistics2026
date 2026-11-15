@@ -661,5 +661,23 @@ namespace Statistics2026.Utilities
 #endif
             return retVal;
         }
+
+        public static User? GetUserByName( string userName, EmbyInterfaces embyInterfaces )
+        {
+            if( embyInterfaces == null )
+                throw new ArgumentNullException( "_embyInterfaces is null." );
+
+            return embyInterfaces.GetUserByName( userName );
+        }
+
+        public static User? GetUserById( Guid id, EmbyInterfaces embyInterfaces )
+        {
+            if( embyInterfaces == null )
+                throw new ArgumentNullException( "_embyInterfaces is null." );
+
+            var user = embyInterfaces.GetUserById( id );
+            return user;
+        }
+
     }
 }

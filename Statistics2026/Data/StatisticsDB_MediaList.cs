@@ -5,8 +5,8 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
-using Statistics2026.Api;
 using Statistics2026.Utilities;
+using Statistics2026.Responses;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -255,7 +255,7 @@ namespace Statistics2026.Data
                 (x, y) =>
                 {
                     var lhs = x.DisplayName.SortBy;
-        var rhs = y.DisplayName.SortBy;
+                    var rhs = y.DisplayName.SortBy;
                     return lhs.CompareTo(rhs );
                 } );
             return retVal;

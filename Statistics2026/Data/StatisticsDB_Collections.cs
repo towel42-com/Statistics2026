@@ -4,7 +4,6 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
-using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Concurrent;
@@ -268,7 +267,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public SortByText? GetCollectionName( string collectionId )
+        private SortByText? GetCollectionName( string collectionId )
         {
             var sql = "SELECT " +
                 "  Collections.Name" +
@@ -301,7 +300,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public SortByText? GetCollectionsForMovie( string movieId, bool includeImage )
+        private SortByText? GetCollectionsForMovie( string movieId, bool includeImage )
         {
             CheckIsValid( ECheckLevel.eReport );
             var sql = "SELECT " +

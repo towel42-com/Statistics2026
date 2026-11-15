@@ -1,9 +1,9 @@
 ﻿using MediaBrowser.Model.MediaInfo;
 using MediaBrowser.Model.Services;
 using ServiceStack;
-using Statistics2026.Api;
 using Statistics2026.ScheduledTasks;
 using Statistics2026.Utilities;
+using Statistics2026.Responses;
 using System;
 using System.Collections.Generic;
 using System.Net.Http.Headers;
@@ -154,7 +154,7 @@ namespace Statistics2026.Data
             return new HtmlJsonResponse() { html = resultText, error = errorText };
         }
 
-        System.Type? TypeForAction( EAction action )
+        private System.Type? TypeForAction( EAction action )
         {
             System.Type? retVal = null;
             switch( action )
@@ -193,7 +193,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        string TitleForAction( EAction action )
+        private string TitleForAction( EAction action )
         {
             string retVal = string.Empty;
             switch( action )
@@ -232,7 +232,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public string GetLastRunInfo( EAction action )
+        private string GetLastRunInfo( EAction action )
         {
             CheckIsValid( ECheckLevel.eReport );
 

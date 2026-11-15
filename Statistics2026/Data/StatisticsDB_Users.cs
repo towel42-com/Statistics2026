@@ -3,7 +3,6 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
-using Statistics2026.Api;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Concurrent;
@@ -153,7 +152,7 @@ namespace Statistics2026.Data
             ] );
         }
 
-        public long NumUsers( bool hasConnectUserId, bool excludeAdmin )
+        private long NumUsers( bool hasConnectUserId, bool excludeAdmin )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -172,7 +171,7 @@ namespace Statistics2026.Data
             return GetSingleValueFromSQL( sql ).ToInt64();
         }
 
-        public long NumUsers()
+        private long NumUsers()
         {
             CheckIsValid( ECheckLevel.eReport );
 

@@ -11,7 +11,6 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using Statistics2026.Api;
 using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
@@ -24,7 +23,7 @@ namespace Statistics2026.ScheduledTasks
 {
     public class AnalyzeSeriesTask : IStatistics2026ScheduledTask
     {
-        private readonly EmbyInterfaces _embyInterfaces;
+        public EmbyInterfaces _embyInterfaces { get; }
 
         public AnalyzeSeriesTask(
             IFileSystem fileSystem,

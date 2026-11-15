@@ -13,13 +13,17 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using ServiceStack;
-using Statistics2026.Api;
 using System;
 using System.Diagnostics.CodeAnalysis;
 
 
 namespace Statistics2026.Utilities
 {
+    public interface IHasEmbyInterface
+    {
+        EmbyInterfaces _embyInterfaces { get; }
+    }
+
     public class EmbyInterfaces
     {
         public EmbyInterfaces()
@@ -215,7 +219,7 @@ namespace Statistics2026.Utilities
             {
                 msgs.Add( "_embyInterfaces._logManager is null" );
             }
-            if ( _notificationManager == null )
+            if( _notificationManager == null )
             {
                 msgs.Add( "_embyInterfaces._notificationManager is null" );
             }

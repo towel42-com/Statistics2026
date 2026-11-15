@@ -565,7 +565,8 @@ namespace Statistics2026.Utilities
                 Url = url,
                 CancellationToken = _cancellationToken ?? CancellationToken.None,
                 CacheLength = System.TimeSpan.FromDays( 30 ),
-                CacheMode = CacheMode.Unconditional
+                CacheMode = CacheMode.Unconditional,
+                UserAgent = "Mozilla/5.0"
             };
             return options;
         }

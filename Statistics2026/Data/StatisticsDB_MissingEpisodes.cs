@@ -3,7 +3,6 @@ using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
-using Statistics2026.Api;
 using Statistics2026.Notifications;
 using Statistics2026.Utilities;
 using System;
@@ -93,7 +92,7 @@ namespace Statistics2026.Data
             NotificationSender.SendEpisodesAvailableNotification( nowAvailable, _embyInterfaces );
         }
 
-        bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
+        private bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
         {
             if( dto == null )
                 return true;
