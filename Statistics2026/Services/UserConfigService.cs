@@ -15,6 +15,7 @@ using MediaBrowser.Model.Net;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
+using MediaBrowser.Controller.Entities;
 using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 using System.Net;
@@ -75,7 +76,7 @@ namespace Statistics2026.Services
             _sessionContext = sessionContext;
         }
 
-        private string GetCurrentUserId()
+        private User GetCurrentUser()
         {
             if( Request == null )
             {
@@ -88,31 +89,27 @@ namespace Statistics2026.Services
                 throw new UnauthorizedAccessException( "User is not authenticated." );
             }
 
-            return user.Id.ToString();
+            return user;
         }
 
         public object Get( GetUserConfig request )
         {
-            var userId = GetCurrentUserId();
+            var user = GetCurrentUser();
             var config = Plugin.Instance!.Configuration;
 
-            var userConfig = config.UserConfigs.FirstOrDefault( u => u.UserId == userId );
-            return userConfig ?? new UserConfig { UserId = userId };
+            var userConfig = config.ConfigForUser( user );
+
+            return userConfig ?? new object();
         }
 
         public void Post( SetUserConfig request )
         {
-            var userId = GetCurrentUserId();
+            var user = GetCurrentUser();
             var config = Plugin.Instance!.Configuration;
 
-            var existing = config.UserConfigs.FirstOrDefault( u => u.UserId == userId );
-            if( existing == null )
-            {
-                existing = new UserConfig { UserId = userId };
-                config.UserConfigs.Add( existing );
-            }
+            var userConfig = config.ConfigForUser( user );
 
-            existing.TableSortEntries = request.TableSortEntries;
+            userConfig.TableSortEntries = request.TableSortEntries;
             Plugin.Instance.SaveConfiguration();
         }
     }
