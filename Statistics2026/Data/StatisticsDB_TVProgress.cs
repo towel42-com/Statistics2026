@@ -5,8 +5,8 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
-using Statistics2026.Api;
 using Statistics2026.Utilities;
+using Statistics2026.Responses;
 using System;
 using System.Text;
 using System.Text.Json;
@@ -232,7 +232,7 @@ namespace Statistics2026.Data
             return (episodes, specials);
         }
 
-        public (int numSeasons, bool hasSpecials) GetSeasonCount( Series series )
+        private (int numSeasons, bool hasSpecials) GetSeasonCount( Series series )
         {
             var query = new InternalItemsQuery
             {
