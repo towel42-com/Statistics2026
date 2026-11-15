@@ -8,6 +8,35 @@ define([
 
         const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
 
+        async function getStatistics2026Data(url_to_get) {
+            console.log("getStatistics2026Data Url = " + url_to_get);
+            return ApiClient.ajax({
+                type: "GET",
+                url: url_to_get,
+                dataType: "json"
+            });
+        };
+
+        async function getUserPluginConfig() {
+            const url = ApiClient.getUrl('/emby/Statistics2026/get_user_config');
+            console.log(`getUserPluginConfig: ${url}`);
+
+            return await ApiClient.getJSON(url);
+        };
+
+        async function updateUserPluginConfiguration(config) {
+            const url = ApiClient.getUrl('/emby/Statistics2026/set_user_config');
+            console.log(`getUserPluginConfig: ${url}`);
+
+            const payload = JSON.stringify(config);
+            return await ApiClient.ajax({
+                type: 'POST',
+                url: url,
+                data: JSON.stringify(config),
+                contentType: 'application/json'
+            });
+        };
+
         async function CheckForValidConfig() {
             var urlText = "/emby/Statistics2026/database_status";
             var url = ApiClient.getUrl(urlText);
@@ -252,15 +281,6 @@ define([
             return retVal;
         }
 
-        async function getStatistics2026Data(url_to_get) {
-            console.log("getStatistics2026Data Url = " + url_to_get);
-            return ApiClient.ajax({
-                type: "GET",
-                url: url_to_get,
-                dataType: "json"
-            });
-        };
-
         async function getSystemStatusAsync() {
             let urlText = `/Statistics2026/get_system_status`;
             console.info("get_system_status - '" + urlText + "'");
@@ -452,7 +472,7 @@ define([
 
                 var thead = view.querySelector('#' + baseId + '_head');
                 thead.innerHTML = getHeaderFunc();
-                setupSortability(baseId, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+                setupSortability(baseId, showLoadingFunc, hideLoadingFunc);
 
                 let minChunkSize = 50;
                 let chunkSize = Math.min(minChunkSize, Math.trunc(resultData.length / 20));
@@ -499,7 +519,7 @@ define([
                             activeLoaders.delete(baseId);
                         }
 
-                        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        getUserPluginConfig().then(function (config) {
                             var found = false;
                             config.TableSortEntries.forEach(entry => {
                                 if (entry.TableId == baseId) {
@@ -522,6 +542,7 @@ define([
                         if (load_status !== undefined && load_status != null) {
                             load_status.style.display = 'none';
                         }
+                        hideLoadingFunc();
                     }
                 }
                 requestAnimationFrame(renderNextChunk);
@@ -700,7 +721,7 @@ define([
             // Add current sorting indicator class to the active header
             table.querySelectorAll("th")[columnIndex].classList.add(currentDirection);
 
-            ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+            getUserPluginConfig().then(function (config) {
                 let columnName = table.querySelectorAll("th")[columnIndex].getAttribute('data-column');
 
                 var found = false;
@@ -719,7 +740,7 @@ define([
                         AscDesc: currentDirection
                     });
                 }
-                ApiClient.updatePluginConfiguration(pluginId, config);
+                updateUserPluginConfiguration(config);
             });
 
             setTimeout(() => {
@@ -850,7 +871,9 @@ define([
             injectStyleSheet,
             loadTableDataAsync,
             loadUsers,
-            showInfo
+            showInfo,
+            getUserPluginConfig,
+            updateUserPluginConfiguration
         };
     }
 )

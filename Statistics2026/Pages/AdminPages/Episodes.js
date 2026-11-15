@@ -24,7 +24,7 @@
                     return; // Exit and prevent reload
                 }
 
-                ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                Helpers.getUserPluginConfig().then(function (config) {
                     var found = false;
                     config.TableSortEntries.forEach(entry => {
                         if (entry.TableId == baseId) {
@@ -101,7 +101,7 @@
                 radio.addEventListener("change", function () {
                     view.setAttribute('data-initialized', 'false');
 
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                    Helpers.getUserPluginConfig().then(function (config) {
                         let found = false;
                         config.TableSortEntries.forEach(entry => {
                             if (entry.TableId == baseId) {
@@ -115,7 +115,7 @@
                                 ExtraFilter: radio.value
                             });
                         }
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                        Helpers.updateUserPluginConfiguration(config);
                     });
 
                     loadTableDataAsync();

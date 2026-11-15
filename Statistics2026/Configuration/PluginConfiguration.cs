@@ -60,6 +60,12 @@ namespace Statistics2026.Configuration
 
         public bool dbStateOK { get; set; } = false;
 
+        public List<UserConfig> UserConfigs { get; set; } = [];
+    }
+
+    public class UserConfig
+    {
+        public string UserId { get; set; } = string.Empty;
         public List<SortEntry> TableSortEntries { get; set; } = [];
     }
 }
