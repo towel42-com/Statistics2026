@@ -160,6 +160,14 @@ namespace Statistics2026
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Settings.html",
                 },
                 new() {
+                    Name = "SystemStatus",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.SystemStatus.html",
+                },
+                new() {
+                    Name = "SystemStatus.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.SystemStatus.js"
+                },
+                new() {
                     Name = "Settings.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Settings.js"
                 },

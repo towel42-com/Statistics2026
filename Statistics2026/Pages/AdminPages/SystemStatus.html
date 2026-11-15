@@ -1,0 +1,16 @@
+﻿<div data-role="page" data-id="systemstatus_page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/SystemStatus.js">
+<!--    <link rel="stylesheet" href="__plugin/styles.css" />-->
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <p name="pageIntro" id="pageIntro" />
+            <p name="lastRunInfo" id="lastRunInfo" />
+            <p name="debugInfo" id="debugInfo" />
+
+            <div class="statRow" name="playedUserMedia" id="playedUserMedia"></div>
+            <div class="statRow" name="userWatchMediaIssues" id="userWatchMediaIssues"></div>
+            <div class="statRow" name="multiCollectionMovies" id="multiCollectionMovies"></div>
+        </div>
+    </div>
+</div>

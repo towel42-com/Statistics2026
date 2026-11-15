@@ -17,7 +17,7 @@ namespace Statistics2026
         internal const string MostActiveUsers = "Most Active Users";
         internal const string HelpMostActiveUsers = "Top <numUsers> users that are the most active on the Emby server. This includes viewing movies and episodes.";
 
-        internal const string MediaTimePlayedPerUser = "Time Spent Playing Media";
+        internal const string MediaTimePlayedPerUser = "Tracked Time vs PlayCount Time";
         internal const string HelpMediaTimePlayedPerUser = "Time played of media by users both calculated using play count as well as tracked.";
 
         internal const string WatchedUserMediaIssues = "Watched User Media Issues";

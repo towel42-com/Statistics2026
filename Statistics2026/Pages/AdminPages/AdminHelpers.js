@@ -22,6 +22,10 @@ define(function () {
                 name: 'Movies'
             }
             , {
+                href: Dashboard.getConfigurationPageUrl('SystemStatus'),
+                name: 'System Status'
+            }
+            , {
                 href: Dashboard.getConfigurationPageUrl('Settings'),
                 name: 'Settings'
             }

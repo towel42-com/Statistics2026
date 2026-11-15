@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0;</TargetFrameworks>
-		<Version>1.0.0.16</Version>
-		<AssemblyVersion>1.0.0.16</AssemblyVersion>
-		<FileVersion>1.0.0.16</FileVersion>
+		<Version>1.0.0.17</Version>
+		<AssemblyVersion>1.0.0.17</AssemblyVersion>
+		<FileVersion>1.0.0.17</FileVersion>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<NoWarn>$(NoWarn);SYSLIB1030;CS0436;CS0618</NoWarn>
@@ -123,30 +123,11 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="Pages\AdminPages\AdminHelpers.js" />
+		<EmbeddedResource Include="Resources\**\*.png" />
+		<EmbeddedResource Include="Resources\**\*.css" />
 
-		<EmbeddedResource Include="Pages\AdminPages\Episodes.html" />
-		<EmbeddedResource Include="Pages\AdminPages\Episodes.js" />
-		<EmbeddedResource Include="Pages\AdminPages\Movies.html" />
-		<EmbeddedResource Include="Pages\AdminPages\Movies.js" />
-		<EmbeddedResource Include="Pages\AdminPages\Settings.html" />
-		<EmbeddedResource Include="Pages\AdminPages\Settings.js" />
-		<EmbeddedResource Include="Pages\AdminPages\Summary.html" />
-		<EmbeddedResource Include="Pages\AdminPages\Summary.js" />
-		<EmbeddedResource Include="Pages\AdminPages\TVSeriesProgress.html" />
-		<EmbeddedResource Include="Pages\AdminPages\TVSeriesProgress.js" />
-		<EmbeddedResource Include="Pages\AdminPages\UserStats.html" />
-		<EmbeddedResource Include="Pages\AdminPages\UserStats.js" />
-
-		<EmbeddedResource Include="Pages\UserPages\Helpers.js" />
-		<EmbeddedResource Include="Pages\UserPages\TVSeriesProgress.html" />
-		<EmbeddedResource Include="Pages\UserPages\TVSeriesProgress.js" />
-		<EmbeddedResource Include="Pages\UserPages\UserStats.html" />
-		<EmbeddedResource Include="Pages\UserPages\UserStats.js" />
-
-		<EmbeddedResource Include="Pages\Helpers.js" />
-		<EmbeddedResource Include="Resources\style.css" />
-		<EmbeddedResource Include="Resources\thumb.png" />
+		<EmbeddedResource Include="Pages\**\*.html" />
+		<EmbeddedResource Include="Pages\**\*.js" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Emby.ApiClient" Version="4.8.10" />

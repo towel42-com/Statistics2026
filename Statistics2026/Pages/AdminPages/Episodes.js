@@ -12,7 +12,7 @@
         const filterId = 'episodeDisplay';
         const baseUrl = "Statistics2026/episode_list";
         const tabName = "Episodes";
-        const lastRunArray = ["MediaAnalysis", "MissingEpisodesAnalysis"];
+        const lastRunArray = ["MediaAnalysis", "MissingEpisodesAnalysis", "NotifyAvailableToday"];
         let showStreaming = true;
 
         return function (view, params) {

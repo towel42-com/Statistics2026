@@ -1113,14 +1113,11 @@ namespace Statistics2026.Data
             var tables = TableDefs().allUserMediaTables();
             foreach( var tableName in tables )
             {
-#if DEBUG_PLUGIN
-                var user = getUserForTableName( tableName );
-                if( ( user == null ) || user.Name != "scott" )
+                var user = TableDefs().getUserForTableName( tableName );
+                if( ( user == null ) || ( user.Policy.IsAdministrator ) )
                 {
                     continue;
                 }
-#endif
-
                 var curr = sqlAtoB;
                 curr = curr.Replace( "<TABLE_NAME>", tableName );
                 sqlCmds.Add( new SQLCmdDef( curr ) );

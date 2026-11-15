@@ -8,53 +8,6 @@
 
         window.MyPluginHelpers = Helpers;
 
-        async function loadDebugInfoAsync(view, pluginConfig) {
-            var url = ApiClient.getUrl("/emby/System/Configuration");
-
-            let sysConfig = await ApiClient.getJSON(url).catch(error => {
-                console.error("System Config API call failed:", error);
-                return;
-            });
-
-            if (!pluginConfig.showDebugInfo) {
-                view.querySelector(`#debugInfo`).style.display = 'none';
-                view.querySelector(`#playedUserMedia`).style.display = 'none';
-                view.querySelector(`#userWatchMediaIssues`).style.display = 'none';
-                view.querySelector(`#multiCollectionMovies`).style.display = 'none';
-                return;
-            }
-
-            var urlText = "/emby/Statistics2026/database_status";
-            var url = ApiClient.getUrl(urlText);
-            let dbStatus = await ApiClient.getJSON(url).catch(error => {
-                console.error("database_status API call failed:", error);
-                return;
-            });
-
-            var debugInfo = "Version <b>" + pluginConfig.Version
-                + "</b> - Build Date - <b>" + pluginConfig.BuildDate + "</b>"
-                + " - Database Status <b>" + dbStatus.DBState + " (";
-            if (!dbStatus.DBStateOK)
-                debugInfo += "not ";
-            debugInfo += "OK)</b>";
-
-            view.querySelector(`#debugInfo`).style.display = '';
-            view.querySelector("#debugInfo").innerHTML = debugInfo;
-
-            var playedUserMedia = Helpers.getSummaryInfo(view, "played_user_media", "", "");
-            view.querySelector(`#playedUserMedia`).style.display = '';
-            view.querySelector("#playedUserMedia").innerHTML = (playedUserMedia);
-
-            var userWatchMediaIssues = Helpers.getSummaryInfo(view, "user_watch_media_issues", "", "");
-            view.querySelector(`#userWatchMediaIssues`).style.display = '';
-            view.querySelector("#userWatchMediaIssues").innerHTML = (userWatchMediaIssues);
-
-            var multiCollectionMovies = "";
-            multiCollectionMovies += Helpers.getSummaryInfo(view, "multi_collection_movies", "", "");
-            view.querySelector(`#multiCollectionMovies`).style.display = '';
-            view.querySelector("#multiCollectionMovies").innerHTML = multiCollectionMovies;
-        }
-
         async function loadStats(view) {
             Dashboard.showLoadingMsg();
 
@@ -64,18 +17,6 @@
                 Dashboard.hideLoadingMsg();
                 return;
             }
-
-            ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                view.querySelector(`#debugInfo`).style.display = 'none';
-                loadDebugInfoAsync(view, config);
-            });
-
-            Helpers.insertSystemStatus(view, "lastRunInfo");
-
-            view.querySelector("#pageIntro").innerHTML =
-                "This plugin will calculate media and user statistics "
-                + "from this Emby server instance.";
-
 
             var userInfo = "";
             userInfo += Helpers.getSummaryInfo(view, "most_active_users", "", "");
