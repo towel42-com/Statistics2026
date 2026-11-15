@@ -271,7 +271,7 @@ namespace Statistics2026.Data
             retVal += HelperFuncs.addToHtml( depth, $"<span class=\"label\">{titleText}:</span>" );
 
             var data = updateText;
-            if( Plugin.Instance!.Configuration.showDebugInfo )
+            if( Plugin.Instance!.Configuration.ShowDebugInfo( _embyInterfaces ) )
             {
                 if( run )
                 {
