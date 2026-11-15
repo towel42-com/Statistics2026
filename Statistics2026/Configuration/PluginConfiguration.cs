@@ -37,6 +37,7 @@ namespace Statistics2026.Configuration
         bool reportOnMissingSpecials { get; set; }
         bool showFilteredMissingSummaries { get; set; }
         string searchLocation { get; set; }
+        bool showSearchTheMovieDB { get; set; }
         int numDaysFutureForMissing { get; set; }
 
         // a list of regular expressions, if the Collection name matches, the movie is NOT listed as missing
@@ -53,6 +54,14 @@ namespace Statistics2026.Configuration
 
     public static class DataForConfigExtensions
     {
+        public static string SearchlocationName( this IDataForConfig target )
+        {
+            if( string.IsNullOrWhiteSpace( target.searchLocation ) )
+                return string.Empty;
+            var uri = new System.Uri( target.searchLocation );
+            return uri.Host;
+        }
+
         public static void CopyData( this IDataForConfig target, IDataForConfig dataSource )
         {
             if( target == null || dataSource == null )
@@ -79,6 +88,7 @@ namespace Statistics2026.Configuration
             target.reportOnMissingSpecials = dataSource.reportOnMissingSpecials;
             target.showFilteredMissingSummaries = dataSource.showFilteredMissingSummaries;
             target.searchLocation = dataSource.searchLocation;
+            target.showSearchTheMovieDB = dataSource.showSearchTheMovieDB;
             target.numDaysFutureForMissing = dataSource.numDaysFutureForMissing;
 
             target.CollectionFiltersForMissingMovies = new List<string>();
@@ -129,6 +139,7 @@ namespace Statistics2026.Configuration
         public bool reportOnMissingSpecials { get; set; } = false;
         public bool showFilteredMissingSummaries { get; set; } = true;
         public string searchLocation { get; set; } = string.Empty;
+        public bool showSearchTheMovieDB { get; set; } = true;
         public int numDaysFutureForMissing { get; set; } = 0;
 
         // a list of regular expressions, if the Collection name matches, the movie is NOT listed as missing
@@ -190,6 +201,7 @@ namespace Statistics2026.Configuration
         public bool reportOnMissingSpecials { get; set; } = false;
         public bool showFilteredMissingSummaries { get; set; } = true;
         public string searchLocation { get; set; } = string.Empty;
+        public bool showSearchTheMovieDB { get; set; } = true;
         public int numDaysFutureForMissing { get; set; } = 0;
 
         // a list of regular expressions, if the Collection name matches, the movie is NOT listed as missing

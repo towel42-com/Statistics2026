@@ -150,6 +150,32 @@ namespace Statistics2026.Responses
             return retVal;
         }
 
+        private static SortByText getSearchData( string searchLink, string searchLocationName, string searchKey, string subKey )
+        {
+            var searchUrl = searchLink;
+            if( !searchUrl.EndsWith( "=" ) )
+                searchUrl += "?q=";
+            searchUrl += searchKey;
+
+            if( !subKey.IsEmpty() )
+                searchUrl += $" {subKey}";
+
+            var sortBy = searchKey;
+            if( !subKey.IsEmpty() )
+                sortBy += $" - {subKey}";
+
+            var displayText = $"{( string.IsNullOrWhiteSpace( searchLocationName ) ? "" : $"{searchLocationName} - " )}Click to Search for '{sortBy}'";
+            var searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {sortBy}\">{displayText}</a>";
+
+            var retVal = new SortByText()
+            {
+                SortBy = sortBy,
+                Text = searchLocation
+            };
+
+            return retVal;
+        }
+
         private static MediaItemResponse? SetMissingData( MediaItemResponse retVal, IResultSet row, ref int col, DateTimeOffset? premiereDate, bool isEpisode, Func<string, int, bool> isSeriesFiltered, Func<string, bool> isCollectionFiltered, Func<string, SortByText?> getCollectionName )
         {
             if( col != (int)Statistics2026DB.EMediaListResponseColumns.ePosterPath )
@@ -226,37 +252,65 @@ namespace Statistics2026.Responses
                     retVal.PremiereDate = premiereDate.Value.ToString( "dddd" ) + $" {retVal.PremiereDate}";
                 }
             }
-            else if( !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation ) )
+            else
             {
-                if( premiereDate != null )
+                var customSearch = !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation );
+                var willSearch = customSearch || Plugin.Instance!.Configuration.showSearchTheMovieDB;
+                if( willSearch )
                 {
-                    if( premiereDate.Value.LocalDateTime.Date == DateTimeOffset.Now.Date )
+                    if( premiereDate != null )
                     {
-                        retVal.PremiereDate = "Today" + " " + retVal.PremiereDate;
-                    }
-                    else if( premiereDate.Value.LocalDateTime.Date == DateTimeOffset.Now.Date.AddDays( -1 ) )
-                    {
-                        retVal.PremiereDate = "Yesterday" + " " + retVal.PremiereDate;
+                        if( premiereDate.Value.LocalDateTime.Date == DateTimeOffset.Now.Date )
+                        {
+                            retVal.PremiereDate = "Today" + " " + retVal.PremiereDate;
+                        }
+                        else if( premiereDate.Value.LocalDateTime.Date == DateTimeOffset.Now.Date.AddDays( -1 ) )
+                        {
+                            retVal.PremiereDate = "Yesterday" + " " + retVal.PremiereDate;
+                        }
                     }
                 }
-                var searchUrl = Plugin.Instance!.Configuration.searchLocation;
-                if( !searchUrl.EndsWith( "=" ) )
-                    searchUrl += "?q=";
-                searchUrl += searchKey;
 
-                if( !subKey.IsEmpty() )
-                    searchUrl += $" {subKey}";
+                List<SortByText> searchData = [];
+                if( customSearch )
+                {
+                    searchData.Add( getSearchData( Plugin.Instance!.Configuration.searchLocation, Plugin.Instance!.Configuration.SearchlocationName(), searchKey, subKey ) );
+                }
 
-                var sortBy = searchKey;
-                if( !subKey.IsEmpty() )
-                    sortBy += $" - {subKey}";
 
-                retVal.SearchLocation.SortBy = sortBy;
+                if( Plugin.Instance!.Configuration.showSearchTheMovieDB )
+                {
+                    searchData.Add( getSearchData( "https://www.themoviedb.org/search?query=", "The MovieDB", searchKey, string.Empty ) );
+                }
 
-                var displayText = $"Click to Search for '{sortBy}'";
-                var searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {sortBy}\">{displayText}</a>";
-                retVal.SearchLocation.Text = searchLocation;
+                retVal.SearchLocation = new();
+                var asList = searchData.Count > 1;
+                List<string> textList = [];
+                var sortBy = string.Empty;
+                for( int ii = 0; ii < searchData.Count; ++ii )
+                {
+                    var curr = searchData[ ii ];
+                    if( ii == 0 )
+                    {
+                        sortBy = curr.SortBy;
+                    }
+                    textList.Add( curr.Text );
+                }
+
+                if( asList )
+                {
+                    var depth = 0;
+                    retVal.SearchLocation.Text = HelperFuncs.addToHtml( depth++, "<ul>" );
+                    foreach( var curr in textList )
+                    {
+                        retVal.SearchLocation.Text += HelperFuncs.addToHtml( depth++, "<li>" );
+                        retVal.SearchLocation.Text += HelperFuncs.addToHtml( depth, curr );
+                        retVal.SearchLocation.Text += HelperFuncs.addToHtml( --depth, "</li>" );
+                    }
+                    retVal.SearchLocation.Text += HelperFuncs.addToHtml( --depth, "</ul>" );
+                }
             }
+
             return retVal;
         }
 

@@ -22,6 +22,8 @@
                 view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
                 view.querySelector("#numMostActive").value = config.numMostActiveUsers;
                 view.querySelector("#searchLocation").value = config.searchLocation;
+                view.querySelector("#showSearchTheMovieDB").checked = config.showSearchTheMovieDB;
+                
                 view.querySelector("#numDaysFutureForMissing").value = config.numDaysFutureForMissing;
                 view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
                 view.querySelector("#numTiedToReport").value = config.numTiedToReport;
@@ -325,7 +327,7 @@
                     });
                 }
             );
-            
+
             view.querySelector("#resetDBState").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -360,6 +362,15 @@
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
                         config.searchLocation = view.querySelector("#searchLocation").value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
+            view.querySelector("#showSearchTheMovieDB").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.showSearchTheMovieDB = view.querySelector("#showSearchTheMovieDB").checked;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
@@ -416,6 +427,11 @@
                     Helpers.showInfo("Search Location for Missing Videos", "URL to the search location for missing videos ie \"https://thepiratebay.org/search.php\"");
                 });
 
+            view.querySelector("#showSearchTheMovieDBHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Search The Movie DB", "Enable searching for the media on \"https://www.themoviedb.org\"");
+                });
+
             view.querySelector("#numMostActiveHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Number of Most Active Users", "The default is 5, but you can limit how many most active users that are reported");
@@ -446,7 +462,7 @@
                     Helpers.showInfo("Reset Database State", "Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured");
                 });
 
-            
+
             view.querySelector("#showFilteredMissingSummariesHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Filtered Missing Summaries", "For summaries of episodes or movies missing, show the filtered results.");
