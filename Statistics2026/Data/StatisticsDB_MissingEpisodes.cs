@@ -89,8 +89,16 @@ namespace Statistics2026.Data
                 Progress?.Report( 100 );
                 Logger().Debug( $"Finished Missing Episodes Analysis" );
             }
-            NotificationSender.SendEpisodesAvailableNotification( nowAvailable, _embyInterfaces );
-        }
+            if( nowAvailable.Count() != 0 )
+            {
+                var lastUpdated = GetLastUpdated( EAction.NotifyAvailableToday ).when;
+                if( lastUpdated == null || lastUpdated.Value.LocalDateTime.Date != DateTimeOffset.Now.LocalDateTime.Date )
+                {
+                    NotificationSender.SendEpisodesAvailableNotification( nowAvailable, _embyInterfaces );
+                    SetLastUpdated( EAction.NotifyAvailableToday, [ "Task" ], 0 );
+                }
+            }
+            }
 
         private bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
         {

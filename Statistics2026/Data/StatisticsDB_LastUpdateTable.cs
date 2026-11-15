@@ -27,7 +27,8 @@ namespace Statistics2026.Data
             UserAnalysis,
             UserWatchDataAnalysis,
             LastMediaOrUserAdded,
-            StreamingProviders
+            StreamingProviders,
+            NotifyAvailableToday
         }
 
         public (DateTimeOffset? when, long ms, List<string> reasons) GetLastUpdated( EAction action )
@@ -124,6 +125,7 @@ namespace Statistics2026.Data
                         EAction.SeriesAnalysis.ToString(),
                         EAction.StreamingProviders.ToString(),
                         EAction.MissingEpisodesAnalysis.ToString(),
+                        EAction.NotifyAvailableToday.ToString(),
                         EAction.MissingMoviesAnalysis.ToString(),
                         EAction.LastMediaOrUserAdded.ToString(),
                         EAction.System.ToString(),
@@ -173,6 +175,9 @@ namespace Statistics2026.Data
                     break;
                 case EAction.MissingEpisodesAnalysis:
                     retVal = typeof( AnalyzeMissingEpisodesTask );
+                    break;
+                case EAction.NotifyAvailableToday:
+                    retVal = null;
                     break;
                 case EAction.MissingMoviesAnalysis:
                     retVal = typeof( AnalyzeMissingMoviesTask );
@@ -228,6 +233,10 @@ namespace Statistics2026.Data
                 case EAction.StreamingProviders:
                     retVal = "Streaming Provider Analysis";
                     break;
+                case EAction.NotifyAvailableToday:
+                    retVal = "Notify Episodes are Available Today";
+                    break;
+
             }
             return retVal;
         }
