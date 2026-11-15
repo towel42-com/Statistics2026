@@ -33,7 +33,7 @@
                 view.querySelector("#alwaysShowJustWatch").checked = config.alwaysShowJustWatch;
                 view.querySelector("#maxNumStreamingProviders").value = config.maxNumStreamingProviders;
 
-                const collectionFilters = config.CollectionNamesToIgnoreFromMissingEpisodes || [];
+                const collectionFilters = config.CollectionFiltersForMissingMovies || [];
                 view.querySelector("#collectionFilterList").value = collectionFilters.join('\n');
             });
         }
@@ -160,7 +160,7 @@
                     .filter(line => line.length > 0);
 
                 ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                    config.CollectionNamesToIgnoreFromMissingEpisodes = linesToSave;
+                    config.CollectionFiltersForMissingMovies = linesToSave;
 
                     ApiClient.updatePluginConfiguration(Helpers.pluginId, config).then(function (result) {
                         // Visual indicator: show green confirmation text
