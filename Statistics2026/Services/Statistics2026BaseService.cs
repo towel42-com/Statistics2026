@@ -20,13 +20,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Statistics2026.Api
+namespace Statistics2026.Services
 {
-    public partial class Statistics2026Service : IService, IRequiresRequest
+    public class Statistics2026BaseService : IHasEmbyInterface, IService, IRequiresRequest
     {
-        private readonly EmbyInterfaces _embyInterfaces;
+        protected EmbyInterfaces _embyInterfaces { get; }
+        EmbyInterfaces IHasEmbyInterface._embyInterfaces => _embyInterfaces;
 
-        public Statistics2026Service(
+        public Statistics2026BaseService(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -46,7 +47,7 @@ namespace Statistics2026.Api
         {
             _embyInterfaces = new EmbyInterfaces()
             {
-                _logger = logManager.GetLogger( "Statistics2026 - Statistics2026Service" ),
+                _logger = logManager.GetLogger( "Statistics2026 - Plugin" ),
                 _appHost = appHost,
                 _authenticationRepository = authenticationRepository,
                 _fileSystem = fileSystem,
@@ -66,22 +67,5 @@ namespace Statistics2026.Api
         }
 
         public IRequest? Request { get; set; } = null;
-
-        private User? GetUserByName( string userName )
-        {
-            if( _embyInterfaces == null )
-                throw new ArgumentNullException( "_embyInterfaces is null." );
-
-            return _embyInterfaces.GetUserByName( userName );
-        }
-
-        private User? GetUserById( Guid id )
-        {
-            if( _embyInterfaces == null )
-                throw new ArgumentNullException( "_embyInterfaces is null." );
-
-            var user = _embyInterfaces.GetUserById( id );
-            return user;
-        }
     }
 }

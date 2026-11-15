@@ -23,21 +23,19 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Statistics2026.Api
+namespace Statistics2026.Services
 {
     [Route( "/Statistics2026/tmdbimage/{size}/{path*}", "GET", Summary = "Get Tmdb Image" )]
-    [Unauthenticated]
+    [Authenticated]
     public class GetTmdbImage : IReturn<Stream>
     {
         public string size { get; set; } = string.Empty;
         public string path { get; set; } = string.Empty;
     }
 
-    public class TMDBImageProxyService : IService, IRequiresRequest
+    public class TMDBImageProxyService : Statistics2026BaseService
     {
         private readonly IHttpResultFactory _httpResultFactory;
-        private readonly EmbyInterfaces _embyInterfaces;
-        public IRequest Request { get; set; } = null!;
 
         public TMDBImageProxyService(
             IFileSystem fileSystem,
@@ -56,27 +54,24 @@ namespace Statistics2026.Api
             IAuthenticationRepository authenticationRepository,
             INotificationManager notificationManager,
             IHttpResultFactory resultFactory
-        )
+        ) : base(
+                fileSystem,
+                libraryManager,
+                logManager,
+                serverApplicationPaths,
+                userDataManager,
+                userManager,
+                appHost,
+                jsonSerializer,
+                providerManager,
+                configManager,
+                taskManager,
+                sessionManager,
+                httpClient,
+                authenticationRepository,
+                notificationManager
+                )
         {
-            _embyInterfaces = new EmbyInterfaces()
-            {
-                _logger = logManager.GetLogger( "Statistics2026 - TMDBImageProxyService" ),
-                _appHost = appHost,
-                _authenticationRepository = authenticationRepository,
-                _fileSystem = fileSystem,
-                _httpClient = httpClient,
-                _jsonSerializer = jsonSerializer,
-                _libraryManager = libraryManager,
-                _logManager = logManager,
-                _notificationManager = notificationManager,
-                _providerManager = providerManager,
-                _serverApplicationPaths = serverApplicationPaths,
-                _configManager = configManager,
-                _sessionManager = sessionManager,
-                _taskManager = taskManager,
-                _userDataManager = userDataManager,
-                _userManager = userManager,
-            };
             _httpResultFactory = resultFactory;
         }
 
