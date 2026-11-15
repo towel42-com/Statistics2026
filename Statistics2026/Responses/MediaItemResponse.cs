@@ -357,7 +357,7 @@ namespace Statistics2026.Responses
                         }
                         else
                         {
-                            return isCollectionFiltered( name ) || ( ( sortName != name ) && isCollectionFiltered( sortName ) );
+                            return isCollectionFiltered( name ) || ( ( sortName != name ) && isCollectionFiltered( sortName ) ) || isCollectionFiltered( title );
                         }
                     }
                 );

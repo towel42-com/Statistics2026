@@ -202,11 +202,12 @@ namespace Statistics2026.Data
                 }
                 else
                 {
+                    var title = row.GetString( (int)EMediaListResponseColumns.eTitle );
                     var parentInfoJSON = row.GetString( (int)EMediaListResponseColumns.eParentInfoJSON );
                     var parentInfos = MediaItemResponse.getParentInfo( parentInfoJSON,
                         ( string id, string name, string sortName ) =>
                         {
-                            return IsFilteredCollection( name ) || IsFilteredCollection( sortName );
+                            return IsFilteredCollection( name ) || ( ( sortName != name ) && IsFilteredCollection( sortName ) ) || IsFilteredCollection( title );
                         }
                     );
                     filtered = ( parentInfos == null );
