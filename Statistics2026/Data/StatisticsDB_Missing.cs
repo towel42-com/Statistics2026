@@ -196,6 +196,9 @@ namespace Statistics2026.Data
                     var parentId = row.GetString( (int)EMediaListResponseColumns.eParentId );
                     filtered = IsFilteredSeries( parentId, seasonNum );
                     currParentIds.Add( parentId );
+                    var premiereDate = HelperFuncs.ReadDateTime( row.GetString( (int)EMediaListResponseColumns.ePremiereDate ) ) ?? DateTimeOffset.MinValue;
+                    if( ( premiereDate != DateTimeOffset.MinValue ) && ( premiereDate.LocalDateTime.Date > DateTimeOffset.Now.Date ) )
+                        filtered = true;
                 }
                 else
                 {
