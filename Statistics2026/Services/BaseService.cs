@@ -6,7 +6,6 @@ using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Net;
 using MediaBrowser.Controller.Notifications;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Controller.Security;
@@ -16,7 +15,6 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
-using Statistics2026.Responses;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
@@ -24,15 +22,12 @@ using System.Linq;
 
 namespace Statistics2026.Services
 {
-    [Route( "/Statistics2026/database_status", "GET" )]
-    [Authenticated]
-    public class GetDatabaseStatus : IReturn<GetDatabaseStatusReponse>
+    public class BaseService : IHasEmbyInterface, IService, IRequiresRequest
     {
-    }
+        protected EmbyInterfaces _embyInterfaces { get; }
+        EmbyInterfaces IHasEmbyInterface._embyInterfaces => _embyInterfaces;
 
-    public class Statistics2026DBStatusService : Statistics2026BaseService
-    {
-        public Statistics2026DBStatusService(
+        public BaseService(
             IFileSystem fileSystem,
             ILibraryManager libraryManager,
             ILogManager logManager,
@@ -48,35 +43,29 @@ namespace Statistics2026.Services
             IHttpClient httpClient,
             IAuthenticationRepository authenticationRepository,
             INotificationManager notificationManager
-        ) : base(
-                fileSystem,
-                libraryManager,
-                logManager,
-                serverApplicationPaths,
-                userDataManager,
-                userManager,
-                appHost,
-                jsonSerializer,
-                providerManager,
-                configManager,
-                taskManager,
-                sessionManager,
-                httpClient,
-                authenticationRepository,
-                notificationManager
-                )
+        )
         {
-        }
-
-        public object Get( GetDatabaseStatus request )
-        {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            _embyInterfaces = new EmbyInterfaces()
             {
-                if( Plugin.Instance == null )
-                    return new GetDatabaseStatusReponse();
-
-                return new GetDatabaseStatusReponse( Plugin.Instance.Configuration );
-            } );
+                _logger = logManager.GetLogger( "Statistics2026 - Plugin" ),
+                _appHost = appHost,
+                _authenticationRepository = authenticationRepository,
+                _fileSystem = fileSystem,
+                _httpClient = httpClient,
+                _jsonSerializer = jsonSerializer,
+                _libraryManager = libraryManager,
+                _logManager = logManager,
+                _notificationManager = notificationManager,
+                _providerManager = providerManager,
+                _serverApplicationPaths = serverApplicationPaths,
+                _configManager = configManager,
+                _sessionManager = sessionManager,
+                _taskManager = taskManager,
+                _userDataManager = userDataManager,
+                _userManager = userManager,
+            };
         }
+
+        public IRequest? Request { get; set; } = null;
     }
 }

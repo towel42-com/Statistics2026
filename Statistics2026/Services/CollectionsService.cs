@@ -38,9 +38,9 @@ namespace Statistics2026.Services
     {
     }
 
-    public class Statistics2026CollectionsService : Statistics2026BaseService
+    public class CollectionsService : BaseService
     {
-        public Statistics2026CollectionsService(
+        public CollectionsService(
            IFileSystem fileSystem,
            ILibraryManager libraryManager,
            ILogManager logManager,

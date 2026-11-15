@@ -117,9 +117,9 @@ namespace Statistics2026.Services
         public string user { get; set; } = string.Empty;
     }
 
-    public class Statistics2026MediaService : Statistics2026BaseService
+    public class MediaService : BaseService
     {
-        public Statistics2026MediaService(
+        public MediaService(
            IFileSystem fileSystem,
            ILibraryManager libraryManager,
            ILogManager logManager,

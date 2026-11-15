@@ -34,9 +34,9 @@ namespace Statistics2026.Services
         public string user { get; set; } = string.Empty;
     }
 
-    public class Statistics2026TVProgressService : Statistics2026BaseService
+    public class TVProgressService : BaseService
     {
-        public Statistics2026TVProgressService(
+        public TVProgressService(
                    IFileSystem fileSystem,
                    ILibraryManager libraryManager,
                    ILogManager logManager,

@@ -17,6 +17,7 @@ using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
+using Statistics2026.Responses;
 using System;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
@@ -26,42 +27,38 @@ using static Statistics2026.Data.Statistics2026DB;
 
 namespace Statistics2026.Services
 {
-    [Route( "/Statistics2026/total_series_finished/{User}", "GET", Summary = "Get the total Movie Count" )]
-    [Authenticated]
-    public class GetTotalSeriesFinished : IReturn<object>
-    {
-        public string user { get; set; } = string.Empty;
-    }
-
-    [Route( "/Statistics2026/user_watch_media_issues", "GET", Summary = "Reports user media data that is causing the db status to not be valid" )]
+    [Route( "/Statistics2026/total_missing_movies", "GET", Summary = "Get the total number of movies missing from Collections" )]
     [Authenticated( Roles = "admin" )]
-    public class GetUserWatchMediaIssues : IReturn<object>
+    public class GetTotalMissingMovies : IReturn<object>
     {
     }
 
-    [Route( "/Statistics2026/played_user_media", "GET", Summary = "Reports Media played by users (debug only)" )]
+    [Route( "/Statistics2026/total_missing_episodes", "GET", Summary = "Get the total number of episodes missing from Series" )]
     [Authenticated( Roles = "admin" )]
-    public class GetPlayedUserMedia : IReturn<object>
+    public class GetTotalMissingEpisodes : IReturn<object>
     {
     }
 
-    [Route( "/Statistics2026/most_watched_shows/{User}", "GET", Summary = "Get the List of Most Watched Shows" )]
-    [Authenticated]
-    public class GetMostWatchedShows : IReturn<object>
-    {
-        [ApiMember( Name = "User", Description = "The user for whom to retrieve statistics", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "GET" )]
-        public string user { get; set; } = string.Empty;
-    }
-
-    [Route( "/Statistics2026/most_watched_shows", "GET", Summary = "Get the List of Most Watched Shows" )]
-    [Authenticated]
-    public class GetMostWatchedShowsNoUser : IReturn<object>
+    [Route( "/Statistics2026/series_filters", "GET", Summary = "Gets Series Filter" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetSeriesFilter : IReturn<List<SeriesFilterResponse>>
     {
     }
 
-    public class Statistics2026WatchedMediaDataService : Statistics2026BaseService
+    [Route( "/Statistics2026/set_series_filter", "POST", Summary = "Sets a Series Filter" )]
+    [Authenticated( Roles = "admin" )]
+    public class SetSeriesFilter : IReturn<object>
     {
-        public Statistics2026WatchedMediaDataService(
+        public string series_id { get; set; } = string.Empty;
+        public bool track_series { get; set; } = false;
+        public bool track_specials { get; set; } = false;
+        public int min_season { get; set; } = -1;
+        public int max_season { get; set; } = -1;
+    }
+
+    public class MissingService : BaseService
+    {
+        public MissingService(
                    IFileSystem fileSystem,
                    ILibraryManager libraryManager,
                    ILogManager logManager,
@@ -97,17 +94,13 @@ namespace Statistics2026.Services
         {
         }
 
-        public object Get( GetTotalSeriesFinished request )
+        public object Get( GetTotalMissingMovies request )
         {
             return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var userName = request.user;
-                var user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
-                if( user == null )
-                    return new StatCardResponse();
 
-                var groupData = db.TotalFinishedSeries( user );
+                var groupData = db.TotalMissingMovies();
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -116,13 +109,13 @@ namespace Statistics2026.Services
             } );
         }
 
-        public object Get( GetUserWatchMediaIssues request )
+        public object Get( GetTotalMissingEpisodes request )
         {
             return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
-                var groupData = db.UserWatchMediaIssues();
+                var groupData = db.TotalMissingEpisodes();
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -131,53 +124,38 @@ namespace Statistics2026.Services
             } );
         }
 
-        public object Get( GetPlayedUserMedia request )
+        public object Get( GetSeriesFilter request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
-                var groupData = db.PlayedUserMedia();
-                if( groupData == null )
-                    return new StatCardResponse();
-
-                var vgReponse = groupData.createStat();
-                return vgReponse;
+                return db.GetSeriesFilter( true );
             } );
+            return retVal;
         }
 
-        public object Get( GetMostWatchedShows request )
+        public object Post( SetSeriesFilter request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
-            {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var userName = request.user;
-                var user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
-                if( user == null )
-                    return new StatCardResponse();
-
-                var groupData = db.WatchedMedia( user, false, EMediaType.eSeries );
-                if( groupData == null )
-                    return new StatCardResponse();
-
-                var vgReponse = groupData.createStat();
-                return vgReponse;
-            } );
-        }
-
-        public object Get( GetMostWatchedShowsNoUser request )
-        {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
-                var groupData = db.WatchedMedia( null, false, EMediaType.eSeries );
-                if( groupData == null )
-                    return new StatCardResponse();
+                var seriesFilter = new SeriesFilterResponse()
+                {
+                    SeriesId = request.series_id,
+                    TrackSeries = request.track_series,
+                    TrackSpecials = request.track_specials,
+                    MinSeason = request.min_season,
+                    MaxSeason = request.max_season
+                };
 
-                var vgReponse = groupData.createStat();
-                return vgReponse;
+                if( seriesFilter.SeriesId.IsNullOrEmpty() )
+                    return new object();
+
+                return db.SaveSeriesFilter( seriesFilter, true );
             } );
+            return retVal;
         }
     }
 }

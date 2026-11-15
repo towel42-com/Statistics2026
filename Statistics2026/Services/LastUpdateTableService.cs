@@ -33,15 +33,15 @@ namespace Statistics2026.Services
     }
 
     [Route( "/Statistics2026/last_run_info", "GET", Summary = "Returns the last time the analysis for run was finished" )]
-    [Authenticated( Roles = "admin" )]
+    [Authenticated]
     public class GetLastRunInfo : IReturn<object>
     {
         public string whichRuns { get; set; } = string.Empty; // comma separated list
     }
 
-    public class Statistics2026LastUpdateTableService : Statistics2026BaseService
+    public class LastUpdateTableService : BaseService
     {
-        public Statistics2026LastUpdateTableService(
+        public LastUpdateTableService(
            IFileSystem fileSystem,
            ILibraryManager libraryManager,
            ILogManager logManager,

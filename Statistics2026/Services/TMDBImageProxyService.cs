@@ -16,12 +16,7 @@ using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Statistics2026.Services
 {
@@ -33,7 +28,7 @@ namespace Statistics2026.Services
         public string path { get; set; } = string.Empty;
     }
 
-    public class TMDBImageProxyService : Statistics2026BaseService
+    public class TMDBImageProxyService : BaseService
     {
         private readonly IHttpResultFactory _httpResultFactory;
 

@@ -92,9 +92,9 @@ namespace Statistics2026.Services
         public bool episodes { get; set; } = false;
     }
 
-    public class Statistics2026UserService : Statistics2026BaseService
+    public class UserService : BaseService
     {
-        public Statistics2026UserService(
+        public UserService(
                    IFileSystem fileSystem,
                    ILibraryManager libraryManager,
                    ILogManager logManager,

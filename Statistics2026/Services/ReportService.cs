@@ -47,9 +47,9 @@ namespace Statistics2026.Services
         public StatGen.EStatisticType whichStatistic { get; set; }
     }
 
-    public class Statistics2026ReportService : Statistics2026BaseService
+    public class ReportService : BaseService
     {
-        public Statistics2026ReportService(
+        public ReportService(
                    IFileSystem fileSystem,
                    ILibraryManager libraryManager,
                    ILogManager logManager,
