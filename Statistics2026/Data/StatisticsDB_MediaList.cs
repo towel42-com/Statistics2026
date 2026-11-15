@@ -73,7 +73,7 @@ namespace Statistics2026.Data
             eParentId, // empty if on server
         };
 
-        private string getMediaListResponseMissingCmd( EWhichMediaList whichMedia, ref List<string> orderBy )
+        private string getMediaListResponseMissingCmd( EWhichMediaList whichMedia, ref List<string> orderBy, bool filterOutFuture )
         {
             var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
 
@@ -124,6 +124,11 @@ namespace Statistics2026.Data
                 whereClauses.Add( "NOT Missing.IsEpisode" );
             }
 
+            if( filterOutFuture )
+            {
+                whereClauses.Add( "ReleaseDate < date('now', '+1 day')" );
+            }
+
             orderBy.Add( "SortName ASC" );
             if( episodes )
             {
@@ -135,10 +140,10 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private string getMediaListResponseMissingCmd( EWhichMediaList whichMedia )
+        private string getMediaListResponseMissingCmd( EWhichMediaList whichMedia, bool filterOutFuture )
         {
             List<string> orderBy = [];
-            return getMediaListResponseMissingCmd( whichMedia, ref orderBy );
+            return getMediaListResponseMissingCmd( whichMedia, ref orderBy, filterOutFuture );
         }
 
         private string getMediaListResponseOnServerCmd( EWhichMediaList whichMedia, ref List<string> orderBy )
@@ -223,7 +228,7 @@ namespace Statistics2026.Data
             List<string> sqlCmds = [];
             if( ( whichMedia & EWhichMediaList.eMissing ) != 0 )
             {
-                sqlCmds.Add( getMediaListResponseMissingCmd( whichMedia ) );
+                sqlCmds.Add( getMediaListResponseMissingCmd( whichMedia, false ) );
             }
 
             if( ( whichMedia & EWhichMediaList.eOnServer ) != 0 )

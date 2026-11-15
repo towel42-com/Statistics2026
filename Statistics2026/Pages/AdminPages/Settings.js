@@ -30,6 +30,7 @@
                 view.querySelector("#resetDBState").checked = config.resetDBState;
                 view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
                 view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
+                view.querySelector("#showFilteredMissingSummaries").checked = config.showFilteredMissingSummaries;
                 view.querySelector("#alwaysShowJustWatch").checked = config.alwaysShowJustWatch;
                 view.querySelector("#maxNumStreamingProviders").value = config.maxNumStreamingProviders;
 
@@ -272,6 +273,15 @@
                 }
             );
 
+            view.querySelector("#showFilteredMissingSummaries").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.showFilteredMissingSummaries = view.querySelector("#showFilteredMissingSummaries").checked;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
             view.querySelector("#alwaysShowJustWatch").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -420,6 +430,12 @@
             view.querySelector("#resetDBStateHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Reset Database State", "Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured");
+                });
+
+            
+            view.querySelector("#showFilteredMissingSummariesHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Filtered Missing Summaries", "For summaries of episodes or movies missing, show the filtered results.");
                 });
 
             view.querySelector("#reportOnMissingSpecialsHelp").addEventListener("click",

@@ -47,6 +47,7 @@ namespace Statistics2026.Configuration
         public int maxNumStreamingProviders { get; set; } = 3;
 
         public bool reportOnMissingSpecials { get; set; } = false;
+        public bool showFilteredMissingSummaries { get; set; } = true;
         public string searchLocation { get; set; } = string.Empty;
         public int numDaysFutureForMissing { get; set; } = 0;
 

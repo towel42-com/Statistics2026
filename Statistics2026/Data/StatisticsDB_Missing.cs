@@ -6,9 +6,10 @@ using MediaBrowser.Model.Entities;
 using RestSharp;
 using ServiceStack;
 using ServiceStack.Text;
+using SQLitePCL;
 using Statistics2026.Configuration;
-using Statistics2026.Utilities;
 using Statistics2026.Responses;
+using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.SymbolStore;
@@ -166,101 +167,110 @@ namespace Statistics2026.Data
             return filtered;
         }
 
-        private ((int numItems, int numParents) unfiltered, (int numItems, int numParents) filtered) MediaMissingInfo( bool episodes )
+        private (int numItems, int numParents) MediaMissingInfo( bool episodes, bool filteredResults )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var whereClause = episodes ? "IsEpisode" : "NOT IsEpisode";
-
-            var sql = $"SELECT COUNT( * ) FROM Missing WHERE {whereClause}";
-            var value = GetSingleValueFromSQL( sql );
-            var numMissingUnfiltered = value.ToInt();
-
-            sql = $"SELECT COUNT( DISTINCT ParentId ) FROM Missing WHERE {whereClause}";
-            value = GetSingleValueFromSQL( sql );
-            var numParentsUnfiltered = value.ToInt();
-
-            int numMissingFiltered = 0;
-            HashSet<string> filteredParents = [];
-            sql = getMediaListResponseMissingCmd( episodes ? EWhichMediaList.eEpisodesMissing : EWhichMediaList.eMoviesMissing );
-            RunSQLOnRow( sql, row =>
+            int numItems = 0;
+            int numParents = 0;
+            if( filteredResults )
             {
-                HashSet<string> currParentIds = [];
-                bool filtered = false;
+                numItems = 0;
+                HashSet<string> filteredParents = [];
+                var sql = getMediaListResponseMissingCmd( episodes ? EWhichMediaList.eEpisodesMissing : EWhichMediaList.eMoviesMissing, true );
 
-                var name = row.GetString( (int)EMediaListResponseColumns.eTitle );
-                var seasonNum = -1;
-                if( episodes )
+                RunSQLOnRow( sql, row =>
                 {
-                    seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
-                    var parentId = row.GetString( (int)EMediaListResponseColumns.eParentId );
-                    filtered = IsFilteredSeries( parentId, seasonNum );
-                    currParentIds.Add( parentId );
-                    var premiereDate = HelperFuncs.ReadDateTime( row.GetString( (int)EMediaListResponseColumns.ePremiereDate ) ) ?? DateTimeOffset.MinValue;
-                    if( ( premiereDate != DateTimeOffset.MinValue ) && ( premiereDate.LocalDateTime.Date > DateTimeOffset.Now.Date ) )
-                        filtered = true;
-                }
-                else
-                {
-                    var title = row.GetString( (int)EMediaListResponseColumns.eTitle );
+                    HashSet<string> currParentIds = [];
+                    bool filtered = false;
+
+                    var name = row.GetString( (int)EMediaListResponseColumns.eTitle );
                     var parentInfoJSON = row.GetString( (int)EMediaListResponseColumns.eParentInfoJSON );
+                    var title = row.GetString( (int)EMediaListResponseColumns.eTitle );
+
                     var parentInfos = MediaItemResponse.getParentInfo( parentInfoJSON,
                         ( string id, string name, string sortName ) =>
                         {
-                            return IsFilteredCollection( name ) || ( ( sortName != name ) && IsFilteredCollection( sortName ) ) || IsFilteredCollection( title );
+                            if( name.IsEmpty() )
+                            {
+                                return true;
+                            }
+
+                            if( !episodes )
+                            {
+                                return IsFilteredCollection( name ) || ( ( sortName != name ) && IsFilteredCollection( sortName ) ) || IsFilteredCollection( title );
+                            }
+                            return false;
+                        } );
+
+                    filtered = ( parentInfos == null ) || ( parentInfos.Count == 0 );
+
+                    if( !filtered )
+                    {
+                        var premiereDate = HelperFuncs.ReadDateTime( row.GetString( (int)EMediaListResponseColumns.ePremiereDate ) ) ?? DateTimeOffset.MinValue;
+                        if( ( premiereDate != DateTimeOffset.MinValue ) && ( premiereDate.LocalDateTime.Date > DateTimeOffset.Now.Date ) )
+                            filtered = true;
+                    }
+
+                    var seasonNum = -1;
+
+                    if( !filtered )
+                    {
+                        if( episodes )
+                        {
+                            seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
+                            var parentId = row.GetString( (int)EMediaListResponseColumns.eParentId );
+                            filtered = filtered || IsFilteredSeries( parentId, seasonNum );
+                            currParentIds = filtered ? [] : [ parentId ];
                         }
-                    );
-                    filtered = ( parentInfos == null );
-                    currParentIds = parentInfos?.Select( pi => pi.id ).ToHashSet() ?? [];
-                }
+                        else
+                        {
+                            currParentIds = parentInfos?.Select( pi => pi.id ).ToHashSet() ?? [];
+                        }
+                    }
 
-                Logger().Debug( $"{( episodes ? "Series" : "Movie" )} : {name}{( episodes ? $" Season: {seasonNum}" : "" )} - {( filtered ? "" : "NOT " )}Filtered" );
-                if( !filtered )
+                    Logger().Debug( $"{( episodes ? "Series" : "Movie" )} : {name}{( episodes ? $" Season: {seasonNum}" : "" )} - {( filtered ? "" : "NOT " )}Filtered" );
+
+                    if( !filtered )
+                    {
+                        numItems++;
+                        filteredParents.UnionWith( currParentIds );
+                    }
+                    return true;
+                } );
+                numParents = filteredParents.Count;
+            }
+            else
+            {
+                var whereClause = episodes ? "IsEpisode" : "NOT IsEpisode";
+                var sql =
+                    $"SELECT COUNT( * ),COUNT( DISTINCT ParentId ) FROM Missing WHERE {( episodes ? "" : "NOT" )} IsEpisode AND ( ReleaseDate < date('now', '+1 day') )";
+                var cmd = new SQLCmdDef( sql );
+
+                ExecuteCommand( cmd, statement =>
                 {
-                    numMissingFiltered++;
-                    filteredParents.UnionWith( currParentIds );
-                }
-
-                return true;
-            } );
-
-            return ((numMissingUnfiltered, numParentsUnfiltered), (numMissingFiltered, filteredParents.Count()));
+                    var row = statement.Current;
+                    numItems = row.GetInt( 0 );
+                    numParents = row.GetInt( 1 );
+                    return true;
+                } );
+            }
+            return (numItems, numParents);
         }
 
         private StatCard TotalMissingMedia( bool episodes )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var info = MediaMissingInfo( episodes );
+            var info = MediaMissingInfo( episodes, Plugin.Instance!.Configuration.showFilteredMissingSummaries );
 
             var title = episodes ? Constants.MissingEpisodes : Constants.MissingMovies;
-            var subTitle = episodes ? Constants.MissingEpisodesSubTitle : Constants.MissingMoviesSubTitle;
-            var titleFiltered = episodes ? Constants.MissingEpisodesFiltered : Constants.MissingMoviesFiltered;
-            var subTitleFiltered = episodes ? Constants.MissingEpisodesSubTitleFiltered : Constants.MissingMoviesSubTitleFiltered;
-
+            var infoFormat = episodes ? "{0} Episodes from {1} Series" : "{0} Movies from {1} Collections";
             var help = episodes ? Constants.MissingEpisodesHelp : Constants.MissingMoviesHelp;
 
-            if( ( info.unfiltered.numItems == info.filtered.numItems ) &&
-                ( info.unfiltered.numParents == info.filtered.numParents ) )
-            {
-                titleFiltered = title;
-                subTitleFiltered = subTitle;
-            }
+            var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eCompact );
+            retVal.AddLine( string.Format( infoFormat, info.numItems, info.numParents ), false );
 
-            var retVal = new TextBasedStatCard( titleFiltered, help, EStatCardStyle.eCompact );
-
-            retVal.AddLine( info.filtered.numItems.ToString(), false );
-            retVal.AddLine( subTitleFiltered, true );
-            retVal.AddLine( info.filtered.numParents.ToString(), false );
-
-            if( ( info.unfiltered.numItems != info.filtered.numItems ) ||
-                ( info.unfiltered.numParents != info.filtered.numParents ) )
-            {
-                retVal.AddLine( title, true );
-                retVal.AddLine( info.unfiltered.numItems.ToString(), false );
-                retVal.AddLine( subTitle, true );
-                retVal.AddLine( info.unfiltered.numParents.ToString(), false );
-            }
             return retVal;
         }
 
