@@ -124,6 +124,22 @@ namespace Statistics2026
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Summary.js"
                 },
                 new() {
+                    Name = "EpisodeSummary",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.EpisodeSummary.html",
+                },
+                new() {
+                    Name = "EpisodeSummary.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.EpisodeSummary.js"
+                },
+                new() {
+                    Name = "MovieSummary",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.MovieSummary.html",
+                },
+                new() {
+                    Name = "MovieSummary.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.MovieSummary.js"
+                },
+                new() {
                     Name = "UserStats",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.UserStats.html"
                 },

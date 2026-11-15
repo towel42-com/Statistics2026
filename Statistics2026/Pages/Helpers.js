@@ -90,6 +90,14 @@ define([
             };
         }
 
+        async function isDebugLoggingEnabled() {
+            var url = ApiClient.getUrl("/emby/System/Configuration");
+            let sysConfig = await ApiClient.getJSON(url).catch(error => {
+                return false;
+            });
+            return sysConfig.EnableDebugLevelLogging;
+        }
+
         function calculateProgressClass(value) {
             value = Math.round(value);
             if (value == 0)
@@ -329,12 +337,22 @@ define([
         }
 
         async function insertGetLastRunInfo(view, whichRuns, div) {
-            getLastRunInfo(whichRuns).then(response => {
-                view.querySelector("#" + div).innerHTML = response.html;
-            }).catch(error => {
-                var errorMessage = "'" + error + "' - '" + div + "' - '" + whichRuns.join(',') + "'";
-                console.error("insertGetLastRunInfo failed:", errorMessage);
-                view.querySelector("#" + div).innerHTML = `<tr><td colspan="2">Error loading ${whichRuns} status</td></tr>`;
+            getUserPluginConfig().then(function (config) {
+                var item = view.querySelector("#" + div);
+                if (config.showLastRunInfo) {
+                    item.style.display = '';
+                    getLastRunInfo(whichRuns).then(response => {
+                        item.innerHTML = response.html;
+                    }).catch(error => {
+                        var errorMessage = "'" + error + "' - '" + div + "' - '" + whichRuns.join(',') + "'";
+                        console.error("insertGetLastRunInfo failed:", errorMessage);
+                        item.innerHTML = `<tr><td colspan="2">Error loading ${whichRuns} status</td></tr>`;
+                    });
+                }
+                else {
+                    item.innerHTML = '';
+                    item.style.display = 'none';
+                }
             });
         }
 
@@ -873,7 +891,8 @@ define([
             loadUsers,
             showInfo,
             getUserPluginConfig,
-            updateUserPluginConfiguration
+            updateUserPluginConfiguration,
+            isDebugLoggingEnabled
         };
     }
 )

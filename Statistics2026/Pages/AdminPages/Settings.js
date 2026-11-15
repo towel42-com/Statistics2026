@@ -29,6 +29,8 @@
                 view.querySelector("#resetPlayCount").checked = config.resetPlayCount;
                 view.querySelector("#resetDBState").checked = config.resetDBState;
                 view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
+                view.querySelector("#showLastRunInfo").checked = config.showLastRunInfo;
+
                 view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
                 view.querySelector("#showFilteredMissingSummaries").checked = config.showFilteredMissingSummaries;
                 view.querySelector("#alwaysShowJustWatch").checked = config.alwaysShowJustWatch;
@@ -111,12 +113,15 @@
             }
 
             // init code here
-            view.addEventListener('viewshow', function (e) {
+            view.addEventListener('viewshow', async function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("Settings", AdminHelpers.getTabs), AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
 
                 loadPage(view, params);
                 loadSeriesFilterTable();
+
+                var isDebugLoggingEnabled = await Helpers.isDebugLoggingEnabled();
+                const viewDebugCB = view.querySelector("#showDebugInfo").disabled = isDebugLoggingEnabled;
             });
 
             function saveSeriesFilterItem(filterItem) {
@@ -312,6 +317,15 @@
                 }
             );
 
+            view.querySelector("#showLastRunInfo").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.showLastRunInfo = view.querySelector("#showLastRunInfo").checked;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            
             view.querySelector("#resetDBState").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -455,7 +469,12 @@
 
             view.querySelector("#showDebugInfoHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Show Debug Info", "More information is reported on the Summary screen, this functionality is also turned on if Debug Logging is enabled");
+                    Helpers.showInfo("Show Debug Info", "More information is reported on the pages, this functionality is also turned on if Debug Logging is enabled");
+                });
+
+            view.querySelector("#showLastRunInfoHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Show Last Run Info", "Each page will show a summary of each analysis' last run");
                 });
 
             view.querySelector("#hasConnectUserIDHelp").addEventListener("click",

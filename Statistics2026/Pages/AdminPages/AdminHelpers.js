@@ -6,6 +6,15 @@ define(function () {
                 name: 'Summary'
             }
             , {
+                href: Dashboard.getConfigurationPageUrl('EpisodeSummary'),
+                name: 'Episode/Series Summary'
+            }
+            ,
+            {
+                href: Dashboard.getConfigurationPageUrl('MovieSummary'),
+                name: 'Movie Summary'
+            }
+            , {
                 href: Dashboard.getConfigurationPageUrl('UserStats'),
                 name: 'User Stats'
             }

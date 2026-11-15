@@ -10,12 +10,6 @@
 
         async function loadDebugInfoAsync(view, pluginConfig) {
             Dashboard.showLoadingMsg();
-            var url = ApiClient.getUrl("/emby/System/Configuration");
-
-            let sysConfig = await ApiClient.getJSON(url).catch(error => {
-                console.error("System Config API call failed:", error);
-                return;
-            });
 
             var urlText = "/emby/Statistics2026/database_status";
             var url = ApiClient.getUrl(urlText);
