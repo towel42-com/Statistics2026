@@ -245,7 +245,7 @@ namespace Statistics2026.Responses
                 searchUrl += searchKey;
 
                 if( !subKey.IsEmpty() )
-                    searchUrl += $"{subKey}";
+                    searchUrl += $" {subKey}";
 
                 var sortBy = searchKey;
                 if( !subKey.IsEmpty() )
