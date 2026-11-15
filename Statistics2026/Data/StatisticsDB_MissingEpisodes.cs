@@ -95,10 +95,10 @@ namespace Statistics2026.Data
                 if( lastUpdated == null || lastUpdated.Value.LocalDateTime.Date != DateTimeOffset.Now.LocalDateTime.Date )
                 {
                     NotificationSender.SendEpisodesAvailableNotification( nowAvailable, _embyInterfaces );
-                    SetLastUpdated( EAction.NotifyAvailableToday, [ "Task" ], 0 );
                 }
             }
-            }
+            SetLastUpdated( EAction.NotifyAvailableToday, [ "Task" ], 0 );
+        }
 
         private bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
         {
