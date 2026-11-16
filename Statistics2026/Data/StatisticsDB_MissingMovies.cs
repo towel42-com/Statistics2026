@@ -96,7 +96,7 @@ namespace Statistics2026.Data
             if( string.IsNullOrEmpty( collectionTmbdId ) )
                 return [];
 
-            var isoCode = await HelperFuncs.GetServerCountryCodeAsync( _embyInterfaces!.HttpClient(), _cancellationToken: CancellationToken );
+            var isoCode = await HelperFuncs.GetCountryCodeAsync( _embyInterfaces!.HttpClient(), _cancellationToken: CancellationToken );
 
             TmdbCollection? tmdbCollection = null;
             try

@@ -240,7 +240,7 @@ namespace Statistics2026.Data
 
             var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
 
-            var isoCode = HelperFuncs.GetServerCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
+            var isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
             ExecuteCommand( new SQLCmdDef( sqlCmd ), statement =>

@@ -190,39 +190,52 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        static string? ServerCountryCode = null;
-
-        public static string GetServerCountryCode( IHttpClient httpClient, CancellationToken? _cancellationToken = null )
+        public static string GetCountryCode( IHttpClient httpClient, CancellationToken? _cancellationToken = null )
         {
-            if( ServerCountryCode != null )
-                return ServerCountryCode;
-
             RegionInfo currentRegion = RegionInfo.CurrentRegion;
             var defaultIsoCode = currentRegion.TwoLetterISORegionName;
-            var isoCode = HelperFuncs.GetServerCountryCodeAsync( httpClient, defaultIsoCode, _cancellationToken ).GetAwaiter().GetResult();
-            return isoCode;
+            var retVal = HelperFuncs.GetIPInfoAsync( "", httpClient, defaultIsoCode, _cancellationToken ).ConfigureAwait( false ).GetAwaiter().GetResult();
+
+            return retVal.countryCode;
         }
 
-        public static async Task<string> GetServerCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode = "US", CancellationToken? _cancellationToken = null )
+        public static string GetCountryCode( string ipAddress, IHttpClient httpClient, CancellationToken? _cancellationToken = null )
         {
-            // Provide a default fallback region code in case the network request is rate-limited or fails
+            RegionInfo currentRegion = RegionInfo.CurrentRegion;
+            var defaultIsoCode = currentRegion.TwoLetterISORegionName;
+            var retVal = HelperFuncs.GetIPInfoAsync( ipAddress, httpClient, defaultIsoCode, _cancellationToken ).ConfigureAwait( false ).GetAwaiter().GetResult();
 
-            if( ServerCountryCode != null )
-                return ServerCountryCode;
+            return retVal.countryCode;
+        }
 
-            ServerCountryCode = defaultCountryCode;
+        public static async Task<string> GetCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode = "US", CancellationToken? _cancellationToken = null )
+        {
+            var retVal = await GetIPInfoAsync( "", httpClient, defaultCountryCode, _cancellationToken );
+            return retVal.countryCode;
+        }
+
+
+        static Dictionary<string, (string countryCode, string tzOffset)> sIpLookup = [];
+        private static async Task<(string countryCode, string tzOffset)> GetIPInfoAsync( string ipAddress, IHttpClient httpClient, string defaultCountryCode = "US", CancellationToken? _cancellationToken = null )
+        {
+            if( sIpLookup.TryGetValue( ipAddress, out var value ) )
+                return value;
+
+            (string countryCode, string tzOffset) retVal = (defaultCountryCode, "-0500");
             if( httpClient == null )
             {
-                return ServerCountryCode;
+                return retVal;
             }
 
             try
             {
+                var path = string.IsNullOrWhiteSpace( ipAddress ) ? "" : "/{ipAddress}";
+                path += "/json";
                 var builder = new UriBuilder
                 {
                     Scheme = "https",
                     Host = "ipapi.co",
-                    Path = "/json"
+                    Path = path
                 };
 
                 var url = builder.Uri.ToString();
@@ -235,10 +248,11 @@ namespace Statistics2026.Utilities
                     {
                         var jsonNode = JsonNode.Parse( rawResponse );
                         var obj = jsonNode?.AsObject();
-                        if( obj == null )
-                            return defaultCountryCode;
-
-                        ServerCountryCode = obj[ "country_code" ]?.GetValue<string>() ?? defaultCountryCode;
+                        if( obj != null )
+                        {
+                            retVal.countryCode = obj[ "country_code" ]?.GetValue<string>() ?? defaultCountryCode;
+                            retVal.tzOffset = obj[ "utc_offset " ]?.GetValue<string>() ?? "-0500";
+                        }
                     }
                 }
             }
@@ -246,7 +260,8 @@ namespace Statistics2026.Utilities
             {
             }
 
-            return ServerCountryCode;
+            sIpLookup.Add( ipAddress, retVal );
+            return retVal;
         }
 
         public static string JoinClauses( List<string> clauses )
