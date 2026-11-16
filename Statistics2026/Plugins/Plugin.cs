@@ -268,13 +268,16 @@ namespace Statistics2026
 
         public override void UpdateConfiguration( BasePluginConfiguration configuration )
         {
-            var prevNumDays = Configuration.numDaysFutureForMissing;
+            var prevNumFutureDays = Configuration.numDaysFutureForMissing;
             var prevReportOnMissing = Configuration.reportOnMissingSpecials;
+            var prevNumDaysStreaming = Configuration.numDaysForMovieStreaming;
 
             base.UpdateConfiguration( configuration );
-            var numDaysChanged = ( Configuration.numDaysFutureForMissing != prevNumDays );
+            var numFutureDaysChanged = ( Configuration.numDaysFutureForMissing != prevNumFutureDays );
             var reportMissingChanged = ( Configuration.reportOnMissingSpecials != prevReportOnMissing );
-            var needsRun = numDaysChanged || reportMissingChanged;
+            var numDaysStreamingChanged = ( Configuration.numDaysForMovieStreaming != prevNumDaysStreaming );
+
+            var needsRun = numFutureDaysChanged || reportMissingChanged || numDaysStreamingChanged;
             if( configuration != null && needsRun )
             {
                 if( _embyInterfaces == null )
@@ -287,14 +290,16 @@ namespace Statistics2026
                         return true;
 
                     List<Type> taskTypes = [];
-                    if( numDaysChanged || reportMissingChanged )
+                    if( numFutureDaysChanged || reportMissingChanged )
                     {
                         taskTypes.Add( typeof( AnalyzeMissingEpisodesTask ) );
                     }
-                    if( numDaysChanged )
+
+                    if( numDaysStreamingChanged || reportMissingChanged )
                     {
                         taskTypes.Add( typeof( AnalyzeMissingMoviesTask ) );
                     }
+
                     await TaskDef.ExecuteSubTasksAsync( _embyInterfaces, taskTypes, [ "ConfigUpdated" ], cancellationToken, false ).ConfigureAwait( false );
                     return false;
                 } );

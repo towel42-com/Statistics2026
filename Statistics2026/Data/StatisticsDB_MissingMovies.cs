@@ -116,13 +116,13 @@ namespace Statistics2026.Data
             }
 
             List<SQLCmdDef> retVal = [];
-            DateTimeOffset ninetyDaysAgo = DateTimeOffset.UtcNow.AddDays( -90 );
+            DateTimeOffset daysAgo = DateTimeOffset.UtcNow.AddDays( -1*Plugin.Instance!.Configuration.numDaysForMovieStreaming );
             foreach( var tmdbMovie in tmdbCollection.Movies )
             {
-                if( InvalidDateForMissingAnalysis( tmdbMovie.ReleaseDate() ) )
+                if( HelperFuncs.InvalidDateForMissingAnalysis( tmdbMovie.ReleaseDate() ) )
                     continue;
 
-                if( ( tmdbMovie.ReleaseDate() != null ) && ( tmdbMovie.ReleaseDate() >= ninetyDaysAgo ) && !tmdbMovie.HasWatchProvider( isoCode ) )
+                if( ( tmdbMovie.ReleaseDate() != null ) && ( tmdbMovie.ReleaseDate() >= daysAgo ) && !tmdbMovie.HasWatchProvider( isoCode ) )
                     continue;
 
                 var movieTmdbId = tmdbMovie.Id;

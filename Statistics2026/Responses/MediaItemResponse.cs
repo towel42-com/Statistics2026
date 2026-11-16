@@ -126,24 +126,6 @@ namespace Statistics2026.Responses
             ParentUrl = parentUrls.Join( "\n" );
         }
 
-
-        private static bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
-        {
-            if( dto == null )
-                return true;
-
-            var numDaysToAdd = ignoreConfig ? 0 : Plugin.Instance!.Configuration.numDaysFutureForMissing;
-            var maxDate = DateTimeOffset.Now.Date.AddDays( numDaysToAdd );
-            if( dto.Value.Date > maxDate )
-                return true;
-
-            if( dto == DateTimeOffset.MinValue )
-                return true;
-
-            return false;
-        }
-
-
         private static string CleanSortName( string sortName )
         {
             var retVal = Regex.Replace( sortName, @"^[^a-zA-Z0-9]+", "" );
@@ -214,7 +196,7 @@ namespace Statistics2026.Responses
                 }
             }
 
-            var futureDate = InvalidDateForMissingAnalysis( premiereDate, true );
+            var futureDate = HelperFuncs.InvalidDateForMissingAnalysis( premiereDate, true );
             if( !tmdbPosterPath.IsNullOrEmpty() )
             {
                 var tmp = string.Empty;

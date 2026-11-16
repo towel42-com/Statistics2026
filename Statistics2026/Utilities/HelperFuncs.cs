@@ -648,5 +648,21 @@ namespace Statistics2026.Utilities
                 }
             }
         }
+
+        public static bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
+        {
+            if( dto == null )
+                return true;
+
+            var numDaysToAdd = ignoreConfig ? 0 : Plugin.Instance!.Configuration.numDaysFutureForMissing;
+            var maxDate = DateTimeOffset.Now.Date.AddDays( numDaysToAdd );
+            if( dto.Value.Date > maxDate )
+                return true;
+
+            if( dto == DateTimeOffset.MinValue )
+                return true;
+
+            return false;
+        }
     }
 }

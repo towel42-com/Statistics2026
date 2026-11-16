@@ -38,7 +38,9 @@ namespace Statistics2026.Configuration
         bool showFilteredMissingSummaries { get; set; }
         List<string> searchLocations { get; set; }
         bool showSearchTheMovieDB { get; set; }
+
         int numDaysFutureForMissing { get; set; }
+        int numDaysForMovieStreaming { get; set; }
 
         // a list of regular expressions, if the Collection name matches, the movie is NOT listed as missing
         // note, the db is complete just what is shown is changed
@@ -106,6 +108,8 @@ namespace Statistics2026.Configuration
 
             target.showSearchTheMovieDB = dataSource.showSearchTheMovieDB;
             target.numDaysFutureForMissing = dataSource.numDaysFutureForMissing;
+            target.numDaysForMovieStreaming = dataSource.numDaysForMovieStreaming;
+
 
             target.CollectionFiltersForMissingMovies = new List<string>();
             if( dataSource.CollectionFiltersForMissingMovies != null )
@@ -156,7 +160,9 @@ namespace Statistics2026.Configuration
         public bool showFilteredMissingSummaries { get; set; } = true;
         public List<string> searchLocations { get; set; } = [];
         public bool showSearchTheMovieDB { get; set; } = true;
+
         public int numDaysFutureForMissing { get; set; } = 0;
+        public int numDaysForMovieStreaming { get; set; } = 90;
 
         // a list of regular expressions, if the Collection name matches, the movie is NOT listed as missing
         // note, the db is complete just what is shown is changed
@@ -218,7 +224,9 @@ namespace Statistics2026.Configuration
         public bool showFilteredMissingSummaries { get; set; } = true;
         public List<string> searchLocations { get; set; } = [];
         public bool showSearchTheMovieDB { get; set; } = true;
+
         public int numDaysFutureForMissing { get; set; } = 0;
+        public int numDaysForMovieStreaming { get; set; } = 90;
 
         // a list of regular expressions, if the Collection name matches, the movie is NOT listed as missing
         // note, the db is complete just what is shown is changed

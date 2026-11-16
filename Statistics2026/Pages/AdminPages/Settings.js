@@ -25,8 +25,10 @@
                 const searchLocations = config.searchLocations || [];
                 view.querySelector("#searchLocations").value = searchLocations.join('\n');;
                 view.querySelector("#showSearchTheMovieDB").checked = config.showSearchTheMovieDB;
-                
+
                 view.querySelector("#numDaysFutureForMissing").value = config.numDaysFutureForMissing;
+                view.querySelector("#numDaysForMovieStreaming").value = config.numDaysForMovieStreaming;
+                
                 view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
                 view.querySelector("#numTiedToReport").value = config.numTiedToReport;
                 view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
@@ -389,6 +391,15 @@
                 }
             );
 
+            view.querySelector("#numDaysForMovieStreaming").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.numDaysForMovieStreaming = view.querySelector("#numDaysForMovieStreaming").value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
             view.querySelector("#showSearchTheMovieDB").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -444,6 +455,11 @@
                     Helpers.showInfo("Number of Days in the Future to Upcoming Videos", "How many days in the future should Upcoming episodes and movies be searched for (limited by published schedules).");
                 });
 
+            view.querySelector("#numDaysForMovieStreamingHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Days after the Premiere", "Since digital availability is usually some time after the known release date, how many days to wait before showing a movie as missing? If the movie is available for streaming, this number is ignored.");
+                });
+            
             view.querySelector("#searchLocationsHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Search Locations for Missing Videos", "URLs to the search location for missing videos ie \"https://www.google.com/search?q=\"");
