@@ -56,7 +56,7 @@ define([
                     console.error("getSystemStatus failed:", errorMessage);
                 });
 
-                let message = `<div>The database has not been initialized or is not finalized, please run the 'Statistics 2026 - Calculate' task on the Scheduled Tasks page and come back for the results.</div>`;
+                let message = `<div>${response.DBStateMsg}</div>`;
 
                 if (systemStatusObj != null) {
                     if (systemStatusObj.html != "" && systemStatusObj.html !== undefined) {

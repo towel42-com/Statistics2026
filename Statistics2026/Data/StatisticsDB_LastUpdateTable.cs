@@ -54,21 +54,6 @@ namespace Statistics2026.Data
             return (lastUpdated, ms, reasons);
         }
 
-        public string GetLastRunInfo( string actionString, ref bool ok )
-        {
-            if( Enum.TryParse( actionString, true, out Statistics2026DB.EAction whichRunEnum ) )
-            {
-                ok = true;
-                return GetLastRunInfo( whichRunEnum );
-            }
-            else
-            {
-                ok = false;
-                return $"Unknown run type <b>{actionString}</b>";
-            }
-        }
-
-
         public HtmlJsonResponse GetSystemStatus()
         {
             var retVal = GetLastRunHtml( "All" );
@@ -108,12 +93,9 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public HtmlJsonResponse GetLastRunHtml( string whichRuns ) // whichRuns comma separated list
+        List<EAction> ActionsFromStringList( string whichRuns )
         {
             var list = whichRuns.Split( ',' );
-            List<string> results = [];
-            List<string> errors = [];
-
             if( list.Length == 1 && list[ 0 ] == "All" )
             {
                 list = new[]
@@ -131,16 +113,63 @@ namespace Statistics2026.Data
                         EAction.System.ToString(),
                     };
             }
-
+            List<EAction> retVal = [];
             foreach( var whichRun in list )
             {
-                bool ok = false;
-                var currData = GetLastRunInfo( whichRun, ref ok );
-                if( ok )
-                    results.Add( currData );
+                if( Enum.TryParse( whichRun, true, out Statistics2026DB.EAction whichRunEnum ) )
+                {
+                    retVal.Add( whichRunEnum );
+                }
                 else
-                    errors.Add( currData );
+                    throw new Exception( $"Unknown run type <b>{whichRun}</b>" );
             }
+
+            return retVal;
+        }
+
+        public List<string> TasksRunning( string whichRuns )
+        {
+            var actions = ActionsFromStringList( whichRuns );
+            return TasksRunning( actions );
+        }
+
+        public List<string> TasksRunning( List<EAction> whichRuns )
+        {
+            List<string> retVal = [];
+            foreach( var curr in whichRuns )
+            {
+                 if ( TaskDef.IsTaskRunning( _embyInterfaces, TypeForAction( curr ) ) )
+                {
+                    retVal.Add( TitleForAction( curr ) );
+                }
+            }
+            return retVal;
+        }
+
+        public HtmlJsonResponse GetLastRunHtml( string whichRuns ) // whichRuns comma separated list
+        {
+            List<string> results = [];
+            List<string> errors = [];
+
+            try
+            {
+                List<EAction> actions = ActionsFromStringList( whichRuns );
+
+                foreach( var whichRun in actions )
+                {
+                    bool ok = false;
+                    var currData = GetLastRunInfo( whichRun );
+                    if( ok )
+                        results.Add( currData );
+                    else
+                        errors.Add( currData );
+                }
+            }
+            catch( Exception ex )
+            {
+                errors.Add( ex.ToString() );
+            }
+
             var resultText = string.Empty;
             var depth = 0;
 

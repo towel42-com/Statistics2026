@@ -2,8 +2,11 @@
 using MediaBrowser.Model.Plugins;
 using ServiceStack;
 using Statistics2026.Configuration;
+using Statistics2026.Data;
+using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
 
 namespace Statistics2026
 {
@@ -44,6 +47,40 @@ namespace Statistics2026
 
     public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
+        public string DBStateMessage()
+        {
+            if( ( DBState == null ) || ( DBState == EDBState.eEmpty ) )
+            {
+                return "The database has not been initialized or is not finalized, please run the 'Statistics 2026 - Run All Tasks' task on the Scheduled Tasks page and come back for the results.";
+            }
+
+            if( DBState == EDBState.eFullyInitialized )
+            {
+                return string.Empty;
+            }
+
+            using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+
+            List<string> msgs = [];
+
+            if( ( ( DBState & EDBState.eSystemTablesCreated ) == 0 ) || ( ( DBState & EDBState.eSystemDataInitialized ) == 0 ) )
+            {
+                msgs.Add( "The System tables have not been fully created. Please run the 'Statistics 2026 - Run All Tasks' task on the Scheduled Tasks page and come back for the results." );
+            }
+            if( ( ( DBState & EDBState.eUserTablesCreated ) == 0 ) || ( ( DBState & EDBState.eUserDataInitialized ) == 0 ) )
+            {
+                msgs.Add( "The User watch tables have not been fully created. Please run the 'Statistics 2026 - Analyze User Watch Data'." );
+            }
+
+            var tasksRunning = db.TasksRunning( "All" );
+            foreach( var task in tasksRunning )
+            {
+                msgs.Add( $"The '{task}' task is running.  Results may be inaccurate or incomplete." );
+            }
+
+            return msgs.Join( "<br>" );
+        }
+
         public string DBStateString()
         {
             return DBState == null ? EDBState.eEmpty.ToPrettyString() : DBState.Value.ToPrettyString();
@@ -112,7 +149,6 @@ namespace Statistics2026
             _embyInterfaces.Logger().Debug( $"Setting DBState to {state.ToPrettyString()}" );
             Plugin.Instance.DBState = state;
             var config = Plugin.Instance.Configuration;
-            config.dbStateOK = Plugin.Instance.DBState == EDBState.eFullyInitialized;
             Plugin.Instance.UpdateConfiguration( config );
         }
 

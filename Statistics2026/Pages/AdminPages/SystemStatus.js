@@ -23,7 +23,11 @@
                 + " - Database Status <b>" + dbStatus.DBState + " (";
             if (!dbStatus.DBStateOK)
                 debugInfo += "not ";
-            debugInfo += "OK)</b>";
+            debugInfo += "OK)";
+            if (dbStatus.DBStateMessage != "" )
+                debugInfo += ` - ${dbStatus.DBStateMessage}`;
+            debugInfo += `</b>`;
+            DBStateMessage
 
             view.querySelector(`#debugInfo`).style.display = '';
             view.querySelector("#debugInfo").innerHTML = debugInfo;

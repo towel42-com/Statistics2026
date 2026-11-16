@@ -57,10 +57,12 @@ namespace Statistics2026.Responses
             Version = config.Version;
             DBStateOK = Plugin.Instance?.IsDBStateSet( EDBState.eFullyInitialized ) ?? false;
             DBState = Plugin.Instance?.DBStateString() ?? EDBState.eEmpty.ToPrettyString();
+            DBStateMessage = Plugin.Instance?.DBStateMessage() ?? EDBState.eEmpty.ToPrettyString();
         }
         public string BuildDate { get; set; } = string.Empty;
         public string Version { get; set; } = string.Empty;
         public string DBState { get; set; } = string.Empty;
+        public string DBStateMessage { get; set; } = string.Empty;
         public bool DBStateOK { get; set; } = false;
     }
 
