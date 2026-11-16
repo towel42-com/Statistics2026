@@ -36,7 +36,7 @@ namespace Statistics2026.Configuration
 
         bool reportOnMissingSpecials { get; set; }
         bool showFilteredMissingSummaries { get; set; }
-        string searchLocation { get; set; }
+        List<string> searchLocations { get; set; }
         bool showSearchTheMovieDB { get; set; }
         int numDaysFutureForMissing { get; set; }
 
@@ -54,12 +54,24 @@ namespace Statistics2026.Configuration
 
     public static class DataForConfigExtensions
     {
-        public static string SearchlocationName( this IDataForConfig target )
+        public static bool HasCustomSearches( this IDataForConfig target )
         {
-            if( string.IsNullOrWhiteSpace( target.searchLocation ) )
-                return string.Empty;
-            var uri = new System.Uri( target.searchLocation );
-            return uri.Host;
+            var retVal = false;
+            for( var ii = 0; !retVal && ( ii < target.searchLocations.Count ); ++ii )
+            {
+                retVal = !string.IsNullOrWhiteSpace( target.searchLocations[ ii ] );
+            }
+            return retVal;
+        }
+
+        public static bool CanSearch( this IDataForConfig target )
+        {
+            var retVal = target.showSearchTheMovieDB;
+            for( var ii = 0; !retVal && ( ii < target.searchLocations.Count ); ++ii )
+            {
+                retVal = !string.IsNullOrWhiteSpace( target.searchLocations[ ii ] );
+            }
+            return retVal;
         }
 
         public static void CopyData( this IDataForConfig target, IDataForConfig dataSource )
@@ -87,7 +99,11 @@ namespace Statistics2026.Configuration
 
             target.reportOnMissingSpecials = dataSource.reportOnMissingSpecials;
             target.showFilteredMissingSummaries = dataSource.showFilteredMissingSummaries;
-            target.searchLocation = dataSource.searchLocation;
+
+            target.searchLocations = [];
+            if( dataSource.searchLocations != null )
+                target.searchLocations.AddRange( dataSource.searchLocations );
+
             target.showSearchTheMovieDB = dataSource.showSearchTheMovieDB;
             target.numDaysFutureForMissing = dataSource.numDaysFutureForMissing;
 
@@ -138,7 +154,7 @@ namespace Statistics2026.Configuration
 
         public bool reportOnMissingSpecials { get; set; } = false;
         public bool showFilteredMissingSummaries { get; set; } = true;
-        public string searchLocation { get; set; } = string.Empty;
+        public List<string> searchLocations { get; set; } = [];
         public bool showSearchTheMovieDB { get; set; } = true;
         public int numDaysFutureForMissing { get; set; } = 0;
 
@@ -200,7 +216,7 @@ namespace Statistics2026.Configuration
 
         public bool reportOnMissingSpecials { get; set; } = false;
         public bool showFilteredMissingSummaries { get; set; } = true;
-        public string searchLocation { get; set; } = string.Empty;
+        public List<string> searchLocations { get; set; } = [];
         public bool showSearchTheMovieDB { get; set; } = true;
         public int numDaysFutureForMissing { get; set; } = 0;
 

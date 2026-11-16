@@ -21,7 +21,9 @@
                 view.querySelector("#showUnknownDVProfiles").checked = config.showUnknownDVProfiles;
                 view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
                 view.querySelector("#numMostActive").value = config.numMostActiveUsers;
-                view.querySelector("#searchLocation").value = config.searchLocation;
+
+                const searchLocations = config.searchLocations || [];
+                view.querySelector("#searchLocations").value = searchLocations.join('\n');;
                 view.querySelector("#showSearchTheMovieDB").checked = config.showSearchTheMovieDB;
                 
                 view.querySelector("#numDaysFutureForMissing").value = config.numDaysFutureForMissing;
@@ -160,24 +162,40 @@
                 collectionAutosaveStatus.style.color = "#ffb703";
                 collectionAutosaveStatus.style.opacity = "1";
 
+                const searchLocationsAutosaveStatus = view.querySelector('#searchLocationsAutosaveStatus');
+                searchLocationsAutosaveStatus.textContent = "Saving...";
+                searchLocationsAutosaveStatus.style.color = "#ffb703";
+                searchLocationsAutosaveStatus.style.opacity = "1";
+
+                const searchLocations = view.querySelector('#searchLocations');
+                const searchUrls = searchLocations.value
+                    .split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+
                 const filterList = view.querySelector('#collectionFilterList');
 
-                const linesToSave = filterList.value
+                const missingMovieFilters = filterList.value
                     .split('\n')
                     .map(line => line.trim())
                     .filter(line => line.length > 0);
 
                 ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                    config.CollectionFiltersForMissingMovies = linesToSave;
+                    config.CollectionFiltersForMissingMovies = missingMovieFilters;
+                    config.searchLocations = searchUrls;
 
                     ApiClient.updatePluginConfiguration(Helpers.pluginId, config).then(function (result) {
                         // Visual indicator: show green confirmation text
                         collectionAutosaveStatus.textContent = "Saved";
                         collectionAutosaveStatus.style.color = "#52b788";
 
+                        searchLocationsAutosaveStatus.textContent = "Saved";
+                        searchLocationsAutosaveStatus.style.color = "#52b788";
+
                         // Fade the "Saved" text away after 2 seconds
                         setTimeout(() => {
                             collectionAutosaveStatus.style.opacity = "0";
+                            searchLocationsAutosaveStatus.style.opacity = "0";
                         }, 2000);
 
                         Dashboard.processPluginConfigurationUpdateResult(result);
@@ -188,15 +206,28 @@
             const debouncedSave = debounce(saveConfigData, 1000);
 
             view.querySelector('#collectionFilterList').addEventListener('input', function () {
-                const collectionAutosaveStatus = view.querySelector('#collectionAutosaveStatus');
-                collectionAutosaveStatus.textContent = "Unsaved Changes...";
-                collectionAutosaveStatus.style.color = "#e63946";
-                collectionAutosaveStatus.style.opacity = "1";
+                const autosaveStatus = view.querySelector('#collectionAutosaveStatus');
+                autosaveStatus.textContent = "Unsaved Changes...";
+                autosaveStatus.style.color = "#e63946";
+                autosaveStatus.style.opacity = "1";
 
                 debouncedSave();
             });
 
             view.querySelector('#collectionFilterList').addEventListener('blur', function () {
+                saveConfigData();
+            });
+
+            view.querySelector('#searchLocations').addEventListener('input', function () {
+                const autosaveStatus = view.querySelector('#searchLocationsAutosaveStatus');
+                autosaveStatus.textContent = "Unsaved Changes...";
+                autosaveStatus.style.color = "#e63946";
+                autosaveStatus.style.opacity = "1";
+
+                debouncedSave();
+            });
+
+            view.querySelector('#searchLocations').addEventListener('blur', function () {
                 saveConfigData();
             });
 
@@ -358,15 +389,6 @@
                 }
             );
 
-            view.querySelector("#searchLocation").addEventListener("input",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.searchLocation = view.querySelector("#searchLocation").value;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
-
             view.querySelector("#showSearchTheMovieDB").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -422,14 +444,14 @@
                     Helpers.showInfo("Number of Days in the Future to Upcoming Videos", "How many days in the future should Upcoming episodes and movies be searched for (limited by published schedules).");
                 });
 
-            view.querySelector("#searchLocationHelp").addEventListener("click",
+            view.querySelector("#searchLocationsHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Search Location for Missing Videos", "URL to the search location for missing videos ie \"https://thepiratebay.org/search.php\"");
+                    Helpers.showInfo("Search Locations for Missing Videos", "URLs to the search location for missing videos ie \"https://www.google.com/search?q=\"");
                 });
 
             view.querySelector("#showSearchTheMovieDBHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Search The Movie DB", "Enable searching for the media on \"https://www.themoviedb.org\"");
+                    Helpers.showInfo("Search The Movie DB", "Enable searching for the media on The MovieDB");
                 });
 
             view.querySelector("#numMostActiveHelp").addEventListener("click",

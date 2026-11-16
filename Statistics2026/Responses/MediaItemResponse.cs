@@ -164,6 +164,15 @@ namespace Statistics2026.Responses
             if( !subKey.IsEmpty() )
                 sortBy += $" - {subKey}";
 
+            if( searchLocationName.IsEmpty() )
+            {
+                if( !string.IsNullOrWhiteSpace( searchLink ) )
+                {
+                    var uri = new System.Uri( searchLink );
+                    searchLocationName = uri.Host;
+                }
+            }
+
             var displayText = $"{( string.IsNullOrWhiteSpace( searchLocationName ) ? "" : $"{searchLocationName} - " )}Click to Search for '{sortBy}'";
             var searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {sortBy}\">{displayText}</a>";
 
@@ -204,7 +213,6 @@ namespace Statistics2026.Responses
                     retVal.ParentName += curr;
                 }
             }
-
 
             var futureDate = InvalidDateForMissingAnalysis( premiereDate, true );
             if( !tmdbPosterPath.IsNullOrEmpty() )
@@ -254,9 +262,8 @@ namespace Statistics2026.Responses
             }
             else
             {
-                var customSearch = !string.IsNullOrEmpty( Plugin.Instance!.Configuration.searchLocation );
-                var willSearch = customSearch || Plugin.Instance!.Configuration.showSearchTheMovieDB;
-                if( willSearch )
+                var canSearch = Plugin.Instance!.Configuration.CanSearch();
+                if( canSearch )
                 {
                     if( premiereDate != null )
                     {
@@ -272,42 +279,41 @@ namespace Statistics2026.Responses
                 }
 
                 List<SortByText> searchData = [];
-                if( customSearch )
-                {
-                    searchData.Add( getSearchData( Plugin.Instance!.Configuration.searchLocation, Plugin.Instance!.Configuration.SearchlocationName(), searchKey, subKey ) );
-                }
-
-
                 if( Plugin.Instance!.Configuration.showSearchTheMovieDB )
                 {
                     searchData.Add( getSearchData( "https://www.themoviedb.org/search?query=", "The MovieDB", searchKey, string.Empty ) );
                 }
 
-                retVal.SearchLocation = new();
-                var asList = searchData.Count > 1;
-                List<string> textList = [];
-                var sortBy = string.Empty;
-                for( int ii = 0; ii < searchData.Count; ++ii )
+                if( Plugin.Instance!.Configuration.HasCustomSearches() )
                 {
-                    var curr = searchData[ ii ];
-                    if( ii == 0 )
+                    foreach( var curr in Plugin.Instance!.Configuration.searchLocations )
                     {
-                        sortBy = curr.SortBy;
+                        if( string.IsNullOrWhiteSpace( curr ) )
+                        {
+                            continue;
+                        }
+                        searchData.Add( getSearchData( curr, string.Empty, searchKey, subKey ) );
                     }
-                    textList.Add( curr.Text );
                 }
 
-                if( asList )
+                retVal.SearchLocation = new();
+                if( searchData.Count == 1 )
+                {
+                    retVal.SearchLocation = searchData[ 0 ];
+                }
+                else if( searchData.Count > 1 )
                 {
                     var depth = 0;
+                    retVal.SearchLocation.SortBy = searchData[ 0 ].SortBy;
                     retVal.SearchLocation.Text = HelperFuncs.addToHtml( depth++, "<ul>" );
-                    foreach( var curr in textList )
+
+                    foreach( var curr in searchData )
                     {
                         retVal.SearchLocation.Text += HelperFuncs.addToHtml( depth++, "<li>" );
-                        retVal.SearchLocation.Text += HelperFuncs.addToHtml( depth, curr );
+                        retVal.SearchLocation.Text += HelperFuncs.addToHtml( depth, curr.Text );
                         retVal.SearchLocation.Text += HelperFuncs.addToHtml( --depth, "</li>" );
                     }
-                    retVal.SearchLocation.Text += HelperFuncs.addToHtml( --depth, "</ul>" );
+                    retVal.SearchLocation.Text = HelperFuncs.addToHtml( --depth, "</ul>" );
                 }
             }
 

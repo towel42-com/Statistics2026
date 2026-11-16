@@ -42,11 +42,6 @@
                 <i class="md-icon" id="numDaysFutureForMissingHelp">info</i>
                 <input type="number" id="numDaysFutureForMissing" min="0" max="30" placeholder="# of Days in the Future" title="Number of Days int the Future" />
             </div>
-            <div class="inputContainer">
-                Search Location for Missing Episodes and Movies:
-                <i class="md-icon" id="searchLocationHelp">info</i>
-                <input type="text" id="searchLocation" placeholder="Search Location" title="Search Location" />
-            </div>
 
             <div class="inputContainer">
                 <label class="emby-checkbox-label">
@@ -54,6 +49,20 @@
                     <span class="checkboxLabel">Show Search https://www.themoviedb.org</span>
                     <i class="md-icon" id="showSearchTheMovieDBHelp">info</i>
                 </label>
+            </div>
+
+            <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
+                <label for="searchLocations" style="margin-bottom: 8px; text-align: center; width: 100%;">
+                    URLS to search for missing Media (One per line):
+                    <i class="md-icon" id="searchLocationsHelp" style="vertical-align: middle;">info</i>
+                </label>
+
+                <textarea is="emby-textarea" id="searchLocations" rows="6" style="width: 100%; min-width: 380px; box-sizing: border-box;"></textarea>
+
+                <div class="fieldDescription" style="display: flex; justify-content: center; gap: 15px; margin-top: 5px; width: 100%; text-align: center;">
+                    <span>Enter each url on a line, end with an = as the search key will be added.</span>
+                    <span id="searchLocationsAutosaveStatus" style="font-weight: bold; color: #52b788; opacity: 0; transition: opacity 0.3s;">Saved</span>
+                </div>
             </div>
 
             <div class="inputContainer">
@@ -100,7 +109,6 @@
             </div>
 
             <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
-
                 <label for="collectionFilterList" style="margin-bottom: 8px; text-align: center; width: 100%;">
                     Regular Expressions to Filter By Collection (One per line):
                     <i class="md-icon" id="collectionFilterHelp" style="vertical-align: middle;">info</i>
