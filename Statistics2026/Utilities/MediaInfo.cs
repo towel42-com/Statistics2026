@@ -241,15 +241,14 @@ namespace Statistics2026.Utilities
         public static string[] genres( Video video )
         {
             var retVal = video.Genres;
-            if( video is not Episode episode )
-                return retVal;
-
-            var series = episode.Series;
-            if( series != null )
+            if( video is Episode episode )
             {
-                retVal = series.Genres;
+                var series = episode.Series;
+                if( series != null )
+                {
+                    retVal = series.Genres;
+                }
             }
-
             return retVal;
         }
 
