@@ -166,7 +166,7 @@ namespace Statistics2026.Data
             if( excludeAdmin )
                 conditions.Add( "NOT IsAdministrator" );
 
-            sql += HelperFuncs.JoinClauses( conditions );
+            sql += HelperFuncs.JoinWhereClauses( conditions );
 
             return GetSingleValueFromSQL( sql ).ToInt64();
         }
@@ -206,7 +206,7 @@ namespace Statistics2026.Data
             if( Statistics2026.Plugin.Instance!.Configuration.excludeAdmin )
                 conditions.Add( "NOT IsAdministrator" );
 
-            sqlBase += HelperFuncs.JoinClauses( conditions );
+            sqlBase += HelperFuncs.JoinWhereClauses( conditions );
 
             var playTimeMap = new SortedDictionary<long, List<(string userId, string userName, long ticksPlayed)>>();
             foreach( var tableName in tables )

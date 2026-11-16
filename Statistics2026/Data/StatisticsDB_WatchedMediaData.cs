@@ -630,7 +630,7 @@ namespace Statistics2026.Data
                     $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId ";
 
                     var clauses = getClauses( tableName, true, user );
-                    sql += HelperFuncs.JoinClauses( clauses );
+                    sql += HelperFuncs.JoinWhereClauses( clauses );
 
                     sql += $"GROUP BY SeriesId " +
                            $"ORDER BY PerUser ";
@@ -652,7 +652,7 @@ namespace Statistics2026.Data
                         ;
 
                     var clauses = getClauses( tableName, false, user );
-                    sql += HelperFuncs.JoinClauses( clauses );
+                    sql += HelperFuncs.JoinWhereClauses( clauses );
 
                     sql += $"GROUP BY {tableName}.ItemId " +
                            $"ORDER BY PerUser ";
@@ -848,7 +848,7 @@ namespace Statistics2026.Data
             if( played )
                 clauses.Add( $"{tableName}.IsPlayed" );
 
-            sql += HelperFuncs.JoinClauses( clauses );
+            sql += HelperFuncs.JoinWhereClauses( clauses );
 
             return ValueGroupForSingleItem( title, null, sql, [ ("@UserId", user.Id.ToString()) ], FormatTicks );
         }

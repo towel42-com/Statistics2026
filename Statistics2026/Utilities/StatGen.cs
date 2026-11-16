@@ -264,7 +264,7 @@ namespace Statistics2026.Utilities
             else if( VideoType == EVideoType.Episode )
                 whereClauseList.Add( "IsEpisode" );
 
-            return whereClauseList.Count > 0 ? HelperFuncs.JoinClauses( whereClauseList ) + " " : string.Empty;
+            return whereClauseList.Count > 0 ? HelperFuncs.JoinWhereClauses( whereClauseList ) + " " : string.Empty;
         }
 
         private string Title()

@@ -364,7 +364,7 @@ namespace Statistics2026.Data
                 clauses.Add( clause );
             }
 
-            var sql = "SELECT name FROM sqlite_master " + HelperFuncs.JoinClauses( clauses );
+            var sql = "SELECT name FROM sqlite_master " + HelperFuncs.JoinWhereClauses( clauses );
 
             _db.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {

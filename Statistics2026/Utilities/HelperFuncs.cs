@@ -264,7 +264,7 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static string JoinClauses( List<string> clauses )
+        public static string JoinWhereClauses( List<string> clauses )
         {
             if( clauses.IsNullOrEmpty() )
                 return string.Empty;
