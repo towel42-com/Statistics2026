@@ -27,6 +27,7 @@ namespace Statistics2026.Configuration
 
         int numWatchedToReport { get; set; }
         int numTiedToReport { get; set; }
+        int numGenresToReport { get; set; }
 
         bool showUnknownDVProfiles { get; set; }
         bool showAllResolutions { get; set; }
@@ -50,8 +51,6 @@ namespace Statistics2026.Configuration
         bool resetDBState { get; set; }
         bool showDebugInfo { get; set; }
         bool showLastRunInfo { get; set; }
-
-        bool dbStateOK { get; set; }
     }
 
     public static class DataForConfigExtensions
@@ -92,6 +91,7 @@ namespace Statistics2026.Configuration
 
             target.numWatchedToReport = dataSource.numWatchedToReport;
             target.numTiedToReport = dataSource.numTiedToReport;
+            target.numGenresToReport = dataSource.numGenresToReport;
 
             target.showUnknownDVProfiles = dataSource.showUnknownDVProfiles;
             target.showAllResolutions = dataSource.showAllResolutions;
@@ -119,8 +119,6 @@ namespace Statistics2026.Configuration
             target.resetDBState = dataSource.resetDBState;
             target.showDebugInfo = dataSource.showDebugInfo;
             target.showLastRunInfo = dataSource.showLastRunInfo;
-
-            target.dbStateOK = dataSource.dbStateOK;
         }
     }
 
@@ -149,6 +147,8 @@ namespace Statistics2026.Configuration
 
         public int numWatchedToReport { get; set; } = 5;
         public int numTiedToReport { get; set; } = 5;
+        public int numGenresToReport { get; set; } = 5;
+        
 
         public bool showUnknownDVProfiles { get; set; } = false;
         public bool showAllResolutions { get; set; } = false;
@@ -172,8 +172,6 @@ namespace Statistics2026.Configuration
         public bool resetDBState { get; set; } = false;
         public bool showDebugInfo { get; set; } = false;
         public bool showLastRunInfo { get; set; } = false;
-
-        public bool dbStateOK { get; set; } = false;
 
         public List<UserConfig> UserConfigs { get; set; } = [];
 
@@ -213,6 +211,7 @@ namespace Statistics2026.Configuration
 
         public int numWatchedToReport { get; set; } = 5;
         public int numTiedToReport { get; set; } = 5;
+        public int numGenresToReport { get; set; } = 5;
 
         public bool showUnknownDVProfiles { get; set; } = false;
         public bool showAllResolutions { get; set; } = false;
@@ -236,8 +235,6 @@ namespace Statistics2026.Configuration
         public bool resetDBState { get; set; } = false;
         public bool showDebugInfo { get; set; } = false;
         public bool showLastRunInfo { get; set; } = false;
-
-        public bool dbStateOK { get; set; } = false;
     }
 }
 

@@ -29,6 +29,10 @@
             movieStats_totals += Helpers.getSummaryInfo(view, "total_missing_movies", "");
             view.querySelector("#movieStats_totals").innerHTML = movieStats_totals;
 
+            var movieStats_genres = "";
+            movieStats_genres += Helpers.getSummaryInfo(view, "movie_genre_list", "");
+            view.querySelector("#movieStats_genres").innerHTML = movieStats_genres;
+
             var movieStats_size = "";
             movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Largest", "", "", "largest_movie");
             movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Longest", "", "", "longest_movie");

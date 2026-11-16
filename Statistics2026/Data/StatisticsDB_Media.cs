@@ -6,6 +6,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Session;
+using RestSharp;
 using ServiceStack;
 using Statistics2026.Utilities;
 using System;
@@ -13,6 +14,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
@@ -65,7 +67,7 @@ namespace Statistics2026.Data
                         validIds.Add( video.Id.ToString() );
 
                         var mediaInfo = MediaInfo.Create( Logger(), video );
-                        if( (mediaInfo == null )|| !mediaInfo.aOK )
+                        if( ( mediaInfo == null ) || !mediaInfo.aOK )
                             return retVal;
 
                         retVal.cmd = AddMediaInfo( mediaInfo );
@@ -569,62 +571,71 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private List<(string genre, long count)> FavoriteGenreValues( User? user, bool movies )
+        // genre to series/moviename -> number of episodes/movies
+        private Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> GenreCountValues( User? user, bool movies, bool playedOnly )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            if( user == null )
-                throw new ArgumentNullException( "user" );
-
-            var tableName = TableDefs().getUserTableName( user );
+            var tableName = ( user != null ) ? TableDefs().getUserTableName( user ) : string.Empty;
             var sql =
-                "SELECT Genres From Media "
-                + $"INNER JOIN {tableName} On Media.ItemId={tableName}.ItemId "
-                + "WHERE "
+                "SELECT PrimaryName, Genres, COUNT(Genres) From Media ";
+            if( user != null )
+            {
+                sql += $"INNER JOIN {tableName} On Media.ItemId={tableName}.ItemId ";
+            }
 
-                ;
+            List<string> whereClauses = [];
             if( movies )
             {
-                sql += "NOT Media.IsEpisode ";
+                whereClauses.Add( "NOT Media.IsEpisode" );
             }
             else
             {
-                sql += "Media.IsEpisode ";
+                whereClauses.Add( "Media.IsEpisode" );
             }
 
-            sql +=
-                "AND UserId=@UserId AND IsPlayed "
-              ;
+            if( user != null )
+            {
+                whereClauses.Add( "UserId=@UserId" );
+            }
 
-            var sqlCmd = new SQLCmdDef( sql,
-                                        [
-                                            ( "@UserId", user.Id.ToString())
-                                        ] );
+            if( playedOnly )
+            {
+                whereClauses.Add( "IsPlayed" );
+            }
 
-            Dictionary<string, int> genreMap = [];
+            sql += HelperFuncs.JoinWhereClauses( whereClauses );
+
+            sql += " GROUP BY Media.PrimaryName";
+
+            List<(string name, object? value)>? parameters = null;
+            if( user != null )
+                parameters = [ ("@UserId", user.Id.ToString()) ];
+            var sqlCmd = new SQLCmdDef( sql, parameters );
+
+            Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> genreMap = [];
             ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
-                var genres = HelperFuncs.JsonToStringArray( row.GetString( 0 ) );
+                var pos = 0;
+                var name = row.GetString( pos++ );
+                var genres = HelperFuncs.JsonToStringArray( row.GetString( pos++ ) );
+                var num = row.GetInt( pos++ );
                 foreach( var genre in genres )
                 {
                     if( !genreMap.ContainsKey( genre ) )
-                        genreMap[ genre ] = 0;
-                    genreMap[ genre ]++;
+                        genreMap[ genre ] = (0, new Dictionary<string, int>());
+
+                    var curr = genreMap[ genre ];
+                    curr.total += movies ? 1 : num; // if there are multiple copies of the same movie, only count it once
+                    curr.parentToChildMapping[ name ] = movies ? 1 : num;
+                    genreMap[ genre ] = curr;
                 }
 
                 return true;
             } );
 
-            var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value ).ToList();
-
-            var retVal = new List<(string genre, long count)>();
-            for( var ii = 0; ii < sortedGenre.Count() && ii < 5; ++ii )
-            {
-                retVal.Add( (sortedGenre[ ii ].Key, sortedGenre[ ii ].Value) );
-            }
-
-            return retVal;
+            return genreMap;
         }
 
         public StatCard FavoriteGenre( User? user, bool movies )
@@ -651,10 +662,13 @@ namespace Statistics2026.Data
             var retVal = new TableBasedStatCard( title, "Genre", [ $"# of {videoType} Watched" ] );
             retVal.SetDataColumnAlignment( 0, StatCard.EAlignment.eCenter );
 
-            var values = FavoriteGenreValues( user, movies );
-            foreach( var (genre, count) in values )
+            var genreMap = GenreCountValues( user, movies, true );
+            var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value.total ).ToList();
+
+            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numGenresToReport ); ++ii )
             {
-                retVal.addRow( genre, [ count ] );
+                var curr = sortedGenre[ ii ];
+                retVal.addRow( curr.Key, [ curr.Value.total ] );
             }
 
             return retVal;
@@ -691,6 +705,34 @@ namespace Statistics2026.Data
             } );
 
             return (currentCount, inDBCount);
+        }
+
+        public StatCard GenreList( bool movies )
+        {
+            CheckIsValid( ECheckLevel.eReport );
+
+            var genreMap = GenreCountValues( null, movies, false );
+
+            var title = movies ? Constants.MovieGenres : Constants.TVGenres;
+            var help = movies ? Constants.MovieGenresHelp : Constants.TVGenresHelp;
+
+            var retVal = new GroupedTextBasedStatCard( title, help, EStatCardStyle.eDetailed )
+            {
+                SubTitle = $"Total Number of Genres: {genreMap.Count()}",
+                ListType = EListType.eNumbered
+            };
+
+            var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value.total ).ToList();
+            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numGenresToReport ); ++ii )
+            {
+                var curr = sortedGenre[ ii ];
+                if ( movies )
+                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.total} Movies", false );
+                else
+                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.parentToChildMapping.Count()} Series and {curr.Value.total} Episodes", false );
+            }
+
+            return retVal;
         }
     }
 }

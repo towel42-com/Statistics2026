@@ -31,6 +31,8 @@
                 
                 view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
                 view.querySelector("#numTiedToReport").value = config.numTiedToReport;
+                view.querySelector("#numGenresToReport").value = config.numGenresToReport;
+                
                 view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
                 view.querySelector("#resetPlayCount").checked = config.resetPlayCount;
                 view.querySelector("#resetDBState").checked = config.resetDBState;
@@ -433,6 +435,18 @@
                 }
             );
 
+            view.querySelector("#numGenresToReport").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        const parsed = parseInt(view.querySelector("#numGenresToReport").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.numGenresToReport = value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
             view.querySelector("#showUnknownDVProfiles").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -485,6 +499,11 @@
                     Helpers.showInfo("Number of Tied Videos", "The default is 5, but when reporting a list of media, and the value is tied how many do you want to show?");
                 });
 
+            view.querySelector("#numGenresToReportHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Genres", "The default is 5, but when reporting a list of genres, how many should be shown?");
+                });
+            
             view.querySelector("#excludeAdminHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Exclude Administrators", "For security reasons, Administrators are not typically viewers of media and likely should be excluded from analysis.");

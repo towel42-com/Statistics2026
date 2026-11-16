@@ -27,6 +27,12 @@ namespace Statistics2026
         internal const string TotalMovies = "Total Movies";
         internal const string HelpTotalMovies = "Total movies in the Emby library.";
 
+        internal const string MovieGenres = "Movie Genres";
+        internal const string MovieGenresHelp = "Movie genres in the Emby library.";
+
+        internal const string TVGenres = "TV Genres";
+        internal const string TVGenresHelp = "TV genres in the Emby library.";
+
         internal const string TotalUserMovies = "Total Movies for User";
         internal const string HelpTotalUserMovies = "Total movies in the Emby library available to the User.";
 

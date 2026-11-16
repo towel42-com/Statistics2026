@@ -22,6 +22,7 @@ using System.Diagnostics;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Timers;
 using static Statistics2026.Data.Statistics2026DB;
 
 namespace Statistics2026.Services
@@ -64,6 +65,12 @@ namespace Statistics2026.Services
         public string user { get; set; } = string.Empty;
     }
 
+    [Route( "/Statistics2026/movie_genre_list", "GET", Summary = "Get the Movie Genre List" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetMovieGenreList : IReturn<object>
+    {
+    }
+
     [Route( "/Statistics2026/total_tv_count", "GET", Summary = "Get the total TV Count" )]
     [Authenticated( Roles = "admin" )]
     public class GetTotalTVCountNoUser : IReturn<object>
@@ -82,6 +89,12 @@ namespace Statistics2026.Services
     public class GetTotalTVWatched : IReturn<object>
     {
         public string user { get; set; } = string.Empty;
+    }
+
+    [Route( "/Statistics2026/series_genre_list", "GET", Summary = "Get the Series Genre List" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetSeriesGenreList : IReturn<object>
+    {
     }
 
     [Route( "/Statistics2026/total_movie_studio_count", "GET", Summary = "Get the total Movie Studio Count" )]
@@ -244,6 +257,36 @@ namespace Statistics2026.Services
                     return new StatCardResponse();
 
                 var groupData = db.TotalMovieCount( user, true );
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        public object Get( GetMovieGenreList request )
+        {
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            {
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+
+                var groupData = db.GenreList( true );
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        public object Get( GetSeriesGenreList request )
+        {
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            {
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+
+                var groupData = db.GenreList( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
