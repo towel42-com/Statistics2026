@@ -96,6 +96,8 @@ namespace Statistics2026.Data
             if( string.IsNullOrEmpty( collectionTmbdId ) )
                 return [];
 
+            var isoCode = await HelperFuncs.GetServerCountryCodeAsync( _embyInterfaces!.HttpClient(), _cancellationToken: CancellationToken );
+
             TmdbCollection? tmdbCollection = null;
             try
             {
@@ -114,9 +116,13 @@ namespace Statistics2026.Data
             }
 
             List<SQLCmdDef> retVal = [];
+            DateTimeOffset ninetyDaysAgo = DateTimeOffset.UtcNow.AddDays( -90 );
             foreach( var tmdbMovie in tmdbCollection.Movies )
             {
                 if( InvalidDateForMissingAnalysis( tmdbMovie.ReleaseDate() ) )
+                    continue;
+
+                if( ( tmdbMovie.ReleaseDate() != null ) && ( tmdbMovie.ReleaseDate() >= ninetyDaysAgo ) && !tmdbMovie.HasWatchProvider( isoCode ) )
                     continue;
 
                 var movieTmdbId = tmdbMovie.Id;
@@ -127,7 +133,7 @@ namespace Statistics2026.Data
                 if( embyMovie == null )
                 {
                     Logger().Info( $"            {tmdbMovie.Title} is missing" );
-                    AddStreamingProvidersInfo? addStreamingProviderInfo= null;
+                    AddStreamingProvidersInfo? addStreamingProviderInfo = null;
                     try
                     {
                         addStreamingProviderInfo = await reader.GetStreamingProvidersAsync( Logger(), movieTmdbId, false, tmdbMovie.Title ).ConfigureAwait( false );

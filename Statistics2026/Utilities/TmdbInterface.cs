@@ -203,6 +203,7 @@ namespace Statistics2026.Utilities
             var query = HttpUtility.ParseQueryString( builder.Query );
             query[ "api_key" ] = TheMovieDB.getApiKeyV3();
             query[ "language" ] = language;
+            query[ "append_to_response" ] = "watch/providers,release_dates";
             builder.Query = query.ToString();
 
             var url = builder.Uri.ToString();
@@ -743,6 +744,41 @@ namespace Statistics2026.Utilities
         public List<TmdbMovie> Movies { get; set; } = [];
     }
 
+
+    [DataContract]
+    public class TmdbCountryProviders
+    {
+        [DataMember( Name = "flatrate" )]
+        public List<object>? Flatrate { get; set; }
+
+        [DataMember( Name = "free" )]
+        public List<object>? Free { get; set; }
+
+        [DataMember( Name = "ads" )]
+        public List<object>? Ads { get; set; }
+
+        [DataMember( Name = "rent" )]
+        public List<object>? Rent { get; set; }
+
+        [DataMember( Name = "buy" )]
+        public List<object>? Buy { get; set; }
+
+        public bool HasAnyProvider()
+        {
+            return ( Flatrate?.Count > 0 ) ||
+                   ( Free?.Count > 0 ) ||
+                   ( Ads?.Count > 0 ) ||
+                   ( Rent?.Count > 0 ) ||
+                   ( Buy?.Count > 0 );
+        }
+    }
+    [DataContract]
+    public class TmdbWatchProvidersResponse
+    {
+        [DataMember( Name = "results" )]
+        public Dictionary<string, TmdbCountryProviders> Results { get; set; } = [];
+    }
+
     [DataContract]
     public class TmdbMovie
     {
@@ -766,6 +802,34 @@ namespace Statistics2026.Utilities
 
         [DataMember( Name = "production_companies" )]
         public List<TmdbStudio> Studios { get; set; } = [];
+
+        [DataMember( Name = "watch/providers" )]
+        public TmdbWatchProvidersResponse? WatchProviders { get; set; }
+
+        public bool HasWatchProvider( string countryCode )
+        {
+            if( WatchProviders?.Results == null )
+                return false;
+
+            if( WatchProviders.Results.TryGetValue( countryCode, out var country ) )
+                return country.HasAnyProvider();
+
+            return false;
+        }
+
+        public bool HasAnyGlobalWatchProvider()
+        {
+            if( WatchProviders?.Results == null )
+                return false;
+
+            foreach( var country in WatchProviders.Results.Values )
+            {
+                if( country.HasAnyProvider() )
+                    return true;
+            }
+
+            return false;
+        }
 
         public DateTimeOffset? ReleaseDate()
         {
