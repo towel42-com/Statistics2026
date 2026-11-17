@@ -9,6 +9,7 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
 using ServiceStack;
+using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -144,7 +145,31 @@ namespace Statistics2026.Secrets
 #endif
         }
     }
-    
+
+    public static class DBDebug
+    {
+        private static string GetSecret( string keyName )
+        {
+            var attribute = typeof( DBLocation ).Assembly
+                .GetCustomAttributes<AssemblyMetadataAttribute>()
+                .FirstOrDefault( a => a.Key == keyName );
+
+            return attribute?.Value ?? string.Empty;
+        }
+
+
+        static HashSet<string>? sLimitUsersTo = null;
+        static public HashSet<string> getLimitUsersToList()
+        {
+            if( sLimitUsersTo == null )
+            {
+                var value = GetSecret( "LIMIT_DB_USERS_TO" );
+                sLimitUsersTo = HelperFuncs.JsonToStringArray( value ).ToHashSet();
+            }
+            return sLimitUsersTo!;
+        }
+    }
+
     public static class TheMovieDB
     {
         private static string GetSecret( string keyName )

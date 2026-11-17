@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
+    <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ActiveDebugProfile>Full</ActiveDebugProfile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">
+    <DebuggerFlavor>ProjectDebugger</DebuggerFlavor>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Visual Studio will read these properties automatically when building -->
+    <TmdbApiKeyV3>XXXXXX</TmdbApiKeyV3>
+    <TmdbApiKeyV4>XXXXXX</TmdbApiKeyV4>
+    <OldServerLocation>\\ServerLocation</OldServerLocation>
+    <NewServerLocation>C:\LocalStorageLocation</NewServerLocation>
+    <LimitDBUsersTo>["username1", "username2"]</LimitDBUsersTo>
+  </PropertyGroup>
+</Project>

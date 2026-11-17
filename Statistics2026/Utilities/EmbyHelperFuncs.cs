@@ -683,7 +683,8 @@ namespace Statistics2026.Utilities
 
             var retVal = embyInterfaces.UserManager().GetUserList( userQuery ).ToList();
 #if DEBUG_DB
-            retVal = retVal.Where( u => u.Name == "scott" ).ToList();
+            var limitUsersTo = DBDebug.getLimitUsersToList();
+            retVal = retVal.Where( u => limitUsersTo.Contains( u.Name ) ).ToList();
 #endif
             return retVal;
         }

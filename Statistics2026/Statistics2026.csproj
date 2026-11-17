@@ -13,6 +13,7 @@
 		<TmdbApiKeyV4 Condition="'$(TmdbApiKeyV4)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV4>
 		<OldServerLocation Condition="'$(OldServerLocation)' == ''">""</OldServerLocation>
 		<NewServerLocation Condition="'$(NewServerLocation)' == ''">""</NewServerLocation>
+		<LimitDBUsersTo Condition="'$(LimitDBUsersTo)' == ''">""</LimitDBUsersTo>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -78,6 +79,10 @@
 		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
 			<_Parameter1>NEW_SERVER_LOCATION</_Parameter1>
 			<_Parameter2>$(NewServerLocation)</_Parameter2>
+		</AssemblyAttribute>
+		<AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+			<_Parameter1>LIMIT_DB_USERS_TO</_Parameter1>
+			<_Parameter2>$(LimitDBUsersTo)</_Parameter2>
 		</AssemblyAttribute>
 	</ItemGroup>
 
