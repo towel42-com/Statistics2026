@@ -603,9 +603,9 @@ namespace Statistics2026.Data
                 whereClauses.Add( "UserId=@UserId" );
             }
 
-            if( playedOnly )
+            if( playedOnly && user != null )
             {
-                whereClauses.Add( "Media.IsPlayed" );
+                whereClauses.Add( $"{tableName}.IsPlayed" );
             }
 
             sql += HelperFuncs.JoinWhereClauses( whereClauses );
