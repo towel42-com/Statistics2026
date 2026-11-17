@@ -458,7 +458,7 @@ namespace Statistics2026.Utilities
                 return string.Empty;
 
             var depth = 0;
-            var retVal = addToHtml( depth++, "<br>\n<div>" );
+            var retVal = addToHtml( depth++, "<div>" );
             if( !title.IsEmpty() )
             {
                 retVal += addToHtml( depth, $"<h3>{title}</h3>" );
