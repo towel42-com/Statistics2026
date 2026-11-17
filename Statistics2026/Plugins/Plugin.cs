@@ -96,7 +96,7 @@ namespace Statistics2026
 
             var debouncer = new Debouncer();
             debouncer.RunLaterAsync( 500, async ( cancellationToken ) => {
-                HelperFuncs.CheckForOOD( _embyInterfaces, true, ["Startup"], GetType() );
+                HelperFuncs.CheckForOOD( _embyInterfaces, true, ["Startup"], GetType(), true );
                 return false;
             } );
 

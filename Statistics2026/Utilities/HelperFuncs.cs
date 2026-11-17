@@ -594,7 +594,7 @@ namespace Statistics2026.Utilities
             embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
         }
 
-        static public void CheckForOOD( EmbyInterfaces embyInterfaces, bool initDB, List<string> reasons, System.Type okIfRunning )
+        static public void CheckForOOD( EmbyInterfaces embyInterfaces, bool initDB, List<string> reasons, System.Type okIfRunning, bool allowRunAll )
         {
             try
             {
@@ -612,16 +612,17 @@ namespace Statistics2026.Utilities
 
                 var currLogger = embyInterfaces.Logger();
                 var (runFullAnalysis, runMissingAnalysis, oodReasons) = EmbyHelperFuncs.AnalysisOutOfDate( embyInterfaces, db );
+                
                 embyInterfaces._logger = currLogger;
                 reasons.AddRange( oodReasons );
                 embyInterfaces.Logger().Debug( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis} reasons={string.Join( ", ", reasons )}" );
 
                 List<Type> tasks = [];
-                if( !runFullAnalysis && runMissingAnalysis )
+                if( ( !runFullAnalysis || !allowRunAll ) && runMissingAnalysis )
                 {
-                    tasks.AddRange( [ typeof( AnalyzeMissingEpisodesTask ), typeof( AnalyzeMissingMoviesTask ) ] );
+                    tasks.AddRange( [ typeof( AnalyzeMediaTask ), typeof( AnalyzeSeriesTask ), typeof( AnalyzeCollectionsTask ), typeof( AnalyzeMissingEpisodesTask ), typeof( AnalyzeMissingMoviesTask ) ] );
                 }
-                else if( runFullAnalysis )
+                else if( runFullAnalysis && allowRunAll )
                 {
                     tasks.Add( typeof( RunAllTasksTask ) );
                 }

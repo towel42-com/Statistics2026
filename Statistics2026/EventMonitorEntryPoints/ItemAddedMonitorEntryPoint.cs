@@ -119,13 +119,8 @@ namespace Statistics2026.EventMonitorEntryPoints
 
         private void OnTimerElapsed( object sender, ElapsedEventArgs e )
         {
-            CheckForOOD();
-        }
-
-        private void CheckForOOD()
-        {
             _embyInterfaces.Logger().Debug( $"Timer Expired" );
-            HelperFuncs.CheckForOOD( _embyInterfaces, false, Reasons, GetType() );
+            HelperFuncs.CheckForOOD( _embyInterfaces, false, Reasons, GetType(), false );
             Reasons.Clear();
             _debounceTimer.Stop();
         }
