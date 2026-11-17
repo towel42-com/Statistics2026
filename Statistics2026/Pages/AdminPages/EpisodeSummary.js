@@ -38,11 +38,6 @@
             seriesStats_biggest += Helpers.getSummaryInfo(view, "get_series/Longest", "", "", "longest_series");
             view.querySelector("#seriesStats_biggest").innerHTML = seriesStats_biggest;
 
-            var seriesStats_size = "";
-            seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Smallest", "", "", "smallest_series");
-            seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Shortest", "", "", "shortest_series");
-            view.querySelector("#seriesStats_size").innerHTML = seriesStats_size;
-
             var seriesStats_smallest = "";
             seriesStats_smallest += Helpers.getSummaryInfo(view, "get_series/HighestRated", "", "", "highest_rated_series");
             seriesStats_smallest += Helpers.getSummaryInfo(view, "get_series/LowestRated", "", "", "lowest_rated_series");
