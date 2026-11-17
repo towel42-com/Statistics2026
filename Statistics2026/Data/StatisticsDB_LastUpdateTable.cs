@@ -77,27 +77,20 @@ namespace Statistics2026.Data
             {
                 var currState = curr.ToString();
                 currState = Regex.Replace( currState, "^e", "" ) + ":";
-                if( ( curr & status ) != 0 )
-                {
-                    dbStates.Add( (currState, "<b>true</b>") );
-                }
-                else
-                {
-                    dbStates.Add( (currState, "<b>false</b>") );
-                }
+                var value = ( ( curr & status ) != 0 ).ToString();
+                dbStates.Add( (currState, $"<b>{value}</b>") );
             }
 
             var dbStateHtml = HelperFuncs.MakeTableHtml( "Database State:", dbStates );
             retVal.html += dbStateHtml;
 
-            retVal.html = retVal.html.Replace( "</br>", "" );
             return retVal;
         }
 
         List<EAction> ActionsFromStringList( string whichRuns )
         {
             var list = whichRuns.Split( ',' );
-            if( list.Length == 1 && list[ 0 ] == "All" )
+            if( list.Length == 1 && list[ 0 ].ToLower() == "all" )
             {
                 list = new[]
                     {
@@ -156,15 +149,9 @@ namespace Statistics2026.Data
             try
             {
                 List<EAction> actions = ActionsFromStringList( whichRuns );
-
                 foreach( var whichRun in actions )
                 {
-                    bool ok = false;
-                    var currData = GetLastRunInfo( whichRun );
-                    if( ok )
-                        results.Add( currData );
-                    else
-                        errors.Add( currData );
+                    results.Add( GetLastRunInfo( whichRun ) );
                 }
             }
             catch( Exception ex )
