@@ -63,7 +63,9 @@ namespace Statistics2026.Utilities
                 AttachDebugger();
             }
 
+#if DEBUG_PLUGIN_IMAGES
             EmbyHelperFuncs.MoveMediaLocations( embyInterfaces ).GetAwaiter().GetResult();
+#endif
 #endif
         }
 

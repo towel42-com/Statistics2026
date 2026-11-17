@@ -1,6 +1,6 @@
 ﻿#if DEBUG
-#define DEBUG_PLUGIN
-#define DEBUG_PLUGIN_ASYNC
+//#define DEBUG_PLUGIN_IMAGES
+//#define DEBUG_PLUGIN_ASYNC
 //#define DEBUG_DB
 #endif
 using MediaBrowser.Controller;
@@ -34,7 +34,7 @@ namespace Statistics2026.Utilities
     {
         public static async Task MoveMediaLocations( EmbyInterfaces embyInterfaces )
         {
-#if DEBUG_PLUGIN
+#if DEBUG_PLUGIN_IMAGES
             bool copyImages( BaseItem item )
             {
                 if( item == null )

@@ -48,7 +48,7 @@ namespace Statistics2026.Data
 
             using( var timer = new AutoTimer( $"    Analyze People - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim( true );
+                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
 
                 var pool = videoList.Select( ( video, index ) => Task.Run( async () =>
                 {
