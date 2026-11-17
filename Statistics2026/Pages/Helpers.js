@@ -233,7 +233,7 @@ define([
                 premiereDateClass = `class='${calculateMediaStatusClass(new Date(info.PremiereDate))}'`;
             }
 
-            retVal += `<td style="text-align:right;" sort-value="${info.PremiereDate}" ${premiereDateClass}> ${info.PremiereDate}</td>`;
+            retVal += `<td style="text-align:left;" sort-value="${info.PremiereDate}" ${premiereDateClass}> ${info.PremiereDate}</td>`;
 
             if (showOnServer) {
                 retVal += `
