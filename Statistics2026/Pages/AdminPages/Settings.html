@@ -24,7 +24,7 @@
             <div class="inputContainer">
                 <label class="emby-checkbox-label">
                     <input style="margin-top: 10px;" id="resetPlayCount" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Reset play count?</span>
+                    <span class="checkboxLabel">Reset play count/time?</span>
                     <i class="md-icon" id="resetPlayCountHelp">info</i>
                 </label>
             </div>
@@ -38,7 +38,7 @@
 
             <h3 style="margin-top: 10px;">Search for Missing Settings</h3>
             <div class="inputContainer">
-                How many days in the future to look for missing episodes?:
+                How many days in the future to look for missing media?:
                 <i class="md-icon" id="numDaysFutureForMissingHelp">info</i>
                 <input type="number" id="numDaysFutureForMissing" min="0" max="30" placeholder="# of Days in the Future" title="Number of Days in the Future" />
             </div>
@@ -101,7 +101,7 @@
                 <input type="number" id="maxNumStreamingProviders" min="-1" max="10" placeholder="# of Streaming Providers" title="Number of Streaming Providers" />
             </div>
 
-            <div class="sectionTitle" style="margin-top: 2em; margin-bottom: 0.5em;">Series Filter</div>
+            <div class="sectionTitle" style="margin-top: 2em; margin-bottom: 0.5em;">Missing Series Filter</div>
             <p class="fieldDescription" style="margin-top: 0; margin-bottom: 1.5em;">
                 Set the seasons to track missing episodes.  Uncheck to no longer track.  Set the minimum and/or maximum season to track.
             </p>
@@ -116,7 +116,7 @@
 
             <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
                 <label for="collectionFilterList" style="margin-bottom: 8px; text-align: center; width: 100%;">
-                    Regular Expressions to Filter By Collection (One per line):
+                    Missing Movies and Collection Filter (Regular Expressions, one per line):
                     <i class="md-icon" id="collectionFilterHelp" style="vertical-align: middle;">info</i>
                 </label>
 

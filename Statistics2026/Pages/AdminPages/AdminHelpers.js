@@ -6,29 +6,28 @@ define(function () {
                 name: 'Summary'
             }
             , {
-                href: Dashboard.getConfigurationPageUrl('EpisodeSummary'),
-                name: 'Episode/Series Summary'
-            }
-            ,
-            {
                 href: Dashboard.getConfigurationPageUrl('MovieSummary'),
                 name: 'Movie Summary'
             }
             , {
-                href: Dashboard.getConfigurationPageUrl('UserStats'),
-                name: 'User Stats'
+                href: Dashboard.getConfigurationPageUrl('Movies'),
+                name: 'Movies'
             }
             , {
-                href: Dashboard.getConfigurationPageUrl('TVSeriesProgress'),
-                name: 'TV Series Progress'
+                href: Dashboard.getConfigurationPageUrl('EpisodeSummary'),
+                name: 'Episode/Series Summary'
             }
             , {
                 href: Dashboard.getConfigurationPageUrl('Episodes'),
                 name: 'Episodes'
             }
             , {
-                href: Dashboard.getConfigurationPageUrl('Movies'),
-                name: 'Movies'
+                href: Dashboard.getConfigurationPageUrl('TVSeriesProgress'),
+                name: 'TV Series Progress'
+            }
+            , {
+                href: Dashboard.getConfigurationPageUrl('UserStats'),
+                name: 'User Stats'
             }
             , {
                 href: Dashboard.getConfigurationPageUrl('SystemStatus'),

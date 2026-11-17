@@ -295,7 +295,7 @@ namespace Statistics2026.Responses
                         retVal.SearchLocation.Text += HelperFuncs.addToHtml( depth, curr.Text );
                         retVal.SearchLocation.Text += HelperFuncs.addToHtml( --depth, "</li>" );
                     }
-                    retVal.SearchLocation.Text = HelperFuncs.addToHtml( --depth, "</ul>" );
+                    retVal.SearchLocation.Text += HelperFuncs.addToHtml( --depth, "</ul>" );
                 }
             }
 

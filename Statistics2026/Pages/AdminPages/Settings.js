@@ -54,11 +54,11 @@
             var retVal =
                 `
                 <tr style="text-align: left;">
+                    <th data-column="SeriesName"    data-type="string"   class="info_cell_heading" style="padding: 8px; white-space: nowrap; cursor: pointer;">Series Name (Year) <span class=\"sort-icon\"></span></th>
                     <th data-column="TrackSeries"   data-type="checkbox" class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap; cursor: pointer;">Track Series? <span class=\"sort-icon\"></span></th>
                     <th data-column="TrackSpecials" data-type="checkbox" class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Track Specials? <span class=\"sort-icon\"></span></th>
-                    <th data-column="SeriesName"    data-type="string"   class="info_cell_heading" style="padding: 8px; white-space: nowrap; cursor: pointer;">Series Name (Year) <span class=\"sort-icon\"></span></th>
-                    <th data-column="MinSeason"                          class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Min Season</th>
-                    <th data-column="MaxSeason"                          class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Max Season</th>
+                    <th data-column="MinSeason"                          class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Min Season Number</th>
+                    <th data-column="MaxSeason"                          class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Max Season Number</th>
                 </tr>
                 `;
             return retVal;
@@ -79,6 +79,9 @@
             if (item.PremiereYear && (item.PremiereYear > 0))
                 yearString = `(${item.PremiereYear})`
             var retVal = `
+                    <td style="padding: 8px; vertical-align: middle; font-weight: 500;" sort-value='${nameKey}'>
+                        ${item.Name} <span style="opacity: 0.6; font-size: 0.9em; margin-left: 4px;">${yearString}</span>
+                    </td>
                     <td style="padding: 8px; vertical-align: middle;">
                         <label class="emby-checkbox-label">
                             <input id="${chkTrackId}" is="emby-checkbox" type="checkbox" class="seriesfilter-trackseries" ${item.TrackSeries ? 'checked' : ''} />
@@ -90,9 +93,6 @@
                             <input id="${chkSpecialsId}" is="emby-checkbox" type="checkbox" class="seriesfilter-trackspecials" ${item.TrackSpecials ? 'checked' : ''} />
                             <span class="checkboxLabel textLabel_${index}_trackspecials">${trackSpecialsLabel}</span>
                         </label>
-                    </td>
-                    <td style="padding: 8px; vertical-align: middle; font-weight: 500;" sort-value='${nameKey}'>
-                        ${item.Name} <span style="opacity: 0.6; font-size: 0.9em; margin-left: 4px;">${yearString}</span>
                     </td>
                     <td style="padding: 8px; vertical-align: middle;">
                         <input is="emby-input" type="number" class="seriesfilter-minseason" min="1" max="${item.NumSeasons}" value="${item.MinSeason !== -1 ? item.MinSeason : ''}" style="width: 100%; margin: 0;" placeholder="Min Season"/>
@@ -479,7 +479,7 @@
 
             view.querySelector("#numDaysFutureForMissingHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Number of Days in the Future to Upcoming Videos", "How many days in the future should Upcoming episodes and movies be searched for (limited by published schedules).");
+                    Helpers.showInfo("Number of Days in the Future to list Upcoming Videos", "How many days in the future should upcoming episodes and movies be searched for (limited by published schedules).");
                 });
 
             view.querySelector("#numDaysForMovieStreamingHelp").addEventListener("click",
