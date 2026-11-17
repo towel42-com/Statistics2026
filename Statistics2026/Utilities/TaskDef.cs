@@ -193,7 +193,8 @@ namespace Statistics2026.Utilities
             var tasks = new List<TaskDef>
             {
                 new($"Analyze User Information", "Analyze the users on the server for use in the analysis.", typeof(AnalyzeUsersTask)),
-                new($"Analyze Media Information", "Analyze the video media on the server use in the analysis.", typeof(AnalyzeMediaTask)),
+                new($"Analyze Media Information", "Analyze the video media on the server for use in the analysis.", typeof(AnalyzeMediaTask)),
+                new($"Analyze Actor Information", "Analyze the actors associated with media on the server use in the analysis.", typeof(AnalyzePeopleTask)),
                 new($"Analyze User Watched Data Information", "Analyze the users watched/played information.", typeof(AnalyzeWatchedMediaDataTask)),
                 new($"Analyze Collection Information", "Analyze the library's collections.", typeof(AnalyzeCollectionsTask)),
                 new($"Analyzing Series Information", "Analyze the library's series.", typeof(AnalyzeSeriesTask)),

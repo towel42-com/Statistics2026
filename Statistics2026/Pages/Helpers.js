@@ -640,11 +640,11 @@ define([
 
                     let footerButtonsHtml = '';
                     if (options.cancelText) {
-                        footerButtonsHtml += `<button is="emby-button" type="button" class="button-cancel raised btnCancel" style="margin-right: 10px; min-width: 80px;">${options.cancelText}</button>`;
+                        footerButtonsHtml += `<button is="emby-button" type="button" class="button-cancel raised btnCancel" id="btnCancel" style="margin-right: 10px; min-width: 80px;">${options.cancelText}</button>`;
                     }
 
                     let okButtonText = options.confirmText || (options.cancelText ? 'OK' : 'Got It');
-                    footerButtonsHtml += `<button is="emby-button" type="button" class="button-submit raised btnConfirm" style="min-width: 80px;">${okButtonText}</button>`;
+                    footerButtonsHtml += `<button is="emby-button" type="button" class="button-submit raised btnConfirm" id="btnConfirm" style="min-width: 80px;">${okButtonText}</button>`;
                     let footerStyle = (options.cancelText && options.confirmText) ? 'display: flex; justify-content: flex-end; margin-top: 2em;' : 'display: flex; justify-content: center; margin-top: 2em; width: 100%;';
                     // Dynamically scales width to fit text boundaries precisely, capping at viewport limits
 
@@ -674,12 +674,12 @@ define([
                         resolve(isConfirmed);
                     }
 
-                    targetDialog.querySelector('.btnConfirm').addEventListener('click', function () {
+                    targetDialog.querySelector('#btnConfirm').addEventListener('click', function () {
                         handleDialogClosure(true);
                     });
 
                     if (options.cancelText) {
-                        targetDialog.querySelector('.btnCancel').addEventListener('click', function () {
+                        targetDialog.querySelector('#btnCancel').addEventListener('click', function () {
                             handleDialogClosure(false);
                         });
                     }

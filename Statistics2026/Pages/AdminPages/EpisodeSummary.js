@@ -27,9 +27,10 @@
             seriesStats_totals += Helpers.getSummaryInfo(view, "total_missing_episodes", "");
             view.querySelector("#seriesStats_totals").innerHTML = seriesStats_totals;
 
-            var seriesStats_genres = "";
-            seriesStats_genres += Helpers.getSummaryInfo(view, "series_genre_list", "");
-            view.querySelector("#seriesStats_genres").innerHTML = seriesStats_genres;
+            var seriesStats_totals2 = "";
+            seriesStats_totals2 += Helpers.getSummaryInfo(view, "series_genre_list", "");
+            seriesStats_totals2 += Helpers.getSummaryInfo(view, "series_actors_list", "");
+            view.querySelector("#seriesStats_totals2").innerHTML = seriesStats_totals2;
 
             var seriesStats_size = "";
             seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Largest", "", "", "largest_series");

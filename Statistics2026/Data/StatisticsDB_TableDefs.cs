@@ -72,6 +72,7 @@ namespace Statistics2026.Data
                         new TableColDef( "StudioNames", "TEXT", true ),  // json array of text
                         new TableColDef( "Genres", "TEXT", true ), // json array of text
                         new TableColDef( "StreamingProviders", "TEXT", true ){FormerColumnName="StreamingServices"}, // json array of text
+                        new TableColDef( "ActorIds", "TEXT", true ), // json array of text
                         new TableColDef( "ServerLocation", "TEXT", true ),
                         new TableColDef( "FileSize", "INT", true),
                         new TableColDef( "ImageUrl", "TEXT", true ),
@@ -128,6 +129,12 @@ namespace Statistics2026.Data
                         new TableColDef( "MediaTableName", "TEXT", false)
                     ]
                 ),
+                new TableDef("People",
+                    [
+                        new TableColDef( "ItemId", "TEXT", false, true ),
+                        new TableColDef( "Name", "TEXT", true ),
+                    ]
+                ){ ValidationRequiresData = false },
                 new TableDef("Missing",
                     [
                         new TableColDef( "Key", "TEXT", false, true),

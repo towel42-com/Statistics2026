@@ -49,7 +49,7 @@ namespace Statistics2026.Data
 
             using( var timer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
+                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim( true );
 
                 var pool = videoList.Select( ( video, index ) => Task.Run( async () =>
                 {
@@ -66,7 +66,7 @@ namespace Statistics2026.Data
                         existing.TryAdd( video.Id.ToString(), true );
                         validIds.Add( video.Id.ToString() );
 
-                        var mediaInfo = MediaInfo.Create( Logger(), video );
+                        var mediaInfo = MediaInfo.Create( Logger(), LibraryManager(), video );
                         if( ( mediaInfo == null ) || !mediaInfo.aOK )
                             return retVal;
 
@@ -136,6 +136,7 @@ namespace Statistics2026.Data
                     ", DolbyVisionProfile\n" +
                     ", StudioNames \n" +
                     ", Genres \n" +
+                    ", ActorIds \n" +
                     ", ServerLocation\n" +
                     ", FileSize\n" +
                     ", ImageUrl\n" +
@@ -164,6 +165,7 @@ namespace Statistics2026.Data
                     ", @DolbyVisionProfile\n" +
                     ", @StudioNames \n" +
                     ", @Genres \n" +
+                    ", @ActorIds \n" +
                     ", @ServerLocation\n" +
                     ", @FileSize\n" +
                     ", @ImageUrl\n" +
@@ -192,6 +194,7 @@ namespace Statistics2026.Data
                     ", DolbyVisionProfile=@DolbyVisionProfile\n" +
                     ", StudioNames=@StudioNames \n" +
                     ", Genres=@Genres \n" +
+                    ", ActorIds=@ActorIds \n" +
                     ", ServerLocation=@ServerLocation\n" +
                     ", FileSize=@FileSize\n" +
                     ", ImageUrl=@ImageUrl\n" +
@@ -221,6 +224,7 @@ namespace Statistics2026.Data
                 ("@DolbyVisionProfile", mediaInfo.DolbyVisionProfile),
                 ("@StudioNames", JsonSerializer.Serialize(mediaInfo.StudioNames)),
                 ("@Genres", JsonSerializer.Serialize(mediaInfo.Genres)),
+                ("@ActorIds", JsonSerializer.Serialize(mediaInfo.ActorIds)),
                 ("@ServerLocation", mediaInfo.ServerLocation),
                 ("@FileSize", mediaInfo.FileSize),
                 ("@ImageUrl",  mediaInfo.ImageUrl ?? string.Empty ),
@@ -571,14 +575,14 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        // genre to series/moviename -> number of episodes/movies
-        private Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> GenreCountValues( User? user, bool movies, bool playedOnly )
+
+        private Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> GroupedMediaKeyCountValues( string mediaColumnName, bool isJSONArray, User? user, bool movies, bool playedOnly )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             var tableName = ( user != null ) ? TableDefs().getUserTableName( user ) : string.Empty;
             var sql =
-                "SELECT PrimaryName, Genres, COUNT(Genres) From Media ";
+                $"SELECT PrimaryName, {mediaColumnName}, COUNT({mediaColumnName}) From Media ";
             if( user != null )
             {
                 sql += $"INNER JOIN {tableName} On Media.ItemId={tableName}.ItemId ";
@@ -613,29 +617,40 @@ namespace Statistics2026.Data
                 parameters = [ ("@UserId", user.Id.ToString()) ];
             var sqlCmd = new SQLCmdDef( sql, parameters );
 
-            Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> genreMap = [];
+            Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> retVal = [];
             ExecuteCommand( sqlCmd, statement =>
             {
                 var row = statement.Current;
                 var pos = 0;
                 var name = row.GetString( pos++ );
-                var genres = HelperFuncs.JsonToStringArray( row.GetString( pos++ ) );
+                var valueString = row.GetString( pos++ );
+                List<string> values = [];
+                if( isJSONArray )
+                    values = HelperFuncs.JsonToStringArray( valueString );
+                else
+                    values.Add( valueString );
                 var num = row.GetInt( pos++ );
-                foreach( var genre in genres )
+                foreach( var value in values )
                 {
-                    if( !genreMap.ContainsKey( genre ) )
-                        genreMap[ genre ] = (0, new Dictionary<string, int>());
+                    if( !retVal.ContainsKey( value ) )
+                        retVal[ value ] = (0, new Dictionary<string, int>());
 
-                    var curr = genreMap[ genre ];
+                    var curr = retVal[ value ];
                     curr.total += movies ? 1 : num; // if there are multiple copies of the same movie, only count it once
                     curr.parentToChildMapping[ name ] = movies ? 1 : num;
-                    genreMap[ genre ] = curr;
+                    retVal[ value ] = curr;
                 }
 
                 return true;
             } );
 
-            return genreMap;
+            return retVal;
+        }
+
+        // genre to series/moviename -> number of episodes/movies
+        private Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> GenreCountValues( User? user, bool movies, bool playedOnly )
+        {
+            return GroupedMediaKeyCountValues( "Genres", true, user, movies, playedOnly );
         }
 
         public StatCard FavoriteGenre( User? user, bool movies )

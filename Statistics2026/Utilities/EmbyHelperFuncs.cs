@@ -3,6 +3,7 @@
 #define DEBUG_PLUGIN_ASYNC
 //#define DEBUG_DB
 #endif
+using MediaBrowser.Controller;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Audio;
@@ -250,6 +251,31 @@ namespace Statistics2026.Utilities
             var episodes = libManager.GetItemList( query ).OfType<Episode>().ToList();
             return episodes;
         }
+
+        public static Person[] GetActorsForVideo( Video video, ILibraryManager libraryManager )
+        {
+            var results = new List<Person>();
+
+            var peopleInfo = libraryManager.GetItemPeople( new InternalPeopleQuery
+            {
+                ItemIds = new[] { video.InternalId },
+                PersonTypes = new[] { PersonType.Actor },
+                EnableIds = true
+            } );
+
+            // 2. Fetch each full Person BaseItem and add it to the list
+            foreach( var info in peopleInfo )
+            {
+                if( libraryManager.GetItemById( info.Id ) is Person personEntity )
+                {
+                    results.Add( personEntity );
+                }
+            }
+
+            // 3. Return as a Person[] array
+            return results.ToArray();
+        }
+
 
         public static List<Series> GetAllSeries( User? user, ILibraryManager libManager, bool includeEmptySeries )
         {
@@ -590,7 +616,7 @@ namespace Statistics2026.Utilities
             {
                 runMissingAnalysis = true;
                 var msg = "Missing Episode Analysis has not been run yet";
-                logger?.Info(  msg );
+                logger?.Info( msg );
                 reasons.Add( msg );
             }
             else

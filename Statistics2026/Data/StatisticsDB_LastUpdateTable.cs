@@ -28,7 +28,8 @@ namespace Statistics2026.Data
             UserWatchDataAnalysis,
             LastMediaOrUserAdded,
             StreamingProviders,
-            NotifyAvailableToday
+            NotifyAvailableToday,
+            PeopleAnalysis
         }
 
         public (DateTimeOffset? when, long ms, List<string> reasons) GetLastUpdated( EAction action )
@@ -102,6 +103,7 @@ namespace Statistics2026.Data
                     {
                         EAction.UserAnalysis.ToString(),
                         EAction.MediaAnalysis.ToString(),
+                        EAction.PeopleAnalysis.ToString(),
                         EAction.UserWatchDataAnalysis.ToString(),
                         EAction.CollectionsAnalysis.ToString(),
                         EAction.SeriesAnalysis.ToString(),
@@ -217,6 +219,9 @@ namespace Statistics2026.Data
                 case EAction.UserAnalysis:
                     retVal = typeof( AnalyzeUsersTask );
                     break;
+                case EAction.PeopleAnalysis:
+                    retVal = typeof( AnalyzePeopleTask );
+                    break;
                 case EAction.UserWatchDataAnalysis:
                     retVal = typeof( AnalyzeWatchedMediaDataTask );
                     break;
@@ -255,6 +260,9 @@ namespace Statistics2026.Data
                     break;
                 case EAction.UserAnalysis:
                     retVal = "User Analysis";
+                    break;
+                case EAction.PeopleAnalysis:
+                    retVal = "People Analysis";
                     break;
                 case EAction.UserWatchDataAnalysis:
                     retVal = "User Watch Data Analysis";

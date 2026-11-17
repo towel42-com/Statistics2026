@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using System.Collections.Concurrent;
 using System.Text.Json;
+using MediaBrowser.Controller.Library;
 
 namespace Statistics2026.Utilities
 {
@@ -165,7 +166,7 @@ namespace Statistics2026.Utilities
             return copy;
         }
 
-        public static MediaInfo Create( ILogger logger, Video video, TableDef? tableDef = null )
+        public static MediaInfo Create( ILogger logger, ILibraryManager libManager, Video video, TableDef? tableDef = null )
         {
             var cachedValue = GetCachedValue( video, false );
             if( cachedValue != null )
@@ -194,6 +195,7 @@ namespace Statistics2026.Utilities
             retVal.DolbyVisionProfile = dvProfile;
             retVal.StudioNames = studioNames( video );
             retVal.Genres = genres( video );
+            retVal.ActorIds = actorIds( video, libManager );
             retVal.Rating = communityRating( video );
 
             retVal.ServerLocation = video.Path ?? "Unknown";
@@ -252,6 +254,14 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
+        public static string[] actorIds( Video video, ILibraryManager libraryManager )
+        {
+            var actors = EmbyHelperFuncs.GetActorsForVideo( video, libraryManager );
+            var retVal = actors.Select( person => person.Id.ToString() ).ToArray();
+
+            return retVal;
+        }
+
         public static double communityRating( Video video )
         {
             var retVal = video.CommunityRating ?? 0.0;
@@ -269,15 +279,12 @@ namespace Statistics2026.Utilities
 
         public static string seriesId( Video video )
         {
-            var isEpisode = video is Episode;
-            if( !isEpisode )
+            if( video is Episode episode )
+            {
+                return episode.Series != null ? episode.Series.Id.ToString() : string.Empty;
+            }
+            else
                 return string.Empty;
-
-            if( video is not Episode episode )
-                return string.Empty;
-
-            var series = episode.Series;
-            return series != null ? series.Id.ToString() : string.Empty;
         }
 
         public static bool isTVSpecial( RemoteSearchResult result )
@@ -290,25 +297,18 @@ namespace Statistics2026.Utilities
             if( video == null )
                 return false;
 
-            var isEpisode = video is Episode;
-            if( !isEpisode )
-                return false;
-
             if( video is not Episode episode )
                 return false;
 
             return ( episode.SortParentIndexNumber != null && episode.SortParentIndexNumber == 0 ) ||
-              ( episode.ParentIndexNumber != null && episode.ParentIndexNumber == 0 ); // season 0 is the specials season
+                ( episode.ParentIndexNumber != null && episode.ParentIndexNumber == 0 ); // season 0 is the specials season
         }
 
         public static int numEpisodes( Video video )
         {
-            var isEpisode = video is Episode;
-            if( !isEpisode )
-                return 0;
-
             if( video is not Episode episode )
                 return 0;
+
 
             var retVal = 1;
             if( episode.IndexNumber != null && episode.IndexNumberEnd != null )
@@ -432,6 +432,7 @@ namespace Statistics2026.Utilities
         public string DolbyVisionProfile { get; set; } = string.Empty;
         public string[] StudioNames { get; set; } = { };
         public string[] Genres { get; set; } = { };
+        public string[] ActorIds { get; set; } = { };
         public string ServerLocation { get; set; } = string.Empty;
         public long FileSize { get; set; } = 0;
         public string? ImageUrl { get; set; } = null;

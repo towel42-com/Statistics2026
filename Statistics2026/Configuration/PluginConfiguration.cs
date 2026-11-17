@@ -28,6 +28,7 @@ namespace Statistics2026.Configuration
         int numWatchedToReport { get; set; }
         int numTiedToReport { get; set; }
         int numGenresToReport { get; set; }
+        int numActorsToReport { get; set; }
 
         bool showUnknownDVProfiles { get; set; }
         bool showAllResolutions { get; set; }
@@ -92,6 +93,7 @@ namespace Statistics2026.Configuration
             target.numWatchedToReport = dataSource.numWatchedToReport;
             target.numTiedToReport = dataSource.numTiedToReport;
             target.numGenresToReport = dataSource.numGenresToReport;
+            target.numActorsToReport = dataSource.numActorsToReport;
 
             target.showUnknownDVProfiles = dataSource.showUnknownDVProfiles;
             target.showAllResolutions = dataSource.showAllResolutions;
@@ -148,7 +150,7 @@ namespace Statistics2026.Configuration
         public int numWatchedToReport { get; set; } = 5;
         public int numTiedToReport { get; set; } = 5;
         public int numGenresToReport { get; set; } = 5;
-        
+        public int numActorsToReport { get; set; } = 5;
 
         public bool showUnknownDVProfiles { get; set; } = false;
         public bool showAllResolutions { get; set; } = false;
@@ -212,6 +214,7 @@ namespace Statistics2026.Configuration
         public int numWatchedToReport { get; set; } = 5;
         public int numTiedToReport { get; set; } = 5;
         public int numGenresToReport { get; set; } = 5;
+        public int numActorsToReport { get; set; } = 5;
 
         public bool showUnknownDVProfiles { get; set; } = false;
         public bool showAllResolutions { get; set; } = false;

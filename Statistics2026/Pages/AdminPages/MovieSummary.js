@@ -29,9 +29,10 @@
             movieStats_totals += Helpers.getSummaryInfo(view, "total_missing_movies", "");
             view.querySelector("#movieStats_totals").innerHTML = movieStats_totals;
 
-            var movieStats_genres = "";
-            movieStats_genres += Helpers.getSummaryInfo(view, "movie_genre_list", "");
-            view.querySelector("#movieStats_genres").innerHTML = movieStats_genres;
+            var movieStats_totals2 = "";
+            movieStats_totals2 += Helpers.getSummaryInfo(view, "movie_genre_list", "");
+            movieStats_totals2 += Helpers.getSummaryInfo(view, "movie_actors_list", "");
+            view.querySelector("#movieStats_totals2").innerHTML = movieStats_totals2;
 
             var movieStats_size = "";
             movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Largest", "", "", "largest_movie");

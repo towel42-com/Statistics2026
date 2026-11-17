@@ -32,6 +32,7 @@
                 view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
                 view.querySelector("#numTiedToReport").value = config.numTiedToReport;
                 view.querySelector("#numGenresToReport").value = config.numGenresToReport;
+                view.querySelector("#numActorsToReport").value = config.numActorsToReport;
                 
                 view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
                 view.querySelector("#resetPlayCount").checked = config.resetPlayCount;
@@ -447,6 +448,18 @@
                 }
             );
 
+            view.querySelector("#numActorsToReport").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        const parsed = parseInt(view.querySelector("#numActorsToReport").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.numActorsToReport = value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+
             view.querySelector("#showUnknownDVProfiles").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -503,7 +516,12 @@
                 function () {
                     Helpers.showInfo("Number of Genres", "The default is 5, but when reporting a list of genres, how many should be shown?");
                 });
-            
+
+            view.querySelector("#numActorsToReportHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Actors", "The default is 5, but when reporting a list of actors, how many should be shown?");
+                });
+
             view.querySelector("#excludeAdminHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Exclude Administrators", "For security reasons, Administrators are not typically viewers of media and likely should be excluded from analysis.");
