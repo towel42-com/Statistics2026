@@ -1,51 +1,58 @@
 define([
     'dialogHelper',
     'toast',
-    'prompt'
+    'prompt',
+    'emby-button'
 ],
     function (dialogHelper, toast, prompt) {
         'use strict';
 
         const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
 
-        async function getStatistics2026Data(url_to_get) {
+        async function getStatistics2026Data(url_to_get, options = {}) {
             console.log("getStatistics2026Data Url = " + url_to_get);
             return ApiClient.ajax({
                 type: "GET",
                 url: url_to_get,
-                dataType: "json"
+                dataType: "json",
+                signal: options.signal
             });
-        };
+        }
 
         async function getUserPluginConfig() {
             const url = ApiClient.getUrl('/emby/Statistics2026/get_user_config');
             console.log(`getUserPluginConfig: ${url}`);
 
             return await ApiClient.getJSON(url);
-        };
+        }
 
         async function updateUserPluginConfiguration(config) {
             const url = ApiClient.getUrl('/emby/Statistics2026/set_user_config');
-            console.log(`getUserPluginConfig: ${url}`);
+            console.log(`updateUserPluginConfiguration: ${url}`);
 
             const payload = JSON.stringify(config);
             return await ApiClient.ajax({
                 type: 'POST',
                 url: url,
-                data: JSON.stringify(config),
+                data: payload,
                 contentType: 'application/json'
             });
-        };
+        }
 
         async function CheckForValidConfig() {
-            var urlText = "/emby/Statistics2026/database_status";
-            var url = ApiClient.getUrl(urlText);
+            const urlText = "/emby/Statistics2026/database_status";
+            const url = ApiClient.getUrl(urlText);
 
             let response = await ApiClient.getJSON(url).catch(error => {
-                var errorMessage = "'" + error + "' - '" + urlText + "'";
+                const errorMessage = `'${error}' - '${urlText}'`;
                 console.error("database_status failed:", errorMessage);
-                return false;
+                showInfo("Problem connecting to back end", errorMessage, false);
+                return null;
             });
+
+            if (!response) {
+                return false;
+            }
 
             if (!response.DBStateOK) {
                 let errorMessage = "";
@@ -56,7 +63,7 @@ define([
                     console.error("getSystemStatus failed:", errorMessage);
                 });
 
-                let message = `<div>${response.DBStateMsg}</div>`;
+                let message = `<div>${response.DBStateMessage}</div>`;
 
                 if (systemStatusObj != null) {
                     if (systemStatusObj.html != "" && systemStatusObj.html !== undefined) {
@@ -69,33 +76,21 @@ define([
                 }
 
                 if (errorMessage != "" && errorMessage !== undefined) {
-                    message += `</br><div><b>Error Getting Last Run Information</b>: ${errorMessage}</div>`;
+                    message += errorMessage;
                 }
 
-                let title = "Incomplete or Missing Database";
+                const title = "Incomplete or Missing Database";
                 showInfo(title, message, true);
             }
-            return response.DBStateOK;
-        }
-
-        if (!String.prototype.endsWith2) {
-            String.prototype.endsWith2 = function (searchString, position) {
-                var subjectString = this.toString();
-                if (typeof position !== 'number' || !isFinite(position) || Math.floor(position) !== position || position > subjectString.length) {
-                    position = subjectString.length;
-                }
-                position -= searchString.length;
-                var lastIndex = subjectString.indexOf(searchString, position);
-                return lastIndex !== -1 && lastIndex === position;
-            };
+            return Boolean(response.DBStateOK);
         }
 
         async function isDebugLoggingEnabled() {
-            var url = ApiClient.getUrl("/emby/System/Configuration");
+            const url = ApiClient.getUrl("/emby/System/Configuration");
             let sysConfig = await ApiClient.getJSON(url).catch(error => {
                 return false;
             });
-            return sysConfig.EnableDebugLevelLogging;
+            return sysConfig ? sysConfig.EnableDebugLevelLogging : false;
         }
 
         function calculateProgressClass(value) {
@@ -114,13 +109,13 @@ define([
                 return `progress-darkGreen`;
             else
                 return `progress-green`;
-        };
+        }
 
         function numDaysTo(date) {
             const todayDT = new Date();
             const today = new Date(todayDT.getFullYear(), todayDT.getMonth(), todayDT.getDate());
-            var numMS = today - date;
-            var msPerDay = 24 * 60 * 60 * 1000;
+            const numMS = today - date;
+            const msPerDay = 24 * 60 * 60 * 1000;
 
             const numDays = Math.round(numMS / msPerDay);
             return numDays;
@@ -145,15 +140,15 @@ define([
                 return `progress-red`;
             else
                 return `progress-darkRed`;
-        };
+        }
 
         function getTVProgressRowData(info) {
             let progressClass = calculateProgressClass(info.Episodes.Percent);
             var retVal = `
-            <td style="vertical-align: middle; white-space: nowrap; align=left>"${info.Name} (${info.PremiereYear})</td>
-            <td class="center ${progressClass}" style="vertical-align: middle; white-space: nowrap; align=left">${info.Episodes.String}</td>
-            <td style="vertical-align: middle; white-space: nowrap; align=left">${info.ScoreStr}/10</td>
-            <td style="vertical-align: middle; white-space: nowrap; align=left">${info.SeriesStatus}</td>
+            <td style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.Name} (${info.PremiereYear})</td>
+            <td class="center ${progressClass}" style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.Episodes.String}</td>
+            <td style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.ScoreStr}/10</td>
+            <td style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.SeriesStatus}</td>
             `;
             return retVal;
         }
@@ -230,31 +225,31 @@ define([
 
         function getMediaRowData(info, showOnServer, showMissing, showStreaming) {
             var retVal = `
-            <td style="align=left" sort-value="${info.DisplayName.SortBy}">${info.DisplayName.Text}</td>
-            <td style="align=left" sort-value="${info.ParentName.SortBy}">${info.ParentName.Text}</td>
+            <td style="text-align:left;" sort-value="${info.DisplayName.SortBy}">${info.DisplayName.Text}</td>
+            <td style="text-align:left;" sort-value="${info.ParentName.SortBy}">${info.ParentName.Text}</td>
             `;
             let premiereDateClass = "";
             if (showMissing && info.SearchLocation.Text != "") {
                 premiereDateClass = `class='${calculateMediaStatusClass(new Date(info.PremiereDate))}'`;
             }
 
-            retVal += `<td style="align=right" sort-value="${info.PremiereDate}" ${premiereDateClass}> ${info.PremiereDate}</td>`;
+            retVal += `<td style="text-align:right;" sort-value="${info.PremiereDate}" ${premiereDateClass}> ${info.PremiereDate}</td>`;
 
             if (showOnServer) {
                 retVal += `
-                <td style="align=left">${info.ResolutionDetail}</td>
-                <td style="align=left">${info.Codec}</td>
-                <td style="align=left">${info.DolbyVisionProfile}</td>
-                <td style="align=left" sort-value="${info.ServerLocation.SortBy}">${info.ServerLocation.Text}</td>
+                <td style="text-align:left;">${info.ResolutionDetail}</td>
+                <td style="text-align:left;">${info.Codec}</td>
+                <td style="text-align:left;">${info.DolbyVisionProfile}</td>
+                <td style="text-align:left;" sort-value="${info.ServerLocation.SortBy}">${info.ServerLocation.Text}</td>
                 `;
             }
 
             if (showStreaming) {
-                retVal += `<td style="align=left"  sort-value="${info.StreamingProviders.SortBy}">${info.StreamingProviders.Text}</td>`;
+                retVal += `<td style="text-align:left;"  sort-value="${info.StreamingProviders.SortBy}">${info.StreamingProviders.Text}</td>`;
             }
 
             if (showMissing) {
-                retVal += `<td style="align=left" sort-value="${info.SearchLocation.SortBy}">${info.SearchLocation.Text}</td>`;
+                retVal += `<td style="text-align:left;" sort-value="${info.SearchLocation.SortBy}">${info.SearchLocation.Text}</td>`;
             }
 
             return retVal;
@@ -266,7 +261,7 @@ define([
                 <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
                 <th data-column="ParentName" data-type="string" class="info_cell_heading">${parentName}<span class="sort-icon"></span></th>
                 <th data-column="PremiereDate" data-type="date" class="info_cell_heading">Premiere Date<span class="sort-icon"></span></th>
-                `
+                `;
 
             if (showOnServer) {
                 retVal += `
@@ -320,7 +315,7 @@ define([
             }
 
             if (errorMessage != "" && errorMessage !== undefined) {
-                message += `</br><div><b>Error Getting Last Run Information</b>: ${errorMessage}</div>`;
+                message += errorMessage;
             }
 
             view.querySelector("#" + div).innerHTML = message;
@@ -373,7 +368,7 @@ define([
                 response.dynamicButtons.forEach((v) => {
                     view.querySelector("#" + v.id).addEventListener("click",
                         function () {
-                            showInfo(v.title, v.info);
+                            showInfo(v.title, v.info, true);
                         });
                 });
 
@@ -392,7 +387,7 @@ define([
             var tabs = getTabsFn();
             for (index = 0; index < tabs.length; ++index) {
                 var path = tabs[index].href;
-                if (path.endsWith2("=" + tab_name)) {
+                if (path.endsWith("=" + tab_name)) {
                     return index;
                 }
             }
@@ -427,7 +422,6 @@ define([
                 img.dataset.proxyInjected = 'true';
             });
         }
-
 
         function injectStyleSheet() {
             if (document.getElementById(STYLE_ID))  // already added
@@ -483,14 +477,12 @@ define([
                     return;
                 }
 
-                // console.log("resultData: " + JSON.stringify(resultData));
-
                 var tbody = view.querySelector('#' + baseId + '_body');
                 tbody.innerHTML = "";
 
                 var thead = view.querySelector('#' + baseId + '_head');
                 thead.innerHTML = getHeaderFunc();
-                setupSortability(baseId, showLoadingFunc, hideLoadingFunc);
+                setupSortability(view, baseId, showLoadingFunc, hideLoadingFunc);
 
                 let minChunkSize = 50;
                 let chunkSize = Math.min(minChunkSize, Math.trunc(resultData.length / 20));
@@ -577,7 +569,7 @@ define([
 
         function loadUsers(view, comboBoxId, loadDataFunc) {
             ApiClient.getUsers().then(function (users) {
-                console.log(`users: {users}`);
+                console.log(`users: ${users}`);
                 var select = view.querySelector(comboBoxId);
                 users.forEach((user) => {
                     var option = document.createElement(`option`);
@@ -591,8 +583,9 @@ define([
             });
         }
 
-        function setupSortability(baseId, showLoadingFunc, hideLoadingFunc) {
-            document.querySelectorAll(`#${baseId}_table thead th`).forEach((header, index) => {
+        function setupSortability(view, baseId, showLoadingFunc, hideLoadingFunc) {
+            const root = view || document;
+            root.querySelectorAll(`#${baseId}_table thead th`).forEach((header) => {
                 header.addEventListener('click', () => {
                     const columnType = header.getAttribute('data-type');
                     let idx = header.cellIndex;
@@ -634,63 +627,74 @@ define([
          * @param {string} [options.cancelText] Optional label text to enable a secondary cancel button.
          * @returns {Promise<boolean>} Resolves to true if confirmed, false if cancelled/closed.
          */
-        function showInfoEx(options) {
+        function showInfoEx(options = {}) {
             return new Promise(function (resolve) {
-                require(['dialogHelper'], function (dialogHelper) {
+                let isResolved = false;
 
-                    let footerButtonsHtml = '';
-                    if (options.cancelText) {
-                        footerButtonsHtml += `<button is="emby-button" type="button" class="button-cancel raised btnCancel" id="btnCancel" style="margin-right: 10px; min-width: 80px;">${options.cancelText}</button>`;
+                function finish(result) {
+                    if (isResolved) {
+                        return;
                     }
+                    isResolved = true;
+                    resolve(result);
+                }
 
-                    let okButtonText = options.confirmText || (options.cancelText ? 'OK' : 'Got It');
-                    footerButtonsHtml += `<button is="emby-button" type="button" class="button-submit raised btnConfirm" id="btnConfirm" style="min-width: 80px;">${okButtonText}</button>`;
-                    let footerStyle = (options.cancelText && options.confirmText) ? 'display: flex; justify-content: flex-end; margin-top: 2em;' : 'display: flex; justify-content: center; margin-top: 2em; width: 100%;';
-                    // Dynamically scales width to fit text boundaries precisely, capping at viewport limits
+                let footerButtonsHtml = '';
+                if (options.cancelText) {
+                    footerButtonsHtml += `<button is="emby-button" type="button" class="button-cancel raised btnCancel" style="margin-right: 10px; min-width: 80px;">${options.cancelText}</button>`;
+                }
 
-                    const dialogTemplate = `
-                        <div class="dialog dialog-fixedSize dialog-alert" style="padding: 2.2em; width: max-content; min-width: 280px; max-width: 90vw; border-radius: 6px; box-sizing: border-box;">
-                            <h2 style="margin-top: 0; font-weight: 500; white-space: nowrap; text-align: center; width: 100%;">
-                                ${options.title || 'Notification'}
-                            </h2>
-                    
-                            <div class="dialogContent" style="margin: 1.5em 0; line-height: 1.5; font-size: 1.05em; height: auto;">
-                                ${options.html}
-                            </div>
-                    
-                            <div style="${footerStyle}">
-                                ${footerButtonsHtml}
-                            </div>
-                        </div>
-                    `;
+                const okButtonText = options.confirmText || (options.cancelText ? 'OK' : 'Got It');
+                footerButtonsHtml += `<button is="emby-button" type="button" class="button-submit raised btnConfirm" style="min-width: 80px;">${okButtonText}</button>`;
 
-                    const containerDiv = document.createElement('div');
-                    containerDiv.innerHTML = dialogTemplate;
-                    const targetDialog = containerDiv.firstElementChild;
+                const footerStyle = (options.cancelText && options.confirmText)
+                    ? 'display: flex; justify-content: flex-end; margin-top: 2em;'
+                    : 'display: flex; justify-content: center; margin-top: 2em; width: 100%;';
 
-                    function handleDialogClosure(isConfirmed) {
+                const dialogTemplate = `
+            <div class="dialog dialog-fixedSize dialog-alert" style="padding: 2.2em; width: max-content; min-width: 280px; max-width: 90vw; border-radius: 6px; box-sizing: border-box;">
+                <h2 class="dialogTitle" style="margin-top: 0; font-weight: 500; text-align: center; width: 100%;"></h2>
+                <div class="dialogContent" style="margin: 1.5em 0; line-height: 1.5; font-size: 1.05em; height: auto;"></div>
+                <div class="dialogFooter" style="${footerStyle}">
+                    ${footerButtonsHtml}
+                </div>
+            </div>
+        `;
+
+                const containerDiv = document.createElement('div');
+                containerDiv.innerHTML = dialogTemplate.trim();
+                const targetDialog = containerDiv.querySelector('.dialog');
+
+                // Inject title and body separately so unclosed tags in options.html cannot break the footer
+                targetDialog.querySelector('.dialogTitle').textContent = options.title || 'Notification';
+                targetDialog.querySelector('.dialogContent').innerHTML = options.html || '';
+
+                injectImageProxy(targetDialog);
+
+                const confirmBtn = targetDialog.querySelector('.btnConfirm');
+                if (confirmBtn) {
+                    confirmBtn.addEventListener('click', function () {
+                        finish(true);
                         dialogHelper.close(targetDialog);
-                        setTimeout(() => targetDialog.remove(), 400);
-                        resolve(isConfirmed);
-                    }
-
-                    targetDialog.querySelector('#btnConfirm').addEventListener('click', function () {
-                        handleDialogClosure(true);
                     });
+                }
 
-                    if (options.cancelText) {
-                        targetDialog.querySelector('#btnCancel').addEventListener('click', function () {
-                            handleDialogClosure(false);
+                if (options.cancelText) {
+                    const cancelBtn = targetDialog.querySelector('.btnCancel');
+                    if (cancelBtn) {
+                        cancelBtn.addEventListener('click', function () {
+                            finish(false);
+                            dialogHelper.close(targetDialog);
                         });
                     }
-
-                    targetDialog.addEventListener('close', function () {
-                        resolve(false);
-                    });
-
-                    document.body.appendChild(targetDialog);
-                    dialogHelper.open(targetDialog);
+               }
+                targetDialog.addEventListener('close', function () {
+                    finish(false);
+                    targetDialog.remove();
                 });
+
+                document.body.appendChild(targetDialog);
+                dialogHelper.open(targetDialog);
             });
         }
 
@@ -709,10 +713,7 @@ define([
             var tableId = baseId + '_table';
             const table = document.getElementById(tableId);
             const tbody = table.querySelector("tbody");
-            // Convert HTMLCollection of rows into a real Array
             const rows = Array.from(tbody.querySelectorAll("tr"));
-
-            // Toggle between Ascending ('asc') and Descending ('desc')
 
             let currentMap = sortDirections.get(tableId);
             if (currentMap === undefined) {
@@ -807,7 +808,6 @@ define([
 
                         diff = currentDirection === 'asc' ? valA - valB : valB - valA;
                     } else { //if (dataType == 'string') {
-                        // Text comparison using localeCompare for proper alphabetical ordering
                         diff = currentDirection === 'asc'
                             ? cellA.localeCompare(cellB)
                             : cellB.localeCompare(cellA);
@@ -825,7 +825,6 @@ define([
         }
 
         function initCollapsibleTable(containerId) {
-            // Scope our selector to the active injected Emby view context
             const container = document.getElementById(containerId);
             if (!container)
                 return;
@@ -890,6 +889,7 @@ define([
             loadTableDataAsync,
             loadUsers,
             showInfo,
+            showInfoEx,
             getUserPluginConfig,
             updateUserPluginConfiguration,
             isDebugLoggingEnabled

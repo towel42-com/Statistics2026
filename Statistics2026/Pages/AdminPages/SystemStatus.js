@@ -27,8 +27,7 @@
             if (dbStatus.DBStateMessage != "" )
                 debugInfo += ` - ${dbStatus.DBStateMessage}`;
             debugInfo += `</b>`;
-            DBStateMessage
-
+            
             view.querySelector(`#debugInfo`).style.display = '';
             view.querySelector("#debugInfo").innerHTML = debugInfo;
 
