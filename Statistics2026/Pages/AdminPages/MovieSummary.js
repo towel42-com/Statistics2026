@@ -29,18 +29,21 @@
             movieStats_totals += Helpers.getSummaryInfo(view, "total_missing_movies", "");
             view.querySelector("#movieStats_totals").innerHTML = movieStats_totals;
 
-            var movieStats_totals2 = "";
-            movieStats_totals2 += Helpers.getSummaryInfo(view, "movie_genre_list", "");
-            movieStats_totals2 += Helpers.getSummaryInfo(view, "movie_actors_list", "");
-            movieStats_totals2 += Helpers.getSummaryInfo(view, "movie_ratings_list", "");
-            view.querySelector("#movieStats_totals2").innerHTML = movieStats_totals2;
+            var movieStats_gar = "";
+            movieStats_gar += Helpers.getSummaryInfo(view, "movie_genre_list", "");
+            movieStats_gar += Helpers.getSummaryInfo(view, "movie_actors_list", "");
+            movieStats_gar += Helpers.getSummaryInfo(view, "movie_ratings_list", "");
+            view.querySelector("#movieStats_gar").innerHTML = movieStats_gar;
 
-            var movieStats_size = "";
-            movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Largest", "", "", "largest_movie");
-            movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Longest", "", "", "longest_movie");
-            movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Smallest", "", "", "smallest_movie");
-            movieStats_size += Helpers.getSummaryInfo(view, "get_movie/Shortest", "", "", "shortest_movie");
-            view.querySelector("#movieStats_size").innerHTML = movieStats_size;
+            var movieStats_biggest = "";
+            movieStats_biggest += Helpers.getSummaryInfo(view, "get_movie/Largest", "", "", "largest_movie");
+            movieStats_biggest += Helpers.getSummaryInfo(view, "get_movie/Longest", "", "", "longest_movie");
+            view.querySelector("#movieStats_biggest").innerHTML = movieStats_biggest;
+
+            var movieStats_smallest = "";
+            movieStats_smallest += Helpers.getSummaryInfo(view, "get_movie/Smallest", "", "", "smallest_movie");
+            movieStats_smallest += Helpers.getSummaryInfo(view, "get_movie/Shortest", "", "", "shortest_movie");
+            view.querySelector("#movieStats_smallest").innerHTML = movieStats_smallest;
 
             var movieStats_ratings = "";
             movieStats_ratings += Helpers.getSummaryInfo(view, "get_movie/HighestRated", "", "", "highest_rated_movie");

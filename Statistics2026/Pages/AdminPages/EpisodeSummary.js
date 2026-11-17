@@ -27,23 +27,26 @@
             seriesStats_totals += Helpers.getSummaryInfo(view, "total_missing_episodes", "");
             view.querySelector("#seriesStats_totals").innerHTML = seriesStats_totals;
 
-            var seriesStats_totals2 = "";
-            seriesStats_totals2 += Helpers.getSummaryInfo(view, "series_genre_list", "");
-            seriesStats_totals2 += Helpers.getSummaryInfo(view, "series_actors_list", "");
-            seriesStats_totals2 += Helpers.getSummaryInfo(view, "series_ratings_list", "");
-            view.querySelector("#seriesStats_totals2").innerHTML = seriesStats_totals2;
+            var seriesStats_gar = "";
+            seriesStats_gar += Helpers.getSummaryInfo(view, "series_genre_list", "");
+            seriesStats_gar += Helpers.getSummaryInfo(view, "series_actors_list", "");
+            seriesStats_gar += Helpers.getSummaryInfo(view, "series_ratings_list", "");
+            view.querySelector("#seriesStats_gar").innerHTML = seriesStats_gar;
+
+            var seriesStats_biggest = "";
+            seriesStats_biggest += Helpers.getSummaryInfo(view, "get_series/Largest", "", "", "largest_series");
+            seriesStats_biggest += Helpers.getSummaryInfo(view, "get_series/Longest", "", "", "longest_series");
+            view.querySelector("#seriesStats_biggest").innerHTML = seriesStats_biggest;
 
             var seriesStats_size = "";
-            seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Largest", "", "", "largest_series");
-            seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Longest", "", "", "longest_series");
             seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Smallest", "", "", "smallest_series");
             seriesStats_size += Helpers.getSummaryInfo(view, "get_series/Shortest", "", "", "shortest_series");
             view.querySelector("#seriesStats_size").innerHTML = seriesStats_size;
 
-            var seriesStats_ratings = "";
-            seriesStats_ratings += Helpers.getSummaryInfo(view, "get_series/HighestRated", "", "", "highest_rated_series");
-            seriesStats_ratings += Helpers.getSummaryInfo(view, "get_series/LowestRated", "", "", "lowest_rated_series");
-            view.querySelector("#seriesStats_ratings").innerHTML = seriesStats_ratings;
+            var seriesStats_smallest = "";
+            seriesStats_smallest += Helpers.getSummaryInfo(view, "get_series/HighestRated", "", "", "highest_rated_series");
+            seriesStats_smallest += Helpers.getSummaryInfo(view, "get_series/LowestRated", "", "", "lowest_rated_series");
+            view.querySelector("#seriesStats_smallest").innerHTML = seriesStats_smallest;
 
             var seriesStats_video_quality = "";
             seriesStats_video_quality += Helpers.getSummaryInfo(view, "get_series/HighestBitrate", "", "", "highest_bitrate_series");
