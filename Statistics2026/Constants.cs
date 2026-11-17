@@ -101,11 +101,11 @@ namespace Statistics2026
         internal const string LongestSeries = "Longest TV Series Total Runtime";
         internal const string ShortestSeries = "Shortest TV Series Total Runtime";
 
-        internal const string HighestRatedSeries = "Highest Average Rating TV Series";
-        internal const string LowestRatedSeries = "Lowest Average Rating TV Series";
+        internal const string HighestRatedSeries = "Highest Rated TV Series";
+        internal const string LowestRatedSeries = "Lowest Rated TV Series";
 
-        internal const string HighestBitrateSeries = "Highest Average Bitrate TV Series";
-        internal const string LowestBitrateSeries = "Lowest Average Bitrate TV Series";
+        internal const string HighestBitrateSeries = "Highest Bitrate TV Series";
+        internal const string LowestBitrateSeries = "Lowest Bitrate TV Series";
         internal const string OldestSeriesPremiere = "Oldest TV Series Premiere";
         internal const string LatestSeriesPremiere = "Latest TV Series Premier";
         internal const string OldestEpisodePremiere = "Oldest TV Episode Premier";
