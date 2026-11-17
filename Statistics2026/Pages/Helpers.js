@@ -93,6 +93,14 @@ define([
             return sysConfig ? sysConfig.EnableDebugLevelLogging : false;
         }
 
+        async function showDiagnosticInfo(pluginConfig) {
+            if (!pluginConfig.showDiagnosticInfo || !pluginConfig.showDebugInfo) {
+                return false;
+            }
+
+            return await isDebugLoggingEnabled();
+        }
+
         function calculateProgressClass(value) {
             value = Math.round(value);
             if (value == 0)
@@ -892,7 +900,8 @@ define([
             showInfoEx,
             getUserPluginConfig,
             updateUserPluginConfiguration,
-            isDebugLoggingEnabled
+            isDebugLoggingEnabled,
+            showDiagnosticInfo
         };
     }
 )

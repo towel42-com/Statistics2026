@@ -16,38 +16,42 @@
         }
 
         function loadPage(view, params) {
-            ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                view.querySelector("#hasConnectUserID").checked = config.hasConnectUserID;
-                view.querySelector("#showUnknownDVProfiles").checked = config.showUnknownDVProfiles;
-                view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
-                view.querySelector("#numMostActive").value = config.numMostActiveUsers;
+            ApiClient.getPluginConfiguration(Helpers.pluginId).then(
+                function (config) {
+                    view.querySelector("#hasConnectUserID").checked = config.hasConnectUserID;
+                    view.querySelector("#showUnknownDVProfiles").checked = config.showUnknownDVProfiles;
+                    view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
+                    view.querySelector("#numMostActive").value = config.numMostActiveUsers;
 
-                const searchLocations = config.searchLocations || [];
-                view.querySelector("#searchLocations").value = searchLocations.join('\n');;
-                view.querySelector("#showSearchTheMovieDB").checked = config.showSearchTheMovieDB;
+                    const searchLocations = config.searchLocations || [];
+                    view.querySelector("#searchLocations").value = searchLocations.join('\n');;
+                    view.querySelector("#showSearchTheMovieDB").checked = config.showSearchTheMovieDB;
 
-                view.querySelector("#numDaysFutureForMissing").value = config.numDaysFutureForMissing;
-                view.querySelector("#numDaysForMovieStreaming").value = config.numDaysForMovieStreaming;
+                    view.querySelector("#numDaysFutureForMissing").value = config.numDaysFutureForMissing;
+                    view.querySelector("#numDaysForMovieStreaming").value = config.numDaysForMovieStreaming;
                 
-                view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
-                view.querySelector("#numTiedToReport").value = config.numTiedToReport;
-                view.querySelector("#numGenresToReport").value = config.numGenresToReport;
-                view.querySelector("#numActorsToReport").value = config.numActorsToReport;
+                    view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
+                    view.querySelector("#numTiedToReport").value = config.numTiedToReport;
+                    view.querySelector("#numGenresToReport").value = config.numGenresToReport;
+                    view.querySelector("#numActorsToReport").value = config.numActorsToReport;
                 
-                view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
-                view.querySelector("#resetPlayCount").checked = config.resetPlayCount;
-                view.querySelector("#resetDBState").checked = config.resetDBState;
-                view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
-                view.querySelector("#showLastRunInfo").checked = config.showLastRunInfo;
+                    view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
+                    view.querySelector("#resetPlayCount").checked = config.resetPlayCount;
+                    view.querySelector("#resetDBState").checked = config.resetDBState;
+                    view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
+                    view.querySelector("#showDiagnosticInfo").checked = config.showDiagnosticInfo;
+                
+                    view.querySelector("#showLastRunInfo").checked = config.showLastRunInfo;
 
-                view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
-                view.querySelector("#showFilteredMissingSummaries").checked = config.showFilteredMissingSummaries;
-                view.querySelector("#alwaysShowJustWatch").checked = config.alwaysShowJustWatch;
-                view.querySelector("#maxNumStreamingProviders").value = config.maxNumStreamingProviders;
+                    view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
+                    view.querySelector("#showFilteredMissingSummaries").checked = config.showFilteredMissingSummaries;
+                    view.querySelector("#alwaysShowJustWatch").checked = config.alwaysShowJustWatch;
+                    view.querySelector("#maxNumStreamingProviders").value = config.maxNumStreamingProviders;
 
-                const collectionFilters = config.CollectionFiltersForMissingMovies || [];
-                view.querySelector("#collectionFilterList").value = collectionFilters.join('\n');
-            });
+                    const collectionFilters = config.CollectionFiltersForMissingMovies || [];
+                    view.querySelector("#collectionFilterList").value = collectionFilters.join('\n');
+                }
+            );
         }
 
         function getSeriesFilterHeader() {
@@ -130,7 +134,9 @@
                 loadSeriesFilterTable();
 
                 var isDebugLoggingEnabled = await Helpers.isDebugLoggingEnabled();
-                const viewDebugCB = view.querySelector("#showDebugInfo").disabled = isDebugLoggingEnabled;
+                view.querySelector("#showDebugInfo").disabled = !isDebugLoggingEnabled;
+                view.querySelector("#showDiagnosticInfo").disabled = !isDebugLoggingEnabled;
+                
             });
 
             function saveSeriesFilterItem(filterItem) {
@@ -348,12 +354,25 @@
 
             view.querySelector("#showDebugInfo").addEventListener("click",
                 function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(
+                        async function (config) {
+                            config.showDebugInfo = view.querySelector("#showDebugInfo").checked;
+                            ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                        }
+                    );
+                    view.querySelector("#showDiagnosticInfo").disabled = !view.querySelector("#showDebugInfo").checked;
+                }
+            );
+
+            view.querySelector("#showDiagnosticInfo").addEventListener("click",
+                function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.showDebugInfo = view.querySelector("#showDebugInfo").checked;
+                        config.showDiagnosticInfo = view.querySelector("#showDiagnosticInfo").checked;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
+            
 
             view.querySelector("#showLastRunInfo").addEventListener("click",
                 function () {
@@ -560,7 +579,12 @@
 
             view.querySelector("#showDebugInfoHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Show Debug Info", "More information is reported on the pages, this functionality is also turned on if Debug Logging is enabled");
+                    Helpers.showInfo("Show Debug Info", "More information is reported on the pages. Only available when debug logging is enabled.");
+                });
+
+            view.querySelector("#showDiagnosticInfoHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Show Diagnostic Info", "Diagnostic information is reported when debug info is enabled.. Only available when debug logging is enabled");
                 });
 
             view.querySelector("#showLastRunInfoHelp").addEventListener("click",

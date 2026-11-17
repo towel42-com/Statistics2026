@@ -51,6 +51,7 @@ namespace Statistics2026.Configuration
         bool resetPlayCount { get; set; }
         bool resetDBState { get; set; }
         bool showDebugInfo { get; set; }
+        bool showDiagnosticInfo { get; set; }
         bool showLastRunInfo { get; set; }
     }
 
@@ -120,6 +121,8 @@ namespace Statistics2026.Configuration
             target.resetPlayCount = dataSource.resetPlayCount;
             target.resetDBState = dataSource.resetDBState;
             target.showDebugInfo = dataSource.showDebugInfo;
+            target.showDiagnosticInfo = dataSource.showDiagnosticInfo;
+
             target.showLastRunInfo = dataSource.showLastRunInfo;
         }
     }
@@ -173,6 +176,7 @@ namespace Statistics2026.Configuration
         public bool resetPlayCount { get; set; } = false;
         public bool resetDBState { get; set; } = false;
         public bool showDebugInfo { get; set; } = false;
+        public bool showDiagnosticInfo { get; set; } = false;
         public bool showLastRunInfo { get; set; } = false;
 
         public List<UserConfig> UserConfigs { get; set; } = [];
@@ -195,7 +199,12 @@ namespace Statistics2026.Configuration
 
         public bool ShowDebugInfo( EmbyInterfaces embyInterfaces )
         {
-            return showDebugInfo || ( embyInterfaces.ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false );
+            return showDebugInfo && ( embyInterfaces.ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false );
+        }
+
+        public bool ShowDiagnosticInfo( EmbyInterfaces embyInterfaces )
+        {
+            return showDiagnosticInfo && ShowDebugInfo( embyInterfaces ) && ( embyInterfaces.ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false );
         }
     }
 
@@ -237,6 +246,7 @@ namespace Statistics2026.Configuration
         public bool resetPlayCount { get; set; } = false;
         public bool resetDBState { get; set; } = false;
         public bool showDebugInfo { get; set; } = false;
+        public bool showDiagnosticInfo { get; set; } = false;
         public bool showLastRunInfo { get; set; } = false;
     }
 }

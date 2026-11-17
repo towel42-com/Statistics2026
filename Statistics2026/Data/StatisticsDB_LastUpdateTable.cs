@@ -57,17 +57,19 @@ namespace Statistics2026.Data
 
         public HtmlJsonResponse GetSystemStatus()
         {
-            var retVal = GetLastRunHtml( "All" );
-
             var version = Plugin.Instance?.Configuration.Version ?? String.Empty;
             var buildDate = Plugin.Instance?.Configuration.BuildDate ?? String.Empty;
+            var dbState = Plugin.Instance?.DBStateString() ?? String.Empty;
 
             var depth = 0;
 
             var systemHtml = HelperFuncs.addToHtml( depth++, "<ul>" );
             systemHtml += HelperFuncs.addToHtml( depth, $"<li>Version: {version}</li>" );
             systemHtml += HelperFuncs.addToHtml( depth, $"<li>Build Date: {buildDate}</li>" );
+            systemHtml += HelperFuncs.addToHtml( depth, $"<li>Database Status: {dbState}</li>" );
             systemHtml += HelperFuncs.addToHtml( --depth, "</ul>" );
+
+            var retVal = GetLastRunHtml( "All" );
 
             retVal.html = systemHtml + retVal.html;
 
