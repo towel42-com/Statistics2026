@@ -605,7 +605,7 @@ namespace Statistics2026.Data
 
             if( playedOnly )
             {
-                whereClauses.Add( "IsPlayed" );
+                whereClauses.Add( "Media.IsPlayed" );
             }
 
             sql += HelperFuncs.JoinWhereClauses( whereClauses );
@@ -741,10 +741,107 @@ namespace Statistics2026.Data
             for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numGenresToReport ); ++ii )
             {
                 var curr = sortedGenre[ ii ];
-                if ( movies )
-                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.total} Movies", false );
+                if( movies )
+                {
+                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.total} Movie{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
+                }
                 else
-                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.parentToChildMapping.Count()} Series and {curr.Value.total} Episodes", false );
+                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.parentToChildMapping.Count()} Series and {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
+            }
+
+            return retVal;
+        }
+
+        // range 0->.5, .5->1, 1->1.5
+        private List<((double start, double end) range, int count)> RatingsCountValues( bool movies, bool playedOnly )
+        {
+            CheckIsValid( ECheckLevel.eReport );
+
+            var sql =
+                $"SELECT \n" +
+                $"   FLOOR(Rating/.5)*.5 as RangeStart,\n" +
+                $"   (FLOOR(Rating/.5)+1)*.5 as RangeEnd,\n" +
+                $"   COUNT(*) as Count\n" +
+                $"FROM Media\n";
+
+
+            List<string> whereClauses = [];
+            if( movies )
+            {
+                whereClauses.Add( "NOT Media.IsEpisode" );
+            }
+            else
+            {
+                whereClauses.Add( "Media.IsEpisode" );
+            }
+
+            if( playedOnly )
+            {
+                whereClauses.Add( "Media.IsPlayed" );
+            }
+
+            sql += HelperFuncs.JoinWhereClauses( whereClauses );
+
+            sql +=
+                $"GROUP BY FLOOR(Rating/.5)\n" +
+                $"ORDER BY RangeStart DESC\n";
+
+            var sqlCmd = new SQLCmdDef( sql );
+
+            Dictionary<(double start, double end), int> map = [];
+            ExecuteCommand( sqlCmd, statement =>
+            {
+                var row = statement.Current;
+                var pos = 0;
+
+                var rangeStart = row.GetDouble( pos++ );
+                var rangeEnd = row.GetDouble( pos++ );
+                var count = row.GetInt( pos++ );
+
+                map[ (rangeStart, rangeEnd) ] = count;
+                return true;
+            } );
+
+            for( int ii = 0; ii < 10; ++ii )
+            {
+                if( ( ii > 0 ) && !map.TryGetValue( (ii - .5, ii), out var _ ) )
+                {
+                    map[ (ii - .5, ii) ] = 0;
+                }
+                if( !map.TryGetValue( (ii, ii + 0.5), out var _ ) )
+                {
+                    map[ (ii, ii + .5) ] = 0;
+                }
+            }
+
+            var retVal = map.OrderByDescending( kvp => kvp.Key.start ).Select( pair => (pair.Key, pair.Value) ).ToList();
+            return retVal;
+        }
+
+        public StatCard RatingsList( bool movies )
+        {
+            CheckIsValid( ECheckLevel.eReport );
+
+            var title = movies ? Constants.MovieRatings : Constants.TVRatings;
+            var help = movies ? Constants.MovieRatingsHelp : Constants.TVRatingsHelp;
+
+            var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eDetailed )
+            {
+                ListType = EListType.eRangeOrdered
+            };
+            var star = "<i class=\"md-icon md-icon-fill starIcon\">&#xE838;</i>";
+            retVal.SubTitle = $"Ratings from 0.0 to 10.0{star}";
+
+            var ratings = RatingsCountValues( movies, false );
+            foreach( var curr in ratings )
+            {
+                var range = curr.range;
+                var count = curr.count;
+                var value = $"{count} {( movies ? "Movies" : "Episodes" )}";
+                if( count == 1 )
+                    value = value[ ..^1 ];
+
+                retVal.AddLine( ($"{range.start:F1}", $"{range.end:F1}{star}"), value, false );
             }
 
             return retVal;

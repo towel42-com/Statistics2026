@@ -497,11 +497,13 @@ td.statCard-stats-numbersep:empty {
         color: var(--local-theme-primary-color);
     }
 
-    /* dynamic list*/
+/* ==========================================================================
+   10. Custom & Dynamic Lists
+   ========================================================================== */
 .dynamic-list {
     display: table;
     border-collapse: collapse;
-    padding-left: 1.5rem; /* Space for the bullets */
+    padding-left: 1.5rem;
     margin: 0;
 }
 
@@ -509,7 +511,6 @@ td.statCard-stats-numbersep:empty {
         display: table-row;
     }
 
-        /* Re-add the bullet in its own table cell */
         .dynamic-list li::before {
             content: "•";
             display: table-cell;
@@ -517,15 +518,14 @@ td.statCard-stats-numbersep:empty {
             font-weight: bold;
         }
 
-    /* Let .row pass its children directly into the table row */
     .dynamic-list .row {
         display: contents;
     }
 
     .dynamic-list .label {
         display: table-cell;
-        width: auto; /* Overrides any global 100% width rules */
-        white-space: nowrap; /* Keeps the label on one line */
+        width: auto;
+        white-space: nowrap;
         text-align: left;
         font-weight: normal;
         padding-right: 0.75rem;
@@ -537,3 +537,84 @@ td.statCard-stats-numbersep:empty {
         width: auto;
         padding-bottom: 0.4rem;
     }
+
+ol.range-list {
+    display: table;
+    border-collapse: collapse;
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+    font-family: inherit !important;
+    font-size: 1rem;
+    font-weight: normal;
+    line-height: 1.4;
+}
+
+    ol.range-list li {
+        display: table-row !important;
+        text-align: left !important;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        font-weight: normal !important;
+        color: inherit;
+    }
+
+    ol.range-list .range-range {
+        display: table-cell;
+        white-space: nowrap;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        font-weight: normal !important;
+        font-variant-numeric: tabular-nums;
+        padding-bottom: 0.4rem;
+        color: inherit;
+    }
+
+    ol.range-list .range-range {
+        text-align: right;
+        padding-right: 0.85em;
+    }
+
+    ol.range-list .starRatingContainer {
+        display: table-cell !important;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        font-weight: normal !important;
+    }
+
+    ol.range-list .range-range .md-icon.starIcon {
+        display: inline-block;
+        vertical-align: middle;
+        font-size: 1em;
+        line-height: 1;
+        margin-left: 0.2em;
+    }
+
+    ol.range-list .range-range:not(:has(.starIcon))::after {
+        content: "";
+        display: inline-block;
+        width: 1.2em;
+    }
+
+    ol.range-list .range-value {
+        display: table-cell;
+        text-align: left;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        font-weight: normal !important;
+        padding-bottom: 0.4rem;
+        color: inherit;
+    }
+
+        ol.range-list .range-value .statCard-stats-number,
+        ol.range-list .range-value .statCard-stats-numbersep {
+            width: auto;
+            font-family: inherit !important;
+            font-size: inherit !important;
+            font-weight: inherit !important;
+            text-align: left !important;
+        }
+
+.statCard ol.range-list .range-range:not(.starRatingContainer) {
+    color: var(--local-statcard-text);
+}

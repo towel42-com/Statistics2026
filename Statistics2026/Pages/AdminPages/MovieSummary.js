@@ -32,6 +32,7 @@
             var movieStats_totals2 = "";
             movieStats_totals2 += Helpers.getSummaryInfo(view, "movie_genre_list", "");
             movieStats_totals2 += Helpers.getSummaryInfo(view, "movie_actors_list", "");
+            movieStats_totals2 += Helpers.getSummaryInfo(view, "movie_ratings_list", "");
             view.querySelector("#movieStats_totals2").innerHTML = movieStats_totals2;
 
             var movieStats_size = "";

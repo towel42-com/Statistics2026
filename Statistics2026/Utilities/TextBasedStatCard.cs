@@ -4,17 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using TextValueLine = (string data, string itemId, string url, bool asTitle);
+using TextValueLine = ((string start, string end)? range, string data, string itemId, string url, bool asTitle);
 
 namespace Statistics2026.Utilities
 {
-    public enum EListType
-    {
-        eTextOnly,
-        eUnordered,
-        eNumbered
-    }
-
     public class TextBasedStatCard : StatCard
     {
         public EListType ListType
@@ -50,14 +43,19 @@ namespace Statistics2026.Utilities
             return value;
         }
 
+        public void AddLine( (string,string) range, string value, bool asTitle )
+        {
+            AddLine( value, string.Empty, string.Empty, asTitle, range );
+        }
+
         public void AddLine( string value, bool asTitle )
         {
             AddLine( value, string.Empty, string.Empty, asTitle );
         }
 
-        public void AddLine( string value, string itemId, string url, bool asTitle )
+        public void AddLine( string value, string itemId, string url, bool asTitle, (string, string)? range=null )
         {
-            ValueLines.Add( (value, itemId, url, asTitle) );
+            ValueLines.Add( (range, value, itemId, url, asTitle) );
         }
 
         public override bool IsClickableTable() { return false; }
@@ -71,7 +69,22 @@ namespace Statistics2026.Utilities
             if( ValueLines.Count() > 1 )
                 value = CheckMaxLength( currValue.data );
 
-            var dataHtml = $"<div class=\"{statCardClass( currValue.asTitle )}\" {style}>{value}</div>";
+            var dataHtml = string.Empty;
+            if( ListType == EListType.eRangeOrdered )
+            {
+                if( currValue.range == null )
+                    throw new NullReferenceException( "Range unordered data missing the range" );
+
+                dataHtml =
+                    $"<li>" +
+                    $"    <span class=\"range-range\">{currValue.range.Value.start} to {currValue.range.Value.end}</span>\n" +
+                    $"    <span class=\"range-value\">{value}</span>\n" +
+                    $"</li>";
+            }
+            else 
+            {
+                dataHtml = $"<div class=\"{statCardClass( currValue.asTitle )}\" {style}>{value}</div>";
+            }
 
             var showImage = !currValue.url.IsNullOrEmpty() && !currValue.itemId.IsNullOrEmpty();
             if( showImage )
@@ -84,7 +97,7 @@ namespace Statistics2026.Utilities
 
         public override string GetDataString( int depth )
         {
-            if( ListType != EListType.eTextOnly && ListType != EListType.eNumbered )
+            if( ListType != EListType.eTextOnly && ListType != EListType.eNumbered && ListType != EListType.eRangeOrdered )
             {
                 throw new Exception( $"GetDataString called for non text only list type - ${ListType}" );
             }
@@ -94,11 +107,15 @@ namespace Statistics2026.Utilities
             {
                 retVal += HelperFuncs.addToHtml( depth++, "<ol>" );
             }
+            else if( ListType == EListType.eRangeOrdered )
+            {
+                retVal += HelperFuncs.addToHtml( depth++, "<ol class=\"range-list\">" );
+            }
 
             for( var ii = 0; ii < ValueLines.Count; ++ii )
             {
                 var html = getDataHtmlForItem( ValueLines[ ii ], string.Empty );
-                if ( ListType == EListType.eNumbered )
+                if( ListType == EListType.eNumbered )
                 {
                     html = $"<li>{html}</li>";
                 }
@@ -108,6 +125,10 @@ namespace Statistics2026.Utilities
             if( ListType == EListType.eNumbered )
             {
                 retVal += HelperFuncs.addToHtml( --depth, "</ol>" );
+            }
+            else if( ListType == EListType.eUnordered )
+            {
+                retVal += HelperFuncs.addToHtml( --depth, "</ul>" );
             }
 
             return retVal;

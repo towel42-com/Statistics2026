@@ -39,6 +39,12 @@ namespace Statistics2026
         internal const string TVActors = "TV Actors";
         internal const string TVActorsHelp = "TV actors in the Emby library.";
 
+        internal const string MovieRatings = "Movie Ratings";
+        internal const string MovieRatingsHelp = "Movie Ratings in the Emby library.";
+
+        internal const string TVRatings = "TV Ratings";
+        internal const string TVRatingsHelp = "TV Ratings in the Emby library.";
+
         internal const string TotalUserMovies = "Total Movies for User";
         internal const string HelpTotalUserMovies = "Total movies in the Emby library available to the User.";
 

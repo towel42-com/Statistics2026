@@ -100,6 +100,14 @@ namespace Statistics2026.Utilities
         eDetailed
     };
 
+    public enum EListType
+    {
+        eTextOnly,
+        eUnordered,
+        eNumbered,
+        eRangeOrdered
+    }
+
     public abstract class StatCard
     {
         public string ToString( EStatCardStyle size )

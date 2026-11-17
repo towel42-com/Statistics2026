@@ -179,9 +179,9 @@ namespace Statistics2026.Data
                     if( person == null )
                         continue;
                     if( movies )
-                        retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.total} Movies", false );
+                        retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.total} Movie{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
                     else
-                        retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.parentToChildMapping.Count()} Series and {curr.Value.total} Episodes", false );
+                        retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.parentToChildMapping.Count()} Series and {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
                 }
                 catch( Exception )
                 {

@@ -30,6 +30,7 @@
             var seriesStats_totals2 = "";
             seriesStats_totals2 += Helpers.getSummaryInfo(view, "series_genre_list", "");
             seriesStats_totals2 += Helpers.getSummaryInfo(view, "series_actors_list", "");
+            seriesStats_totals2 += Helpers.getSummaryInfo(view, "series_ratings_list", "");
             view.querySelector("#seriesStats_totals2").innerHTML = seriesStats_totals2;
 
             var seriesStats_size = "";

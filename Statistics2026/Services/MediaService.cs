@@ -77,6 +77,12 @@ namespace Statistics2026.Services
     {
     }
 
+    [Route( "/Statistics2026/movie_ratings_list", "GET", Summary = "Get the Movie Ratings List" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetMovieRatingsList : IReturn<object>
+    {
+    }
+
     [Route( "/Statistics2026/total_tv_count", "GET", Summary = "Get the total TV Count" )]
     [Authenticated( Roles = "admin" )]
     public class GetTotalTVCountNoUser : IReturn<object>
@@ -108,6 +114,13 @@ namespace Statistics2026.Services
     public class GetSeriesActorsList : IReturn<object>
     {
     }
+
+    [Route( "/Statistics2026/series_ratings_list", "GET", Summary = "Get the Series Ratings List" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetSeriesRatingsList : IReturn<object>
+    {
+    }
+
 
     [Route( "/Statistics2026/total_movie_studio_count", "GET", Summary = "Get the total Movie Studio Count" )]
     [Authenticated( Roles = "admin" )]
@@ -329,6 +342,36 @@ namespace Statistics2026.Services
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
                 var groupData = db.ActorsList( false );
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        public object Get( GetMovieRatingsList request )
+        {
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            {
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+
+                var groupData = db.RatingsList( true );
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        public object Get( GetSeriesRatingsList request )
+        {
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            {
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+
+                var groupData = db.RatingsList( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
