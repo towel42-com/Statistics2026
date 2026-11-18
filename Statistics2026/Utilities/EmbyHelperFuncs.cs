@@ -20,6 +20,7 @@ using Statistics2026.Secrets;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -311,6 +312,16 @@ namespace Statistics2026.Utilities
             }
 
             return null;
+        }
+
+        public static List<string> GetAllIds( List<BaseItem> items )
+        {
+            HashSet<string> ids = [];
+            foreach( var item in items )
+            {
+                ids.Add( item.Id.ToString() );
+            }
+            return ids.ToList();
         }
 
         public static Movie? GetMovieByTmdbId( ILibraryManager libraryManager, string tmdbId )
