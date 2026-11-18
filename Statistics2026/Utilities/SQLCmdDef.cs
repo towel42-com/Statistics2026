@@ -1,10 +1,8 @@
 ﻿using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Data;
-using System;
-using System.Collections.Generic;
 using System.Text;
-using static ServiceStack.Diagnostics;
+using System.Text.Json;
 
 namespace Statistics2026.Utilities
 {
@@ -88,44 +86,61 @@ namespace Statistics2026.Utilities
             return null;
         }
 
+        public static readonly object _dbLock = new Object();
         private void _Execute( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, bool>? onStatement )
         {
-            using( var statement = connection.PrepareStatement( Statement ) )
+            if( !Monitor.IsEntered( _dbLock ) )
             {
-                StringBuilder? msgs = null;
-                if( db.DBLogger() != null )
-                    msgs = new StringBuilder();
-                if( HasParameters() )
+                db.DBLogger()?.Warn( "Warning: _Execute called without holding _dbLock!" );
+            }
+
+            lock( _dbLock )
+            {
+                using( var statement = connection.PrepareStatement( Statement ) )
                 {
-                    db.DBLogger()?.Debug( $"{Statement.GetHashCode():X16} -    Parameters:" );
-                    foreach( var (name, value) in Parameters! )
+                    StringBuilder? msgs = null;
+                    if( db.DBLogger() != null )
+                        msgs = new StringBuilder();
+                    if( HasParameters() )
                     {
-                        _ = db.TryBind( statement, name, value );
-                        if( msgs != null )
-                            msgs.AppendLine( $"{Statement.GetHashCode():X16} -     {name} = {value}" );
+                        db.DBLogger()?.Debug( $"{Statement.GetHashCode():X16} -    Parameters:" );
+                        foreach( var (name, value) in Parameters! )
+                        {
+                            _ = db.TryBind( statement, name, value );
+                            if( msgs != null )
+                                msgs.AppendLine( $"{Statement.GetHashCode():X16} -     {name} = {value}" );
+                        }
                     }
-                }
 
-                if( ( db.DBLogger() != null ) && ( msgs != null ) )
-                {
-                    db.DBLogger()?.LogMultiline( $"{Statement.GetHashCode():X16} - Executing SQL Statement: - {Statement}", MediaBrowser.Model.Logging.LogSeverity.Debug, msgs );
-                }
-
-                if( onStatement == null )
-                {
-                    _ = statement.MoveNext();
-                }
-                else
-                {
-                    while( statement.MoveNext() )
+                    if( ( db.DBLogger() != null ) && ( msgs != null ) )
                     {
-                        if( !onStatement( statement ) )
-                            break;
-                        db.CancellationToken?.ThrowIfCancellationRequested();
+                        db.DBLogger()?.LogMultiline( $"{Statement.GetHashCode():X16} - Executing SQL Statement: - {Statement}", MediaBrowser.Model.Logging.LogSeverity.Debug, msgs );
+                    }
+
+                    try
+                    {
+                        if( onStatement == null )
+                        {
+                            _ = statement.MoveNext();
+                        }
+                        else
+                        {
+                            while( statement.MoveNext() )
+                            {
+                                if( !onStatement( statement ) )
+                                    break;
+                                db.CancellationToken?.ThrowIfCancellationRequested();
+                            }
+                        }
+                    }
+                    catch( Exception ex )
+                    {
+                        db.Logger().Error( $"Exception thrown in Execute: {ex}" );
                     }
                 }
             }
         }
+
         public void Execute( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, bool>? onStatement )
         {
             if( FailureAllowed )
@@ -172,15 +187,14 @@ namespace Statistics2026.Utilities
 
         static public SQLCmdDef CreateSQLCmdDef( string sql, string paramListName, List<object> paramList )
         {
-            var placeHolderNames = string.Join( ", ", paramList.Select( ( _, index ) => $"@p{index}" ).ToArray() );
+            var subTable = "SELECT value FROM json_each(@JsonParamList)";
+            sql = sql.Replace( paramListName, subTable );
 
-            var sqlDefParams = new List<(string name, object? value)>();
-            for( int ii = 0; ii < paramList.Count; ++ii )
+            var sqlDefParams = new List<(string name, object? value)>
             {
-                sqlDefParams.Add( ($"@p{ii}", paramList[ ii ]) );
-            }
+                ("@JsonParamList", JsonSerializer.Serialize( paramList ) )
+            };
 
-            sql = sql.Replace( paramListName, placeHolderNames );
             var retVal = new SQLCmdDef( sql, sqlDefParams );
             return retVal;
         }
