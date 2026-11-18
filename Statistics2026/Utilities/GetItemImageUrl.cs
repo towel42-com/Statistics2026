@@ -35,6 +35,12 @@ namespace Statistics2026.Utilities
         }
 
         private static ConcurrentCache<(string itemId, ImageType imageType, int maxWidth, int quality, int index), string> sIdToUrlMap = new(1000);
+        
+        public static void ClearCache()
+        {
+            sIdToUrlMap.Clear();
+        }
+
         public static string _ItemImageUrl( BaseItem item, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
             if( item == null || item.Id.ToString().IsNullOrEmpty() )

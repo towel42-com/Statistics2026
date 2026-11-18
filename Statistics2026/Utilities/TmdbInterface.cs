@@ -328,7 +328,10 @@ namespace Statistics2026.Utilities
         }
 
         private static readonly ConcurrentDictionary<string, string> _ProviderCache = new ConcurrentDictionary<string, string>();
-
+        public static void ClearCache()
+        {
+            _ProviderCache.Clear();
+        }
         public async Task<AddStreamingProvidersInfo> GetStreamingProvidersAsync( ILogger logger, Video video, string language = "en-US" )
         {
             if( video == null )

@@ -1,14 +1,12 @@
 ﻿using Emby.Media.Common.Extensions;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Logging;
-using System;
-using System.Linq;
+using MediaBrowser.Model.Providers;
 using System.Collections.Concurrent;
 using System.Text.Json;
-using MediaBrowser.Controller.Library;
 
 namespace Statistics2026.Utilities
 {
@@ -38,6 +36,13 @@ namespace Statistics2026.Utilities
         }
 
         public MediaInfo() { }
+
+        public static void ClearCache()
+        {
+            sMediaInfoCache.Clear();
+            DateCacheCreated = null;
+
+        }
 
         private static void SetCachedValue( MediaInfo mediaInfo )
         {

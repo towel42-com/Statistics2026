@@ -100,6 +100,12 @@ namespace Statistics2026.Utilities
 
         public void Add( TKey key, TValue value ) => this[ key ] = value;
 
+        public void Clear()
+        {
+            _keyList.Clear();
+            _dictionary.Clear();
+        }
+
         private void TrimToCapacity()
         {
             // Internal helper assuming caller holds the lock

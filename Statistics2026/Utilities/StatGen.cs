@@ -456,7 +456,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.Largest:
                 {
                     var size = sqlResultValue.GetInt64( index );
-                    value = HelperFuncs.PrettyPrintFileSize( size );
+                    value = HelperFuncs.PrettyPrintSize( size );
                 }
 
                 break;
