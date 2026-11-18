@@ -1,13 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Querying;
 using ServiceStack;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Statistics2026.Data
 {
@@ -18,7 +11,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eUpdate );
 
             Logger().Debug( $"Starting User Analysis" );
-            Progress?.Report( 0 );
+            SetProgress( 0 );
             var userList = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
             if( userList == null )
                 return;
@@ -26,48 +19,44 @@ namespace Statistics2026.Data
             double count = userList.Count;
             int completedCount = 0;
 
-            Progress?.Report( 0 );
+            SetProgress( 0 );
             var sqlCmds = new List<SQLCmdDef>();
-            ConcurrentBag<object> validIds = [];
+            DeleteAllInvalid( userList.ConvertAll( item => (BaseItem)item ), "Users", "UserId" );
 
             using( var timer = new AutoTimer( $"    Analyze Users - Getting Commands", Logger() ) )
             {
                 var pool = userList.Select( ( user, index ) => Task.Run( async () =>
                 {
-                    var retVal = (index: index, user: user, cmd: (SQLCmdDef?)null);
+                    var retVal = (index: index, item: user, cmds: new List<SQLCmdDef?>());
                     if( user == null )
                         return retVal;
 
-                    retVal.cmd = AddUser( user );
-                    validIds.Add( user.Id.ToString() );
+                    retVal.cmds.Add( AddUser( user ) );
                     CancellationToken?.ThrowIfCancellationRequested();
                     int currProgress = Interlocked.Increment( ref completedCount );
-                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                    SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
                     Logger().Debug( $"    Processed User ({currProgress} of {count}) - {user.Name}" );
                     return retVal;
                 } ) );
 
                 CancellationToken?.ThrowIfCancellationRequested();
                 var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
+                sqlCmds = unsortedResults
+                            .Where( item => item.cmds != null )
+                            .OrderBy( item => item.index )
+                            .SelectMany( item => item.cmds! )
+                            .Where( cmd => cmd != null )
+                            .Select( cmd => cmd! )
+                            .ToList();
 
-                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Users WHERE UserId NOT IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
-                foreach( var result in results )
-                {
-                    if( result.cmd != null )
-                    {
-                        sqlCmds.Add( result.cmd );
-                    }
-                    CancellationToken?.ThrowIfCancellationRequested();
-                }
                 CancellationToken?.ThrowIfCancellationRequested();
             }
 
             using( var timer = new AutoTimer( $"    Analyze Users - Executing Commands", Logger() ) )
             {
-                Progress?.Report( 80 );
+                SetProgress( 80 );
                 ExecuteCommands( sqlCmds );
-                Progress?.Report( 100 );
+                SetProgress( 100 );
             }
 
             Logger().Debug( $"Finished User Analysis" );

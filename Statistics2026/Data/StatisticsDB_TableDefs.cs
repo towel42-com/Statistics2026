@@ -263,7 +263,7 @@ namespace Statistics2026.Data
             return _userMediaTemplate!.ColumnNames();
         }
 
-        public void CreateTables( TableDef.EAction action, CancellationToken? cancellationToken, IProgress<double>? progress )
+        public void CreateTables( TableDef.EAction action, CancellationToken? cancellationToken, Action<double> setProgress )
         {
             CheckIsValid();
             if( action != TableDef.EAction.eRecreate && action != TableDef.EAction.eCreate )
@@ -292,7 +292,7 @@ namespace Statistics2026.Data
                 Plugin.Instance.AddDBState( EDBState.eSystemTablesCreated );
             }
 
-            InitWatchedMediaTables( cancellationToken, progress );
+            InitWatchedMediaTables( cancellationToken, setProgress );
         }
 
         public TableDef? getTableDef( string tableName, bool isUserMediaTable = false, User? user = null )
@@ -445,7 +445,7 @@ namespace Statistics2026.Data
             return $"{sUserMediaTablePrefix}{userId}";
         }
 
-        public void InitWatchedMediaTables( CancellationToken? cancellationToken, IProgress<double>? progress )
+        public void InitWatchedMediaTables( CancellationToken? cancellationToken, Action<double> setProgress )
         {
             CheckIsValid();
 
@@ -454,16 +454,15 @@ namespace Statistics2026.Data
 
             if( !Plugin.Instance.IsDBStateSet( EDBState.eUserTablesCreated ) )
             {
-
-                progress?.Report( 0 );
+                setProgress( 0 );
                 var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
                 if( users == null )
                 {
-                    progress?.Report( 100 );
+                    setProgress( 100 );
                     return;
                 }
 
-                progress?.Report( 100 );
+                setProgress( 100 );
 
                 var sqlCmds = new List<SQLCmdDef>();
                 var curr = 0.0;
@@ -474,7 +473,7 @@ namespace Statistics2026.Data
                     curr = 0;
                     foreach( var user in users )
                     {
-                        progress?.Report( 80.0 * ( ++curr ) / count );
+                        setProgress( 80.0 * ( ++curr ) / count );
                         using( var userTimer = new AutoTimer( $"    Processed User ({curr} of {count}) - {user.Name}", _embyInterfaces.Logger() ) )
                         {
                             sqlCmds.AddRange( GetInitWatchedMediaTableCommands( user ) );
@@ -487,9 +486,9 @@ namespace Statistics2026.Data
 
                 using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Init Table Commands", _embyInterfaces.Logger() ) )
                 {
-                    progress?.Report( 80 );
+                    setProgress( 80 );
                     _db.ExecuteCommands( sqlCmds );
-                    progress?.Report( 100 );
+                    setProgress( 100 );
                 }
 
                 Plugin.Instance.AddDBState( EDBState.eUserTablesCreated );

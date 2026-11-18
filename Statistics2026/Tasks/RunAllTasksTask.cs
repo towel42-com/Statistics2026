@@ -2,7 +2,6 @@
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Notifications;
 using MediaBrowser.Controller.Providers;
@@ -12,18 +11,9 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using ServiceStack;
 using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
@@ -84,72 +74,80 @@ namespace Statistics2026.ScheduledTasks
 
         async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
+            var memoryReport = await HelperFuncs.RunAndReportMemory( true, async () =>
             {
-                _embyInterfaces?.Logger().Info( "Analysis is currently running" );
-                return;
-            }
-            if( PluginConfiguration == null )
-                throw new ArgumentNullException( nameof( PluginConfiguration ) );
-
-            using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-
-            db.Initialize( this, cancellationToken, progress, PluginConfiguration.resetPlayCount );
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var taskName = "Analyze All";
-            _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
-
-            db.ClearLastUpdated( Statistics2026DB.EAction.System );
-
-            var overAllTimer = new AutoTimer( $"Adding All Data", _embyInterfaces.Logger(), false );
-            var tasks = TaskDef.GetKnownTasks( false );
-
-            for( var ii = 0; ii < tasks?.Count; ii++ )
-            {
-                progress.Report( 100.0 * ii / ( 1.0 * tasks.Count ) );
-                var task = tasks[ ii ];
-                if( task != null )
+                if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
                 {
-                    task.Result = await TaskDef.ExecuteSubTaskAsync( _embyInterfaces, task, ReasonsForExecute, cancellationToken, true ).ConfigureAwait( false );
-                    tasks[ ii ] = task;
+                    _embyInterfaces?.Logger().Info( "Analysis is currently running" );
+                    return;
                 }
-            }
+                if( PluginConfiguration == null )
+                    throw new ArgumentNullException( nameof( PluginConfiguration ) );
 
-            var overall = overAllTimer.ElapsedMilliseconds();
-            db.SetLastUpdated( Statistics2026DB.EAction.System, ReasonsForExecute, overall );
-            EmbyHelperFuncs.UpdateLastAdded( _embyInterfaces, ReasonsForExecute, db );
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
-            overAllTimer.Dispose();
-            _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"Time to Analyze: {overall} ms" );
-            if( tasks != null )
-            {
-                var maxLen = 0;
-                foreach( var task in tasks )
+                db.Initialize( this, cancellationToken, progress, PluginConfiguration.resetPlayCount );
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var taskName = "Analyze All";
+                _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
+
+                db.ClearLastUpdated( Statistics2026DB.EAction.System );
+
+                var overAllTimer = new AutoTimer( $"Adding All Data", _embyInterfaces.Logger(), false );
+                var tasks = TaskDef.GetKnownTasks( false );
+
+                for( var ii = 0; ii < tasks?.Count; ii++ )
                 {
-                    if( task == null )
-                        continue;
-
-                    if( task.Description.Length > maxLen )
-                        maxLen = task.Description.Length;
+                    progress.Report( 100.0 * ii / ( 1.0 * tasks.Count ) );
+                    var task = tasks[ ii ];
+                    if( task != null )
+                    {
+                        task.Result = await TaskDef.ExecuteSubTaskAsync( _embyInterfaces, task, ReasonsForExecute, cancellationToken, true ).ConfigureAwait( false );
+                        tasks[ ii ] = task;
+                    }
                 }
 
-                foreach( var task in tasks )
+                var overall = overAllTimer.ElapsedMilliseconds();
+                db.SetLastUpdated( Statistics2026DB.EAction.System, ReasonsForExecute, overall );
+                EmbyHelperFuncs.UpdateLastAdded( _embyInterfaces, ReasonsForExecute, db );
+
+                overAllTimer.Dispose();
+                _embyInterfaces.Logger().Info( $"=======================================" );
+                _embyInterfaces.Logger().Info( $"Time to Analyze: {overall} ms" );
+                if( tasks != null )
                 {
-                    if( task == null )
-                        continue;
-                    _embyInterfaces.Logger().Info( $"{task.Description.PadLeft( maxLen )}: {task.RunTimeMS} ms" );
+                    var maxLen = 0;
+                    foreach( var task in tasks )
+                    {
+                        if( task == null )
+                            continue;
+
+                        if( task.Description.Length > maxLen )
+                            maxLen = task.Description.Length;
+                    }
+
+                    foreach( var task in tasks )
+                    {
+                        if( task == null )
+                            continue;
+                        _embyInterfaces.Logger().Info( $"{task.Description.PadLeft( maxLen )}: {task.RunTimeMS} ms" );
+                    }
                 }
-            }
 
-            _embyInterfaces.Logger().Info( $"=======================================" );
-            _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
+                _embyInterfaces.Logger().Info( $"=======================================" );
+                _embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
 
-            Plugin.Instance?.AddDBState( EDBState.eFullyInitialized );
-            Plugin.Instance?.SaveConfiguration();
-            db.ResetCancellationToken();
-            return;
+                Plugin.Instance?.AddDBState( EDBState.eFullyInitialized );
+                Plugin.Instance?.SaveConfiguration();
+                db.ResetCancellationToken();
+
+                ItemImageUrl.ClearCache();
+                HelperFuncs.ClearCache();
+                MediaInfo.ClearCache();
+                TmdbInterface.ClearCache();
+            } );
+            memoryReport.Report( _embyInterfaces.Logger(), GetType().Name, LogSeverity.Info );
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

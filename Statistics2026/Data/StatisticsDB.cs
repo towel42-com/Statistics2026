@@ -1,18 +1,12 @@
 ﻿//#define DEBUG_DB
 using MediaBrowser.Controller.Configuration;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Providers;
-using MediaBrowser.Controller.Security;
 using MediaBrowser.Model.Logging;
 using ServiceStack;
 using SQLitePCL.pretty;
-using Statistics2026.Configuration;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Threading;
 
 namespace Statistics2026.Data
 {
@@ -28,7 +22,6 @@ namespace Statistics2026.Data
         public EmbyInterfaces _embyInterfaces { get; }
         private bool _disposed = false;
         ILogger? _DBConnLogger = null;
-        private static readonly object _padlock = new();
         private MediaBrowser.Model.Tasks.IScheduledTask? _currentTask = null;
 
         public bool AllTablesExisted { get; private set; } = false;
@@ -41,7 +34,7 @@ namespace Statistics2026.Data
 
         public static Statistics2026DB GetInstance( EmbyInterfaces? embyInterfaces )
         {
-            lock( _padlock )
+            lock( SQLCmdDef._dbLock )
             {
                 if( embyInterfaces == null )
                     throw new ArgumentNullException( "EmbyInterfaces is null." );
@@ -55,7 +48,7 @@ namespace Statistics2026.Data
 
         private Statistics2026DB( EmbyInterfaces embyInterfaces )
         {
-            lock( _padlock )
+            lock( SQLCmdDef._dbLock )
             {
                 _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
 #if DEBUG_DB
@@ -197,7 +190,7 @@ namespace Statistics2026.Data
 
             try
             {
-                lock( _padlock )
+                lock( SQLCmdDef._dbLock )
                 {
                     var db = SQLite3.Open( db_file, connectionFlags, null, true );
                     Connection = db;
@@ -259,7 +252,7 @@ namespace Statistics2026.Data
 
         public void CloseConnection()
         {
-            lock( _padlock )
+            lock( SQLCmdDef._dbLock )
             {
                 try
                 {
@@ -281,7 +274,8 @@ namespace Statistics2026.Data
         {
             _currentTask = runningTask;
             SetCancellationToken( cancellationToken, progress );
-            TableDefs().CreateTables( reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate, cancellationToken, progress );
+            TableDefs().CreateTables( reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate, cancellationToken,
+                value => { progress?.Report( value ); } );
         }
 
         public void ResetCancellationToken()
@@ -355,10 +349,15 @@ namespace Statistics2026.Data
         public void ExecuteCommand( SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null, bool useTransaction = true )
         {
             List<SQLCmdDef> cmds = [ cmd ];
-            ExecuteCommands( cmds, onStatement, useTransaction );
+            ExecuteCommands( cmds, true, onStatement, useTransaction );
         }
 
-        public void ExecuteCommands( List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement = null, bool useTransaction = true )
+        private void SetProgress( double value )
+        {
+            Progress?.Report( value );
+        }
+
+        public void ExecuteCommands( List<SQLCmdDef> cmds, bool useProgress = true, Func<IStatement, bool>? onStatement = null, bool useTransaction = true )
         {
             _ = CheckIsValid( ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
 
@@ -370,8 +369,11 @@ namespace Statistics2026.Data
 
                     var cmd = cmds[ ii ];
                     cmd.Execute( connection, this, onStatement );
-                    var value = 80 + ( 20.0 * ii / cmds.Count );
-                    Progress?.Report( value );
+                    if( useProgress && ( cmds.Count > 1 ) )
+                    {
+                        var value = 80 + ( 20.0 * ii / cmds.Count );
+                        SetProgress( value );
+                    }
                 }
             }
 
@@ -379,10 +381,13 @@ namespace Statistics2026.Data
             {
                 if( useTransaction && ( cmds.Count > 1 ) )
                 {
-                    Connection.RunInTransaction( connection =>
+                    lock( SQLCmdDef._dbLock )
                     {
-                        runCommands( connection, cmds, onStatement );
-                    } );
+                        Connection.RunInTransaction( connection =>
+                        {
+                            runCommands( connection, cmds, onStatement );
+                        } );
+                    }
                 }
                 else
                 {
@@ -404,7 +409,7 @@ namespace Statistics2026.Data
                 cmdDefs.Add( new SQLCmdDef( cmd ) );
             }
 
-            ExecuteCommands( cmdDefs, null, useTransaction );
+            ExecuteCommands( cmdDefs, true, null, useTransaction );
         }
 
         public void ExecuteCommand( string cmd )
@@ -551,54 +556,71 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task AnalyzeData<T>( string dataType, List<T> items, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, string> itemNameFunc, List<SQLCmdDef?> initCmds )
+        public void DeleteAllInvalid( List<string> ids, string tableName, string idColName, List<string>? whereClauses = null )
         {
-            double count = items.Count;
-            var completedCount = 0;
-            Progress?.Report( 0 );
-            List<SQLCmdDef?> nullableCmds = initCmds ?? [];
+            whereClauses = whereClauses ?? [];
+            whereClauses.Add( $"{idColName} NOT IN (<KEYLIST>)" );
 
-            using( var timer = new AutoTimer( $"    Analyze {dataType} - Getting Commands", Logger() ) )
-            {
-                var pool = items.Select( ( item, index ) => Task.Run( async () =>
-                {
-                    var retVal = (index: index, item: item, cmds: new List<SQLCmdDef?>());
-                    if( item == null )
-                        return retVal;
+            var whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
 
-                    await Task.Yield();
-                    retVal.cmds.AddRange( await getSqlCmdsFunc( item ) );
-
-                    CancellationToken?.ThrowIfCancellationRequested();
-                    int currProgress = Interlocked.Increment( ref completedCount );
-                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
-                    Logger().Debug( $"    Processed {dataType} ({currProgress} of {count}) - {itemNameFunc( item )}" );
-
-                    return retVal;
-                } ) );
-
-                var unsortedResults = await Task.WhenAll( pool );
-                CancellationToken?.ThrowIfCancellationRequested();
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                foreach( var result in results )
-                {
-                    nullableCmds.AddRange( result.cmds );
-                    CancellationToken?.ThrowIfCancellationRequested();
-                }
-            }
-
-            List<SQLCmdDef> sqlCmds = nullableCmds.Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
-
-            CancellationToken?.ThrowIfCancellationRequested();
-            using( var timer = new AutoTimer( $"    Analyze {dataType} - Executing Commands", Logger() ) )
-            {
-                Progress?.Report( 80 );
-                ExecuteCommands( sqlCmds );
-                Progress?.Report( 100 );
-                CancellationToken?.ThrowIfCancellationRequested();
-                Logger().Debug( $"Finished Series Analysis" );
-            }
+            ExecuteCommand( SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM {tableName} WHERE {idColName} NOT IN (<KEYLIST>)", "<KEYLIST>", ids.ConvertAll( item => (object)item ) ) );
         }
+
+        public void DeleteAllInvalid( List<BaseItem> items, string tableName, string idColName, List<string>? whereClauses = null )
+        {
+            var ids = EmbyHelperFuncs.GetAllIds( items );
+            DeleteAllInvalid( ids, tableName, idColName, whereClauses );
+        }
+
+        //public async Task AnalyzeData<T>( string dataType, List<T> items, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, string> itemNameFunc, List<SQLCmdDef?> initCmds )
+        //{
+        //    double count = items.Count;
+        //    var completedCount = 0;
+        //    SetProgress( 0 );
+        //    List<SQLCmdDef> sqlCmds = initCmds?.Where( item => item != null ).Select( item => item! ).ToList() ?? [];
+
+        //    using( var timer = new AutoTimer( $"    Analyze {dataType} - Getting Commands", Logger() ) )
+        //    {
+        //        var pool = items.Select( ( item, index ) => Task.Run( async () =>
+        //        {
+        //            (int index, T item, List<SQLCmdDef?>? cmds) retVal = (index, item, new List<SQLCmdDef?>());
+        //            if( item == null )
+        //                return retVal;
+
+        //            await Task.Yield();
+        //            retVal.cmds!.AddRange( await getSqlCmdsFunc( item ) );
+
+        //            CancellationToken?.ThrowIfCancellationRequested();
+        //            int currProgress = Interlocked.Increment( ref completedCount );
+        //            SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
+        //            Logger().Debug( $"    Processed {dataType} ({currProgress} of {count}) - {itemNameFunc( item )}" );
+
+        //            return retVal;
+        //        } ) );
+
+        //        var unsortedResults = await Task.WhenAll( pool );
+        //        sqlCmds.AddRange( unsortedResults
+        //                    .Where( item => item.cmds != null )
+        //                    .OrderBy( item => item.index )
+        //                    .SelectMany( item => item.cmds! )
+        //                    .Where( subItem => subItem != null )
+        //                    .Select( subItem => subItem! )
+        //                    .ToList()
+        //                    );
+
+        //        CancellationToken?.ThrowIfCancellationRequested();
+        //    }
+
+        //    CancellationToken?.ThrowIfCancellationRequested();
+        //    using( var timer = new AutoTimer( $"    Analyze {dataType} - Executing Commands", Logger() ) )
+        //    {
+        //        SetProgress( 80 );
+        //        ExecuteCommands( sqlCmds );
+        //        SetProgress( 100 );
+        //        CancellationToken?.ThrowIfCancellationRequested();
+        //        Logger().Debug( $"Finished Series Analysis" );
+        //    }
+        //}
 
         public bool HasConnection()
         {

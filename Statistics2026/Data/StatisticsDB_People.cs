@@ -1,23 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.Querying;
-using MediaBrowser.Model.Session;
-using RestSharp;
 using ServiceStack;
 using Statistics2026.Utilities;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 
 namespace Statistics2026.Data
 {
@@ -29,61 +13,56 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting People Analysis" );
 
-            Progress?.Report( 0 );
+            SetProgress( 0 );
             var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
-            Progress?.Report( 100 );
+            SetProgress( 100 );
 
             if( videoList == null )
             {
                 return;
             }
 
-            double count = videoList.Count;
+            SetProgress( 0 );
+
+            ConcurrentDictionary<Person, bool> allActors = [];
+            HashSet<string> allActorIds = [];
+            foreach( var video in videoList )
+            {
+                var actors = EmbyHelperFuncs.GetActorsForVideo( video, LibraryManager() );
+                foreach( var actor in actors )
+                {
+                    allActors.TryAdd( actor, true );
+                    allActorIds.Add( actor.Id.ToString() );
+                }
+            }
+
+            DeleteAllInvalid( allActorIds.ToList(), "People", "ItemId" );
+            
+            double count = allActors.Count;
             var completedCount = 0;
 
-            Progress?.Report( 0 );
-            var existing = new ConcurrentDictionary<string, bool>();
-            ConcurrentBag<object> validIds = [];
-            var sqlCmds = new List<SQLCmdDef>();
-
+            List<SQLCmdDef> sqlCmds = [];
             using( var timer = new AutoTimer( $"    Analyze People - Getting Commands", Logger() ) )
             {
                 using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
 
-                var pool = videoList.Select( ( video, index ) => Task.Run( async () =>
+                var pool = allActors.Select( ( kvp, index ) => Task.Run( async () =>
                 {
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        var retVal = (index: index, video: video, cmds: (List<SQLCmdDef>?)null);
-                        if( video == null )
+                        var actor = kvp.Key;
+                        var retVal = (index: index, item: actor, cmds: new List<SQLCmdDef?>());
+                        if( actor == null )
                             return retVal;
 
-                        var videoName = MediaInfo.GetDescName( video ).descName;
+                        retVal.cmds.Add( AddPerson( actor ) );
 
-                        var actors = EmbyHelperFuncs.GetActorsForVideo( video, LibraryManager() );
+                        CancellationToken?.ThrowIfCancellationRequested();
 
-                        retVal.cmds = [];
-                        foreach( var actor in actors )
-                        {
-                            if( actor == null )
-                                continue;
-
-                            if( existing.ContainsKey( actor.Id.ToString() ) )
-                                continue;
-
-                            existing.TryAdd( actor.Id.ToString(), true );
-                            validIds.Add( actor.Id.ToString() );
-
-                            var cmd = AddPerson( actor );
-                            if( cmd != null )
-                                retVal.cmds.Add( cmd );
-
-                            CancellationToken?.ThrowIfCancellationRequested();
-                        }
                         int currProgress = Interlocked.Increment( ref completedCount );
-                        Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
-                        Logger().Debug( $"    Processed Video ({currProgress} of {count}) - {videoName}" );
+                        SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
+                        Logger().Debug( $"    Processed Person ({currProgress} of {count}) - {actor.Name}" );
 
                         return retVal;
                     }
@@ -94,22 +73,20 @@ namespace Statistics2026.Data
                 } ) );
 
                 var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM People WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
-                foreach( var result in results )
-                {
-                    if( result.cmds != null )
-                    {
-                        sqlCmds.AddRange( result.cmds );
-                    }
-                }
+                sqlCmds = unsortedResults
+                            .Where( item => item.cmds != null )
+                            .OrderBy( item => item.index )
+                            .SelectMany( item => item.cmds! )
+                            .Where( cmd => cmd != null )
+                            .Select( cmd => cmd! )
+                            .ToList();
             }
 
             using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
             {
-                Progress?.Report( 80 );
+                SetProgress( 80 );
                 ExecuteCommands( sqlCmds );
-                Progress?.Report( 100 );
+                SetProgress( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
             }
         }

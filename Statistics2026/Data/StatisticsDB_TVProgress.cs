@@ -1,20 +1,10 @@
 ﻿using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
-using Statistics2026.Utilities;
 using Statistics2026.Responses;
-using System;
-using System.Text;
-using System.Text.Json;
+using Statistics2026.Utilities;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 
 namespace Statistics2026.Data
 {
@@ -84,16 +74,18 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eUpdate );
             Logger().Debug( $"Starting Series Analysis" );
 
-            Progress?.Report( 0 );
+            SetProgress( 0 );
             var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
-            Progress?.Report( 100 );
+            SetProgress( 100 );
             if( seriesList == null )
                 return;
+
+            SetProgress( 0 );
+            DeleteAllInvalid( seriesList.ConvertAll( item => (BaseItem)item ), "Series", "ItemId" );
 
             var (seriesInfoMap, validSeriesIds) = ComputeSeriesInfo( seriesList );
 
             var sqlCmds = new List<SQLCmdDef>();
-            ConcurrentBag<object> validIds = [];
             sqlCmds.AddRange( UpdateSeriesFilter() );
 
             int completedCount = 0;
@@ -102,23 +94,21 @@ namespace Statistics2026.Data
             {
                 var pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
                 {
-                    var retVal = (index: index, series: series, cmd: (SQLCmdDef?)null);
+                    var retVal = (index: index, item: series, cmds: new List<SQLCmdDef?>());
                     if( series == null )
                         return retVal;
 
-                    if( seriesInfoMap.TryGetValue( series.Id.ToString(), out SeriesInfo seriesInfo ) )
-                    {
-                        retVal.cmd = await AddSeriesAsync( series, seriesInfo ).ConfigureAwait( false );
-                        validIds.Add( series.Id.ToString() );
-                    }
-                    else
+                    if( !seriesInfoMap.TryGetValue( series.Id.ToString(), out SeriesInfo seriesInfo ) )
                     {
                         Logger().Error( $"Series '{series.Name}' is not in the Media table" );
                         return retVal;
                     }
+
+                    retVal.cmds.Add( await AddSeriesAsync( series, seriesInfo ).ConfigureAwait( false ) );
+
                     CancellationToken?.ThrowIfCancellationRequested();
                     int currProgress = Interlocked.Increment( ref completedCount );
-                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / seriesList.Count() );
+                    SetProgress( 80.0 * ( 1.0 * currProgress ) / seriesList.Count() );
                     Logger().Debug( $"    Processed Series ({currProgress} of {seriesList.Count()}) - {series.Name}" );
 
                     return retVal;
@@ -126,24 +116,22 @@ namespace Statistics2026.Data
 
                 CancellationToken?.ThrowIfCancellationRequested();
                 var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Series WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
-                foreach( var result in results )
-                {
-                    if( result.cmd != null )
-                    {
-                        sqlCmds.Add( result.cmd );
-                    }
-                    CancellationToken?.ThrowIfCancellationRequested();
-                }
+                sqlCmds = unsortedResults
+                            .Where( item => item.cmds != null )
+                            .OrderBy( item => item.index )
+                            .SelectMany( item => item.cmds! )
+                            .Where( cmd => cmd != null )
+                            .Select( cmd => cmd! )
+                            .ToList();
+
                 CancellationToken?.ThrowIfCancellationRequested();
             }
 
             using( var timer = new AutoTimer( $"    Analyze Series - Executing Commands", Logger() ) )
             {
-                Progress?.Report( 80 );
+                SetProgress( 80 );
                 ExecuteCommands( sqlCmds );
-                Progress?.Report( 100 );
+                SetProgress( 100 );
                 CancellationToken?.ThrowIfCancellationRequested();
                 Logger().Debug( $"Finished Series Analysis" );
             }
@@ -331,7 +319,7 @@ namespace Statistics2026.Data
                 ", RunTimeTicks=@RunTimeTicks" +
                 ", Rating=@Rating" +
                 ", Status=@Status" +
-                ", AverageBitrate=@AverageBitrate" ;
+                ", AverageBitrate=@AverageBitrate";
 
             paramsList =
                    [

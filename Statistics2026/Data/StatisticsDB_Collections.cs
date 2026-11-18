@@ -1,19 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Querying;
 using ServiceStack;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Xml.Linq;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
@@ -24,17 +12,19 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eUpdate );
 
             Logger().Debug( $"Starting Collection Analysis" );
-            Progress?.Report( 0 );
+            SetProgress( 0 );
             var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
-            Progress?.Report( 100 );
+            SetProgress( 100 );
 
             double count = collections.Count();
             var completedCount = 0;
 
-            Progress?.Report( 0 );
-            var sqlCmds = new List<SQLCmdDef>();
-            ConcurrentBag<object> validIds = [];
 
+            SetProgress( 0 );
+
+            DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "Collections", "ItemId" );
+
+            var sqlCmds = new List<SQLCmdDef>();
             using( var listTimer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
             {
                 var pool = collections.Select( ( collection, index ) => Task.Run( async () =>
@@ -47,35 +37,34 @@ namespace Statistics2026.Data
                     {
                         currTimer.Restart();
                         currCmds = await AddCollectionAsync( collection ).ConfigureAwait( false );
-                        validIds.Add( collection.Id.ToString() );
                         runTimeMS = currTimer.ElapsedMilliseconds();
                     }
 
                     CancellationToken?.ThrowIfCancellationRequested();
                     int currProgress = Interlocked.Increment( ref completedCount );
-                    Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                    SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
                     Logger().Info( $"Processed Collection {collection.Name} - {runTimeMS} ms" );
 
-                    return (index: index, collection: collection, cmds: currCmds, runTimeMS: runTimeMS);
+                    return (index: index, item: collection, cmds: currCmds);
                 } ) ).ToList();
 
                 var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-
-                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Collections WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
-                foreach( var result in results )
-                {
-                    sqlCmds.AddRange( result.cmds );
-                }
+                sqlCmds = unsortedResults
+                            .Where( item => item.cmds != null )
+                            .OrderBy( item => item.index )
+                            .SelectMany( item => item.cmds! )
+                            .Where( subItem => subItem != null )
+                            .Select( subItem => subItem! )
+                            .ToList();
             }
 
             CancellationToken?.ThrowIfCancellationRequested();
 
             using( var timer = new AutoTimer( $"    Analyze Collection - Executing Commands", Logger() ) )
             {
-                Progress?.Report( 80 );
+                SetProgress( 80 );
                 ExecuteCommands( sqlCmds );
-                Progress?.Report( 100 );
+                SetProgress( 100 );
             }
             Logger().Debug( $"Finished Collection Analysis" );
         }
@@ -138,7 +127,7 @@ namespace Statistics2026.Data
 
             videos.ForEach( async video =>
             {
-                Progress?.Report( 100.0 * ( ++curr ) / count );
+                SetProgress( 100.0 * ( ++curr ) / count );
                 sqlCmds.AddRange( await AddChildToCollectionAsync( video, collection ).ConfigureAwait( false ) );
                 CancellationToken?.ThrowIfCancellationRequested();
             } );

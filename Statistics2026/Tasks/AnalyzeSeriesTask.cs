@@ -11,13 +11,8 @@ using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
-using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Statistics2026.ScheduledTasks
 {
@@ -76,37 +71,41 @@ namespace Statistics2026.ScheduledTasks
 
         async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
+            var memoryReport = await HelperFuncs.RunAndReportMemory( true, async () =>
             {
-                throw new Exception( "Statistics 2026 task is running" );
-            }
-
-            var taskName = "Analyze Series";
-            _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
-            using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-            db.Initialize( this, cancellationToken, progress );
-            db.ClearLastUpdated( Statistics2026DB.EAction.SeriesAnalysis );
-
-            long runtimeMS = 0;
-            using( var timer = new AutoTimer( $"Adding All Series", _embyInterfaces.Logger() ) )
-            {
-                try
+                if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
                 {
-                    await db.AddAllSeriesTaskImplAsync().ConfigureAwait( false );
-                    runtimeMS = timer.ElapsedMilliseconds();
+                    throw new Exception( "Statistics 2026 task is running" );
                 }
-                catch( Exception ex )
+
+                var taskName = "Analyze Series";
+                _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                db.Initialize( this, cancellationToken, progress );
+                db.ClearLastUpdated( Statistics2026DB.EAction.SeriesAnalysis );
+
+                long runtimeMS = 0;
+                using( var timer = new AutoTimer( $"Adding All Series", _embyInterfaces.Logger() ) )
                 {
-                    _embyInterfaces.Logger().ErrorException( $"Problem running '{( (IScheduledTask)this ).Name}", ex );
+                    try
+                    {
+                        await db.AddAllSeriesTaskImplAsync().ConfigureAwait( false );
+                        runtimeMS = timer.ElapsedMilliseconds();
+                    }
+                    catch( Exception ex )
+                    {
+                        _embyInterfaces.Logger().ErrorException( $"Problem running '{( (IScheduledTask)this ).Name}", ex );
+                    }
                 }
-            }
 
-            cancellationToken.ThrowIfCancellationRequested();
+                cancellationToken.ThrowIfCancellationRequested();
 
-            HelperFuncs.RunTimeSummary( runtimeMS, taskName, _embyInterfaces );
-            db.SetLastUpdated( Statistics2026DB.EAction.SeriesAnalysis, ReasonsForExecute, runtimeMS );
+                HelperFuncs.RunTimeSummary( runtimeMS, taskName, _embyInterfaces );
+                db.SetLastUpdated( Statistics2026DB.EAction.SeriesAnalysis, ReasonsForExecute, runtimeMS );
 
-            db.ResetCancellationToken();
+                db.ResetCancellationToken();
+            } );
+            memoryReport.Report( _embyInterfaces.Logger(), GetType().Name, LogSeverity.Info );
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

@@ -63,7 +63,7 @@ namespace Statistics2026.Data
         [MemberNotNull( nameof( _embyInterfaces ) )]
         public bool CheckIsValid( ECheckLevel checkLevel )
         {
-            List<string> msgs = [ $"DBHelper is not valid {ToString( checkLevel )}" ];
+            List<string> msgs = [ $"\nStatistics2026DB is not valid {ToString( checkLevel )}" ];
             var retVal = true;
             if( Statistics2026.Plugin.Instance == null )
             {

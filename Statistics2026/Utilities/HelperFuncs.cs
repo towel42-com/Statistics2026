@@ -6,32 +6,16 @@
 
 using MediaBrowser.Common.Extensions;
 using MediaBrowser.Common.Net;
-using MediaBrowser.Controller.Dto;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Services;
+using MediaBrowser.Model.Logging;
 using ServiceStack;
-using SQLitePCL;
-using SQLitePCL.pretty;
 using Statistics2026.Data;
 using Statistics2026.ScheduledTasks;
-using Statistics2026.Secrets;
-using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.Serialization;
+using System.Text;
 using System.Text.Json.Nodes;
-using System.Threading;
-using System.Web;
-using System.Xml;
 using TimeZoneNames;
-using static Statistics2026.Utilities.StatGen;
 
 namespace Statistics2026.Utilities
 {
@@ -217,53 +201,68 @@ namespace Statistics2026.Utilities
         }
 
 
-        static Dictionary<string, (string countryCode, string tzOffset)> sIpLookup = [];
+        private static ConcurrentDictionary<string, (string countryCode, string tzOffset)> sIpLookup = [];
+        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim( 1, 1 );
+
+        public static void ClearCache()
+        {
+            sIpLookup.Clear();
+        }
+
         private static async Task<(string countryCode, string tzOffset)> GetIPInfoAsync( string ipAddress, IHttpClient httpClient, string defaultCountryCode = "US", CancellationToken? _cancellationToken = null )
         {
-            if( sIpLookup.TryGetValue( ipAddress, out var value ) )
-                return value;
-
-            (string countryCode, string tzOffset) retVal = (defaultCountryCode, "-0500");
-            if( httpClient == null )
-            {
-                return retVal;
-            }
-
+            await _semaphore.WaitAsync( _cancellationToken ?? CancellationToken.None );
             try
             {
-                var path = string.IsNullOrWhiteSpace( ipAddress ) ? "" : "/{ipAddress}";
-                path += "/json";
-                var builder = new UriBuilder
-                {
-                    Scheme = "https",
-                    Host = "ipapi.co",
-                    Path = path
-                };
+                if( sIpLookup.TryGetValue( ipAddress, out var value ) )
+                    return value;
 
-                var url = builder.Uri.ToString();
-                var options = getRequestOptions( url, _cancellationToken );
-
-                using( var response = await httpClient.Get( options ).ConfigureAwait( false ) )
+                (string countryCode, string tzOffset) retVal = (defaultCountryCode, "-0500");
+                if( httpClient == null )
                 {
-                    var rawResponse = HelperFuncs.StreamToString( response );
-                    if( !string.IsNullOrWhiteSpace( rawResponse ) )
+                    return retVal;
+                }
+
+                try
+                {
+                    var path = string.IsNullOrWhiteSpace( ipAddress ) ? "" : "/{ipAddress}";
+                    path += "/json";
+                    var builder = new UriBuilder
                     {
-                        var jsonNode = JsonNode.Parse( rawResponse );
-                        var obj = jsonNode?.AsObject();
-                        if( obj != null )
+                        Scheme = "https",
+                        Host = "ipapi.co",
+                        Path = path
+                    };
+
+                    var url = builder.Uri.ToString();
+                    var options = getRequestOptions( url, _cancellationToken );
+
+                    using( var response = await httpClient.Get( options ).ConfigureAwait( false ) )
+                    {
+                        var rawResponse = HelperFuncs.StreamToString( response );
+                        if( !string.IsNullOrWhiteSpace( rawResponse ) )
                         {
-                            retVal.countryCode = obj[ "country_code" ]?.GetValue<string>() ?? defaultCountryCode;
-                            retVal.tzOffset = obj[ "utc_offset " ]?.GetValue<string>() ?? "-0500";
+                            var jsonNode = JsonNode.Parse( rawResponse );
+                            var obj = jsonNode?.AsObject();
+                            if( obj != null )
+                            {
+                                retVal.countryCode = obj[ "country_code" ]?.GetValue<string>() ?? defaultCountryCode;
+                                retVal.tzOffset = obj[ "utc_offset " ]?.GetValue<string>() ?? "-0500";
+                            }
                         }
                     }
                 }
-            }
-            catch( System.Exception )
-            {
-            }
+                catch( System.Exception )
+                {
+                }
 
-            sIpLookup.Add( ipAddress, retVal );
-            return retVal;
+                sIpLookup.TryAdd( ipAddress, retVal );
+                return retVal;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
         public static string JoinWhereClauses( List<string> clauses )
@@ -276,7 +275,7 @@ namespace Statistics2026.Utilities
                 clauses[ ii ] = $"( {clauses[ ii ]} )";
             }
 
-            return " WHERE " + string.Join( " AND ", clauses ) + " ";
+            return $" WHERE {( string.Join( " AND ", clauses ) )} ";
         }
 
         static private readonly Dictionary<int, string> ProviderTemplates = new()
@@ -483,12 +482,12 @@ namespace Statistics2026.Utilities
             return MakeTableHtml( title, rows );
         }
 
-        public static string PrettyPrintFileSize( this long bytes )
+        public static string PrettyPrintSize( this long bytes )
         {
-            string[] suffixes = { "bytes", "Kb", "Mb", "Gb", "Tb", "Pb", "Eb" };
+            string[] suffixes = { "b", "Kb", "Mb", "Gb", "Tb", "Pb", "Eb" };
 
             if( bytes == 0 )
-                return "0 B";
+                return "0 b";
 
             long absBytes = Math.Abs( bytes );
             // Calculate the index in the suffixes array
@@ -614,7 +613,7 @@ namespace Statistics2026.Utilities
 
                 var currLogger = embyInterfaces.Logger();
                 var (runFullAnalysis, runMissingAnalysis, oodReasons) = EmbyHelperFuncs.AnalysisOutOfDate( embyInterfaces, db );
-                
+
                 embyInterfaces._logger = currLogger;
                 reasons.AddRange( oodReasons );
                 embyInterfaces.Logger().Debug( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis} reasons={string.Join( ", ", reasons )}" );
@@ -666,6 +665,80 @@ namespace Statistics2026.Utilities
                 return true;
 
             return false;
+        }
+
+        public class MemoryUsage
+        {
+            public long _managedBefore { get; set; } = 0;
+            public long _managedPeak { get; set; } = 0;
+            public long _managedAfter { get; set; } = 0;
+            public long _processBefore { get; set; } = 0;
+            public long _processAfter { get; set; } = 0;
+
+            public void Report( ILogger logger, string prefix, LogSeverity severity=LogSeverity.Debug )
+            {
+                StringBuilder builder = new();
+
+                builder.AppendLine( $"{prefix}: --- Managed Heap Memory ---" );
+                builder.AppendLine( $"{prefix}: Before: {PrettyPrintSize( _managedBefore )}" );
+                builder.AppendLine( $"{prefix}: Peak:   {PrettyPrintSize( _managedPeak )}" );
+                builder.AppendLine( $"{prefix}: After:  {PrettyPrintSize( _managedAfter )}" );
+                builder.AppendLine( $"{prefix}: --- Total OS Process Memory (Task Manager) ---" );
+                builder.AppendLine( $"{prefix}: Before: {PrettyPrintSize( _processBefore )}" );
+                builder.AppendLine( $"{prefix}: After:  {PrettyPrintSize( _processAfter )}" );
+
+                logger?.LogMultiline( "Memory Usage Report", severity, builder );
+            }
+        };
+
+        public static async Task<MemoryUsage> RunAndReportMemory( bool debugLoggingEnabled, Func<Task> workload )
+        {
+            if( !debugLoggingEnabled )
+            {
+                await workload();
+                return new();
+            }
+            // Optional: Start with a clean baseline before measuring
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            var retVal = new MemoryUsage();
+
+            // 1. Measure BEFORE
+            retVal._managedBefore = GC.GetTotalMemory( forceFullCollection: false );
+            retVal._processBefore = GetProcessMemory();
+
+            // 2. Run the heavy function
+            await workload();
+
+            // Measure PEAK (Optional: see how much it grew before cleanup)
+            retVal._managedPeak = GC.GetTotalMemory( forceFullCollection: false );
+
+            // 3. Force cleanup
+            GC.Collect( 2, GCCollectionMode.Forced, blocking: true );
+            GC.WaitForPendingFinalizers();
+            GC.Collect( 2, GCCollectionMode.Forced, blocking: true );
+
+            // 4. Measure AFTER
+            retVal._managedAfter = GC.GetTotalMemory( forceFullCollection: false );
+            retVal._processAfter = GetProcessMemory();
+
+            return retVal;
+        }
+
+        private static void ForceFullCleanup()
+        {
+            GC.Collect( 2, GCCollectionMode.Forced, blocking: true );
+            GC.WaitForPendingFinalizers();
+            GC.Collect( 2, GCCollectionMode.Forced, blocking: true );
+        }
+
+        private static long GetProcessMemory()
+        {
+            using var currentProcess = Process.GetCurrentProcess();
+            currentProcess.Refresh();
+            return currentProcess.WorkingSet64;
         }
     }
 }

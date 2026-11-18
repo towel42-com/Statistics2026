@@ -26,10 +26,10 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eUpdate );
 
             Logger().Debug( $"Starting Analysis" );
-            Progress?.Report( 0 );
+            SetProgress( 0 );
             var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
             seriesList.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
-            Progress?.Report( 100 );
+            SetProgress( 100 );
 
             var reader = new TmdbInterface( _embyInterfaces, CancellationToken );
 
@@ -38,9 +38,10 @@ namespace Statistics2026.Data
 
             List<SQLCmdDef> sqlCmds = [];
             List<string> nowAvailable = [];
-            ConcurrentBag<object> validIds = [];
 
-            Progress?.Report( 0 );
+            SetProgress( 0 );
+            DeleteAllInvalid( seriesList.ConvertAll( item => (BaseItem)item ), "Missing", "ParentId", whereClauses:["IsEpisode"] );
+
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Getting Commands", Logger() ) )
             {
                 using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
@@ -50,18 +51,17 @@ namespace Statistics2026.Data
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        var retVal = (index: index, series: series, cmds: new List<SQLCmdDef>(), nowAvailable: new List<string>());
+                        var retVal = (index: index, item: series, sqlCmds: new List<SQLCmdDef>(), nowAvailable: new List<string>());
                         if( series == null )
                             return retVal;
 
-                        (retVal.cmds, retVal.nowAvailable) = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
+                        (retVal.sqlCmds, retVal.nowAvailable) = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
 
                         CancellationToken?.ThrowIfCancellationRequested();
-                        validIds.Add( series.Id.ToString() );
 
 
                         var currProgress = Interlocked.Increment( ref completedCount );
-                        Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                        SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
 
                         Logger().Info( $"    Processed Series ({currProgress} of {count}) - {series.Name}" );
                         return retVal;
@@ -73,22 +73,33 @@ namespace Statistics2026.Data
                 } ) ).ToList();
 
                 var unsortedResults = await Task.WhenAll( pool );
-                sqlCmds.Add( CreateSQLCmdDef( "DELETE FROM Missing WHERE IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                foreach( var result in results )
-                {
-                    sqlCmds.AddRange( result.cmds );
-                    nowAvailable.AddRange( result.nowAvailable );
-                    CancellationToken?.ThrowIfCancellationRequested();
-                }
+                sqlCmds = unsortedResults
+                            .Where( item => item.sqlCmds != null )
+                            .OrderBy( item => item.index )
+                            .SelectMany( item => item.sqlCmds! )
+                            .Where( cmd => cmd != null )
+                            .Select( cmd => cmd! )
+                            .ToList();
+
+                nowAvailable = unsortedResults
+                                .Where( item => item.nowAvailable != null )
+                                .OrderBy( item => item.index )
+                                .SelectMany( item => item.nowAvailable! )
+                                .Where( cmd => cmd != null )
+                                .Select( cmd => cmd! )
+                                .ToList();
+
+                CancellationToken?.ThrowIfCancellationRequested();
             }
+
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Executing Commands", Logger() ) )
             {
-                Progress?.Report( 80 );
+                SetProgress( 80 );
                 ExecuteCommands( sqlCmds );
-                Progress?.Report( 100 );
+                SetProgress( 100 );
                 Logger().Debug( $"Finished Missing Episodes Analysis" );
             }
+
             if( nowAvailable.Count() != 0 )
             {
                 var lastUpdated = GetLastUpdated( EAction.NotifyAvailableToday ).when;

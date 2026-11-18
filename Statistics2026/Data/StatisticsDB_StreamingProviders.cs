@@ -2,21 +2,10 @@
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
-using SQLitePCL.pretty;
 using Statistics2026.Utilities;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Net;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Statistics2026.Data
 {
@@ -28,9 +17,9 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting Video Analysis" );
 
-            Progress?.Report( 0 );
+            SetProgress( 0 );
             var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
-            Progress?.Report( 100 );
+            SetProgress( 100 );
 
             if( videoList == null )
             {
@@ -42,7 +31,7 @@ namespace Statistics2026.Data
 
             TmdbStreamingProvider.ClearCache();
 
-            Progress?.Report( 0 );
+            SetProgress( 0 );
             var existing = new ConcurrentDictionary<string, bool>();
             var sqlCmds = new List<SQLCmdDef>();
             TmdbStreamingProvider justWatchProvider = new()
@@ -65,7 +54,7 @@ namespace Statistics2026.Data
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        var retVal = (index: index, video: video, cmds: (List<SQLCmdDef>?)null);
+                        (int index, Video item, List<SQLCmdDef?>? cmds) retVal = (index, video, new List<SQLCmdDef?>());
                         if( video == null )
                             return retVal;
 
@@ -75,11 +64,11 @@ namespace Statistics2026.Data
                         existing.TryAdd( video.Id.ToString(), true );
 
                         var name = Utilities.MediaInfo.GetDescName( video ).descName;
-                        retVal.cmds = await FindAllMediaProviders( reader, video );
+                        retVal.cmds.AddRange( await FindAllMediaProviders( reader, video ) );
                         CancellationToken?.ThrowIfCancellationRequested();
                         int currProgress = Interlocked.Increment( ref completedCount );
 
-                        Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                        SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
 
                         Logger().Debug( $"    Processed Video ({currProgress} of {count}) - {name}" );
                         return retVal;
@@ -91,28 +80,27 @@ namespace Statistics2026.Data
                 } ) );
 
                 var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                foreach( var result in results )
-                {
-                    if( result.cmds != null )
-                    {
-                        sqlCmds.AddRange( result.cmds );
-                    }
-                }
+                sqlCmds = unsortedResults
+                            .Where( item => item.cmds != null )
+                            .OrderBy( item => item.index )
+                            .SelectMany( item => item.cmds! )
+                            .Where( subItem => subItem != null )
+                            .Select( subItem => subItem! )
+                            .ToList();
             }
 
             using( var timer = new AutoTimer( $"    Analyze Streaming Providers - Executing Commands", Logger() ) )
             {
-                Progress?.Report( 80 );
+                SetProgress( 80 );
                 ExecuteCommands( sqlCmds );
-                Progress?.Report( 100 );
+                SetProgress( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
             }
         }
 
-        private async Task<List<SQLCmdDef>> FindAllMediaProviders( TmdbInterface reader, Video video )
+        private async Task<List<SQLCmdDef?>?> FindAllMediaProviders( TmdbInterface reader, Video video )
         {
-            List<SQLCmdDef> retVal = [];
+            List<SQLCmdDef?> retVal = [];
 
             var tmdbId = video.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( tmdbId ) )

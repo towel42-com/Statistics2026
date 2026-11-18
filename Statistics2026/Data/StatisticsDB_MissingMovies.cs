@@ -25,10 +25,10 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eUpdate );
 
             Logger().Debug( $"Starting Analysis" );
-            Progress?.Report( 0 );
+            SetProgress( 0 );
             var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
             collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
-            Progress?.Report( 100 );
+            SetProgress( 100 );
 
             var reader = new TmdbInterface( _embyInterfaces, CancellationToken );
 
@@ -36,9 +36,10 @@ namespace Statistics2026.Data
             var completedCount = 0;
 
             List<SQLCmdDef> sqlCmds = [];
-            ConcurrentBag<object> validIds = [];
 
-            Progress?.Report( 0 );
+            SetProgress( 0 );
+            DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "Missing", "ParentId", whereClauses: [ "NOT IsEpisode" ] );
+
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Getting Commands", Logger() ) )
             {
                 using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
@@ -53,12 +54,11 @@ namespace Statistics2026.Data
                             return retVal;
 
                         retVal.cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection ).ConfigureAwait( false );
-                        validIds.Add( collection.Id.ToString() );
 
                         CancellationToken?.ThrowIfCancellationRequested();
 
                         var currProgress = Interlocked.Increment( ref completedCount );
-                        Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                        SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
 
                         Logger().Info( $"    Processed Collection ({currProgress} of {count}) - {collection.Name}" );
                         return retVal;
@@ -70,20 +70,20 @@ namespace Statistics2026.Data
                 } ) ).ToList();
 
                 var unsortedResults = await Task.WhenAll( pool );
-                sqlCmds.Add( CreateSQLCmdDef( "DELETE FROM Missing WHERE NOT IsEpisode AND ParentId IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                foreach( var result in results )
-                {
-                    sqlCmds.AddRange( result.cmds );
-                    CancellationToken?.ThrowIfCancellationRequested();
-                }
+                sqlCmds = unsortedResults
+                            .Where( item => item.cmds != null )
+                            .OrderBy( item => item.index )
+                            .SelectMany( item => item.cmds! )
+                            .Where( cmd => cmd != null )
+                            .Select( cmd => cmd! )
+                            .ToList();
             }
 
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Executing Commands", Logger() ) )
             {
-                Progress?.Report( 80 );
+                SetProgress( 80 );
                 ExecuteCommands( sqlCmds );
-                Progress?.Report( 100 );
+                SetProgress( 100 );
                 Logger().Debug( $"Finished Missing Movies Analysis" );
             }
         }

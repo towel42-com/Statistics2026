@@ -77,7 +77,9 @@ namespace Statistics2026.ScheduledTasks
 
         async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
+            var memoryReport = await HelperFuncs.RunAndReportMemory( true, async () =>
+            {
+                if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
             {
                 throw new Exception( "Statistics 2026 task is running" );
             }
@@ -108,6 +110,8 @@ namespace Statistics2026.ScheduledTasks
             db.SetLastUpdated( Statistics2026DB.EAction.CollectionsAnalysis, ReasonsForExecute, runtimeMS );
 
             db.ResetCancellationToken();
+            } );
+            memoryReport.Report( _embyInterfaces.Logger(), GetType().Name, LogSeverity.Info );
         }
 
         IEnumerable<TaskTriggerInfo> IScheduledTask.GetDefaultTriggers()

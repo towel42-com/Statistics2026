@@ -29,9 +29,9 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting Video Analysis" );
 
-            Progress?.Report( 0 );
+            SetProgress( 0 );
             var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
-            Progress?.Report( 100 );
+            SetProgress( 100 );
 
             if( videoList == null )
             {
@@ -41,10 +41,12 @@ namespace Statistics2026.Data
             double count = videoList.Count;
             var completedCount = 0;
 
-            Progress?.Report( 0 );
-            var existing = new ConcurrentDictionary<string, bool>();
-            ConcurrentBag<object> validIds = [];
+            SetProgress( 0 );
+
+            DeleteAllInvalid( videoList.ConvertAll( item => (BaseItem)item ), "Media", "ItemId" );
+
             var sqlCmds = new List<SQLCmdDef>();
+            var existing = new ConcurrentDictionary<string, bool>();
             sqlCmds.Add( new SQLCmdDef( "DELETE FROM Media WHERE PremiereDate IS NULL" ) );
 
             using( var timer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
@@ -56,7 +58,7 @@ namespace Statistics2026.Data
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        var retVal = (index: index, video: video, cmd: (SQLCmdDef?)null);
+                        var retVal = (index: index, video: video, cmds: new List<SQLCmdDef?>());
                         if( video == null )
                             return retVal;
 
@@ -64,17 +66,16 @@ namespace Statistics2026.Data
                             return retVal;
 
                         existing.TryAdd( video.Id.ToString(), true );
-                        validIds.Add( video.Id.ToString() );
 
                         var mediaInfo = MediaInfo.Create( Logger(), LibraryManager(), video );
                         if( ( mediaInfo == null ) || !mediaInfo.aOK )
                             return retVal;
 
-                        retVal.cmd = AddMediaInfo( mediaInfo );
+                        retVal.cmds.Add( AddMediaInfo( mediaInfo ) );
                         CancellationToken?.ThrowIfCancellationRequested();
                         int currProgress = Interlocked.Increment( ref completedCount );
 
-                        Progress?.Report( 80.0 * ( 1.0 * currProgress ) / count );
+                        SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
 
                         Logger().Debug( $"    Processed Video ({currProgress} of {count}) - {mediaInfo.DescriptiveName}" );
                         return retVal;
@@ -86,22 +87,20 @@ namespace Statistics2026.Data
                 } ) );
 
                 var unsortedResults = await Task.WhenAll( pool );
-                var results = unsortedResults.OrderBy( item => item.index ).ToList();
-                sqlCmds.Add( SQLCmdDef.CreateSQLCmdDef( "DELETE FROM Media WHERE ItemId NOT IN (<KEYLIST>)", "<KEYLIST>", validIds.ToList() ) );
-                foreach( var result in results )
-                {
-                    if( result.cmd != null )
-                    {
-                        sqlCmds.Add( result.cmd );
-                    }
-                }
+                sqlCmds = unsortedResults
+                            .Where( item => item.cmds != null )
+                            .OrderBy( item => item.index )
+                            .SelectMany( item => item.cmds! )
+                            .Where( cmd => cmd != null )
+                            .Select( cmd => cmd! )
+                            .ToList();
             }
 
             using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
             {
-                Progress?.Report( 80 );
+                SetProgress( 80 );
                 ExecuteCommands( sqlCmds );
-                Progress?.Report( 100 );
+                SetProgress( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
             }
         }
