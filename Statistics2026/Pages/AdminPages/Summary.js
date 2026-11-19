@@ -39,7 +39,7 @@
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, Helpers.getTabIndex("Summary", AdminHelpers.getTabs), AdminHelpers.getTabs);
+                Helpers.initMultiRowTabs(this, 'Stats2026_Summary', AdminHelpers);
                 Helpers.injectStyleSheet();
             });
 

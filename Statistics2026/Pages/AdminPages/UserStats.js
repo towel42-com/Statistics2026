@@ -8,7 +8,7 @@
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, Helpers.getTabIndex("UserStats", AdminHelpers.getTabs), AdminHelpers.getTabs);
+                Helpers.initMultiRowTabs(this, 'Stats2026_UserStats', AdminHelpers);
                 Helpers.injectStyleSheet();
 
                 Helpers.insertGetLastRunInfo(view, ["UserAnalysis", "UserWatchDataAnalysis"], "lastRunInfo");

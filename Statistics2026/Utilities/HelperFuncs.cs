@@ -13,6 +13,8 @@ using Statistics2026.ScheduledTasks;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Text.Json.Nodes;
 using TimeZoneNames;
@@ -21,10 +23,36 @@ namespace Statistics2026.Utilities
 {
     public static class HelperFuncs
     {
+        [DllImport( "ole32.dll" )]
+        private static extern int GetRunningObjectTable( int reserved, out IRunningObjectTable prot );
+
+        [DllImport( "ole32.dll" )]
+        private static extern int CreateBindCtx( int reserved, out IBindCtx ppbc );
+
+        private static object? GetActiveVisualStudioInstance()
+        {
+            GetRunningObjectTable( 0, out IRunningObjectTable rot );
+            rot.EnumRunning( out IEnumMoniker enumMoniker );
+
+            IMoniker[] monikers = new IMoniker[ 1 ];
+            while( enumMoniker.Next( 1, monikers, IntPtr.Zero ) == 0 )
+            {
+                CreateBindCtx( 0, out IBindCtx bindCtx );
+                monikers[ 0 ].GetDisplayName( bindCtx, null, out string displayName );
+
+                // Matches Visual Studio DTE monikers (e.g., !VisualStudio.DTE.17.0:12345)
+                if( displayName.StartsWith( "!VisualStudio.DTE" ) )
+                {
+                    rot.GetObject( monikers[ 0 ], out object dte );
+                    return dte;
+                }
+            }
+            return null;
+        }
+
         public static void AttachDebugger()
         {
 #if DEBUG_PLUGIN
-            // Check if a debugger is already attached
             if( !Debugger.IsAttached )
             {
                 // This forces the server startup thread to halt and pop up a
@@ -36,12 +64,34 @@ namespace Statistics2026.Utilities
                 // If already attached, instantly trigger a breakpoint break
                 Debugger.Break();
             }
+
+            // Check if a debugger is already attached
+            if( !Debugger.IsAttached )
+            {
+                int currentProcessId = Process.GetCurrentProcess().Id;
+
+                // Note: Requires reference to EnvDTE / EnvDTE80 (or dynamic COM interop)
+                dynamic? dte = GetActiveVisualStudioInstance();
+                if( dte != null )
+                {
+                    foreach( dynamic proc in dte.Debugger.LocalProcesses )
+                    {
+                        if( proc.ProcessID == currentProcessId )
+                        {
+                            proc.Attach();
+                            return;
+                        }
+                    }
+                }
+
+                // Fallback to standard prompt if no active VS instance is found
+                Debugger.Launch();
+            }
 #endif
         }
 
         public static void PreDebugRun( EmbyInterfaces embyInterfaces )
         {
-#if DEBUG_PLUGIN
             if( !Debugger.IsAttached )
             {
                 AttachDebugger();
@@ -49,7 +99,6 @@ namespace Statistics2026.Utilities
 
 #if DEBUG_PLUGIN_IMAGES
             EmbyHelperFuncs.MoveMediaLocations( embyInterfaces ).GetAwaiter().GetResult();
-#endif
 #endif
         }
 

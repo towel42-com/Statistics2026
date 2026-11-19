@@ -70,7 +70,7 @@
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, Helpers.getTabIndex("SystemStatus", AdminHelpers.getTabs), AdminHelpers.getTabs);
+                Helpers.initMultiRowTabs(this, 'Stats2026_SystemStatus', AdminHelpers);
                 Helpers.injectStyleSheet();
             });
 

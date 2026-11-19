@@ -11,14 +11,14 @@
         const baseId = 'movie_results';
         const filterId = 'movieDisplay';
         const baseUrl = "Statistics2026/movie_list";
-        const tabName = "Movies";
+        const tabName = "Stats2026_Movies";
         const lastRunArray = ["MediaAnalysis", "MissingMoviesAnalysis"];
         let showStreaming = true;
 
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, Helpers.getTabIndex(tabName, AdminHelpers.getTabs), AdminHelpers.getTabs);
+                Helpers.initMultiRowTabs(this, tabName, AdminHelpers);
                 Helpers.injectStyleSheet();
 
                 if (view.getAttribute('data-initialized') === 'true') {

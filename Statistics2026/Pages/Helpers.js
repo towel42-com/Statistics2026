@@ -1,10 +1,12 @@
 define([
+    'mainTabsManager',
     'dialogHelper',
     'toast',
     'prompt',
-    'emby-button'
+    'emby-button',
+    'emby-tabs'
 ],
-    function (dialogHelper, toast, prompt) {
+    function (mainTabsManager,dialogHelper, toast, prompt) {
         'use strict';
 
         const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
@@ -435,7 +437,7 @@ define([
             if (document.getElementById(STYLE_ID))  // already added
                 return;
 
-            const cssUrl = 'configurationpage?name=Stats2026_style.css';
+            const cssUrl = 'configurationpage?name=Stats2026_style.css&v=2';
             const link = document.createElement('link');
             link.id = STYLE_ID;
             link.rel = 'stylesheet';
@@ -881,6 +883,124 @@ define([
             });
         }
 
+        function getCurrentConfigurationPageName() {
+            // 1. Check hash query string first (standard Emby SPA route: #!/configurationpage?name=Stats2026_Movies)
+            const hash = window.location.hash || '';
+            const hashQueryIndex = hash.indexOf('?');
+            if (hashQueryIndex !== -1) {
+                const hashParams = new URLSearchParams(hash.substring(hashQueryIndex));
+                const hashName = hashParams.get('name');
+                if (hashName) {
+                    return hashName;
+                }
+            }
+
+            // 2. Fallback to standard window.location.search (?name=Stats2026_Movies)
+            const searchParams = new URLSearchParams(window.location.search || '');
+            return searchParams.get('name') || '';
+        }
+
+        function initMultiRowTabs(view, currentPageName, AdminHelpers) {
+            const hierarchy = AdminHelpers.getTabHierarchy();
+            let activeGroupIndex = 0;
+            let activeGroup = hierarchy;
+
+            const computedCurrentPageName = getCurrentConfigurationPageName();
+            if (currentPageName !== computedCurrentPageName) {
+                const errMsg = `Page name mismatch! Expected: "${currentPageName}", but getCurrentConfigurationPageName() returned: "${computedCurrentPageName}"`;
+                showInfo("Tab Page Name Mismatch", errMsg, false);
+            }
+
+            for (let ii = 0; ii < hierarchy.length; ii++) {
+                const subTabs = hierarchy[ii].subTabs || [];
+                for (let jj = 0; jj < subTabs.length; jj++) {
+                    if (subTabs[jj].page === currentPageName) {
+                        activeGroupIndex = ii;
+                        activeGroup = hierarchy[ii];
+                        break;
+                    }
+                }
+            }
+
+            // 1. Set Row 1 (Emby Header Tabs)
+            mainTabsManager.setTabs(view, activeGroupIndex, AdminHelpers.getTabs);
+
+            // 2. Build Row 2 inside .content-primary (isolated from .tabs-viewmenubar)
+            const contentPrimary = view.querySelector('.content-primary');
+            if (!contentPrimary) {
+                return;
+            }
+
+            let subTabsWrapper = view.querySelector('#dynamicSubTabs');
+            if (subTabsWrapper) {
+                subTabsWrapper.remove();
+            }
+
+            const subTabs = activeGroup.subTabs || [];
+            if (subTabs.length <= 1) {
+                return;
+            }
+
+            // Read live colors from Emby's top header tab bar so Row 2 matches 100% in any theme
+            const headerSlider = document.querySelector('.skinHeader .emby-tabs-slider');
+            const headerActiveBtn = document.querySelector('.skinHeader .emby-tab-button-active');
+            const headerInactiveBtn = document.querySelector('.skinHeader .emby-tab-button:not(.emby-tab-button-active)');
+
+            const trackBg = headerSlider ? window.getComputedStyle(headerSlider).backgroundColor : '';
+            const activeBg = headerActiveBtn ? window.getComputedStyle(headerActiveBtn).backgroundColor : '';
+            const activeColor = headerActiveBtn ? window.getComputedStyle(headerActiveBtn).color : '';
+            const inactiveColor = headerInactiveBtn ? window.getComputedStyle(headerInactiveBtn).color : '';
+
+            subTabsWrapper = document.createElement('div');
+            subTabsWrapper.id = 'dynamicSubTabs';
+            subTabsWrapper.className = 'subTabsNativeBar';
+
+            if (trackBg && trackBg !== 'rgba(0, 0, 0, 0)' && trackBg !== 'transparent') {
+                subTabsWrapper.style.setProperty('background-color', trackBg, 'important');
+            }
+
+            const slider = document.createElement('div');
+            slider.className = 'emby-tabs-slider';
+
+            for (let ii = 0; ii < subTabs.length; ii++) {
+                const subTab = subTabs[ii];
+                const isCurrent = subTab.page === currentPageName;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.setAttribute('is', 'emby-button');
+                btn.className = 'emby-tab-button';
+
+                if (isCurrent) {
+                    btn.classList.add('emby-tab-button-active');
+                    if (activeBg && activeBg !== 'rgba(0, 0, 0, 0)') {
+                        btn.style.setProperty('background-color', activeBg, 'important');
+                    }
+                    if (activeColor) {
+                        btn.style.setProperty('color', activeColor, 'important');
+                    }
+                } else if (inactiveColor) {
+                    btn.style.setProperty('color', inactiveColor, 'important');
+                }
+
+                const foreground = document.createElement('div');
+                foreground.className = 'emby-button-foreground';
+                foreground.textContent = subTab.name;
+                btn.appendChild(foreground);
+
+                btn.addEventListener('click', function () {
+                    if (!isCurrent) {
+                        Dashboard.navigate(Dashboard.getConfigurationPageUrl(subTab.page));
+                    }
+                });
+
+                slider.appendChild(btn);
+            }
+
+            subTabsWrapper.appendChild(slider);
+            contentPrimary.insertBefore(subTabsWrapper, contentPrimary.firstChild);
+        }
+
         return {
             pluginId,
             CheckForValidConfig,
@@ -901,7 +1021,8 @@ define([
             getUserPluginConfig,
             updateUserPluginConfiguration,
             isDebugLoggingEnabled,
-            showDiagnosticInfo
+            showDiagnosticInfo,
+            initMultiRowTabs
         };
     }
 )

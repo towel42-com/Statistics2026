@@ -618,3 +618,63 @@ ol.range-list {
 .statCard ol.range-list .range-range:not(.starRatingContainer) {
     color: var(--local-statcard-text);
 }
+
+/* ==========================================================================
+   11. Multi-Row Dynamic Tab Navigation (Live Header-Matched Pill Bar)
+   ========================================================================== */
+#dynamicSubTabs.subTabsNativeBar {
+    position: relative !important;
+    display: table !important;
+    width: auto !important;
+    max-width: 100%;
+    margin: -1.1em auto 1.25em auto !important;
+    padding: 0.22em !important;
+    border-radius: 9999px !important;
+    background-color: rgba(128, 128, 128, 0.12);
+    border: none !important;
+    box-shadow: none !important;
+}
+
+    #dynamicSubTabs.subTabsNativeBar .emby-tabs-slider {
+        display: flex !important;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 0.2em;
+        padding: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    #dynamicSubTabs.subTabsNativeBar .emby-tab-button {
+        background-color: transparent;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 9999px !important;
+        margin: 0 !important;
+        padding: 0.35em 1.05em !important;
+        min-height: 0 !important;
+        height: auto !important;
+        line-height: 1.25 !important;
+        font-size: 0.92em !important;
+        color: var(--local-text-muted, #666666);
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+        #dynamicSubTabs.subTabsNativeBar .emby-tab-button:hover {
+            background-color: rgba(128, 128, 128, 0.12) !important;
+        }
+
+    #dynamicSubTabs.subTabsNativeBar .emby-tab-button-active {
+        background-color: rgba(128, 128, 128, 0.22);
+        color: var(--local-text-normal, #000000);
+        font-weight: 600;
+    }
+
+        #dynamicSubTabs.subTabsNativeBar .emby-tab-button-active .emby-button-foreground {
+            color: inherit !important;
+        }

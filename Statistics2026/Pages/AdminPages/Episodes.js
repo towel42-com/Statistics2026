@@ -11,13 +11,13 @@
         const baseId = 'episode_results';
         const filterId = 'episodeDisplay';
         const baseUrl = "Statistics2026/episode_list";
-        const tabName = "Episodes";
+        const tabName = "Stats2026_Episodes";
         const lastRunArray = ["MediaAnalysis", "MissingEpisodesAnalysis", "NotifyAvailableToday"];
         let showStreaming = true;
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, Helpers.getTabIndex(tabName, AdminHelpers.getTabs), AdminHelpers.getTabs);
+                Helpers.initMultiRowTabs(this, tabName, AdminHelpers);
                 Helpers.injectStyleSheet();
 
                 if (view.getAttribute('data-initialized') === 'true') {

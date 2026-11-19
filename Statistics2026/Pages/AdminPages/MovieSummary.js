@@ -76,7 +76,7 @@
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, Helpers.getTabIndex("MovieSummary", AdminHelpers.getTabs), AdminHelpers.getTabs);
+                Helpers.initMultiRowTabs(this, 'Stats2026_MovieSummary', AdminHelpers);
                 Helpers.injectStyleSheet();
             });
 
