@@ -8,7 +8,9 @@ define(function () {
                 name: 'Overview',
                 href: Dashboard.getConfigurationPageUrl('Stats2026_Summary'),
                 subTabs: [
-                    { page: 'Stats2026_Summary', name: 'Summary' }
+                    { page: 'Stats2026_Summary', name: 'Summary' },
+                    { page: 'Stats2026_SystemStatus', name: 'System Status' },
+                    { page: 'Stats2026_Settings', name: 'Settings' }
                 ]
             },
             {
@@ -27,26 +29,17 @@ define(function () {
                 subTabs: [
                     { page: 'Stats2026_EpisodeSummary', name: 'Episode/Series Summary' },
                     { page: 'Stats2026_Episodes', name: 'Episodes' },
-                    { page: 'Stats2026_TVSeriesProgress', name: 'TV Series Progress' }
                 ]
             },
             {
                 id: 'users',
-                name: 'Users',
+                name: 'User Info',
                 href: Dashboard.getConfigurationPageUrl('Stats2026_UserStats'),
                 subTabs: [
-                    { page: 'Stats2026_UserStats', name: 'User Stats' }
+                    { page: 'Stats2026_UserStats', name: 'User Stats' },
+                    { page: 'Stats2026_TVSeriesProgress', name: 'TV Series Progress' }
                 ]
             },
-            {
-                id: 'system',
-                name: 'System',
-                href: Dashboard.getConfigurationPageUrl('Stats2026_SystemStatus'),
-                subTabs: [
-                    { page: 'Stats2026_SystemStatus', name: 'System Status' },
-                    { page: 'Stats2026_Settings', name: 'Settings' }
-                ]
-            }
         ];
     }
 
