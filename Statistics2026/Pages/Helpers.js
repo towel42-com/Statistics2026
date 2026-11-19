@@ -1006,6 +1006,45 @@ define([
 
             subTabsWrapper.appendChild(slider);
             contentPrimary.insertBefore(subTabsWrapper, contentPrimary.firstChild);
+
+            // Run after layout settles, and keep aligned on window resize
+            requestAnimationFrame(() => alignSubTabsToHeader(view));
+            window.removeEventListener('resize', view._subTabResizeHandler);
+            view._subTabResizeHandler = alignSubTabsToHeader;
+            window.addEventListener('resize', alignSubTabsToHeader);
+        }
+
+        function alignSubTabsToHeader(view) {
+            const subTabsWrapper = view.querySelector('#dynamicSubTabs');
+            const contentPrimary = view.querySelector('.content-primary');
+            const activeTopTab = document.querySelector('.skinHeader .emby-tab-button-active');
+            const headerSlider = document.querySelector('.skinHeader .emby-tabs-slider');
+
+            if (!subTabsWrapper || !contentPrimary || !activeTopTab || !subTabsWrapper.isConnected) {
+                return;
+            }
+
+            subTabsWrapper.style.marginLeft = '0px';
+
+            const topTabRect = activeTopTab.getBoundingClientRect();
+            const containerRect = contentPrimary.getBoundingClientRect();
+            const subBarWidth = subTabsWrapper.getBoundingClientRect().width;
+
+            const headerRight = headerSlider
+                ? Math.min(headerSlider.getBoundingClientRect().right, containerRect.right)
+                : containerRect.right;
+
+            let offsetLeft = topTabRect.left - containerRect.left;
+
+            if (topTabRect.left + subBarWidth > headerRight) {
+                offsetLeft = topTabRect.right - subBarWidth - containerRect.left;
+            }
+
+            const maxOffset = Math.max(0, containerRect.width - subBarWidth);
+            offsetLeft = Math.max(0, Math.min(offsetLeft, maxOffset));
+
+            subTabsWrapper.style.setProperty('margin-left', `${Math.round(offsetLeft)}px`, 'important');
+            subTabsWrapper.style.setProperty('margin-right', 'auto', 'important');
         }
 
         return {
