@@ -27,7 +27,7 @@ namespace Statistics2026.Utilities
                 lines.AddRange( joins.Select( join => "    " + join ) );
             }
 
-            if( whereClauses != null )
+            if( whereClauses != null && whereClauses.Count() > 0 )
             {
                 lines.Add( $"WHERE" );
                 lines.AddRange( whereClauses.Select( ( clause, index ) => $"    {( index == 0 ? "   " : "AND" )} ( " + clause + " )" ) );
@@ -162,7 +162,7 @@ namespace Statistics2026.Utilities
         public static List<string> joinWithComma( List<string>? values, string? prefix = null )
         {
             List<string> retVal = [];
-            if( values == null )
+            if( values == null || values.Count() == 0 )
                 return retVal;
 
             if( prefix != null )
