@@ -1,4 +1,7 @@
-﻿using Emby.Notifications;
+﻿#if DEBUG
+#define DEBUG_PLUGIN
+#endif
+using Emby.Notifications;
 using MediaBrowser.Common;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Net;
@@ -93,12 +96,13 @@ namespace Statistics2026
             _tableDefs = new TableDefs( _embyInterfaces );
 
             HelperFuncs.PreDebugRun( _embyInterfaces );
-
+#if !DEBUG_PLUGIN
             var debouncer = new Debouncer();
             debouncer.RunLaterAsync( 500, async ( cancellationToken ) => {
                 HelperFuncs.CheckForOOD( _embyInterfaces, true, ["Startup"], GetType(), true );
                 return false;
             } );
+#endif
 
         }
 
@@ -122,6 +126,14 @@ namespace Statistics2026
                 new() {
                     Name = "Stats2026_Summary.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Summary.js"
+                },
+                new() {
+                    Name = "Stats2026_SeriesSummary",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.SeriesSummary.html",
+                },
+                new() {
+                    Name = "Stats2026_SeriesSummary.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.SeriesSummary.js"
                 },
                 new() {
                     Name = "Stats2026_EpisodeSummary",
@@ -154,6 +166,14 @@ namespace Statistics2026
                 new() {
                     Name = "Stats2026_TVSeriesProgress.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TVSeriesProgress.js"
+                },
+                new() {
+                    Name = "Stats2026_Series",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Series.html",
+                },
+                new() {
+                    Name = "Stats2026_Series.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Series.js"
                 },
                 new() {
                     Name = "Stats2026_Episodes",

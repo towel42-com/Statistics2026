@@ -1,9 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Statistics2026.Data
@@ -26,7 +23,7 @@ namespace Statistics2026.Data
         public void SetDatabase( Statistics2026DB db )
         {
             _db = db ?? throw new ArgumentNullException( "db is null." );
-            if ( !_db.HasConnection() )
+            if( !_db.HasConnection() )
                 throw new ArgumentNullException( "db has no connection." );
         }
 
@@ -102,7 +99,7 @@ namespace Statistics2026.Data
                         new TableColDef( "Status", "TEXT" , true ),
                         new TableColDef( "AverageBitrate", "INT", true ),
                         new TableColDef( "StreamingProviders", "TEXT", true ){FormerColumnName="StreamingServices"}, // json array
-
+                        new TableColDef( "ServerLocation", "TEXT", true ),
                     ]
                 ),
                 new TableDef("SeriesFilterList",

@@ -1,22 +1,8 @@
-﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Querying;
+﻿using MediaBrowser.Controller.Entities.TV;
 using ServiceStack;
-using Statistics2026.Utilities;
 using Statistics2026.Responses;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Net;
-using System.Reflection;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+using Statistics2026.Utilities;
 using System.Text.RegularExpressions;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
@@ -53,7 +39,7 @@ namespace Statistics2026.Data
         }
 
         public enum EMediaListResponseColumns
-        { 
+        {
             eMissing,
             eTitle,
             eSortName,
@@ -146,6 +132,41 @@ namespace Statistics2026.Data
             return getMediaListResponseMissingCmd( whichMedia, ref orderBy, filterOutFuture );
         }
 
+        private string getSeriesListResponseOnServerCmd()
+        {
+            List<string> columns = [];
+            columns.Add( "0 AS IsMissing" );
+            columns.Add( "Series.Name AS Title" );
+            columns.Add( "Series.SortName as SortName" );
+            columns.Add( "Series.PremiereDate AS PremiereDate" );
+            columns.Add( "'' AS StudioNames" );
+            columns.Add( "Series.StreamingProviders AS StreamingProviders" );
+            columns.Add( "'' AS ResolutionDetail" );
+            columns.Add( "'' AS Codec" );
+            columns.Add( "'' AS DolbyVisionProfile" );
+            columns.Add( "ServerLocation AS ServerLocation" );
+            columns.Add( "Series.ItemId AS ItemId" );
+            columns.Add( "Series.ImageUrl AS ImageUrl" );
+            columns.Add( "'' AS ParentInfo" );
+
+            columns.Add( "'' AS PosterPath" );
+            columns.Add( "'' AS SeasonNum" );
+            columns.Add( "'' AS EpisodeNum" );
+            columns.Add( "'' AS ParentId" );
+            columns.Add( "NumEpisodes as NumEpisodes" );
+            columns.Add( "(SELECT SUM(NumEpisodes) FROM Media WHERE Series.ItemId=Media.SeriesId AND Media.IsEpisode AND NOT Media.IsTVSpecial AND Media.Season > 0 AND Media.Episode > 0 AND ServerLocation NOT like '%featurettes%') AS collectedEpisodes" );
+            columns.Add( "NumSpecials as NumSpecials" );
+            columns.Add( "(SELECT SUM(NumEpisodes) FROM Media WHERE Series.ItemId=Media.SeriesId AND Media.IsEpisode AND     ( Media.IsTVSpecial OR Media.Season == 0 OR Media.Episode <= 0 ) ) AS collectedSpecials" );
+
+            var from = "Series";
+            List<string> joins = [];
+            List<string> whereClauses = [];
+            List<string> groupByClauses = [];
+            List<string> orderBy = new(){ "SortName ASC" };
+
+            return SQLCmdDef.CreateCmd( from, columns, joins, whereClauses, groupByClauses, orderBy );
+        }
+
         private string getMediaListResponseOnServerCmd( EWhichMediaList whichMedia, ref List<string> orderBy )
         {
             var episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
@@ -220,6 +241,54 @@ namespace Statistics2026.Data
             return retVal;
         }
 
+        public List<MediaItemResponse> getSeriesListResponseAsync()
+        {
+            if( _embyInterfaces == null )
+                return [];
+
+            var sqlCmd = getSeriesListResponseOnServerCmd();
+
+            var isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
+
+            List<MediaItemResponse> retVal = [];
+            ExecuteCommand( new SQLCmdDef( sqlCmd ), statement =>
+            {
+                var row = statement.Current;
+                var mediaInfoResponse = MediaItemResponse.CreateFromStatementRow( row, null, isoCode, null, null, null, _embyInterfaces, this );
+                if( mediaInfoResponse != null )
+                {
+                    var pos = ( (int)EMediaListResponseColumns.eParentId ) + 1;
+                    var numEpisodes = row.GetInt( pos++ );
+                    var episodesCollected = row.GetInt( pos++ );
+                    var numSpecials = row.GetInt( pos++ );
+                    var specialsCollected = row.GetInt( pos++ );
+
+                    var episodesPercent = 100.0 * episodesCollected / (1.0*numEpisodes);
+
+                    var episodeStatus = $"{episodesCollected}/{numEpisodes} ({episodesPercent:F0}%)";
+                    mediaInfoResponse.Extra = episodeStatus;
+
+                    var specialsPercent = 100.0 * specialsCollected / ( 1.0 * numSpecials );
+                    var specialsStatus = $"{specialsCollected}/{numSpecials} ({specialsPercent:F0}%)";
+                    mediaInfoResponse.Extra2 = specialsStatus;
+
+                    retVal.Add( mediaInfoResponse );
+                }
+
+                return true;
+            } );
+
+
+            retVal.Sort(
+                ( x, y ) =>
+                {
+                    var lhs = x.DisplayName.SortBy;
+                    var rhs = y.DisplayName.SortBy;
+                    return lhs.CompareTo( rhs );
+                } );
+            return retVal;
+        }
+
         public List<MediaItemResponse> getMediaListResponseAsync( EWhichMediaList whichMedia )
         {
             if( _embyInterfaces == null )
@@ -251,17 +320,17 @@ namespace Statistics2026.Data
                 {
                     retVal.Add( mediaInfoResponse );
                 }
-                
+
                 return true;
             } );
 
 
             retVal.Sort(
-                (x, y) =>
+                ( x, y ) =>
                 {
                     var lhs = x.DisplayName.SortBy;
                     var rhs = y.DisplayName.SortBy;
-                    return lhs.CompareTo(rhs );
+                    return lhs.CompareTo( rhs );
                 } );
             return retVal;
         }

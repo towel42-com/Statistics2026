@@ -43,6 +43,12 @@ namespace Statistics2026.Services
         public bool showMissing { get; set; } = false;
     }
 
+    [Route( "/Statistics2026/series_list", "GET", Summary = "Gets Series" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetSeriesList : IReturn<List<MediaItemResponse>>
+    {
+    }
+
     public class MediaListService : BaseService
     {
         public MediaListService(
@@ -79,6 +85,19 @@ namespace Statistics2026.Services
                        notificationManager
                     )
         {
+        }
+
+        public async Task<object> Get( GetSeriesList request )
+        {
+            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            {
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+
+                var series = db.getSeriesListResponseAsync();
+
+                return series ?? new object();
+            } );
+            return retVal;
         }
 
         public async Task<object> Get( GetEpisodeList request )

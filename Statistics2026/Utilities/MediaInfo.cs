@@ -352,6 +352,15 @@ namespace Statistics2026.Utilities
             return primaryName;
         }
 
+        public static (string primaryName, string secondaryName, string descName) GetDescName( BaseItem item )
+        {
+            if( item is Video video )
+            {
+                return GetDescName( video );
+            }
+            return (item.Name, string.Empty, item.Name);
+        }
+
         public static (string primaryName, string secondaryName, string descName) GetDescName( Video video )
         {
             var primaryName = video.Name;

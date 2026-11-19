@@ -23,11 +23,20 @@ define(function () {
                 ]
             },
             {
-                id: 'tv',
-                name: 'TV & Episodes',
+                id: 'series',
+                name: 'TV Series',
+                href: Dashboard.getConfigurationPageUrl('Stats2026_SeriesSummary'),
+                subTabs: [
+                    { page: 'Stats2026_SeriesSummary', name: 'Series Summary' },
+                    { page: 'Stats2026_Series', name: 'Series' },
+                ]
+            },
+            {
+                id: 'episodes',
+                name: 'TV Episodes',
                 href: Dashboard.getConfigurationPageUrl('Stats2026_EpisodeSummary'),
                 subTabs: [
-                    { page: 'Stats2026_EpisodeSummary', name: 'Episode/Series Summary' },
+                    { page: 'Stats2026_EpisodeSummary', name: 'Episode Summary' },
                     { page: 'Stats2026_Episodes', name: 'Episodes' },
                 ]
             },

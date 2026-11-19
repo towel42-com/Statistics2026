@@ -332,14 +332,16 @@ namespace Statistics2026.Utilities
         {
             _ProviderCache.Clear();
         }
-        public async Task<AddStreamingProvidersInfo> GetStreamingProvidersAsync( ILogger logger, Video video, string language = "en-US" )
+        public async Task<AddStreamingProvidersInfo> GetStreamingProvidersAsync( ILogger logger, BaseItem baseItem, string language = "en-US" )
         {
-            if( video == null )
+            if( baseItem == null )
                 return new AddStreamingProvidersInfo();
-            if( video is Movie )
-                return await GetStreamingProvidersAsync( logger, ( video as Movie )!, language ).ConfigureAwait( false );
-            if( video is Episode )
-                return await GetStreamingProvidersAsync( logger, ( video as Episode )!, language ).ConfigureAwait( false );
+            if( baseItem is Movie )
+                return await GetStreamingProvidersAsync( logger, ( baseItem as Movie )!, language ).ConfigureAwait( false );
+            if( baseItem is Episode )
+                return await GetStreamingProvidersAsync( logger, ( baseItem as Episode )!, language ).ConfigureAwait( false );
+            if( baseItem is Series )
+                return await GetStreamingProvidersAsync( logger, ( baseItem as Series )!, language ).ConfigureAwait( false );
             return new AddStreamingProvidersInfo();
         }
 

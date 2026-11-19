@@ -25,6 +25,8 @@ namespace Statistics2026.Responses
         public SortByText ParentName { get; set; } = new();
         public string ParentUrl { get; set; } = string.Empty;
         public List<string> ParentIds { get; set; } = [];
+        public string Extra { get; set; } = string.Empty;
+        public string Extra2 { get; set; } = string.Empty;
 
         public string ItemUrl
         {
@@ -43,6 +45,9 @@ namespace Statistics2026.Responses
         public static List<(string id, string name, string sortName, string displayText, string url)>? getParentInfo( string parentJson, Func<string, string, string, bool> isFiltered )
         {
             List<(string id, string name, string sortName, string displayText, string url)> retVal = [];
+
+            if( parentJson.IsNullOrEmpty() || parentJson.IsWhiteSpace() )
+                return retVal;
 
             JsonArray? parentArray = null;
             try
@@ -322,7 +327,8 @@ namespace Statistics2026.Responses
             return retVal;
         }
 
-        public static MediaItemResponse? CreateFromStatementRow( IResultSet row, bool isEpisode, string isoCode, Func<string, int, bool> isSeriesFiltered, Func<string, bool> isCollectionFiltered, Func<string, SortByText?> getCollectionName, EmbyInterfaces? embyInterfaces, Statistics2026DB db )
+        // if isEpisode is null its a series item, true its an episode item, false movie
+        public static MediaItemResponse? CreateFromStatementRow( IResultSet row, bool? isEpisode, string isoCode, Func<string, int, bool>? isSeriesFiltered, Func<string, bool>? isCollectionFiltered, Func<string, SortByText?>? getCollectionName, EmbyInterfaces? embyInterfaces, Statistics2026DB db )
         {
             if( embyInterfaces == null )
                 return null;
@@ -365,36 +371,34 @@ namespace Statistics2026.Responses
             var parentInfo = getParentInfo( parentInfoJSON,
                 ( string id, string name, string sortName ) =>
                 {
-                    if( isMissing )
+                    if( isMissing && ( isEpisode != null ) )
                     {
-                        if( isEpisode )
+                        if( isEpisode.Value && ( isSeriesFiltered != null ) )
                         {
                             return isSeriesFiltered( id, seasonNum );
                         }
-                        else
+                        else if( isCollectionFiltered != null )
                         {
                             return isCollectionFiltered( name ) || ( ( sortName != name ) && isCollectionFiltered( sortName ) ) || isCollectionFiltered( title );
                         }
                     }
-                    else
-                        return false;
+                    return false;
                 }
             );
 
             if( parentInfo == null )
-                return null;
-
-            retVal.setParentInfo( parentInfo );
-
-            if( isMissing )
             {
-                retVal = SetMissingData( retVal, row, ref col, premiereDate, isEpisode, isSeriesFiltered, isCollectionFiltered, getCollectionName );
-                if( retVal == null )
+                if( isEpisode != null )
                     return null;
             }
-            else
-            {
+            if( isEpisode != null )
+                retVal.setParentInfo( parentInfo! );
 
+            if( isMissing && isEpisode != null )
+            {
+                retVal = SetMissingData( retVal, row, ref col, premiereDate, isEpisode.Value, isSeriesFiltered!, isCollectionFiltered!, getCollectionName! );
+                if( retVal == null )
+                    return null;
             }
             retVal = AddStreamingProviders( retVal, isoCode, streamingProvidersString, embyInterfaces, db );
 

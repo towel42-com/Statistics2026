@@ -18,15 +18,21 @@ namespace Statistics2026.Data
             Logger().Debug( $"Starting Video Analysis" );
 
             SetProgress( 0 );
+            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
             var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
             SetProgress( 100 );
 
-            if( videoList == null )
+            List<BaseItem> allItems = [];
+            if( seriesList != null )
             {
-                return;
+                allItems.AddRange( seriesList );
+            }
+            if( videoList != null )
+            {
+                allItems.AddRange( videoList );
             }
 
-            double count = videoList.Count;
+            double count = allItems.Count;
             var completedCount = 0;
 
             TmdbStreamingProvider.ClearCache();
@@ -46,25 +52,25 @@ namespace Statistics2026.Data
 
             using( var timer = new AutoTimer( $"    Analyze Streaming Providers - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
+                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim( true );
                 var reader = new TmdbInterface( _embyInterfaces, CancellationToken );
 
-                var pool = videoList.Select( ( video, index ) => Task.Run( async () =>
+                var pool = allItems.Select( ( baseItem, index ) => Task.Run( async () =>
                 {
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        (int index, Video item, List<SQLCmdDef?>? cmds) retVal = (index, video, new List<SQLCmdDef?>());
-                        if( video == null )
+                        (int index, BaseItem item, List<SQLCmdDef?>? cmds) retVal = (index, baseItem, new List<SQLCmdDef?>());
+                        if( baseItem == null )
                             return retVal;
 
-                        if( existing.ContainsKey( video.Id.ToString() ) )
+                        if( existing.ContainsKey( baseItem.Id.ToString() ) )
                             return retVal;
 
-                        existing.TryAdd( video.Id.ToString(), true );
+                        existing.TryAdd( baseItem.Id.ToString(), true );
 
-                        var name = Utilities.MediaInfo.GetDescName( video ).descName;
-                        retVal.cmds.AddRange( await FindAllMediaProviders( reader, video ) );
+                        var name = Utilities.MediaInfo.GetDescName( baseItem ).descName;
+                        retVal.cmds.AddRange( await FindAllStreamingProviders( reader, baseItem ) );
                         CancellationToken?.ThrowIfCancellationRequested();
                         int currProgress = Interlocked.Increment( ref completedCount );
 
@@ -98,69 +104,56 @@ namespace Statistics2026.Data
             }
         }
 
-        private async Task<List<SQLCmdDef?>?> FindAllMediaProviders( TmdbInterface reader, Video video )
+        private async Task<List<SQLCmdDef?>?> FindAllStreamingProviders( TmdbInterface reader, BaseItem baseItem )
         {
             List<SQLCmdDef?> retVal = [];
 
-            var tmdbId = video.GetProviderId( MetadataProviders.Tmdb );
+            var tmdbId = baseItem.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( tmdbId ) )
                 return [];
 
             AddStreamingProvidersInfo? streamingProviders = null;
             try
             {
-                streamingProviders = await reader.GetStreamingProvidersAsync( Logger(), video ).ConfigureAwait( false );
+                streamingProviders = await reader.GetStreamingProvidersAsync( Logger(), baseItem ).ConfigureAwait( false );
                 if( streamingProviders == null )
                     return [];
 
                 var allProviders = streamingProviders?.allProviders ?? [];
                 retVal.AddRange( streamingProviders?.addProviderCmds ?? [] );
 
-                if( video is Movie )
+                var allProvidersJSON = JsonSerializer.Serialize( allProviders );
+                var sql = string.Empty;
+                if( baseItem is Movie )
                 {
-                    var sql = "UPDATE Media SET StreamingProviders=@StreamingProviders WHERE ItemId=@ItemId";
-                    List<(string name, object? value)> parameters =
-                        [
-                            ( "@StreamingProviders", JsonSerializer.Serialize( allProviders )),
-                            ( "@ItemId", video.Id.ToString()),
-                        ];
-
-                    retVal.Add( new SQLCmdDef( sql, parameters ) );
+                    sql = "UPDATE Media SET StreamingProviders=@StreamingProviders WHERE ItemId=@ItemId";
                 }
-                else if( video is Episode )
+                else if( baseItem is Episode )
                 {
-                    var sql = "UPDATE Media SET StreamingProviders=@StreamingProviders WHERE ItemId=@ItemId";
-                    List<(string name, object? value)> parameters =
-                        [
-                            ( "@StreamingProviders", JsonSerializer.Serialize( allProviders )),
-                            ( "@ItemId", video.Id.ToString()),
-                        ];
-
-                    retVal.Add( new SQLCmdDef( sql, parameters ) );
-
-                    var series = ( video as Episode )!.Series;
-                    if( series != null )
-                    {
-                        sql = "UPDATE Series SET StreamingProviders=@StreamingProviders WHERE ItemId=@ItemId";
-                        parameters =
-                            [
-                                ( "@StreamingProviders", JsonSerializer.Serialize( allProviders )),
-                               ( "@ItemId", series.Id.ToString()),
-                            ];
-
-                        retVal.Add( new SQLCmdDef( sql, parameters ) );
-                    }
+                    sql = "UPDATE Media SET StreamingProviders=@StreamingProviders WHERE ItemId=@ItemId";
                 }
+                else if( baseItem is Series )
+                {
+                    sql = "UPDATE Series SET StreamingProviders=@StreamingProviders WHERE ItemId=@ItemId";
+                }
+
+                List<(string name, object? value)> parameters =
+                    [
+                        ( "@StreamingProviders", allProvidersJSON ),
+                        ( "@ItemId", baseItem.Id.ToString()),
+                    ];
+
+                retVal.Add( new SQLCmdDef( sql, parameters ) );
             }
             catch( Exception ex )
             {
-                Logger().Error( $"Problem connecting to TMDB - {video.Name} - {tmdbId}" );
+                Logger().Error( $"Problem connecting to TMDB - {baseItem.Name} - {tmdbId}" );
                 Logger().Error( ex.ToString() );
             }
 
             if( streamingProviders == null )
             {
-                Logger().Warn( $"Could not find Streaming Providers for {video.Name} - {tmdbId}" );
+                Logger().Warn( $"Could not find Streaming Providers for {baseItem.Name} - {tmdbId}" );
                 return [];
             }
 

@@ -251,7 +251,6 @@ define([
                 <td style="text-align:left;">${info.ResolutionDetail}</td>
                 <td style="text-align:left;">${info.Codec}</td>
                 <td style="text-align:left;">${info.DolbyVisionProfile}</td>
-                <td style="text-align:left;" sort-value="${info.ServerLocation.SortBy}">${info.ServerLocation.Text}</td>
                 `;
             }
 
@@ -263,6 +262,11 @@ define([
                 retVal += `<td style="text-align:left;" sort-value="${info.SearchLocation.SortBy}">${info.SearchLocation.Text}</td>`;
             }
 
+            if (showOnServer) {
+                retVal += `
+                <td style="text-align:left;" sort-value="${info.ServerLocation.SortBy}">${info.ServerLocation.Text}</td>
+                `;
+            }
             return retVal;
         }
 
@@ -279,7 +283,6 @@ define([
                 <th data-column="Resolution" data-type="string" class="info_cell_heading">Resolution<span class="sort-icon"></span></th>
                 <th data-column="Codec" data-type="string" class="info_cell_heading">Codec<span class="sort-icon"></span></th>
                 <th data-column="DolbyVisionProfile" data-type="string" class="info_cell_heading">Dolby Vision Profile<span class="sort-icon"></span></th>
-                <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
                 `;
             }
 
@@ -291,6 +294,11 @@ define([
                 retVal += `<th data-column="Search" data-type="string" class="info_cell_heading">Click to Search<span class="sort-icon"></span></th>`;
             }
 
+            if (showOnServer) {
+                retVal += `
+                    <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
+                `;
+            }
             retVal += "</tr>";
             return retVal;
         }
