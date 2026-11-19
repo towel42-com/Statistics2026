@@ -170,25 +170,6 @@ namespace Statistics2026.Responses
             var episodeNum = row.GetInt( col++ );
             var parentId = row.GetString( col++ );  // blank for onServer
 
-            if( !isEpisode )
-            {
-                List<SortByText> collectionNames = [];
-                foreach( var currParentId in retVal.ParentIds )
-                {
-                    var currCollectionNames = getCollectionName( currParentId );
-                    if( currCollectionNames != null )
-                    {
-                        collectionNames.Add( currCollectionNames );
-                    }
-                }
-
-                retVal.ParentName = new();
-                foreach( var curr in collectionNames )
-                {
-                    retVal.ParentName += curr;
-                }
-            }
-
             var futureDate = HelperFuncs.InvalidDateForMissingAnalysis( premiereDate, true );
             if( !tmdbPosterPath.IsNullOrEmpty() )
             {
