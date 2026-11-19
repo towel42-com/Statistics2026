@@ -4,6 +4,7 @@
 		<Version>1.1.0.22</Version>
 		<AssemblyVersion>1.1.0.22</AssemblyVersion>
 		<FileVersion>1.1.0.22</FileVersion>
+		<TargetName>$(AssemblyName).$(Version)</TargetName>        
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<NoWarn>$(NoWarn);SYSLIB1030;CS0436;CS0618</NoWarn>
@@ -15,6 +16,7 @@
 		<NewServerLocation Condition="'$(NewServerLocation)' == ''">""</NewServerLocation>
 		<LimitDBUsersTo Condition="'$(LimitDBUsersTo)' == ''">""</LimitDBUsersTo>
 	</PropertyGroup>
+
 
 	<ItemGroup>
 		<Using Include="System" />
