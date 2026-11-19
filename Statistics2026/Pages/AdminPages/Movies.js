@@ -1,8 +1,8 @@
 ﻿define([
     'mainTabsManager',
     'appRouter',
-    Dashboard.getConfigurationResourceUrl('AdminHelpers.js'),
-    Dashboard.getConfigurationResourceUrl('Helpers.js'),
+    Dashboard.getConfigurationResourceUrl('Stats2026_AdminHelpers.js'),
+    Dashboard.getConfigurationResourceUrl('Stats2026_Helpers.js'),
     'emby-linkbutton'
 ],
     function (mainTabsManager, appRouter, AdminHelpers, Helpers) {

@@ -1,7 +1,7 @@
 ﻿define([
     'mainTabsManager',
-    Dashboard.getConfigurationResourceUrl('AdminHelpers.js'),
-    Dashboard.getConfigurationResourceUrl('Helpers.js')
+    Dashboard.getConfigurationResourceUrl('Stats2026_AdminHelpers.js'),
+    Dashboard.getConfigurationResourceUrl('Stats2026_Helpers.js')
 ],
     function (mainTabsManager, AdminHelpers, Helpers) {
         'use strict';

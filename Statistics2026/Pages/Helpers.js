@@ -435,7 +435,7 @@ define([
             if (document.getElementById(STYLE_ID))  // already added
                 return;
 
-            const cssUrl = 'configurationpage?name=style.css';
+            const cssUrl = 'configurationpage?name=Stats2026_style.css';
             const link = document.createElement('link');
             link.id = STYLE_ID;
             link.rel = 'stylesheet';
