@@ -1,16 +1,9 @@
-﻿using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.Serialization;
-using ServiceStack;
-using SQLitePCL;
+﻿using ServiceStack;
 using SQLitePCL.pretty;
-using Statistics2026;
 using Statistics2026.Configuration;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
-using System.Globalization;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using static Statistics2026.Data.Statistics2026DB;
@@ -385,13 +378,13 @@ namespace Statistics2026.Responses
                 retVal.ItemUrl = ItemImageUrl.ItemUrlFromItemId( itemId, itemImageUrl, title );
 
 
-            if( isMissing )
-            {
-                var parentInfoJSON = row.GetString( col++ );
-                var seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
+            var parentInfoJSON = row.GetString( col++ );
+            var seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
 
-                var parentInfo = getParentInfo( parentInfoJSON,
-                    ( string id, string name, string sortName ) =>
+            var parentInfo = getParentInfo( parentInfoJSON,
+                ( string id, string name, string sortName ) =>
+                {
+                    if( isMissing )
                     {
                         if( isEpisode )
                         {
@@ -402,18 +395,26 @@ namespace Statistics2026.Responses
                             return isCollectionFiltered( name ) || ( ( sortName != name ) && isCollectionFiltered( sortName ) ) || isCollectionFiltered( title );
                         }
                     }
-                );
+                    else
+                        return false;
+                }
+            );
 
-                if( parentInfo == null )
-                    return null;
+            if( parentInfo == null )
+                return null;
 
-                retVal.setParentInfo( parentInfo );
+            retVal.setParentInfo( parentInfo );
 
+            if( isMissing )
+            {
                 retVal = SetMissingData( retVal, row, ref col, premiereDate, isEpisode, isSeriesFiltered, isCollectionFiltered, getCollectionName );
                 if( retVal == null )
                     return null;
             }
+            else
+            {
 
+            }
             retVal = AddStreamingProviders( retVal, isoCode, streamingProvidersString, embyInterfaces, db );
 
             return retVal;
