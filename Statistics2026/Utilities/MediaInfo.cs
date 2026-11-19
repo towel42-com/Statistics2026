@@ -183,13 +183,14 @@ namespace Statistics2026.Utilities
 
             retVal.IsMinimal = false;
 
-            var mediaStream = video.GetMediaStreams().FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
+            var mediaStreams = video.GetMediaStreams();
+            var videoStream = mediaStreams.FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
 
-            var resolutionBase = GetMediaResolution( mediaStream, false );
-            var resolutionDetail = GetMediaResolution( mediaStream, true );
+            var resolutionBase = GetMediaResolution( videoStream, false );
+            var resolutionDetail = GetMediaResolution( videoStream, true );
 
-            var codec = mediaStream?.Codec ?? "Unknown";
-            var dvProfile = GetDolbyVisionProfile( mediaStream );
+            var codec = videoStream?.Codec ?? "Unknown";
+            var dvProfile = GetDolbyVisionProfile( videoStream );
 
             retVal.StartYear = video.ProductionYear?.ToString() ?? "Unknown";
             retVal.Season = video.ParentIndexNumber ?? -1;
