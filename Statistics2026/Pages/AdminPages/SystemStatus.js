@@ -18,19 +18,21 @@
                 return;
             });
 
+            var pendingPromises = [];
+
             Helpers.insertSystemStatus(view, "lastRunInfo");
 
             if (Helpers.showDiagnosticInfo(pluginConfig)) {
-                var playedUserMedia = Helpers.getSummaryInfo(view, "played_user_media", "", "");
+                var playedUserMedia = Helpers.getSummaryInfo(view, "played_user_media", { promises: pendingPromises });
                 view.querySelector(`#playedUserMedia`).style.display = '';
                 view.querySelector("#playedUserMedia").innerHTML = (playedUserMedia);
 
-                var userWatchMediaIssues = Helpers.getSummaryInfo(view, "user_watch_media_issues", "", "");
+                var userWatchMediaIssues = Helpers.getSummaryInfo(view, "user_watch_media_issues", { promises: pendingPromises });
                 view.querySelector(`#userWatchMediaIssues`).style.display = '';
                 view.querySelector("#userWatchMediaIssues").innerHTML = (userWatchMediaIssues);
 
                 var multiCollectionMovies = "";
-                multiCollectionMovies += Helpers.getSummaryInfo(view, "multi_collection_movies", "", "");
+                multiCollectionMovies += Helpers.getSummaryInfo(view, "multi_collection_movies", { promises: pendingPromises });
                 view.querySelector(`#multiCollectionMovies`).style.display = '';
                 view.querySelector("#multiCollectionMovies").innerHTML = multiCollectionMovies;
             }
@@ -40,7 +42,10 @@
                 view.querySelector(`#multiCollectionMovies`).style.display = 'none';
 
             }
-            Dashboard.hideLoadingMsg();
+
+            Promise.allSettled(pendingPromises).finally(() => {
+                Dashboard.hideLoadingMsg();
+            });
         }
 
         async function loadStats(view) {
@@ -62,7 +67,6 @@
             ApiClient.getPluginConfiguration(Helpers.pluginId).then(
                 function (config) {
                     loadInfoAsync(view, config);
-                    Dashboard.hideLoadingMsg();
                 }
             );
         }

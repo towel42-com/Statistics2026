@@ -20,20 +20,24 @@
                 return;
             }
 
+            var pendingPromises = [];
+
             Helpers.insertGetLastRunInfo(view, lastRunArray, "lastRunInfo");
 
             var userInfo = "";
-            userInfo += Helpers.getSummaryInfo(view, "most_active_users", "", "");
-            userInfo += Helpers.getSummaryInfo(view, "user_count", "", "");
+            userInfo += Helpers.getSummaryInfo(view, "most_active_users", { promises: pendingPromises });
+            userInfo += Helpers.getSummaryInfo(view, "user_count", { promises: pendingPromises });
             view.querySelector("#userInfo").innerHTML = (userInfo);
 
             var mediaInfo = "";
             mediaInfo += Helpers.getSummaryInfo(view, "codec_summary");
-            mediaInfo += Helpers.getSummaryInfo(view, "resolution_summary", "", "");
-            mediaInfo += Helpers.getSummaryInfo(view, "dvprofile_summary", "", "");
+            mediaInfo += Helpers.getSummaryInfo(view, "resolution_summary", { promises: pendingPromises });
+            mediaInfo += Helpers.getSummaryInfo(view, "dvprofile_summary", { promises: pendingPromises });
             view.querySelector("#mediaInfo").innerHTML = mediaInfo;
 
-            Dashboard.hideLoadingMsg();
+            Promise.allSettled(pendingPromises).finally(() => {
+                Dashboard.hideLoadingMsg();
+            });
         }
 
 

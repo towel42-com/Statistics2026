@@ -6,7 +6,7 @@ define([
     'emby-button',
     'emby-tabs'
 ],
-    function (mainTabsManager,dialogHelper, toast, prompt) {
+    function (mainTabsManager, dialogHelper, toast, prompt) {
         'use strict';
 
         const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
@@ -189,48 +189,49 @@ define([
         function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
             showLoadingFunc();
 
-            try {
-                view.querySelector("#UserTitle").innerHTML = "User statistics for " + userName;
-                view.querySelector("#generalStats").innerHTML = "";
-                view.querySelector("#movieStats").innerHTML = "";
-                view.querySelector("#showStats").innerHTML = "";
+            view.querySelector("#UserTitle").innerHTML = "User statistics for " + userName;
+            view.querySelector("#generalStats").innerHTML = "";
+            view.querySelector("#movieStats").innerHTML = "";
+            view.querySelector("#showStats").innerHTML = "";
 
-                var generalStats = "";
-                generalStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=all");
-                generalStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=all");
-                view.querySelector("#generalStats").innerHTML = generalStats;
+            var pendingPromises = [];
 
-                var movieStats = "";
-                movieStats += getSummaryInfo(view, "total_movie_count", userName);
-                movieStats += getSummaryInfo(view, "total_movies_watched", userName);
-                movieStats += getSummaryInfo(view, "movie_favorite_years", userName);
-                movieStats += getSummaryInfo(view, "movie_favorite_genres", userName);
-                movieStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=false", "total_movie_time_watched");
-                movieStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=false", "total_movie_watchable_time");
-                view.querySelector("#movieStats").innerHTML = movieStats;
+            var generalStats = "";
+            generalStats += getSummaryInfo(view, "total_time_watched", { user: userName, parameters: "?episodes=all", promises: pendingPromises });
+            generalStats += getSummaryInfo(view, "total_watchable_time", { user: userName, parameters: "?episodes=all", promises: pendingPromises });
+            view.querySelector("#generalStats").innerHTML = generalStats;
 
-                var movieMostWatchedStats = "";
-                movieMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=false", "last_seen_movies");
-                movieMostWatchedStats += getSummaryInfo(view, "most_watched_movies", userName);
-                view.querySelector("#movieMostWatchedStats").innerHTML = movieMostWatchedStats;
+            var movieStats = "";
+            movieStats += getSummaryInfo(view, "total_movie_count", { user: userName, promises: pendingPromises });
+            movieStats += getSummaryInfo(view, "total_movies_watched", { user: userName, promises: pendingPromises });
+            movieStats += getSummaryInfo(view, "movie_favorite_years", { user: userName, promises: pendingPromises });
+            movieStats += getSummaryInfo(view, "movie_favorite_genres", { user: userName, promises: pendingPromises });
+            movieStats += getSummaryInfo(view, "total_time_watched", { user: userName, parameters: "?episodes=false", promises: pendingPromises }, "total_movie_time_watched");
+            movieStats += getSummaryInfo(view, "total_watchable_time", { user: userName, parameters: "?episodes=false", promises: pendingPromises }, "total_movie_watchable_time");
+            view.querySelector("#movieStats").innerHTML = movieStats;
 
-                var showStats = "";
-                showStats += getSummaryInfo(view, "total_tv_count", userName);
-                showStats += getSummaryInfo(view, "total_tv_watched", userName);
-                showStats += getSummaryInfo(view, "total_series_finished", userName);
-                showStats += getSummaryInfo(view, "tv_favorite_genres", userName);
-                showStats += getSummaryInfo(view, "total_time_watched", userName, "?episodes=true", "total_episode_time_watched");
-                showStats += getSummaryInfo(view, "total_watchable_time", userName, "?episodes=true", "total_episode_watchable_time");
-                view.querySelector("#showStats").innerHTML = showStats;
+            var movieMostWatchedStats = "";
+            movieMostWatchedStats += getSummaryInfo(view, "last_seen", { user: userName, parameters: "?episodes=false", promises: pendingPromises }, "last_seen_movies");
+            movieMostWatchedStats += getSummaryInfo(view, "most_watched_movies", { user: userName, promises: pendingPromises });
+            view.querySelector("#movieMostWatchedStats").innerHTML = movieMostWatchedStats;
 
-                var seriesMostWatchedStats = "";
-                seriesMostWatchedStats += getSummaryInfo(view, "last_seen", userName, "?episodes=true", "last_seen_tv");
-                seriesMostWatchedStats += getSummaryInfo(view, "most_watched_shows", userName, "");
-                view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
+            var showStats = "";
+            showStats += getSummaryInfo(view, "total_tv_count", { user: userName, promises: pendingPromises });
+            showStats += getSummaryInfo(view, "total_tv_watched", { user: userName, promises: pendingPromises });
+            showStats += getSummaryInfo(view, "total_series_finished", { user: userName, promises: pendingPromises });
+            showStats += getSummaryInfo(view, "tv_favorite_genres", { user: userName, promises: pendingPromises });
+            showStats += getSummaryInfo(view, "total_time_watched", { user: userName, parameters: "?episodes=true", promises: pendingPromises }, "total_episode_time_watched");
+            showStats += getSummaryInfo(view, "total_watchable_time", { user: userName, parameters: "?episodes=true", promises: pendingPromises }, "total_episode_watchable_time");
+            view.querySelector("#showStats").innerHTML = showStats;
 
-            } finally {
-                hideLoadingFunc();
-            }
+            var seriesMostWatchedStats = "";
+            seriesMostWatchedStats += getSummaryInfo(view, "last_seen", { user: userName, parameters: "?episodes=true", promises: pendingPromises }, "last_seen_tv");
+            seriesMostWatchedStats += getSummaryInfo(view, "most_watched_shows", { user: userName, promises: pendingPromises });
+            view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
+
+            Promise.allSettled(pendingPromises).finally(() => {
+                Dashboard.hideLoadingMsg();
+            });
         }
 
         function getMediaRowData(info, showOnServer, showMissing, showStreaming) {
@@ -361,24 +362,26 @@ define([
             });
         }
 
-        function getSummaryInfo(view, whichSummary, user, parameters = "", div = "") {
+        function getSummaryInfo(view, whichSummary, { user = "", parameters = "", div = "", promises = null } = {}) {
             var urlText = "/emby/Statistics2026/" + whichSummary;
-            if (user != "" && user !== undefined)
+            if (user != "" && user !== undefined) {
                 urlText += "/" + user;
+            }
             urlText += parameters;
             console.info("getSummaryInfo - '" + urlText + "'");
             var url = ApiClient.getUrl(urlText);
 
-            if (div == "")
+            if (div == "") {
                 div = whichSummary;
+            }
 
-            ApiClient.getJSON(url).then(response => {
+            var requestPromise = ApiClient.getJSON(url).then(response => {
                 view.querySelector("#" + div).innerHTML = response.html;
 
-                response.dynamicButtons.forEach((v) => {
-                    view.querySelector("#" + v.id).addEventListener("click",
+                response.dynamicButtons.forEach((btn) => {
+                    view.querySelector("#" + btn.id).addEventListener("click",
                         function () {
-                            showInfo(v.title, v.info, true);
+                            showInfo(btn.title, btn.info, true);
                         });
                 });
 
@@ -387,6 +390,10 @@ define([
                 var errorMessage = "'" + error + "' - '" + div + "' - '" + urlText + "'";
                 console.error("getSummaryInfo failed:", errorMessage);
             });
+
+            if (Array.isArray(promises)) {
+                promises.push(requestPromise);
+            }
 
             return `<div name="${div}" id="${div}"></div>`;
         }
@@ -697,7 +704,7 @@ define([
                             dialogHelper.close(targetDialog);
                         });
                     }
-               }
+                }
                 targetDialog.addEventListener('close', function () {
                     finish(false);
                     targetDialog.remove();
