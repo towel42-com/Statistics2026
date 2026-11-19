@@ -218,7 +218,7 @@ namespace Statistics2026
                 },
                 new() {
                     Name = "Stats2026_UserPageHelpers.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.Helpers.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.UserHelpers.js"
                 },
 
             };
