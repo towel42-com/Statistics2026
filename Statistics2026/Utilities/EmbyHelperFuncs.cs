@@ -202,6 +202,26 @@ namespace Statistics2026.Utilities
             return libManager.GetItemList( query ).OfType<T>().ToList();
         }
 
+        public static List<Video> GetAllMovies( User? user, ILibraryManager libManager )
+        {
+            if( libManager == null )
+                return [];
+
+            var query = new InternalItemsQuery( user )
+            {
+                IncludeItemTypes = new[] { typeof( Movie ).Name },
+                Recursive = true,
+                IsVirtualItem = false
+            };
+            query.DtoOptions = new DtoOptions( true )
+            {
+                ImageTypes = new[] { ImageType.Thumb, ImageType.Thumbnail },
+                EnableImages = true
+            };
+
+            return libManager.GetItemList( query ).OfType<Video>().ToList();
+        }
+
         public static List<Video> GetAllEpisodesAndMovies( User? user, ILibraryManager libManager )
         {
             if( libManager == null )
