@@ -627,7 +627,7 @@ ol.range-list {
     display: table !important;
     width: auto !important;
     max-width: 100%;
-    margin: -1.1em 0 1.25em 0 !important;
+    margin: -1.1em auto 1.25em auto !important;
     padding: 0.22em !important;
     border-radius: 9999px !important;
     background-color: rgba(128, 128, 128, 0.12);
