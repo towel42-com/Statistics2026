@@ -1,5 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities;
 using ServiceStack;
+using Statistics2026.Services;
 using Statistics2026.Utilities;
 using System.Collections.Concurrent;
 
@@ -161,12 +162,21 @@ namespace Statistics2026.Data
                     var person = LibraryManager().GetItemById( new Guid( curr.Key ) );
                     if( person == null )
                         continue;
+
+                    var text = string.Empty;
                     if( movies )
-                        retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.total} Movie{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
+                        text = $"{person.Name}: {curr.Value.total} Movie{( ( curr.Value.total == 1 ) ? "" : "s" )}";
                     else if( series == null || series! == true )
-                        retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.parentToChildMapping.Count()} Series", false );
+                        text = $"{person.Name}: {curr.Value.parentToChildMapping.Count()} Series";
                     else
-                        retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
+                        text = $"{person.Name}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}";
+
+                    var imageUrl = ItemImageUrl._ItemImageUrl( person );
+                    if( !imageUrl.IsNullOrEmpty() )
+                    {
+                        text = ItemImageUrl.ItemUrlFromItemId( person.Id.ToString(), imageUrl, text );
+                    }
+                    retVal.AddLine( person.Name, text, false );
                 }
                 catch( Exception )
                 {

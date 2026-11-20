@@ -3,30 +3,15 @@
 //#define DEBUG_PLUGIN_ASYNC
 //#define DEBUG_DB
 #endif
-using MediaBrowser.Controller;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Audio;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
-using SQLitePCL.pretty;
 using Statistics2026.Data;
-using Statistics2026.Secrets;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.Serialization;
-using System.Threading;
 using static Statistics2026.Data.Statistics2026DB;
 
 namespace Statistics2026.Utilities
@@ -735,6 +720,27 @@ namespace Statistics2026.Utilities
 
             var user = embyInterfaces.GetUserById( id );
             return user;
+        }
+        
+        public static Genre? GetGenreByName( string genreName, EmbyInterfaces embyInterfaces )
+        {
+            if( string.IsNullOrWhiteSpace( genreName ) )
+            {
+                return null;
+            }
+
+            var query = new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { nameof( Genre ) },
+                Name = genreName,
+                Recursive = true
+            };
+
+            var results = embyInterfaces.LibraryManager().GetItemList( query );
+
+            return results
+                .OfType<Genre>()
+                .FirstOrDefault( genre => string.Equals( genre.Name, genreName, StringComparison.OrdinalIgnoreCase ) );
         }
 
     }

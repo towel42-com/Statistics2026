@@ -3,6 +3,7 @@ using ServiceStack;
 using Statistics2026.Utilities;
 using System.Collections.Concurrent;
 using System.Text.Json;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
@@ -736,12 +737,25 @@ namespace Statistics2026.Data
             for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numGenresToReport ); ++ii )
             {
                 var curr = sortedGenre[ ii ];
+
+                var genre = EmbyHelperFuncs.GetGenreByName( curr.Key, _embyInterfaces );
+
+                var text = string.Empty;
+
                 if( movies )
-                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.total} Movie{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
+                    text = $"{curr.Key}: {curr.Value.total} Movie{( ( curr.Value.total == 1 ) ? "" : "s" )}";
                 else if( series == null || series! == true )
-                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.parentToChildMapping.Count()} Series", false );
+                    text = $"{curr.Key}: {curr.Value.parentToChildMapping.Count()} Series";
                 else
-                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
+                    text = $"{curr.Key}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}";
+
+                var imageUrl = ItemImageUrl._ItemImageUrl( genre );
+                if( !imageUrl.IsNullOrEmpty() )
+                {
+                    text = ItemImageUrl.ItemUrlFromItemId( genre!.Id.ToString(), imageUrl, text );
+               }
+
+                retVal.AddLine( curr.Key, text, false );
             }
 
             return retVal;

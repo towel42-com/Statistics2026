@@ -41,7 +41,7 @@ namespace Statistics2026.Utilities
             sIdToUrlMap.Clear();
         }
 
-        public static string _ItemImageUrl( BaseItem item, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
+        public static string _ItemImageUrl( BaseItem? item, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
             if( item == null || item.Id.ToString().IsNullOrEmpty() )
                 return string.Empty;
