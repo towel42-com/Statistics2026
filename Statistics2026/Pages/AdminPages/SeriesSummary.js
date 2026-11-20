@@ -24,8 +24,8 @@
             var pendingPromises = [];
 
             var seriesStats_totals = "";
-            seriesStats_totals += Helpers.getSummaryInfo(view, "total_tv_count", { promises: pendingPromises });
-            seriesStats_totals += Helpers.getSummaryInfo(view, "total_tv_studio_count", { promises: pendingPromises });
+            seriesStats_totals += Helpers.getSummaryInfo(view, "total_series_count", { promises: pendingPromises });
+            seriesStats_totals += Helpers.getSummaryInfo(view, "total_series_studio_count", { promises: pendingPromises });
             seriesStats_totals += Helpers.getSummaryInfo(view, "total_missing_episodes", { promises: pendingPromises });
             view.querySelector("#seriesStats_totals").innerHTML = seriesStats_totals;
 

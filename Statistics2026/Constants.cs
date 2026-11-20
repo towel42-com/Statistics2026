@@ -33,11 +33,21 @@ namespace Statistics2026
         internal const string TVGenres = "TV Genres";
         internal const string TVGenresHelp = "TV genres in the Emby library.";
 
+        internal const string TVSeriesGenres = "TV Genres";
+        internal const string TVSeriesGenresHelp = "TV Series genres (by series) in the Emby library.";
+
+        internal const string TVEpisodeGenres = "TV Genres";
+        internal const string TVEpisodeGenresHelp = "TV Series genres (by episode) in the Emby library.";
+
         internal const string MovieActors = "Movie Actors";
         internal const string MovieActorsHelp = "Movie actors in the Emby library.";
 
-        internal const string TVActors = "TV Actors";
-        internal const string TVActorsHelp = "TV actors in the Emby library.";
+        internal const string TVEpisodeActors = "TV Actors";
+        internal const string TVEpisodeActorsHelp = "TV actors (by episode) in the Emby library.";
+
+        internal const string TVSeriesActors = "TV Actors";
+        internal const string TVSeriesActorsHelp = "TV actors (by series) in the Emby library.";
+
 
         internal const string MovieRatings = "Movie Ratings";
         internal const string MovieRatingsHelp = "Movie Ratings in the Emby library.";
@@ -86,7 +96,7 @@ namespace Statistics2026
         internal const string HelpTotalUserTVShows = "Total TV Series the Emby library available to the User.";
 
         internal const string TotalTVEpisodes = "Total TV Episodes";
-        internal const string HelpTotalTVEpisodes = "Total TV Series the Emby library (Excludes Specials).";
+        internal const string HelpTotalTVEpisodes = "Total TV Episodes  the Emby library (Excludes Specials).";
 
         internal const string TotalUserTVEpisodes = "Total TV Episodes for User";
         internal const string HelpTotalUserTVEpisodes = "Total TV Series the Emby library available to the User (Excludes Specials).";

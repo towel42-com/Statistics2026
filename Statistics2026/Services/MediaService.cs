@@ -1,5 +1,4 @@
-﻿using Emby.Media.Common.Extensions;
-using MediaBrowser.Common;
+﻿using MediaBrowser.Common;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
@@ -17,13 +16,6 @@ using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
-using System;
-using System.Diagnostics;
-using System.Net.NetworkInformation;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Timers;
-using static Statistics2026.Data.Statistics2026DB;
 
 namespace Statistics2026.Services
 {
@@ -83,9 +75,15 @@ namespace Statistics2026.Services
     {
     }
 
-    [Route( "/Statistics2026/total_tv_count", "GET", Summary = "Get the total TV Count" )]
+    [Route( "/Statistics2026/total_episode_count", "GET", Summary = "Get the total Episode Count" )]
     [Authenticated( Roles = "admin" )]
-    public class GetTotalTVCountNoUser : IReturn<object>
+    public class GetTotalEpisodeCount : IReturn<object>
+    {
+    }
+
+    [Route( "/Statistics2026/total_series_count", "GET", Summary = "Get the total Series Count" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetTotalSeriesCount : IReturn<object>
     {
     }
 
@@ -115,6 +113,18 @@ namespace Statistics2026.Services
     {
     }
 
+    [Route( "/Statistics2026/episode_genre_list", "GET", Summary = "Get the Episode Genre List" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetEpisodeGenreList : IReturn<object>
+    {
+    }
+
+    [Route( "/Statistics2026/episode_actors_list", "GET", Summary = "Get the Episode Actors List" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetEpisodeActorsList : IReturn<object>
+    {
+    }
+
     [Route( "/Statistics2026/series_ratings_list", "GET", Summary = "Get the Series Ratings List" )]
     [Authenticated( Roles = "admin" )]
     public class GetSeriesRatingsList : IReturn<object>
@@ -128,9 +138,15 @@ namespace Statistics2026.Services
     {
     }
 
-    [Route( "/Statistics2026/total_tv_studio_count", "GET", Summary = "Get the total TV Studio Count" )]
+    [Route( "/Statistics2026/total_episode_studio_count", "GET", Summary = "Get the total Episode Studio Count" )]
     [Authenticated( Roles = "admin" )]
-    public class GetTotalTVStudioCount : IReturn<object>
+    public class GetTotalEpisodeStudioCount : IReturn<object>
+    {
+    }
+
+    [Route( "/Statistics2026/total_series_studio_count", "GET", Summary = "Get the total Series Studio Count" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetTotalSeriesStudioCount : IReturn<object>
     {
     }
 
@@ -311,7 +327,7 @@ namespace Statistics2026.Services
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
-                var groupData = db.GenreList( false );
+                var groupData = db.GenreList( false, true );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -320,13 +336,30 @@ namespace Statistics2026.Services
             } );
         }
 
+        public object Get( GetEpisodeGenreList request )
+        {
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            {
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+
+                var groupData = db.GenreList( false, false );
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+
+        //GetEpisodeActorsList
         public object Get( GetMovieActorsList request )
         {
             return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
-                var groupData = db.ActorsList( true );
+                var groupData = db.ActorsList( true, null );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -341,7 +374,23 @@ namespace Statistics2026.Services
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
-                var groupData = db.ActorsList( false );
+                var groupData = db.ActorsList( false, true );
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+
+        public object Get( GetEpisodeActorsList request )
+        {
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            {
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+
+                var groupData = db.ActorsList( false, false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -380,11 +429,11 @@ namespace Statistics2026.Services
             } );
         }
 
-        public object TotalTVCount( User? user, bool watched )
+        public object TotalTVCount( User? user, bool watched, bool forSeries )
         {
             using var db = Statistics2026DB.GetInstance( _embyInterfaces );
 
-            var groupData = db.TotalTVCount( user, watched );
+            var groupData = db.TotalTVCount( user, watched, forSeries );
             if( groupData == null )
                 return new StatCardResponse();
 
@@ -398,15 +447,23 @@ namespace Statistics2026.Services
             {
                 var userName = request.user;
                 var user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
-                return user == null ? new object() : TotalTVCount( user, false );
+                return user == null ? new object() : TotalTVCount( user, false, false );
             } );
         }
 
-        public object Get( GetTotalTVCountNoUser request )
+        public object Get( GetTotalSeriesCount request )
         {
             return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
-                return TotalTVCount( null, false );
+                return TotalTVCount( null, false, true );
+            } );
+        }
+
+        public object Get( GetTotalEpisodeCount request )
+        {
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            {
+                return TotalTVCount( null, false, false );
             } );
         }
 
@@ -420,7 +477,7 @@ namespace Statistics2026.Services
                 if( user == null )
                     return new StatCardResponse();
 
-                var groupData = db.TotalTVCount( user, true );
+                var groupData = db.TotalTVCount( user, true, false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -444,12 +501,26 @@ namespace Statistics2026.Services
             } );
         }
 
-        public object Get( GetTotalTVStudioCount request )
+        public object Get( GetTotalSeriesStudioCount request )
         {
             return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
             {
                 using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var groupData = db.TotalTVStudioCount( null );
+                var groupData = db.TotalTVStudioCount( null, false );
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                var vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        public object Get( GetTotalEpisodeStudioCount request )
+        {
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            {
+                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                var groupData = db.TotalTVStudioCount( null, true );
                 if( groupData == null )
                     return new StatCardResponse();
 

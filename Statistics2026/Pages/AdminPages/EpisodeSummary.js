@@ -23,6 +23,16 @@
 
             var pendingPromises = [];
 
+            var episodeStats_totals = "";
+            episodeStats_totals += Helpers.getSummaryInfo(view, "total_episode_count", { promises: pendingPromises });
+            episodeStats_totals += Helpers.getSummaryInfo(view, "total_episode_studio_count", { promises: pendingPromises });
+            view.querySelector("#episodeStats_totals").innerHTML = episodeStats_totals;
+
+            var episodeStats_gar = "";
+            episodeStats_gar += Helpers.getSummaryInfo(view, "episode_genre_list", { promises: pendingPromises });
+            episodeStats_gar += Helpers.getSummaryInfo(view, "episode_actors_list", { promises: pendingPromises });
+            view.querySelector("#episodeStats_gar").innerHTML = episodeStats_gar;
+
             var episodeStats_age_stats = "";
             episodeStats_age_stats += Helpers.getSummaryInfo(view, "get_episode/OldestPremiereDate", { div: "oldest_episode", promises: pendingPromises });
             episodeStats_age_stats += Helpers.getSummaryInfo(view, "get_episode/LatestPremiereDate", { div: "latest_episode", promises: pendingPromises });

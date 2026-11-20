@@ -1,23 +1,8 @@
 ﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.Querying;
-using MediaBrowser.Model.Session;
-using RestSharp;
 using ServiceStack;
 using Statistics2026.Utilities;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Runtime.Serialization;
 using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Text.RegularExpressions;
 
 namespace Statistics2026.Data
 {
@@ -390,7 +375,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard TotalTVCount( User? user, bool watched )
+        public StatCard TotalTVCount( User? user, bool watched, bool forSeries )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -411,15 +396,17 @@ namespace Statistics2026.Data
             string? titleEpisodes;
 
             string? helpEpisodes;
+            string? helpSeries;
             if( user == null )
             {
                 seriesColumn = "COUNT(DISTINCT(PrimaryName))";
                 episodeColumn = "SUM(NumEpisodes)";
-                episodeFrom = seriesFrom = "Media WHERE IsEpisode";
+                episodeFrom = seriesFrom = "Media WHERE IsEpisode AND NOT IsTVSpecial";
 
                 titleSeries = Constants.TotalTVShows;
                 titleEpisodes = Constants.TotalTVEpisodes;
-                helpEpisodes = Constants.HelpTotalTVShows;
+                helpEpisodes = Constants.HelpTotalTVEpisodes;
+                helpSeries = Constants.HelpTotalTVShows;
             }
             else
             {
@@ -430,7 +417,8 @@ namespace Statistics2026.Data
 
                 titleSeries = Constants.TotalUserTVShows;
                 titleEpisodes = Constants.TotalUserTVEpisodes;
-                helpEpisodes = Constants.HelpTotalUserTVShows;
+                helpEpisodes = Constants.HelpTotalUserTVEpisodes;
+                helpSeries = Constants.HelpTotalUserTVShows;
 
                 var from = $"{tableName} LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId WHERE Media.IsEpisode AND NOT Media.IsTVSpecial AND ( {tableName}.UserId=@UserId )";
 
@@ -446,17 +434,19 @@ namespace Statistics2026.Data
                 seriesFrom = episodeFrom = from;
             }
 
-            var sqlEpisodes = $"SELECT {episodeColumn} FROM {episodeFrom}";
-            var retVal = ValueGroupForSingleItem( titleEpisodes, helpEpisodes, sqlEpisodes, paramList );
-
-            retVal.AddLine( titleSeries, true );
-            var sqlSeries = $"SELECT {seriesColumn} FROM {seriesFrom}";
-            var value = GetSingleValueFromSQL( sqlSeries, paramList );
-            retVal.AddLine( value, false );
+            TextBasedStatCard retVal;
+            if( forSeries )
+            {
+                retVal = ValueGroupForSingleItem( titleSeries, helpSeries, $"SELECT {seriesColumn} FROM {seriesFrom}", paramList );
+            }
+            else
+            {
+                retVal = ValueGroupForSingleItem( titleEpisodes, helpEpisodes, $"SELECT {episodeColumn} FROM {episodeFrom}", paramList );
+            }
 
             if( user == null )
             {
-                value = GetSingleValueFromSQL( "SELECT SUM(RunTimeTicks) FROM MEDIA WHERE IsEpisode" );
+                var value = GetSingleValueFromSQL( "SELECT SUM(RunTimeTicks) FROM MEDIA WHERE IsEpisode" );
                 value = FormatTicks( value.ToInt64() );
                 retVal.AddLine( value, false );
             }
@@ -464,7 +454,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private long TotalStudioCountValue( User? user, bool movies )
+        private long TotalStudioCountValue( User? user, bool movies, bool forSeries )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -488,12 +478,12 @@ namespace Statistics2026.Data
             return studios.Count();
         }
 
-        private StatCard TotalStudioCount( User? user, bool movies )
+        private StatCard TotalStudioCount( User? user, bool movies, bool forSeries )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             var retVal = new TextBasedStatCard( movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, EStatCardStyle.eCompact );
-            var value = TotalStudioCountValue( user, movies );
+            var value = TotalStudioCountValue( user, movies, forSeries );
             retVal.AddLine( value.ToString(), false );
             return retVal;
         }
@@ -502,14 +492,14 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            return TotalStudioCount( user, true );
+            return TotalStudioCount( user, true, false );
         }
 
-        public StatCard TotalTVStudioCount( User? user )
+        public StatCard TotalTVStudioCount( User? user, bool forSeries )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            return TotalStudioCount( user, false );
+            return TotalStudioCount( user, false, forSeries );
         }
 
         private List<(int year, long count)> FavoriteYearValues( User? user, bool movies )
@@ -647,7 +637,7 @@ namespace Statistics2026.Data
         }
 
         // genre to series/moviename -> number of episodes/movies
-        private Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> GenreCountValues( User? user, bool movies, bool playedOnly )
+        private Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> GenreCountValues( User? user, bool movies, bool playedOnly, bool? series=null )
         {
             return GroupedMediaKeyCountValues( "Genres", true, user, movies, playedOnly );
         }
@@ -669,14 +659,14 @@ namespace Statistics2026.Data
             }
             else
             {
-                videoType = "Episodes";
+                videoType = "Series";
                 title = Constants.FavoriteTVGenres;
             }
 
             var retVal = new TableBasedStatCard( title, "Genre", [ $"# of {videoType} Watched" ] );
             retVal.SetDataColumnAlignment( 0, StatCard.EAlignment.eCenter );
 
-            var genreMap = GenreCountValues( user, movies, true );
+            var genreMap = GenreCountValues( user, movies, true, true );
             var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value.total ).ToList();
 
             for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numGenresToReport ); ++ii )
@@ -721,14 +711,14 @@ namespace Statistics2026.Data
             return (currentCount, inDBCount);
         }
 
-        public StatCard GenreList( bool movies )
+        public StatCard GenreList( bool movies, bool? series=null )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var genreMap = GenreCountValues( null, movies, false );
+            var genreMap = GenreCountValues( null, movies, false, series );
 
-            var title = movies ? Constants.MovieGenres : Constants.TVGenres;
-            var help = movies ? Constants.MovieGenresHelp : Constants.TVGenresHelp;
+            var title = movies ? Constants.MovieGenres : ( ( series == null || series! == true ) ? Constants.TVSeriesGenres : Constants.TVEpisodeGenres );
+            var help = movies ? Constants.MovieGenresHelp : ( ( series == null || series! == true ) ? Constants.TVSeriesGenresHelp : Constants.TVEpisodeGenresHelp );
 
             var retVal = new GroupedTextBasedStatCard( title, help, EStatCardStyle.eDetailed )
             {
@@ -736,16 +726,22 @@ namespace Statistics2026.Data
                 ListType = EListType.eNumbered
             };
 
-            var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value.total ).ToList();
+            var sortedGenre = genreMap.OrderByDescending( kvp =>
+                {
+                    if( !movies && ( series == null || series! == true ) )
+                        return kvp.Value.parentToChildMapping.Count();
+                    return kvp.Value.total;
+                }
+            ).ToList();
             for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numGenresToReport ); ++ii )
             {
                 var curr = sortedGenre[ ii ];
                 if( movies )
-                {
                     retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.total} Movie{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
-                }
+                else if( series == null || series! == true )
+                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.parentToChildMapping.Count()} Series", false );
                 else
-                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.parentToChildMapping.Count()} Series and {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
+                    retVal.AddLine( curr.Key, $"{curr.Key}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
             }
 
             return retVal;

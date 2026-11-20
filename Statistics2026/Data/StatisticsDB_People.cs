@@ -37,7 +37,7 @@ namespace Statistics2026.Data
             }
 
             DeleteAllInvalid( allActorIds.ToList(), "People", "ItemId" );
-            
+
             double count = allActors.Count;
             var completedCount = 0;
 
@@ -131,25 +131,31 @@ namespace Statistics2026.Data
             return GroupedMediaKeyCountValues( "ActorIds", true, user, movies, playedOnly );
         }
 
-        public StatCard ActorsList( bool movies )
+        public StatCard ActorsList( bool movies, bool? series )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var genreMap = ActorCountValues( null, movies, false );
+            var actorsMap = ActorCountValues( null, movies, false );
 
-            var title = movies ? Constants.MovieActors : Constants.TVActors;
-            var help = movies ? Constants.MovieActorsHelp : Constants.TVActorsHelp;
+            var title = movies ? Constants.MovieActors : ( ( series == null || series! == true ) ? Constants.TVSeriesActors : Constants.TVEpisodeActors );
+            var help = movies ? Constants.MovieActorsHelp : ( ( series == null || series! == true ) ? Constants.TVSeriesActorsHelp : Constants.TVEpisodeActorsHelp );
 
             var retVal = new GroupedTextBasedStatCard( title, help, EStatCardStyle.eDetailed )
             {
-                SubTitle = $"Total Number of Actors: {genreMap.Count()}",
+                SubTitle = $"Total Number of Actors: {actorsMap.Count()}",
                 ListType = EListType.eNumbered
             };
 
-            var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value.total ).ToList();
-            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numActorsToReport ); ++ii )
+            var sortedActors = actorsMap.OrderByDescending( kvp => 
+                {
+                    if( !movies && ( series == null || series! == true ) )
+                        return kvp.Value.parentToChildMapping.Count();
+                    return kvp.Value.total;
+                }
+            ).ToList();
+            for( int ii = 0; ( ii < sortedActors.Count() ) && ( ii < Plugin.Instance!.Configuration.numActorsToReport ); ++ii )
             {
-                var curr = sortedGenre[ ii ];
+                var curr = sortedActors[ ii ];
                 try
                 {
                     var person = LibraryManager().GetItemById( new Guid( curr.Key ) );
@@ -157,8 +163,10 @@ namespace Statistics2026.Data
                         continue;
                     if( movies )
                         retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.total} Movie{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
+                    else if( series == null || series! == true )
+                        retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.parentToChildMapping.Count()} Series", false );
                     else
-                        retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.parentToChildMapping.Count()} Series and {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
+                        retVal.AddLine( person.Name, $"{person.Name}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}", false );
                 }
                 catch( Exception )
                 {
