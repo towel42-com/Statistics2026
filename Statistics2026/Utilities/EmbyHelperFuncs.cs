@@ -9,9 +9,12 @@ using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Logging;
+using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
 using Statistics2026.Data;
+using System.Text;
 using static Statistics2026.Data.Statistics2026DB;
 
 namespace Statistics2026.Utilities
@@ -240,7 +243,7 @@ namespace Statistics2026.Utilities
 
         public static List<BoxSet> GetAllBoxSets( User? user, ILibraryManager libManager )
         {
-            var boxSets = GetLibraryItems<BoxSet>( user, libManager );
+            List<BoxSet> boxSets = GetLibraryItems<BoxSet>( user, libManager );
             return boxSets;
         }
 
@@ -262,7 +265,7 @@ namespace Statistics2026.Utilities
         {
             var results = new List<Person>();
 
-            var peopleInfo = libraryManager.GetItemPeople( new InternalPeopleQuery
+            List<PersonInfo> peopleInfo = libraryManager.GetItemPeople( new InternalPeopleQuery
             {
                 ItemIds = new[] { video.InternalId },
                 PersonTypes = new[] { PersonType.Actor },
@@ -270,7 +273,7 @@ namespace Statistics2026.Utilities
             } );
 
             // 2. Fetch each full Person BaseItem and add it to the list
-            foreach( var info in peopleInfo )
+            foreach( PersonInfo? info in peopleInfo )
             {
                 if( libraryManager.GetItemById( info.Id ) is Person personEntity )
                 {
@@ -285,13 +288,13 @@ namespace Statistics2026.Utilities
 
         public static List<Series> GetAllSeries( User? user, ILibraryManager libManager, bool includeEmptySeries )
         {
-            var series = GetLibraryItems<Series>( user, libManager );
+            List<Series> series = GetLibraryItems<Series>( user, libManager );
             if( includeEmptySeries )
                 return series;
 
             series = series.Where( series =>
             {
-                var episodes = GetAllEpisodesForSeries( user, libManager, series );
+                List<Episode> episodes = GetAllEpisodesForSeries( user, libManager, series );
                 return ( episodes.Count() != 0 );
             } ).ToList();
 
@@ -303,14 +306,14 @@ namespace Statistics2026.Utilities
 
         public static Season? GetSeasonFromSeries( Series series, int seasonNum )
         {
-            var result = series.GetItems( new InternalItemsQuery
+            QueryResult<BaseItem> result = series.GetItems( new InternalItemsQuery
             {
                 IncludeItemTypes = new[] { nameof( Season ) },
                 Recursive = true
             } );
 
             var seasons = result.Items.OfType<Season>().ToList();
-            foreach( var season in seasons )
+            foreach( Season? season in seasons )
             {
                 if( season.IndexNumber == seasonNum )
                     return season;
@@ -322,7 +325,7 @@ namespace Statistics2026.Utilities
         public static List<string> GetAllIds( List<BaseItem> items )
         {
             HashSet<string> ids = [];
-            foreach( var item in items )
+            foreach( BaseItem item in items )
             {
                 ids.Add( item.Id.ToString() );
             }
@@ -345,7 +348,7 @@ namespace Statistics2026.Utilities
             };
 
             // Execute query and grab the first match
-            var result = libraryManager.GetItemList( query );
+            BaseItem[] result = libraryManager.GetItemList( query );
             if( result == null )
                 return null;
 
@@ -372,7 +375,7 @@ namespace Statistics2026.Utilities
             };
 
             // Execute query and grab the first match
-            var result = libraryManager.GetItemList( query );
+            BaseItem[] result = libraryManager.GetItemList( query );
             if( result != null && result.Count() != 0 )
             {
                 var episode = result.FirstOrDefault() as Episode;
@@ -380,14 +383,14 @@ namespace Statistics2026.Utilities
                     return episode;
             }
 
-            var queryResult = embySeason.GetItems( new InternalItemsQuery
+            QueryResult<BaseItem> queryResult = embySeason.GetItems( new InternalItemsQuery
             {
                 IncludeItemTypes = new[] { nameof( Episode ) },
                 Recursive = true
             } );
 
             // Extract the episode numbers
-            var retVal = queryResult.Items
+            Episode retVal = queryResult.Items
                 .OfType<Episode>()
                 .FirstOrDefault( ep =>
                 ep.IndexNumber == episodeNum ||
@@ -412,7 +415,7 @@ namespace Statistics2026.Utilities
                 itemTypes.Add( "Episode" );
             }
 
-            var limit = 10;
+            int limit = 10;
             while( true )
             {
                 var query = new InternalItemsQuery
@@ -425,8 +428,8 @@ namespace Statistics2026.Utilities
                     Limit = limit
                 };
 
-                var items = embyInterfaces.LibraryManager().GetItemList( query );
-                foreach( var item in items )
+                BaseItem[] items = embyInterfaces.LibraryManager().GetItemList( query );
+                foreach( BaseItem? item in items )
                 {
                     if( item.DateCreated == DateTimeOffset.MinValue )
                         continue;
@@ -455,14 +458,14 @@ namespace Statistics2026.Utilities
             if( embyInterfaces == null )
                 return null;
 
-            var queryResult = EmbyHelperFuncs.GetAllUsers( embyInterfaces, false );
+            List<User> queryResult = EmbyHelperFuncs.GetAllUsers( embyInterfaces, false );
             if( queryResult != null )
             {
                 // 3. Find the newest user by sorting their creation date
-                var users = queryResult
+                IOrderedEnumerable<User> users = queryResult
                     .OrderByDescending( u => u.DateCreated );
 
-                foreach( var user in users )
+                foreach( User? user in users )
                 {
                     if( user == null )
                         continue;
@@ -477,15 +480,15 @@ namespace Statistics2026.Utilities
         }
 
 
-        public static void UpdateLastAdded( EmbyInterfaces? embyInterfaces, List<string> reason, Statistics2026DB db )
+        public static async Task UpdateLastAdded( EmbyInterfaces? embyInterfaces, List<string> reason, Statistics2026DB db )
         {
-            var lastMediaAdded = EmbyHelperFuncs.GetLastMovieOrEpisodeAdded( embyInterfaces );
+            BaseItem? lastMediaAdded = EmbyHelperFuncs.GetLastMovieOrEpisodeAdded( embyInterfaces );
             DateTimeOffset? lastAdded = null;
             if( lastMediaAdded != null && lastMediaAdded!.DateCreated != DateTimeOffset.MinValue )
             {
                 lastAdded = lastMediaAdded!.DateCreated;
             }
-            var lastUserAdded = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
+            User? lastUserAdded = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
             if( lastUserAdded != null && lastUserAdded!.DateCreated != DateTimeOffset.MinValue )
             {
                 if( lastAdded == null )
@@ -495,7 +498,7 @@ namespace Statistics2026.Utilities
             }
             if( lastAdded != null && lastAdded != DateTimeOffset.MinValue )
             {
-                db.SetLastUpdated( Statistics2026DB.EAction.LastMediaOrUserAdded, reason, 0, lastAdded.Value );
+                await db.SetLastUpdated( Statistics2026DB.EAction.LastMediaOrUserAdded, reason, 0, lastAdded.Value );
             }
         }
 
@@ -521,21 +524,21 @@ namespace Statistics2026.Utilities
 
             // all items analyzed are tied to new episodes, movies or users
 
-            var lastMovieAddedToServer = EmbyHelperFuncs.GetLastMovieAdded( embyInterfaces );
+            Video? lastMovieAddedToServer = EmbyHelperFuncs.GetLastMovieAdded( embyInterfaces );
             if( lastMovieAddedToServer != null && lastMovieAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
                 embyInterfaces?.Logger().Info( $"Last Movie added: '{MediaInfo.GetDisplayName( lastMovieAddedToServer )}' on '{lastMovieAddedToServer!.DateCreated.LocalDateTime}'" );
                 latestItem = getLatestItem( latestItem, lastMovieAddedToServer );
             }
 
-            var lastEpisodeAddedToServer = EmbyHelperFuncs.GetLastEpisodeAdded( embyInterfaces );
+            Video? lastEpisodeAddedToServer = EmbyHelperFuncs.GetLastEpisodeAdded( embyInterfaces );
             if( lastEpisodeAddedToServer != null && lastEpisodeAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
                 embyInterfaces?.Logger().Info( $"Last Episode added: '{MediaInfo.GetDisplayName( lastEpisodeAddedToServer )}' on '{lastEpisodeAddedToServer!.DateCreated.LocalDateTime}'" );
                 latestItem = getLatestItem( latestItem, lastEpisodeAddedToServer );
             }
 
-            var lastUserAddedToServer = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
+            User? lastUserAddedToServer = EmbyHelperFuncs.GetLastAddedUser( embyInterfaces );
             if( lastUserAddedToServer != null && lastUserAddedToServer!.DateCreated != DateTimeOffset.MinValue )
             {
                 embyInterfaces?.Logger().Info( $"Last User added: '{lastUserAddedToServer.Name}' on '{lastUserAddedToServer!.DateCreated.LocalDateTime}'" );
@@ -547,8 +550,8 @@ namespace Statistics2026.Utilities
                 return (null, "<No Item Found>");
             }
 
-            var name = string.Empty;
-            var dateCreated = latestItem?.DateCreated;
+            string name = string.Empty;
+            DateTimeOffset? dateCreated = latestItem?.DateCreated;
             if( latestItem is Video )
             {
 
@@ -559,7 +562,7 @@ namespace Statistics2026.Utilities
             else
                 name = latestItem!.Name;
 
-            var msg = $"Last Item Added: {latestItem.GetType().Name} - '{name}'";
+            string msg = $"Last Item Added: {latestItem.GetType().Name} - '{name}'";
             if( dateCreated != null )
                 msg += $" on '{dateCreated?.LocalDateTime}'";
             embyInterfaces?.Logger().Info( msg );
@@ -567,22 +570,22 @@ namespace Statistics2026.Utilities
             return (latestItem, msg);
         }
 
-        public static (bool runFullAnalysis, bool runMissingAnalysis, List<string> reasons) AnalysisOutOfDate( EmbyInterfaces? embyInterfaces, Statistics2026DB db )
+        public static async Task<(bool runFullAnalysis, bool runMissingAnalysis, List<string> reasons)> AnalysisOutOfDate( EmbyInterfaces? embyInterfaces, Statistics2026DB db )
         {
             if( embyInterfaces == null )
                 return (false, false, []);
 
-            var logger = embyInterfaces.LogManager().GetLogger( "Statistics2026 - OOD Analysis" ) ?? null;
+            ILogger? logger = embyInterfaces.LogManager().GetLogger( "Statistics2026 - OOD Analysis" ) ?? null;
             embyInterfaces._logger = logger;
 
             logger?.Info( $"Starting OOD Analysis" );
 
             List<string> reasons = [];
             bool runFullAnalysis = false;
-            var lastAnalysisAdded = db.GetLastUpdated( EAction.LastMediaOrUserAdded ).when;
+            DateTimeOffset? lastAnalysisAdded = ( await db.GetLastUpdated( EAction.LastMediaOrUserAdded ) ).when;
             if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTimeOffset.MinValue )
             {
-                var msg = "Analysis has not been run yet";
+                string msg = "Analysis has not been run yet";
                 logger?.Info( msg );
                 reasons.Add( msg );
                 runFullAnalysis = true;
@@ -594,10 +597,10 @@ namespace Statistics2026.Utilities
 
             if( !runFullAnalysis )
             {
-                var (curr, inDB) = db.totalMediaCount();
+                (int curr, int inDB) = await db.totalMediaCount();
                 if( curr != inDB )
                 {
-                    var msg = $"Media count has changed since last run, re-running Complete Statistical Analysis";
+                    string msg = $"Media count has changed since last run, re-running Complete Statistical Analysis";
                     logger?.Info( msg );
                     reasons.Add( msg );
                     runFullAnalysis = true;
@@ -607,12 +610,12 @@ namespace Statistics2026.Utilities
             bool runMissingAnalysis = false;
             if( !runFullAnalysis )
             {
-                var (latestItem, reason) = getLastItemOfConsequenceAdded( embyInterfaces );
+                (BaseItem? latestItem, string? reason) = getLastItemOfConsequenceAdded( embyInterfaces );
                 if( latestItem != null && latestItem.DateCreated != DateTimeOffset.MinValue )
                 {
                     if( lastAnalysisAdded < latestItem.DateCreated )
                     {
-                        var msg = $"Last analysys was run before the latest item was added, running Missing Analysis";
+                        string msg = $"Last analysys was run before the latest item was added, running Missing Analysis";
                         logger?.Info( msg );
                         reasons.Add( reason );
                         reasons.Add( msg );
@@ -627,11 +630,11 @@ namespace Statistics2026.Utilities
             }
 
             DateTimeOffset? lastMissingAnalysis = null;
-            var lastMissingEpisodeAnalysis = db.GetLastUpdated( EAction.MissingEpisodesAnalysis ).when;
+            DateTimeOffset? lastMissingEpisodeAnalysis = ( await db.GetLastUpdated( EAction.MissingEpisodesAnalysis ) ).when;
             if( lastMissingEpisodeAnalysis == null || lastMissingEpisodeAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;
-                var msg = "Missing Episode Analysis has not been run yet";
+                string msg = "Missing Episode Analysis has not been run yet";
                 logger?.Info( msg );
                 reasons.Add( msg );
             }
@@ -641,11 +644,11 @@ namespace Statistics2026.Utilities
                 logger?.Info( $"Last Missing Episode Analysis run: {lastMissingEpisodeAnalysis.Value.LocalDateTime}" );
             }
 
-            var lastMissingMovieAnalysis = db.GetLastUpdated( EAction.MissingMoviesAnalysis ).when;
+            DateTimeOffset? lastMissingMovieAnalysis = (await db.GetLastUpdated( EAction.MissingMoviesAnalysis ) ).when;
             if( lastMissingMovieAnalysis == null || lastMissingMovieAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;
-                var msg = "Missing Movie Analysis has not been run yet";
+                string msg = "Missing Movie Analysis has not been run yet";
                 logger?.Info( msg );
                 reasons.Add( msg );
             }
@@ -697,7 +700,7 @@ namespace Statistics2026.Utilities
                 userQuery.EnableRemoteAccess = true;
             }
 
-            var retVal = embyInterfaces.UserManager().GetUserList( userQuery ).ToList();
+            List<User> retVal = embyInterfaces.UserManager().GetUserList( userQuery ).ToList();
 #if DEBUG_DB
             var limitUsersTo = DBDebug.getLimitUsersToList();
             retVal = retVal.Where( u => limitUsersTo.Contains( u.Name ) ).ToList();
@@ -718,10 +721,10 @@ namespace Statistics2026.Utilities
             if( embyInterfaces == null )
                 throw new ArgumentNullException( "_embyInterfaces is null." );
 
-            var user = embyInterfaces.GetUserById( id );
+            User? user = embyInterfaces.GetUserById( id );
             return user;
         }
-        
+
         public static Genre? GetGenreByName( string genreName, EmbyInterfaces embyInterfaces )
         {
             if( string.IsNullOrWhiteSpace( genreName ) )
@@ -736,12 +739,99 @@ namespace Statistics2026.Utilities
                 Recursive = true
             };
 
-            var results = embyInterfaces.LibraryManager().GetItemList( query );
+            BaseItem[] results = embyInterfaces.LibraryManager().GetItemList( query );
 
             return results
                 .OfType<Genre>()
                 .FirstOrDefault( genre => string.Equals( genre.Name, genreName, StringComparison.OrdinalIgnoreCase ) );
         }
 
+        public static void validatePluginResourcePages( IEnumerable<PluginPageInfo> pages, object plugin, EmbyInterfaces embyInterfaces, bool forceShowKnownResources = false )
+        {
+            List<string> pageMissingInResources = [];
+            foreach( PluginPageInfo page in pages )
+            {
+                string path = page.EmbeddedResourcePath;
+                if( plugin.GetType().Assembly.GetManifestResourceInfo( path ) == null )
+                {
+                    pageMissingInResources.Add( path );
+                }
+            }
+
+            string[] resourcePaths = plugin.GetType().Assembly.GetManifestResourceNames();
+            List<string> resourceMissingInPages = [];
+            foreach( string? resourcePath in resourcePaths )
+            {
+                bool found = false;
+
+                string ext = ( new FileInfo( resourcePath ) ).Extension;
+                if( ( ext != ".js" ) && ( ext != ".html" ) && ( ext != ".css" ) )
+                    continue;
+
+                foreach( PluginPageInfo page in pages )
+                {
+                    if( page.EmbeddedResourcePath == resourcePath )
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if( !found )
+                {
+                    resourceMissingInPages.Add( resourcePath );
+                }
+            }
+
+            if( !forceShowKnownResources && ( pageMissingInResources.Count == 0 ) && ( resourceMissingInPages.Count == 0 ) )
+                return;
+
+            StringBuilder builder = new();
+            if( pageMissingInResources.Count != 0 )
+            {
+                builder.AppendLine( $"--------------------------------------------------" );
+                builder.AppendLine( $"---- Could not find {pageMissingInResources.Count} resources ----" );
+                builder.AppendLine( $"--------------------------------------------------" );
+                foreach( string name in pageMissingInResources )
+                {
+                    builder.AppendLine( $"    {name}" );
+                }
+            }
+
+
+            if( resourceMissingInPages.Count != 0 )
+            {
+                builder.AppendLine( $"--------------------------------------------------" );
+                builder.AppendLine( $"---- Could not find {resourceMissingInPages.Count} resources ----" );
+                builder.AppendLine( $"--------------------------------------------------" );
+                foreach( string name in resourceMissingInPages )
+                {
+                    builder.AppendLine( $"    {name}" );
+                }
+            }
+
+            builder.AppendLine( $"--------------------------------------------------" );
+            builder.AppendLine( $"----           Known Resource Paths           ----" );
+            builder.AppendLine( $"--------------------------------------------------" );
+            foreach( string? name in resourcePaths )
+            {
+                builder.AppendLine( $"    {name}" );
+            }
+
+            LogSeverity logSeverity = LogSeverity.Info;
+            string severity = "Info";
+            if( pageMissingInResources.Count > 0 )
+            {
+                severity = "Error";
+                logSeverity = LogSeverity.Error;
+            }
+            else if( resourceMissingInPages.Count > 0 )
+            {
+                severity = "Warning";
+                logSeverity = LogSeverity.Warn;
+            }
+
+            builder.AppendLine( $"--------------------------------------------------" );
+            embyInterfaces.Logger().LogMultiline( $"----         {severity} loading page info          ----", logSeverity, builder );
+        }
     }
 }
