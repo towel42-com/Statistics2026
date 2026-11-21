@@ -85,15 +85,15 @@ namespace Statistics2026.Services
         {
         }
 
-        public object Get( GetMovie request )
+        public Task<object> Get( GetMovie request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var whichStatistic = request.whichStatistic;
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                StatGen.EStatisticType whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
-                var groupData = db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Movie );
+                StatCard groupData = await db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Movie );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -101,15 +101,15 @@ namespace Statistics2026.Services
             } );
         }
 
-        public object Get( GetSeries request )
+        public Task<object> Get( GetSeries request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var whichStatistic = request.whichStatistic;
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                StatGen.EStatisticType whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
-                var groupData = db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Series );
+                StatCard groupData = await db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Series );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -117,15 +117,15 @@ namespace Statistics2026.Services
             } );
         }
 
-        public object Get( GetEpisode request )
+        public Task<object> Get( GetEpisode request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var whichStatistic = request.whichStatistic;
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                StatGen.EStatisticType whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
-                var groupData = db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Episode );
+                StatCard groupData = await db.StatisticFor( null, whichStatistic, StatGen.EVideoType.Episode );
                 if( groupData == null )
                     return new StatCardResponse();
 

@@ -74,7 +74,7 @@ namespace Statistics2026.ScheduledTasks
 
         async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            var memoryReport = await HelperFuncs.RunAndReportMemory( true, async () =>
+            HelperFuncs.MemoryUsage memoryReport = await HelperFuncs.RunAndReportMemory( true, async () =>
             {
                 if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
                 {
@@ -84,23 +84,23 @@ namespace Statistics2026.ScheduledTasks
                 if( PluginConfiguration == null )
                     throw new ArgumentNullException( nameof( PluginConfiguration ) );
 
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, GetType().Name );
 
-                db.Initialize( this, cancellationToken, progress, PluginConfiguration.resetPlayCount );
+                await db.Initialize( this, cancellationToken, progress, PluginConfiguration.resetPlayCount );
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var taskName = "Analyze All";
+                string taskName = "Analyze All";
                 _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
-                db.ClearLastUpdated( Statistics2026DB.EAction.System );
+                await db.ClearLastUpdated( Statistics2026DB.EAction.System );
 
                 var overAllTimer = new AutoTimer( $"Adding All Data", _embyInterfaces.Logger(), false );
-                var tasks = TaskDef.GetKnownTasks( false );
+                List<TaskDef>? tasks = TaskDef.GetKnownTasks( false );
 
-                for( var ii = 0; ii < tasks?.Count; ii++ )
+                for( int ii = 0; ii < tasks?.Count; ii++ )
                 {
                     progress.Report( 100.0 * ii / ( 1.0 * tasks.Count ) );
-                    var task = tasks[ ii ];
+                    TaskDef task = tasks[ ii ];
                     if( task != null )
                     {
                         task.Result = await TaskDef.ExecuteSubTaskAsync( _embyInterfaces, task, ReasonsForExecute, cancellationToken, true ).ConfigureAwait( false );
@@ -108,17 +108,17 @@ namespace Statistics2026.ScheduledTasks
                     }
                 }
 
-                var overall = overAllTimer.ElapsedMilliseconds();
-                db.SetLastUpdated( Statistics2026DB.EAction.System, ReasonsForExecute, overall );
-                EmbyHelperFuncs.UpdateLastAdded( _embyInterfaces, ReasonsForExecute, db );
+                long overall = overAllTimer.ElapsedMilliseconds();
+                await db.SetLastUpdated( Statistics2026DB.EAction.System, ReasonsForExecute, overall );
+                await EmbyHelperFuncs.UpdateLastAdded( _embyInterfaces, ReasonsForExecute, db );
 
                 overAllTimer.Dispose();
                 _embyInterfaces.Logger().Info( $"=======================================" );
                 _embyInterfaces.Logger().Info( $"Time to Analyze: {overall} ms" );
                 if( tasks != null )
                 {
-                    var maxLen = 0;
-                    foreach( var task in tasks )
+                    int maxLen = 0;
+                    foreach( TaskDef task in tasks )
                     {
                         if( task == null )
                             continue;
@@ -127,7 +127,7 @@ namespace Statistics2026.ScheduledTasks
                             maxLen = task.Description.Length;
                     }
 
-                    foreach( var task in tasks )
+                    foreach( TaskDef task in tasks )
                     {
                         if( task == null )
                             continue;

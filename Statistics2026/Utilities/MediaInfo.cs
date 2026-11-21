@@ -48,7 +48,7 @@ namespace Statistics2026.Utilities
         {
             if( mediaInfo.aOK )
             {
-                var cacheKey = (mediaInfo.ItemId, mediaInfo.HasUserData, mediaInfo.IsMinimal);
+                (string ItemId, bool HasUserData, bool IsMinimal) cacheKey = (mediaInfo.ItemId, mediaInfo.HasUserData, mediaInfo.IsMinimal);
                 sMediaInfoCache[ cacheKey ] = mediaInfo;
             }
         }
@@ -64,7 +64,7 @@ namespace Statistics2026.Utilities
                 }
             }
 
-            var cacheKey = (KeyForVideo( video ), video.UserDataSet, minimalOnly);
+            (string, bool UserDataSet, bool minimalOnly) cacheKey = (KeyForVideo( video ), video.UserDataSet, minimalOnly);
             MediaInfo? cachedValue = null;
             if( !sMediaInfoCache.TryGetValue( cacheKey, out cachedValue ) )
             {
@@ -77,17 +77,17 @@ namespace Statistics2026.Utilities
             if( OutOfDate( video, cachedValue ) )
             {
                 if( cachedValue.IsMinimal )
-                    sMediaInfoCache.Remove( cacheKey, out var currValue );
+                    sMediaInfoCache.Remove( cacheKey, out MediaInfo? currValue );
                 else
-                    sMediaInfoCache.Remove( (KeyForVideo( video ), video.UserDataSet, false), out var currValue );
+                    sMediaInfoCache.Remove( (KeyForVideo( video ), video.UserDataSet, false), out MediaInfo? currValue );
                 return null;
             }
 
             if( minimalOnly || ( !minimalOnly && !cachedValue.IsMinimal ) )
                 return cachedValue;
 
-            var json = JsonSerializer.Serialize( cachedValue );
-            var copy = JsonSerializer.Deserialize<MediaInfo>( json );
+            string json = JsonSerializer.Serialize( cachedValue );
+            MediaInfo? copy = JsonSerializer.Deserialize<MediaInfo>( json );
             if( copy == null )
                 throw new Exception( "Problem deserializing" );
             copy.IsMinimal = false;
@@ -103,7 +103,7 @@ namespace Statistics2026.Utilities
 
         private static MediaInfo CreateMinimal( ILogger logger, Video video, bool minimalOnly )
         {
-            var cachedValue = GetCachedValue( video, minimalOnly );
+            MediaInfo? cachedValue = GetCachedValue( video, minimalOnly );
             if( cachedValue != null )
                 return cachedValue;
 
@@ -112,7 +112,7 @@ namespace Statistics2026.Utilities
             if( video == null )
                 return retVal;
 
-            var (primaryName, secondaryName, descName) = GetDescName( video );
+            (string? primaryName, string? secondaryName, string? descName) = GetDescName( video );
             retVal.ItemId = video.Id.ToString();
             retVal.DescriptiveName = descName;
             retVal.PrimaryName = primaryName;
@@ -134,8 +134,8 @@ namespace Statistics2026.Utilities
                 retVal.IsPlayed = video.Played;
                 retVal.TotalTicksPlayed = 0;
 
-                var playCount = retVal.PlayCount ?? 0;
-                var isPlayed = retVal.IsPlayed ?? false;
+                int playCount = retVal.PlayCount ?? 0;
+                bool isPlayed = retVal.IsPlayed ?? false;
                 if( isPlayed && ( playCount > 0 ) )
                     retVal.TotalTicksPlayed = ( video.PlayCount * video.RunTimeTicks );
             }
@@ -164,8 +164,8 @@ namespace Statistics2026.Utilities
             if( minimalOnly )
                 return retVal;
 
-            var json = JsonSerializer.Serialize( retVal );
-            var copy = JsonSerializer.Deserialize<MediaInfo>( json );
+            string json = JsonSerializer.Serialize( retVal );
+            MediaInfo? copy = JsonSerializer.Deserialize<MediaInfo>( json );
             if( copy == null )
                 throw new Exception( "Problem deserializing" );
             return copy;
@@ -173,24 +173,24 @@ namespace Statistics2026.Utilities
 
         public static MediaInfo Create( ILogger logger, ILibraryManager libManager, Video video, TableDef? tableDef = null )
         {
-            var cachedValue = GetCachedValue( video, false );
+            MediaInfo? cachedValue = GetCachedValue( video, false );
             if( cachedValue != null )
                 return cachedValue;
 
-            var retVal = CreateMinimal( logger, video, false );
+            MediaInfo retVal = CreateMinimal( logger, video, false );
             if( !retVal.aOK || ( retVal.aOK && !retVal.IsMinimal ) )
                 return retVal;
 
             retVal.IsMinimal = false;
 
-            var mediaStreams = video.GetMediaStreams();
-            var videoStream = mediaStreams.FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
+            List<MediaStream> mediaStreams = video.GetMediaStreams();
+            MediaStream? videoStream = mediaStreams.FirstOrDefault( s => s != null && s.Type == MediaStreamType.Video );
 
-            var resolutionBase = GetMediaResolution( videoStream, false );
-            var resolutionDetail = GetMediaResolution( videoStream, true );
+            string resolutionBase = GetMediaResolution( videoStream, false );
+            string resolutionDetail = GetMediaResolution( videoStream, true );
 
-            var codec = videoStream?.Codec ?? "Unknown";
-            var dvProfile = GetDolbyVisionProfile( videoStream );
+            string codec = videoStream?.Codec ?? "Unknown";
+            string dvProfile = GetDolbyVisionProfile( videoStream );
 
             retVal.StartYear = video.ProductionYear?.ToString() ?? "Unknown";
             retVal.Season = video.ParentIndexNumber ?? -1;
@@ -233,11 +233,11 @@ namespace Statistics2026.Utilities
 
         public static string[] studioNames( Video video )
         {
-            var retVal = video.Studios;
+            string[] retVal = video.Studios;
             if( video is not Episode episode )
                 return retVal;
 
-            var series = episode.Series;
+            Series series = episode.Series;
             if( series != null )
             {
                 retVal = series.Studios;
@@ -248,10 +248,10 @@ namespace Statistics2026.Utilities
 
         public static string[] genres( Video video )
         {
-            var retVal = video.Genres;
+            string[] retVal = video.Genres;
             if( video is Episode episode )
             {
-                var series = episode.Series;
+                Series series = episode.Series;
                 if( series != null )
                 {
                     retVal = series.Genres;
@@ -262,19 +262,19 @@ namespace Statistics2026.Utilities
 
         public static string[] actorIds( Video video, ILibraryManager libraryManager )
         {
-            var actors = EmbyHelperFuncs.GetActorsForVideo( video, libraryManager );
-            var retVal = actors.Select( person => person.Id.ToString() ).ToArray();
+            Person[] actors = EmbyHelperFuncs.GetActorsForVideo( video, libraryManager );
+            string[] retVal = actors.Select( person => person.Id.ToString() ).ToArray();
 
             return retVal;
         }
 
         public static double communityRating( Video video )
         {
-            var retVal = video.CommunityRating ?? 0.0;
+            double retVal = video.CommunityRating ?? 0.0;
             if( video is not Episode episode )
                 return retVal;
 
-            var series = episode.Series;
+            Series series = episode.Series;
             if( series != null )
             {
                 retVal = series.CommunityRating ?? 0.0;
@@ -316,11 +316,11 @@ namespace Statistics2026.Utilities
                 return 0;
 
 
-            var retVal = 1;
+            int retVal = 1;
             if( episode.IndexNumber != null && episode.IndexNumberEnd != null )
             {
-                var start = episode.IndexNumber ?? -1;
-                var end = episode.IndexNumberEnd ?? start;
+                int start = episode.IndexNumber ?? -1;
+                int end = episode.IndexNumberEnd ?? start;
                 retVal = end - start + 1;
             }
 
@@ -332,15 +332,15 @@ namespace Statistics2026.Utilities
             if( video == null )
                 return string.Empty;
 
-            var retVal = video.Name;
+            string retVal = video.Name;
             var episode = video as Episode;
             if( episode == null )
                 return video.Name;
 
-            var primName = episode.SeriesName;
-            var secName = episode.Name;
-            var season = video.ParentIndexNumber ?? -1;
-            var episodeNum = video.IndexNumber ?? -1;
+            string primName = episode.SeriesName;
+            string secName = episode.Name;
+            int season = video.ParentIndexNumber ?? -1;
+            int episodeNum = video.IndexNumber ?? -1;
 
             return GetDisplayName( primName, secName, season, episodeNum );
         }
@@ -363,9 +363,9 @@ namespace Statistics2026.Utilities
 
         public static (string primaryName, string secondaryName, string descName) GetDescName( Video video )
         {
-            var primaryName = video.Name;
-            var secondaryName = video.Name;
-            var descName = video.Name;
+            string primaryName = video.Name;
+            string secondaryName = video.Name;
+            string descName = video.Name;
             if( video is Episode episode )
             {
                 primaryName = episode.SeriesName;
@@ -384,9 +384,9 @@ namespace Statistics2026.Utilities
             if( typeInfo == null || typeInfo.Width == null )
                 return Constants.NoResolution;
 
-            var width = typeInfo.Width.Value;
+            int width = typeInfo.Width.Value;
 
-            var details = string.Empty;
+            string details = string.Empty;
             if( includeDetails )
             {
                 details = $" ({typeInfo.Width}x{typeInfo.Height})";
@@ -412,11 +412,11 @@ namespace Statistics2026.Utilities
             if( mediaStream.Profile == null )
                 return Constants.UnknownDolbyProfile;
 
-            var codec = mediaStream.Codec.ToUpper();
+            string codec = mediaStream.Codec.ToUpper();
             if( codec != Constants.HEVC && codec != Constants.AV1 )
                 return Constants.NonDolbyVisionCompatibleCodec;
 
-            var dvProfile = mediaStream.ExtendedVideoSubTypeDescription;
+            string dvProfile = mediaStream.ExtendedVideoSubTypeDescription;
             return dvProfile.ToLower() == "none" ? Constants.NoDolbyProfile : dvProfile;
         }
 

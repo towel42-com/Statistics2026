@@ -16,6 +16,7 @@ using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Data;
+using Statistics2026.Responses;
 using Statistics2026.Utilities;
 using System;
 using System.Diagnostics;
@@ -77,23 +78,23 @@ namespace Statistics2026.Services
         {
         }
 
-        public object Get( GetSystemStatus request )
+        public Task<object> Get( GetSystemStatus request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name ).ConfigureAwait( false );
 
-                return db.GetSystemStatus();
+                return await db.GetSystemStatus();
             } );
         }
 
-        public object Get( GetLastRunInfo request )
+        public Task<object> Get( GetLastRunInfo request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                return db.GetLastRunHtml( request.whichRuns );
+                return await db.GetLastRunHtml( request.whichRuns );
             } );
         }
 

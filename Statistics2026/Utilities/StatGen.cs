@@ -1,8 +1,6 @@
 ﻿using Emby.Media.Common.Extensions;
 using SQLitePCL.pretty;
 using Statistics2026.Data;
-using System;
-using System.Collections.Generic;
 
 namespace Statistics2026.Utilities
 {
@@ -51,35 +49,35 @@ namespace Statistics2026.Utilities
             public string ImageUrl = string.Empty;
         };
 
-        public StatCardValues GetStatCardValues()
+        public async Task<StatCardValues> GetStatCardValues()
         {
-            var sql = SQL();
+            string sql = SQL();
 
             var retVal = new StatCardValues();
 
             var sqlCmd = new SQLCmdDef( sql );
 
             var cmd = new SQLCmdDef( sql );
-            _Database.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await _Database.ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
-                var row = statement.Current;
+                IResultSet row = statement.Current;
                 retVal.ItemId = row.GetString( 0 );
                 retVal.Name = row.GetString( 1 );
                 retVal.ImageUrl = row.GetString( 2 );
                 retVal.Value = Value( row, 3 );
                 retVal.SecondValue = SecondValue( row, 3 );
-                return false;
+                return Task.FromResult(false);
             } );
             return retVal;
         }
 
-        public StatCard GetStatCard()
+        public async Task<StatCard> GetStatCard()
         {
-            var title = Title();
-            var help = Help();
+            string title = Title();
+            string help = Help();
             var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eDetailed );
 
-            var statCardValues = GetStatCardValues();
+            StatCardValues statCardValues = await GetStatCardValues();
 
             retVal.AddLine( statCardValues.Value, false );
             if( statCardValues.SecondValue.IsNullOrEmpty() )
@@ -99,12 +97,12 @@ namespace Statistics2026.Utilities
 
         private string SQL()
         {
-            var nameField = NameField();
-            var fieldName = FieldFor();
-            var orderClause = OrderClause();
-            var tableName = TableName();
-            var whereClause = WhereClause();
-            var retVal = "SELECT "
+            string nameField = NameField();
+            string fieldName = FieldFor();
+            string orderClause = OrderClause();
+            string tableName = TableName();
+            string whereClause = WhereClause();
+            string retVal = "SELECT "
                 + $"  ItemId"
                 + $", {nameField}"
                 + $", ImageUrl"
@@ -127,7 +125,7 @@ namespace Statistics2026.Utilities
 
         private string FieldFor()
         {
-            var fieldName = string.Empty;
+            string fieldName = string.Empty;
             switch( WhichStatistic )
             {
                 case EStatisticType.Largest:
@@ -168,7 +166,7 @@ namespace Statistics2026.Utilities
 
         private string OrderClause()
         {
-            var orderClause = string.Empty;
+            string orderClause = string.Empty;
             switch( WhichStatistic )
             {
                 case EStatisticType.Largest:
@@ -269,7 +267,7 @@ namespace Statistics2026.Utilities
 
         private string Title()
         {
-            var title = string.Empty;
+            string title = string.Empty;
             switch( WhichStatistic )
             {
                 case EStatisticType.Largest:
@@ -413,7 +411,7 @@ namespace Statistics2026.Utilities
 
         private string Help()
         {
-            var help = string.Empty;
+            string help = string.Empty;
             switch( WhichStatistic )
             {
                 case EStatisticType.Largest:
@@ -455,7 +453,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.Smallest:
                 case EStatisticType.Largest:
                 {
-                    var size = sqlResultValue.GetInt64( index );
+                    long size = sqlResultValue.GetInt64( index );
                     value = HelperFuncs.PrettyPrintSize( size );
                 }
 
@@ -463,7 +461,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.Longest:
                 case EStatisticType.Shortest:
                 {
-                    var runTimeTicks = sqlResultValue.GetInt64( index );
+                    long runTimeTicks = sqlResultValue.GetInt64( index );
                     value = new TimeSpan( runTimeTicks ).ToString( @"hh\:mm\:ss" );
                 }
 
@@ -471,7 +469,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.HighestRated:
                 case EStatisticType.LowestRated:
                 {
-                    var rating = sqlResultValue.GetFloat( index ).ToString( "F1" );
+                    string rating = sqlResultValue.GetFloat( index ).ToString( "F1" );
                     value = $"{rating} / 10";
                 }
 
@@ -479,7 +477,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.HighestBitrate:
                 case EStatisticType.LowestBitrate:
                 {
-                    var bitrate = Math.Round( (decimal)sqlResultValue.GetInt64( index ) / 1000 );
+                    decimal bitrate = Math.Round( (decimal)sqlResultValue.GetInt64( index ) / 1000 );
                     value = $"{bitrate:N0} Kbps";
                 }
 
@@ -487,7 +485,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.OldestPremiereDate:
                 case EStatisticType.LatestPremiereDate:
                 {
-                    var premiereDate = HelperFuncs.ReadDateTime( sqlResultValue.GetString( index ) );
+                    DateTimeOffset? premiereDate = HelperFuncs.ReadDateTime( sqlResultValue.GetString( index ) );
                     value = premiereDate?.ToTZShortString( true, true ) ?? string.Empty;
                 }
 
@@ -495,7 +493,7 @@ namespace Statistics2026.Utilities
                 case EStatisticType.FirstAdditionToServer:
                 case EStatisticType.LatestAdditionToServer:
                 {
-                    var premiereDate = HelperFuncs.ReadDateTime( sqlResultValue.GetString( index ) );
+                    DateTimeOffset? premiereDate = HelperFuncs.ReadDateTime( sqlResultValue.GetString( index ) );
                     value = premiereDate?.ToTZShortString( true ) ?? string.Empty;
                 }
 
@@ -511,7 +509,7 @@ namespace Statistics2026.Utilities
 
         private string SecondValue( IResultSet sqlResultValue, int index )
         {
-            var secondValue = string.Empty;
+            string secondValue = string.Empty;
             switch( WhichStatistic )
             {
                 case EStatisticType.Smallest:
@@ -526,8 +524,8 @@ namespace Statistics2026.Utilities
                 case EStatisticType.OldestPremiereDate:
                 case EStatisticType.LatestPremiereDate:
                 {
-                    var premiereDate = HelperFuncs.ReadDateTime( sqlResultValue.GetString( index ) );
-                    if ( premiereDate == null )
+                    DateTimeOffset? premiereDate = HelperFuncs.ReadDateTime( sqlResultValue.GetString( index ) );
+                    if( premiereDate == null )
                         secondValue = string.Empty;
                     else
                         secondValue = TimeSince( premiereDate.Value );
@@ -537,8 +535,8 @@ namespace Statistics2026.Utilities
                 case EStatisticType.FirstAdditionToServer:
                 case EStatisticType.LatestAdditionToServer:
                 {
-                    var premiereDate = HelperFuncs.ReadDateTime( sqlResultValue.GetString( index ) );
-                    if ( premiereDate == null )
+                    DateTimeOffset? premiereDate = HelperFuncs.ReadDateTime( sqlResultValue.GetString( index ) );
+                    if( premiereDate == null )
                         secondValue = string.Empty;
                     else
                         secondValue = TimeSince( premiereDate.Value );
@@ -566,19 +564,19 @@ namespace Statistics2026.Utilities
             if( date == null )
                 return string.Empty;
 
-            var yearDiff = DateTimeOffset.UtcNow.Year - date.Value.UtcDateTime.Year;
-            var monthDiff = DateTimeOffset.UtcNow.Month - date.Value.UtcDateTime.Month;
+            int yearDiff = DateTimeOffset.UtcNow.Year - date.Value.UtcDateTime.Year;
+            int monthDiff = DateTimeOffset.UtcNow.Month - date.Value.UtcDateTime.Month;
 
-            var numberOfTotalMonths = ( yearDiff * 12 ) + monthDiff;
+            int numberOfTotalMonths = ( yearDiff * 12 ) + monthDiff;
             if( numberOfTotalMonths > 3 )
             {
-                var numberOfYears = Math.Floor( numberOfTotalMonths / (decimal)12 );
-                var numberOfMonth = Math.Floor( ( ( numberOfTotalMonths / (decimal)12 ) - numberOfYears ) * 12 );
+                decimal numberOfYears = Math.Floor( numberOfTotalMonths / (decimal)12 );
+                decimal numberOfMonth = Math.Floor( ( ( numberOfTotalMonths / (decimal)12 ) - numberOfYears ) * 12 );
                 return $"{CheckForPlural( "year", numberOfYears, string.Empty, string.Empty, false )} {CheckForPlural( "month", numberOfMonth, "and" )} ago";
             }
             else
             {
-                var numberOfDays = DateTimeOffset.Now.DayOfYear - date.Value.DayOfYear;
+                int numberOfDays = DateTimeOffset.Now.DayOfYear - date.Value.DayOfYear;
                 if( numberOfDays < 0 )
                     numberOfDays *= -1;
                 if( numberOfDays == 0 )

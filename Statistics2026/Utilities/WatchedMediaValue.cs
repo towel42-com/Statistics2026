@@ -14,7 +14,7 @@ namespace Statistics2026.Utilities
 
         public string Title()
         {
-            var title = Name;
+            string title = Name;
             if( MediaType == EMediaType.eMovie )
             {
                 title += $" - Watched {PlayCount} time";

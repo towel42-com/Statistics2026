@@ -87,26 +87,25 @@ namespace Statistics2026.Services
         {
         }
 
-        public async Task<object> Get( GetSeriesList request )
+        public Task<object> Get( GetSeriesList request )
         {
-            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                var series = db.getSeriesListResponseAsync();
+                List<MediaItemResponse> series = await db.getSeriesListResponseAsync();
 
-                return series ?? new object();
+                return series;
             } );
-            return retVal;
         }
 
-        public async Task<object> Get( GetEpisodeList request )
+        public Task<object> Get( GetEpisodeList request )
         {
-            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var showOnServer = request.showOnServer;
-                var showMissing = request.showMissing;
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                bool showOnServer = request.showOnServer;
+                bool showMissing = request.showMissing;
 
                 if( !showOnServer && !showMissing )
                 {
@@ -114,26 +113,25 @@ namespace Statistics2026.Services
                     showMissing = true;
                 }
 
-                var whichMedia = EWhichMediaList.eEpisodes;
+                EWhichMediaList whichMedia = EWhichMediaList.eEpisodes;
                 if( showOnServer )
                     whichMedia = whichMedia | EWhichMediaList.eOnServer;
                 if( showMissing )
                     whichMedia = whichMedia | EWhichMediaList.eMissing;
 
-                var episodes = db.getMediaListResponseAsync( whichMedia );
+                List<MediaItemResponse> episodes = await db.getMediaListResponseAsync( whichMedia );
 
-                return episodes ?? new object();
+                return episodes;
             } );
-            return retVal;
         }
 
-        public async Task<object> Get( GetMovieList request )
+        public Task<object> Get( GetMovieList request )
         {
-            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var showOnServer = request.showOnServer;
-                var showMissing = request.showMissing;
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name ).ConfigureAwait( false );
+                bool showOnServer = request.showOnServer;
+                bool showMissing = request.showMissing;
 
                 if( !showOnServer && !showMissing )
                 {
@@ -141,16 +139,15 @@ namespace Statistics2026.Services
                     showMissing = true;
                 }
 
-                var whichMedia = EWhichMediaList.eMovies;
+                EWhichMediaList whichMedia = EWhichMediaList.eMovies;
                 if( showOnServer )
-                    whichMedia = whichMedia | EWhichMediaList.eOnServer;
+                    whichMedia |= EWhichMediaList.eOnServer;
                 if( showMissing )
-                    whichMedia = whichMedia | EWhichMediaList.eMissing;
+                    whichMedia |= EWhichMediaList.eMissing;
 
-                var movies = db.getMediaListResponseAsync( whichMedia );
-                return movies ?? new object();
+                return await db.getMediaListResponseAsync( whichMedia ).ConfigureAwait( false );
             } );
-            return retVal;
         }
+
     }
 }

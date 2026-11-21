@@ -4,6 +4,8 @@
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Model.Entities;
 using ServiceStack;
+using SQLitePCL.pretty;
+using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 using WatchedMediaValueItemData = (string id, string name, long playCount, long denominator, double playCountPerUser);
 
@@ -16,7 +18,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eUpdate );
 
             SetProgress( 0 );
-            var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
+            List<User> users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
             if( users == null )
                 return;
             SetProgress( 100 );
@@ -24,29 +26,29 @@ namespace Statistics2026.Data
             Logger().Debug( $"Starting User Watch Data Analysis" );
 
             double count = users.Count;
-            var completedCount = 0;
-            var startedCount = 0;
+            int completedCount = 0;
+            int startedCount = 0;
 
             double progressWindow = 80.0 * 1.0 / count;
 
             SetProgress( 0 );
             using( var listTimer = new AutoTimer( $"    Analyze User Watch Data - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
+                using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim();
                 var pool = users.Select( ( user, index ) => Task.Run( async () =>
                 {
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        var memoryReport = await HelperFuncs.RunAndReportMemory( ( ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false ), async () =>
+                        HelperFuncs.MemoryUsage memoryReport = await HelperFuncs.RunAndReportMemory( ( ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false ), async () =>
                         {
                             await Task.Yield();
                             long runTimeMS = 0;
-                            var userNum = Interlocked.Increment( ref startedCount );
+                            int userNum = Interlocked.Increment( ref startedCount );
                             List<SQLCmdDef> currCmds = [];
                             List<Video> allVideosForUser = [];
 
-                            var userTableName = TableDefs().getUserTableName( user );
+                            string? userTableName = TableDefs().getUserTableName( user );
                             if( userTableName == null )
                             {
                                 throw new Exception( $"AddWatchedDataForUser: TableDef for {user.Name} is null" );
@@ -64,11 +66,11 @@ namespace Statistics2026.Data
 
                             using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Commands for user {user.Name}", Logger() ) )
                             {
-                                DeleteAllInvalid( allVideosForUser.ConvertAll( item => (BaseItem)item ), userTableName, "ItemId" );
-                                ExecuteCommands( currCmds, false );
+                                await DeleteAllInvalid( allVideosForUser.ConvertAll( item => (BaseItem)item ), userTableName, "ItemId" );
+                                await ExecuteCommands( currCmds, false );
                             }
 
-                            var currProgress = Interlocked.Increment( ref completedCount );
+                            int currProgress = Interlocked.Increment( ref completedCount );
                             SetProgress( progressWindow * currProgress );
 
                             Logger().Info( $"Processed User {user.Name} - {runTimeMS} ms {userNum} of {count}" );
@@ -82,16 +84,16 @@ namespace Statistics2026.Data
                     }
                 } ) ).ToList();
 
-                var aOK = await Task.WhenAll( pool );
+                bool[] aOK = await Task.WhenAll( pool );
 
                 CancellationToken?.ThrowIfCancellationRequested();
             }
 
-            var config = Statistics2026.Plugin.Instance!.Configuration;
+            PluginConfiguration config = Statistics2026.Plugin.Instance!.Configuration;
             config.resetPlayCount = false;
             Statistics2026.Plugin.Instance.UpdateConfiguration( config );
 
-            ComputeUserDataDBState();
+            await ComputeUserDataDBState();
             if( !Plugin.Instance.IsDBStateSet( EDBState.eUserDataInitialized ) )
             {
                 Logger().Error( "After initializing user watch data, user watch data still doesn't conform." );
@@ -107,16 +109,16 @@ namespace Statistics2026.Data
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var config = Statistics2026.Plugin.Instance!.Configuration;
+            PluginConfiguration config = Statistics2026.Plugin.Instance!.Configuration;
 
-            var allVideosForUser = EmbyHelperFuncs.GetAllEpisodesAndMovies( user, LibraryManager() );
+            List<Video> allVideosForUser = EmbyHelperFuncs.GetAllEpisodesAndMovies( user, LibraryManager() );
             if( allVideosForUser == null )
             {
                 return ([], []);
             }
 
             //_tableList
-            var sql =
+            string sql =
                 $"INSERT INTO {userTableName} " +
                 "(" +
                     "  UserId" +
@@ -160,8 +162,8 @@ namespace Statistics2026.Data
                       ;
             }
 
-            var completedCount = 0;
-            var totalVideos = allVideosForUser.Count;
+            int completedCount = 0;
+            int totalVideos = allVideosForUser.Count;
 
             if( totalVideos == 0 )
             {
@@ -169,8 +171,8 @@ namespace Statistics2026.Data
             }
 
             var orderedCmds = new SQLCmdDef?[ totalVideos ];
-            var userIdStr = user.Id.ToString();
-            var isDebugEnabled = ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false;
+            string userIdStr = user.Id.ToString();
+            bool isDebugEnabled = ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false;
 
             var parallelOptions = new ParallelOptions
             {
@@ -180,18 +182,18 @@ namespace Statistics2026.Data
 
             Parallel.For( 0, totalVideos, parallelOptions, index =>
             {
-                var video = allVideosForUser[ index ];
+                Video video = allVideosForUser[ index ];
                 if( video == null )
                     return;
 
-                var isPlayed = video.Played;
-                var playCount = video.PlayCount;
-                var isFavorite = video.IsFavorite;
+                bool isPlayed = video.Played;
+                int playCount = video.PlayCount;
+                bool isFavorite = video.IsFavorite;
 
                 if( config.resetPlayCount )
                     ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
 
-                var lastPlayedDate = video.LastPlayedDate;
+                DateTimeOffset? lastPlayedDate = video.LastPlayedDate;
                 var mediaInfo = MediaInfo.CreateMinimal( Logger(), video );
                 if( !mediaInfo.aOK )
                     return;
@@ -205,17 +207,17 @@ namespace Statistics2026.Data
                 orderedCmds[ index ] = new SQLCmdDef( sql,
                 [
                     ( "@UserId", userIdStr ),
-            ( "@ItemId", video.Id.ToString() ),
-            ( "@Name", mediaInfo.PrimaryName ),
-            ( "@IsEpisode", mediaInfo.IsEpisode ),
-            ( "@NumEpisodes", mediaInfo.NumEpisodes ),
-            ( "@IsTVSpecial", mediaInfo.IsTVSpecial ),
-            ( "@IsPlayed", isPlayed ),
-            ( "@PlayCount", playCount ),
-            ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null ) ),
-            ( "@SeriesId", mediaInfo.SeriesId ),
-            ( "@TotalTicksPlayed", mediaInfo.TotalTicksPlayed ),
-        ] );
+                    ( "@ItemId", video.Id.ToString() ),
+                    ( "@Name", mediaInfo.PrimaryName ),
+                    ( "@IsEpisode", mediaInfo.IsEpisode ),
+                    ( "@NumEpisodes", mediaInfo.NumEpisodes ),
+                    ( "@IsTVSpecial", mediaInfo.IsTVSpecial ),
+                    ( "@IsPlayed", isPlayed ),
+                    ( "@PlayCount", playCount ),
+                    ( "@LastPlayedDate", HelperFuncs.ToDateTimeParamValue( lastPlayedDate.HasValue ? lastPlayedDate.Value : null ) ),
+                    ( "@SeriesId", mediaInfo.SeriesId ),
+                    ( "@TotalTicksPlayed", mediaInfo.TotalTicksPlayed ),
+                ] );
 
                 int currProgress = Interlocked.Increment( ref completedCount );
                 if( isDebugEnabled )
@@ -235,7 +237,7 @@ namespace Statistics2026.Data
 
             if( config.resetPlayCount )
             {
-                var sqlUpdateTicks =
+                string sqlUpdateTicks =
                     $"UPDATE {userTableName} " +
                     $" SET " +
                     $"  TotalTicksPlayed=(IsPlayed*PlayCount)*Media.RunTimeTicks " +
@@ -247,15 +249,14 @@ namespace Statistics2026.Data
                 ValidateResetMapResults( user );
             }
 
-            await Task.CompletedTask;
             return (sqlCmds, allVideosForUser);
         }
 
-        public long? GetTotalTicksPlayed( string userId, string itemId )
+        public async Task<long?> GetTotalTicksPlayed( string userId, string itemId )
         {
-            var tableName = TableDefs().getUserTableName( userId );
+            string tableName = TableDefs().getUserTableName( userId );
 
-            var sql =
+            string sql =
                 "SELECT " +
                 "TotalTicksPlayed " +
                 $"FROM {tableName} " +
@@ -265,21 +266,21 @@ namespace Statistics2026.Data
 
             long? totalTicksPlayed = null;
 
-            ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement => 
             {
-                var row = statement.Current;
+                IResultSet row = statement.Current;
                 totalTicksPlayed = row.GetInt64( 0 );
-                return true;
+                return Task.FromResult(true);
             } );
 
             return totalTicksPlayed;
         }
 
-        public void UpdateTotalTicksPlayed( string userId, string itemId, long totalTicksPlayed )
+        public Task UpdateTotalTicksPlayed( string userId, string itemId, long totalTicksPlayed )
         {
-            var tableName = TableDefs().getUserTableName( userId );
+            string tableName = TableDefs().getUserTableName( userId );
 
-            var sql =
+            string sql =
                 $"UPDATE {tableName} " +
                 "SET " +
                 " TotalTicksPlayed=@TotalTicksPlayed " +
@@ -291,7 +292,7 @@ namespace Statistics2026.Data
                     ("@ItemId", itemId)
                 ];
 
-            ExecuteCommand( new SQLCmdDef( sql, parameters ) );
+            return ExecuteCommand( new SQLCmdDef( sql, parameters ) );
         }
 
 
@@ -438,9 +439,9 @@ namespace Statistics2026.Data
             DateTimeOffset? newLastPlayedDate = null;
             bool? newHideFromResume = null;
             bool? newFavorite = null;
-            var updateLastPlayedDate = false;
+            bool updateLastPlayedDate = false;
 
-            var userData = UserDataManager().GetUserData( user, video );
+            UserItemData userData = UserDataManager().GetUserData( user, video );
             if( userData == null )
                 return;
 
@@ -455,7 +456,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                var (isCustom, justReturn) = CustomResetForUser( video, user, playCount, ref newPlayCount, isPlayed, ref newIsPlayed, isFavorite, ref newFavorite );
+                (bool isCustom, bool justReturn) = CustomResetForUser( video, user, playCount, ref newPlayCount, isPlayed, ref newIsPlayed, isFavorite, ref newFavorite );
 
                 if( justReturn )
                 {
@@ -472,7 +473,7 @@ namespace Statistics2026.Data
                 }
             }
 
-            var update = false;
+            bool update = false;
             if( newIsPlayed != null && ( userData.Played != newIsPlayed.Value ) )
             {
                 userData.Played = newIsPlayed.Value;
@@ -489,8 +490,8 @@ namespace Statistics2026.Data
 
             if( updateLastPlayedDate )
             {
-                var wasIsNull = userData.LastPlayedDate == null;
-                var nowIsNull = newLastPlayedDate == null;
+                bool wasIsNull = userData.LastPlayedDate == null;
+                bool nowIsNull = newLastPlayedDate == null;
                 if( wasIsNull != nowIsNull )
                 {
                     userData.LastPlayedDate = newLastPlayedDate;
@@ -518,20 +519,20 @@ namespace Statistics2026.Data
             if( CancellationToken == null )
                 return;
 
-            var token = CancellationToken.Value;
+            CancellationToken token = CancellationToken.Value;
 
             UserDataManager().SaveUserData( user, video, userData, UserDataSaveReason.Import, token );
         }
 
-        public StatCard TotalFinishedSeries( User? user )
+        public async Task<StatCard> TotalFinishedSeries( User? user )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var tableName = TableDefs().getUserTableName( user );
-            var sql =
+            string? tableName = TableDefs().getUserTableName( user );
+            string sql =
                 "SELECT " +
                     "  PrimaryName" +
                     ", Media.SeriesId " +
@@ -548,16 +549,16 @@ namespace Statistics2026.Data
             List<(string, object?)> parameters = [ ("@UserId", user.Id.ToString()) ];
             var seriesInfo = new Dictionary<string, (string name, long watched, long total)>();
 
-            ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
             {
-                var row = statement.Current;
-                var seriesName = row.GetString( 0 );
-                var seriesId = row.GetString( 1 );
-                var numPlayed = row.GetInt64( 2 );
-                var numEpisodes = row.GetInt64( 3 );
+                IResultSet row = statement.Current;
+                string seriesName = row.GetString( 0 );
+                string seriesId = row.GetString( 1 );
+                long numPlayed = row.GetInt64( 2 );
+                long numEpisodes = row.GetInt64( 3 );
                 if( numPlayed == numEpisodes )
                     seriesInfo[ seriesId ] = (seriesName, 0, numEpisodes);
-                return true;
+                return Task.FromResult(true);
             } );
 
             var retVal = new TextBasedStatCard( Constants.TotalSeriesFinished, Constants.HelpTotalSeriesFinished, EStatCardStyle.eCompact );
@@ -565,7 +566,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private List<List<WatchedMediaValue>> WatchedMediaValues( User? user, bool leastWatched, EMediaType mediaType )
+        private async Task<List<List<WatchedMediaValue>>> WatchedMediaValues( User? user, bool leastWatched, EMediaType mediaType )
         {
             List<string> getClauses( string tableName, bool episodes, User? user )
             {
@@ -580,7 +581,7 @@ namespace Statistics2026.Data
                 else
                     clauses.Add( $"NOT {tableName}.IsEpisode" );
 
-                var excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
+                bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
                 if( ( user == null ) && excludeAdmin )
                 {
                     clauses.Add( "NOT Users.IsAdministrator" );
@@ -596,25 +597,25 @@ namespace Statistics2026.Data
 
             CheckIsValid( ECheckLevel.eReport );
 
-            var excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
-            var numUsers = ( user == null ) ? NumUsers( false, excludeAdmin ) : 1;
+            bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
+            long numUsers = ( user == null ) ? (await NumUsers( false, excludeAdmin )) : 1;
 
             var tableNames = new List<string>();
             if( user != null )
             {
-                var name = TableDefs().getUserTableName( user );
+                string? name = TableDefs().getUserTableName( user );
                 if( name != null )
                     tableNames.Add( name );
             }
             else
             {
-                tableNames = TableDefs().allUserMediaTables();
+                tableNames = await TableDefs().allUserMediaTables();
             }
 
             var playMap = new Dictionary<string, WatchedMediaValueItemData>();
-            foreach( var tableName in tableNames )
+            foreach( string tableName in tableNames )
             {
-                var sql = string.Empty;
+                string sql = string.Empty;
                 if( mediaType == EMediaType.eSeries )
                 {
                     sql = "SELECT " +
@@ -627,7 +628,7 @@ namespace Statistics2026.Data
                     $"LEFT OUTER JOIN {tableName} ON Series.ItemId = {tableName}.SeriesId " +
                     $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId ";
 
-                    var clauses = getClauses( tableName, true, user );
+                    List<string> clauses = getClauses( tableName, true, user );
                     sql += HelperFuncs.JoinWhereClauses( clauses );
 
                     sql += $"GROUP BY SeriesId " +
@@ -649,7 +650,7 @@ namespace Statistics2026.Data
                         $"LEFT OUTER JOIN Users ON {tableName}.UserId = Users.UserId "
                         ;
 
-                    var clauses = getClauses( tableName, false, user );
+                    List<string> clauses = getClauses( tableName, false, user );
                     sql += HelperFuncs.JoinWhereClauses( clauses );
 
                     sql += $"GROUP BY {tableName}.ItemId " +
@@ -660,16 +661,16 @@ namespace Statistics2026.Data
                         sql += "DESC ";
                 }
 
-                ExecuteCommand( new SQLCmdDef( sql ), statement =>
+                await ExecuteCommand( new SQLCmdDef( sql ), statement =>
                 {
-                    var row = statement.Current;
-                    var col = 0;
-                    var id = row.GetString( col++ );
-                    var name = row.GetString( col++ );
-                    var playCount = row.GetInt64( col++ );
-                    var numEpisodes = row.GetInt64( col++ );
-                    var playCountPerUser = row.GetDouble( col++ );
-                    if( playMap.TryGetValue( id, out var currentValue ) )
+                    IResultSet row = statement.Current;
+                    int col = 0;
+                    string id = row.GetString( col++ );
+                    string name = row.GetString( col++ );
+                    long playCount = row.GetInt64( col++ );
+                    long numEpisodes = row.GetInt64( col++ );
+                    double playCountPerUser = row.GetDouble( col++ );
+                    if( playMap.TryGetValue( id, out (string id, string name, long playCount, long denominator, double playCountPerUser) currentValue ) )
                     {
                         // Safely updates based on the current value
                         playMap[ id ] = (id, name, currentValue.playCount + playCount, currentValue.denominator + numEpisodes, currentValue.playCountPerUser + playCountPerUser);
@@ -679,19 +680,19 @@ namespace Statistics2026.Data
                         playMap[ id ] = (id, name, playCount, numEpisodes, playCountPerUser);
                     }
 
-                    return true;
+                    return Task.FromResult(true);
                 } );
             }
 
             var sortedMapping = new SortedDictionary<long, List<WatchedMediaValue>>();
 
-            var numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.numWatchedToReport;
-            var maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.numTiedToReport;
+            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.numWatchedToReport;
+            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.numTiedToReport;
 
-            foreach( var curr in playMap.Values )
+            foreach( (string id, string name, long playCount, long denominator, double playCountPerUser) curr in playMap.Values )
             {
-                var (id, name, playCount, denominator, playCountPerUser) = curr;
-                var key = (long)( 100 * playCountPerUser );
+                (string? id, string? name, long playCount, long denominator, double playCountPerUser) = curr;
+                long key = (long)( 100 * playCountPerUser );
 
                 var item = new WatchedMediaValue()
                 {
@@ -703,7 +704,7 @@ namespace Statistics2026.Data
                     MediaType = mediaType
                 };
 
-                if( sortedMapping.TryGetValue( key, out var value ) )
+                if( sortedMapping.TryGetValue( key, out List<WatchedMediaValue>? value ) )
                 {
                     value.Add( item );
                     sortedMapping[ key ] = value;
@@ -718,12 +719,12 @@ namespace Statistics2026.Data
 
             List<WatchedMediaValue> cleanCurrList( List<WatchedMediaValue> inList )
             {
-                var numToKeep = Math.Min( inList.Count, maxPerGroup );
+                int numToKeep = Math.Min( inList.Count, maxPerGroup );
                 var subList = inList.Take( numToKeep ).ToList();
 
-                for( var ii = 0; ii < numToKeep; ++ii )
+                for( int ii = 0; ii < numToKeep; ++ii )
                 {
-                    var item = subList[ ii ];
+                    WatchedMediaValue item = subList[ ii ];
                     item.ImageUrl = ItemImageUrl._ItemImageUrl( item.ItemId, LibraryManager() );
                     subList[ ii ] = item;
                 }
@@ -733,7 +734,7 @@ namespace Statistics2026.Data
 
             if( leastWatched )
             {
-                foreach( var curr in sortedMapping.Values )
+                foreach( List<WatchedMediaValue> curr in sortedMapping.Values )
                 {
                     if( retVal.Count >= numResultsToGet )
                         break;
@@ -743,7 +744,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                foreach( var curr in sortedMapping.Reverse() )
+                foreach( KeyValuePair<long, List<WatchedMediaValue>> curr in sortedMapping.Reverse() )
                 {
                     if( retVal.Count >= numResultsToGet )
                         break;
@@ -755,11 +756,11 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard WatchedMedia( User? user, bool leastWatched, EMediaType mediaType )
+        public async Task<StatCard> WatchedMedia( User? user, bool leastWatched, EMediaType mediaType )
         {
-            var watchedMedia = WatchedMediaValues( user, leastWatched, mediaType );
-            var title = string.Empty;
-            var help = string.Empty;
+            List<List<WatchedMediaValue>> watchedMedia = await WatchedMediaValues( user, leastWatched, mediaType );
+            string title = string.Empty;
+            string help = string.Empty;
 
             if( ( mediaType == EMediaType.eSeries ) || ( mediaType == EMediaType.eEpisode ) )
             {
@@ -778,11 +779,11 @@ namespace Statistics2026.Data
                 ListType = EListType.eNumbered
             };
 
-            foreach( var currList in watchedMedia )
+            foreach( List<WatchedMediaValue> currList in watchedMedia )
             {
-                foreach( var curr in currList )
+                foreach( WatchedMediaValue curr in currList )
                 {
-                    var key = (long)( 100 * curr.PlayCountPerUser );
+                    long key = (long)( 100 * curr.PlayCountPerUser );
                     retVal.AddLine( key.ToString(), ($"{curr.Title()}", curr.ItemId, curr.ImageUrl, false) );
                 }
             }
@@ -802,15 +803,15 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private StatCard TotalTime( User? user, bool? episodesOnly, bool played )
+        private async Task<StatCard> TotalTime( User? user, bool? episodesOnly, bool played )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var tableName = TableDefs().getUserTableName( user );
-            var sql = string.Empty;
+            string? tableName = TableDefs().getUserTableName( user );
+            string sql = string.Empty;
 
             if( played )
             {
@@ -826,7 +827,7 @@ namespace Statistics2026.Data
                     ;
             }
             List<string> clauses = [ $"{tableName}.UserId=@UserId" ];
-            var title = string.Empty;
+            string title = string.Empty;
 
             if( episodesOnly == null )
             {
@@ -848,29 +849,29 @@ namespace Statistics2026.Data
 
             sql += HelperFuncs.JoinWhereClauses( clauses );
 
-            return ValueGroupForSingleItem( title, null, sql, [ ("@UserId", user.Id.ToString()) ], FormatTicks );
+            return await ValueGroupForSingleItem( title, null, sql, [ ("@UserId", user.Id.ToString()) ], FormatTicks );
         }
 
-        public StatCard TotalTimeWatched( User? user, bool? episodesOnly )
+        public Task<StatCard> TotalTimeWatched( User? user, bool? episodesOnly )
         {
             return TotalTime( user, episodesOnly, true );
         }
 
-        public StatCard TotalWatchableTime( User? user, bool? episodesOnly )
+        public Task<StatCard> TotalWatchableTime( User? user, bool? episodesOnly )
         {
             return TotalTime( user, episodesOnly, false );
         }
 
-        private List<(string name, DateTimeOffset lastPlayed)> LastSeenValues( User? user, bool movies )
+        private async Task<List<(string name, DateTimeOffset lastPlayed)>> LastSeenValues( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var tableName = TableDefs().getUserTableName( user );
+            string? tableName = TableDefs().getUserTableName( user );
 
-            var sql = "SELECT ";
+            string sql = "SELECT ";
             if( movies )
                 sql += "PrimaryName ";
             else
@@ -897,22 +898,22 @@ namespace Statistics2026.Data
             ] );
 
             var retVal = new List<(string genre, DateTimeOffset lastPlayed)>();
-            ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommand( sqlCmd, statement =>
             {
-                var row = statement.Current;
-                var name = row.GetString( 0 );
-                var date = row.GetString( 1 );
-                var lastPlayedDate = HelperFuncs.ReadDateTime( date );
+                IResultSet row = statement.Current;
+                string name = row.GetString( 0 );
+                string date = row.GetString( 1 );
+                DateTimeOffset? lastPlayedDate = HelperFuncs.ReadDateTime( date );
                 if( lastPlayedDate == null )
                     lastPlayedDate = DateTimeOffset.MinValue;
                 retVal.Add( (name, lastPlayedDate.Value) );
-                return true;
+                return Task.FromResult(true);
             } );
 
             return retVal;
         }
 
-        public StatCard LastSeen( User? user, bool movies )
+        public async Task<StatCard> LastSeen( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -938,26 +939,26 @@ namespace Statistics2026.Data
                 ListType = EListType.eNumbered,
                 IgnoreLength = true
             };
-            var values = LastSeenValues( user, movies );
+            List<(string name, DateTimeOffset lastPlayed)> values = await LastSeenValues( user, movies );
 
-            foreach( var (name, lastPlayed) in values )
+            foreach( (string? name, DateTimeOffset lastPlayed) in values )
             {
                 retVal.AddLine( $"{name} - {lastPlayed:d}", false );
             }
 
             if( values.Count == 0 )
             {
-                var name = movies ? "Movies" : "TV Shows";
+                string name = movies ? "Movies" : "TV Shows";
                 retVal.AddLine( $"Watch some {name} already!", false );
             }
 
             return retVal;
         }
 
-        private List<List<object>>? CheckUserMediaTableHasData( string tableName )
+        private async Task<List<List<object>>?> CheckUserMediaTableHasData( string tableName )
         {
-            var sqlTicks = $"SELECT COUNT(*) FROM {tableName} WHERE TotalTicksPlayed IS NOT NULL AND iif( {tableName}.IsPlayed AND ( {tableName}.PlayCount > 0 ), {tableName}.TotalTicksPlayed, 0 ) != 0";
-            var sqlPlayed = $"SELECT COUNT(*) FROM {tableName} WHERE PlayCount>0 AND IsPlayed";
+            string sqlTicks = $"SELECT COUNT(*) FROM {tableName} WHERE TotalTicksPlayed IS NOT NULL AND iif( {tableName}.IsPlayed AND ( {tableName}.PlayCount > 0 ), {tableName}.TotalTicksPlayed, 0 ) != 0";
+            string sqlPlayed = $"SELECT COUNT(*) FROM {tableName} WHERE PlayCount>0 AND IsPlayed";
 
             long? ticksPlayed = null;
             long systemPlayed = 0;
@@ -968,16 +969,16 @@ namespace Statistics2026.Data
                 new( sqlPlayed )
             ];
 
-            ExecuteCommands( cmds, false, statement =>
-            {
-                var row = statement.Current;
-                var value = row.GetInt64( 0 );
-                if( ticksPlayed == null )
-                    ticksPlayed = value;
-                else
-                    systemPlayed = value;
-                return true;
-            }
+            await ExecuteCommands( cmds, false, statement =>
+                {
+                    IResultSet row = statement.Current;
+                    long value = row.GetInt64( 0 );
+                    if( ticksPlayed == null )
+                        ticksPlayed = value;
+                    else
+                        systemPlayed = value;
+                    return Task.FromResult( true );
+                }
             );
 
             ticksPlayed ??= 0;
@@ -986,7 +987,7 @@ namespace Statistics2026.Data
             List<List<object>>? missing = null;
             if( ticksPlayed != systemPlayed && ticksPlayed != 0 )
             {
-                var user = TableDefs().getUserForTableName( tableName );
+                User? user = TableDefs().getUserForTableName( tableName );
                 if( user == null )
                 {
                     Logger().Warn( $"Invalid user table name {tableName}" );
@@ -997,12 +998,12 @@ namespace Statistics2026.Data
                     Logger().Warn( $"User: {user.Name} has an invalid UserMedia table" );
                 }
 
-                var fields = $"Users.UserName, {tableName}.ItemID, {tableName}.Name, Media.RunTimeTicks, {tableName}.IsPlayed, {tableName}.PlayCount"
+                string fields = $"Users.UserName, {tableName}.ItemID, {tableName}.Name, Media.RunTimeTicks, {tableName}.IsPlayed, {tableName}.PlayCount"
                     + $", iif( {tableName}.IsPlayed,  {tableName}.TotalTicksPlayed, 0 )"
                     + $", Series.Name, Media.Season, Media.Episode";
-                var joinClause = $" LEFT JOIN Users ON Users.UserId={tableName}.UserId LEFT JOIN Media ON Media.ItemId = {tableName}.ItemId LEFT JOIN Series On Series.ItemId={tableName}.SeriesId";
+                string joinClause = $" LEFT JOIN Users ON Users.UserId={tableName}.UserId LEFT JOIN Media ON Media.ItemId = {tableName}.ItemId LEFT JOIN Series On Series.ItemId={tableName}.SeriesId";
 
-                var pos = sqlTicks.IndexOf( "WHERE" );
+                int pos = sqlTicks.IndexOf( "WHERE" );
                 if( pos != -1 )
                     sqlTicks = sqlTicks.Insert( pos, joinClause + " " );
 
@@ -1010,54 +1011,54 @@ namespace Statistics2026.Data
                 if( pos != -1 )
                     sqlPlayed = sqlPlayed.Insert( pos, joinClause + " " );
 
-                var ticksNotPlayed = sqlTicks + " EXCEPT " + sqlPlayed;
+                string ticksNotPlayed = sqlTicks + " EXCEPT " + sqlPlayed;
                 ticksNotPlayed = ticksNotPlayed.Replace( "COUNT(*)", fields );
 
-                var playedNotTicks = sqlPlayed + " EXCEPT " + sqlTicks;
+                string playedNotTicks = sqlPlayed + " EXCEPT " + sqlTicks;
                 playedNotTicks = playedNotTicks.Replace( "COUNT(*)", fields );
 
                 List<List<object>> ticksNotPlayedList = [];
-                ExecuteCommand( new SQLCmdDef( ticksNotPlayed ), statement =>
+                await ExecuteCommand( new SQLCmdDef( ticksNotPlayed ), statement =>
                 {
-                    var row = statement.Current;
-                    var col = 0;
+                    IResultSet row = statement.Current;
+                    int col = 0;
 
-                    var userName = row.GetString( col++ );
-                    var itemId = row.GetString( col++ );
-                    var itemName = row.GetString( col++ );
-                    var runtimeTicks = row.GetInt64( col++ );
-                    var isPlayed = row.GetBoolean( col++ );
-                    var playCount = row.GetInt64( col++ );
-                    var totalTicksPlayed = row.GetInt64( col++ );
-                    var seriesName = row.GetString( col++ );
-                    var season = row.GetInt64( col++ );
-                    var episode = row.GetInt64( col++ );
+                    string userName = row.GetString( col++ );
+                    string itemId = row.GetString( col++ );
+                    string itemName = row.GetString( col++ );
+                    long runtimeTicks = row.GetInt64( col++ );
+                    bool isPlayed = row.GetBoolean( col++ );
+                    long playCount = row.GetInt64( col++ );
+                    long totalTicksPlayed = row.GetInt64( col++ );
+                    string seriesName = row.GetString( col++ );
+                    long season = row.GetInt64( col++ );
+                    long episode = row.GetInt64( col++ );
 
                     ticksNotPlayedList.Add( [ userName, itemId, itemName, runtimeTicks, isPlayed, playCount, totalTicksPlayed, seriesName, season, episode ] );
 
-                    return true;
+                    return Task.FromResult( true );
                 } );
 
                 List<List<object>> playedNotTicksList = [];
-                ExecuteCommand( new SQLCmdDef( playedNotTicks ), statement =>
+                await ExecuteCommand( new SQLCmdDef( playedNotTicks ), statement =>
                 {
-                    var row = statement.Current;
-                    var col = 0;
+                    IResultSet row = statement.Current;
+                    int col = 0;
 
-                    var userName = row.GetString( col++ );
-                    var itemId = row.GetString( col++ );
-                    var itemName = row.GetString( col++ );
-                    var runtimeTicks = row.GetInt64( col++ );
-                    var isPlayed = row.GetBoolean( col++ );
-                    var playCount = row.GetInt64( col++ );
-                    var totalTicksPlayed = row.GetInt64( col++ );
-                    var seriesName = row.GetString( col++ );
-                    var season = row.GetInt64( col++ );
-                    var episode = row.GetInt64( col++ );
+                    string userName = row.GetString( col++ );
+                    string itemId = row.GetString( col++ );
+                    string itemName = row.GetString( col++ );
+                    long runtimeTicks = row.GetInt64( col++ );
+                    bool isPlayed = row.GetBoolean( col++ );
+                    long playCount = row.GetInt64( col++ );
+                    long totalTicksPlayed = row.GetInt64( col++ );
+                    string seriesName = row.GetString( col++ );
+                    long season = row.GetInt64( col++ );
+                    long episode = row.GetInt64( col++ );
 
                     playedNotTicksList.Add( [ userName, itemId, itemName, runtimeTicks, isPlayed, playCount, totalTicksPlayed, seriesName, season, episode ] );
 
-                    return true;
+                    return Task.FromResult( true );
                 } );
 
                 missing = [];
@@ -1068,11 +1069,11 @@ namespace Statistics2026.Data
             return ( ticksPlayed == systemPlayed ) ? null : missing;
         }
 
-        public StatCard? UserWatchMediaIssues()
+        public async Task<StatCard?> UserWatchMediaIssues()
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var fields =
+            string fields =
                 "  Users.UserName\n" +
                 ", Media.PrimaryName\n" +
                 ", Media.SecondaryName\n" +
@@ -1084,39 +1085,39 @@ namespace Statistics2026.Data
                 ", <TABLE_NAME>.TotalTicksPlayed\n"
                 ;
 
-            var joinClause =
+            string joinClause =
                 "LEFT JOIN Users ON Users.UserId=<TABLE_NAME>.UserId\n" +
                 "LEFT JOIN Media ON Media.ItemId = <TABLE_NAME>.ItemId\n"
                 ;
 
-            var sqlTicks =
+            string sqlTicks =
                 "SELECT\n" +
                 fields +
                 "FROM <TABLE_NAME>\n" +
                 joinClause +
                 "WHERE <TABLE_NAME>.TotalTicksPlayed IS NOT NULL AND iif( <TABLE_NAME>.IsPlayed, <TABLE_NAME>.TotalTicksPlayed, 0 ) != 0\n";
 
-            var sqlPlayed =
+            string sqlPlayed =
                 "SELECT\n" +
                 fields +
                 "FROM <TABLE_NAME>\n" +
                 joinClause +
                 "WHERE PlayCount>0 AND IsPlayed\n";
 
-            var sqlAtoB = sqlTicks + " EXCEPT \n" + sqlPlayed;
+            string sqlAtoB = sqlTicks + " EXCEPT \n" + sqlPlayed;
 
-            var sqlBtoA = sqlPlayed + " EXCEPT \n" + sqlTicks;
+            string sqlBtoA = sqlPlayed + " EXCEPT \n" + sqlTicks;
 
             List<SQLCmdDef> sqlCmds = [];
-            var tables = TableDefs().allUserMediaTables();
-            foreach( var tableName in tables )
+            List<string> tables = await TableDefs().allUserMediaTables();
+            foreach( string tableName in tables )
             {
-                var user = TableDefs().getUserForTableName( tableName );
+                User? user = TableDefs().getUserForTableName( tableName );
                 if( ( user == null ) || ( user.Policy.IsAdministrator ) )
                 {
                     continue;
                 }
-                var curr = sqlAtoB;
+                string curr = sqlAtoB;
                 curr = curr.Replace( "<TABLE_NAME>", tableName );
                 sqlCmds.Add( new SQLCmdDef( curr ) );
 
@@ -1134,34 +1135,34 @@ namespace Statistics2026.Data
 
             SortedDictionary<string, List<object>> items = [];
 
-            ExecuteCommands( sqlCmds, true, statement =>
+            await ExecuteCommands( sqlCmds, true, statement =>
             {
-                var row = statement.Current;
-                var col = 0;
+                IResultSet row = statement.Current;
+                int col = 0;
 
-                var userName = row.GetString( col++ );
-                var primaryName = row.GetString( col++ );
-                var secondaryName = row.GetString( col++ );
-                var season = row.GetInt( col++ );
-                var episode = row.GetInt( col++ );
-                var runTimeTicks = row.GetInt64( col++ );
-                var isPlayed = row.GetBoolean( col++ );
-                var playCount = row.GetInt64( col++ );
-                var totalTicksPlayed = row.GetInt64( col++ );
+                string userName = row.GetString( col++ );
+                string primaryName = row.GetString( col++ );
+                string secondaryName = row.GetString( col++ );
+                int season = row.GetInt( col++ );
+                int episode = row.GetInt( col++ );
+                long runTimeTicks = row.GetInt64( col++ );
+                bool isPlayed = row.GetBoolean( col++ );
+                long playCount = row.GetInt64( col++ );
+                long totalTicksPlayed = row.GetInt64( col++ );
 
-                var mediaName = MediaInfo.GetDisplayName( primaryName, secondaryName, season, episode );
+                string mediaName = MediaInfo.GetDisplayName( primaryName, secondaryName, season, episode );
                 if( mediaName == null || mediaName == "" )
                 {
-                    return true;
+                    return Task.FromResult( true );
                 }
                 var rtTicks = new RunTime( runTimeTicks );
                 var totalTicks = new RunTime( totalTicksPlayed );
 
                 items[ userName + "-" + mediaName ] = [ userName, mediaName, isPlayed ? "Yes" : "No", playCount, rtTicks.ToShortString(), totalTicks.ToShortString() ];
-                return true;
+                return Task.FromResult( true );
             } );
 
-            foreach( var kvp in items )
+            foreach( KeyValuePair<string, List<object>> kvp in items )
             {
                 groupData.addRow( kvp.Key, kvp.Value );
             }
@@ -1172,13 +1173,13 @@ namespace Statistics2026.Data
             return groupData;
         }
 
-        public StatCard PlayedUserMedia()
+        public async Task<StatCard> PlayedUserMedia()
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var tables = TableDefs().allUserMediaTables();
+            List<string> tables = await TableDefs().allUserMediaTables();
 
-            var sqlBase =
+            string sqlBase =
                 $"SELECT \n" +
                 $"    Users.UserName\n" +
                 $"  , Media.PrimaryName\n" +
@@ -1194,14 +1195,14 @@ namespace Statistics2026.Data
                 ;
 
             List<string> sqlCmds = [];
-            foreach( var tableName in tables )
+            foreach( string tableName in tables )
             {
-                var curr = sqlBase;
+                string curr = sqlBase;
                 curr = curr.Replace( "<TABLE_NAME>", tableName );
                 sqlCmds.Add( curr );
             }
 
-            var sql = sqlCmds.Join( "\nUNION\n\n" );
+            string sql = sqlCmds.Join( "\nUNION\n\n" );
             var groupData = new TableBasedStatCard( Constants.MediaTimePlayedPerUser, Constants.HelpMediaTimePlayedPerUser,
                     [
                         [ "", "", new HeaderDef( "Time Played", 2 ), "" ],
@@ -1226,37 +1227,37 @@ namespace Statistics2026.Data
 
             SortedDictionary<string, List<object>> items = [];
 
-            ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
-                var row = statement.Current;
+                IResultSet row = statement.Current;
 
-                var col = 0;
-                var userName = row.GetString( col++ );
-                var primaryName = row.GetString( col++ );
-                var secondaryName = row.GetString( col++ );
-                var season = row.GetInt( col++ );
-                var episode = row.GetInt( col++ );
-                var totalTicksPlayed = row.GetInt64( col++ );
-                var playCountBasedTotalTicksPlayed = row.GetInt64( col++ );
+                int col = 0;
+                string userName = row.GetString( col++ );
+                string primaryName = row.GetString( col++ );
+                string secondaryName = row.GetString( col++ );
+                int season = row.GetInt( col++ );
+                int episode = row.GetInt( col++ );
+                long totalTicksPlayed = row.GetInt64( col++ );
+                long playCountBasedTotalTicksPlayed = row.GetInt64( col++ );
 
-                var mediaName = MediaInfo.GetDisplayName( primaryName, secondaryName, season, episode );
+                string mediaName = MediaInfo.GetDisplayName( primaryName, secondaryName, season, episode );
                 var rtTotal = new RunTime( totalTicksPlayed );
                 var playCountRT = new RunTime( playCountBasedTotalTicksPlayed );
                 var diffRT = new RunTime( playCountBasedTotalTicksPlayed - totalTicksPlayed );
 
                 items[ userName + "-" + mediaName ] = [ userName, mediaName, rtTotal.ToShortString(), playCountRT.ToShortString(), diffRT.ToShortString() ];
-                return true;
+                return Task.FromResult( true );
             } );
 
-            var prevUser = string.Empty;
-            foreach( var kvp in items )
+            string prevUser = string.Empty;
+            foreach( KeyValuePair<string, List<object>> kvp in items )
             {
                 if( prevUser != kvp.Value[ 0 ].ToString() )
                 {
                     groupData.addRow( kvp.Value[ 0 ].ToString(), [ kvp.Value[ 0 ].ToString() ], true );
                 }
 
-                var values = kvp.Value;
+                List<object> values = kvp.Value;
                 values[ 0 ] = string.Empty;
                 groupData.addRow( kvp.Key, values );
             }

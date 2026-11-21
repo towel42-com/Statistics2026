@@ -13,6 +13,7 @@ using Statistics2026.ScheduledTasks;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
@@ -165,7 +166,7 @@ namespace Statistics2026.Utilities
             if( dateValue == null )
                 return null;
 
-            var tmp = dateValue.Value.DateTime.ToString( "o", CultureInfo.InvariantCulture );
+            string tmp = dateValue.Value.DateTime.ToString( "o", CultureInfo.InvariantCulture );
 
             return dateValue.Value.UtcDateTime.ToString( GetDateTimeKindFormat( DateTimeKind.Utc ) );
         }
@@ -185,15 +186,15 @@ namespace Statistics2026.Utilities
 
         public static string ToTZShortString( this DateTimeOffset dto, bool local, bool dateOnly = false )
         {
-            var tz = local ? TimeZoneInfo.Local : TimeZoneInfo.Utc;
-            var abbreviations = TZNames.GetAbbreviationsForTimeZone( tz.Id, "en" );
+            TimeZoneInfo tz = local ? TimeZoneInfo.Local : TimeZoneInfo.Utc;
+            TimeZoneValues abbreviations = TZNames.GetAbbreviationsForTimeZone( tz.Id, "en" );
 
-            var isDaylight = tz.IsDaylightSavingTime( dto );
-            var tzAbbreviation = isDaylight ? abbreviations.Daylight : abbreviations.Standard;
+            bool isDaylight = tz.IsDaylightSavingTime( dto );
+            string? tzAbbreviation = isDaylight ? abbreviations.Daylight : abbreviations.Standard;
 
-            var dt = local ? dto.LocalDateTime : dto.UtcDateTime;
+            DateTime dt = local ? dto.LocalDateTime : dto.UtcDateTime;
 
-            var retVal = dt.ToShortDateString();
+            string retVal = dt.ToShortDateString();
             if( !dateOnly )
                 retVal += " " + dt.ToString( "HH:mm" ) + $" {tzAbbreviation}";
             return retVal;
@@ -207,7 +208,7 @@ namespace Statistics2026.Utilities
                 var node = JsonNode.Parse( json );
                 if( node != null && ( node is JsonArray jsonArray ) )
                 {
-                    foreach( var studio in jsonArray )
+                    foreach( JsonNode? studio in jsonArray )
                     {
                         if( studio == null )
                             continue;
@@ -228,8 +229,8 @@ namespace Statistics2026.Utilities
         public static string GetCountryCode( IHttpClient httpClient, CancellationToken? _cancellationToken = null )
         {
             RegionInfo currentRegion = RegionInfo.CurrentRegion;
-            var defaultIsoCode = currentRegion.TwoLetterISORegionName;
-            var retVal = HelperFuncs.GetIPInfoAsync( "", httpClient, defaultIsoCode, _cancellationToken ).ConfigureAwait( false ).GetAwaiter().GetResult();
+            string defaultIsoCode = currentRegion.TwoLetterISORegionName;
+            (string countryCode, string tzOffset) retVal = HelperFuncs.GetIPInfoAsync( "", httpClient, defaultIsoCode, _cancellationToken ).ConfigureAwait( false ).GetAwaiter().GetResult();
 
             return retVal.countryCode;
         }
@@ -237,15 +238,15 @@ namespace Statistics2026.Utilities
         public static string GetCountryCode( string ipAddress, IHttpClient httpClient, CancellationToken? _cancellationToken = null )
         {
             RegionInfo currentRegion = RegionInfo.CurrentRegion;
-            var defaultIsoCode = currentRegion.TwoLetterISORegionName;
-            var retVal = HelperFuncs.GetIPInfoAsync( ipAddress, httpClient, defaultIsoCode, _cancellationToken ).ConfigureAwait( false ).GetAwaiter().GetResult();
+            string defaultIsoCode = currentRegion.TwoLetterISORegionName;
+            (string countryCode, string tzOffset) retVal = HelperFuncs.GetIPInfoAsync( ipAddress, httpClient, defaultIsoCode, _cancellationToken ).ConfigureAwait( false ).GetAwaiter().GetResult();
 
             return retVal.countryCode;
         }
 
         public static async Task<string> GetCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode = "US", CancellationToken? _cancellationToken = null )
         {
-            var retVal = await GetIPInfoAsync( "", httpClient, defaultCountryCode, _cancellationToken );
+            (string countryCode, string tzOffset) retVal = await GetIPInfoAsync( "", httpClient, defaultCountryCode, _cancellationToken );
             return retVal.countryCode;
         }
 
@@ -263,7 +264,7 @@ namespace Statistics2026.Utilities
             await _semaphore.WaitAsync( _cancellationToken ?? CancellationToken.None );
             try
             {
-                if( sIpLookup.TryGetValue( ipAddress, out var value ) )
+                if( sIpLookup.TryGetValue( ipAddress, out (string countryCode, string tzOffset) value ) )
                     return value;
 
                 (string countryCode, string tzOffset) retVal = (defaultCountryCode, "-0500");
@@ -274,7 +275,7 @@ namespace Statistics2026.Utilities
 
                 try
                 {
-                    var path = string.IsNullOrWhiteSpace( ipAddress ) ? "" : "/{ipAddress}";
+                    string path = string.IsNullOrWhiteSpace( ipAddress ) ? "" : "/{ipAddress}";
                     path += "/json";
                     var builder = new UriBuilder
                     {
@@ -283,16 +284,16 @@ namespace Statistics2026.Utilities
                         Path = path
                     };
 
-                    var url = builder.Uri.ToString();
-                    var options = getRequestOptions( url, _cancellationToken );
+                    string url = builder.Uri.ToString();
+                    HttpRequestOptions options = getRequestOptions( url, _cancellationToken );
 
-                    using( var response = await httpClient.Get( options ).ConfigureAwait( false ) )
+                    using( Stream response = await httpClient.Get( options ).ConfigureAwait( false ) )
                     {
-                        var rawResponse = HelperFuncs.StreamToString( response );
+                        string rawResponse = HelperFuncs.StreamToString( response );
                         if( !string.IsNullOrWhiteSpace( rawResponse ) )
                         {
                             var jsonNode = JsonNode.Parse( rawResponse );
-                            var obj = jsonNode?.AsObject();
+                            JsonObject? obj = jsonNode?.AsObject();
                             if( obj != null )
                             {
                                 retVal.countryCode = obj[ "country_code" ]?.GetValue<string>() ?? defaultCountryCode;
@@ -319,7 +320,7 @@ namespace Statistics2026.Utilities
             if( clauses.IsNullOrEmpty() )
                 return string.Empty;
 
-            for( var ii = 0; ii < clauses.Count; ++ii )
+            for( int ii = 0; ii < clauses.Count; ++ii )
             {
                 clauses[ ii ] = $"( {clauses[ ii ]} )";
             }
@@ -432,7 +433,7 @@ namespace Statistics2026.Utilities
         {
             string encodedTitle = System.Uri.EscapeDataString( title );
 
-            if( ProviderTemplates.TryGetValue( providerId, out var template ) )
+            if( ProviderTemplates.TryGetValue( providerId, out string? template ) )
             {
                 return template.Replace( "{searchInfo}", encodedTitle ).Replace( "{isoCode}", isoCode );
             }
@@ -444,7 +445,7 @@ namespace Statistics2026.Utilities
 
         public static string GetProviderTemplateUrl( int providerId )
         {
-            if( ProviderTemplates.TryGetValue( providerId, out var template ) )
+            if( ProviderTemplates.TryGetValue( providerId, out string? template ) )
             {
                 return template;
             }
@@ -457,7 +458,7 @@ namespace Statistics2026.Utilities
             if( _html.IsNullOrEmpty() )
                 return string.Empty;
 
-            var retVal = string.Empty;
+            string retVal = string.Empty;
             if( depth > 0 )
                 retVal += new string( ' ', 4 * depth );
             retVal += _html;
@@ -471,12 +472,12 @@ namespace Statistics2026.Utilities
             if( rows.IsNullOrEmpty() )
                 return string.Empty;
 
-            var retVal = string.Empty;
+            string retVal = string.Empty;
             if( inDiv )
                 retVal += addToHtml( depth++, "<div>" );
 
             retVal += addToHtml( depth++, "<ul class=\"dynamic-list\">" );
-            foreach( var curr in rows )
+            foreach( (string key, string value) curr in rows )
             {
                 retVal += addToHtml( depth++, "<li>" );
                 retVal += addToHtml( depth++, "<div class=\"row\">" );
@@ -495,7 +496,7 @@ namespace Statistics2026.Utilities
         public static string MakeTableHtml( List<string> values, bool inDiv = true, int depth = 0 )
         {
             List<(string key, string value)> rows = [];
-            foreach( var curr in values )
+            foreach( string curr in values )
             {
                 rows.Add( (curr, "") );
             }
@@ -507,8 +508,8 @@ namespace Statistics2026.Utilities
             if( rows.IsNullOrEmpty() )
                 return string.Empty;
 
-            var depth = 0;
-            var retVal = addToHtml( depth++, "<div>" );
+            int depth = 0;
+            string retVal = addToHtml( depth++, "<div>" );
             if( !title.IsEmpty() )
             {
                 retVal += addToHtml( depth, $"<h3>{title}</h3>" );
@@ -524,7 +525,7 @@ namespace Statistics2026.Utilities
         public static string MakeTableHtml( string title, List<string> values )
         {
             List<(string key, string value)> rows = [];
-            foreach( var curr in values )
+            foreach( string curr in values )
             {
                 rows.Add( (curr, "") );
             }
@@ -581,7 +582,7 @@ namespace Statistics2026.Utilities
             posterPath = posterPath.TrimStart( '/' ).TrimEnd( '/' );
             posterSize = posterSize.TrimStart( '/' ).TrimEnd( '/' );
 
-            var urlBase = string.Empty;
+            string urlBase = string.Empty;
             if( proxy )
             {
                 urlBase = $"/emby/Statistics2026/tmdbimage";
@@ -590,7 +591,7 @@ namespace Statistics2026.Utilities
             {
                 urlBase = $"https://image.tmdb.org/t/p";
             }
-            var retVal = $"{urlBase}/{posterSize}/{posterPath}";
+            string retVal = $"{urlBase}/{posterSize}/{posterPath}";
             return retVal;
         }
 
@@ -623,7 +624,7 @@ namespace Statistics2026.Utilities
             return (imageUrl, itemText, itemUrl);
         }
 
-        public static HttpRequestOptions getRequestOptions( string url, CancellationToken? _cancellationToken )
+        public static HttpRequestOptions getRequestOptions( string url, CancellationToken? _cancellationToken, int? timeoutMs = null )
         {
             var options = new HttpRequestOptions
             {
@@ -633,6 +634,10 @@ namespace Statistics2026.Utilities
                 CacheMode = CacheMode.Unconditional,
                 UserAgent = "Mozilla/5.0"
             };
+            if ( timeoutMs != null )
+            {
+                options.TimeoutMs = timeoutMs.Value;
+            }
             return options;
         }
 
@@ -644,7 +649,7 @@ namespace Statistics2026.Utilities
             embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
         }
 
-        static public void CheckForOOD( EmbyInterfaces embyInterfaces, bool initDB, List<string> reasons, System.Type okIfRunning, bool allowRunAll )
+        static public async Task CheckForOOD( EmbyInterfaces embyInterfaces, List<string> reasons, System.Type okIfRunning, bool allowRunAll )
         {
             try
             {
@@ -657,11 +662,11 @@ namespace Statistics2026.Utilities
                 }
 
                 embyInterfaces.Logger().Debug( $"System currently NOT running" );
-                using var db = Statistics2026DB.GetInstance( embyInterfaces );
-                db.Initialize( null, null, null, false );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( embyInterfaces, "CheckForOOD" );
+                await db.Initialize( null, null, null, false );
 
-                var currLogger = embyInterfaces.Logger();
-                var (runFullAnalysis, runMissingAnalysis, oodReasons) = EmbyHelperFuncs.AnalysisOutOfDate( embyInterfaces, db );
+                ILogger currLogger = embyInterfaces.Logger();
+                (bool runFullAnalysis, bool runMissingAnalysis, List<string>? oodReasons) = await EmbyHelperFuncs.AnalysisOutOfDate( embyInterfaces, db );
 
                 embyInterfaces._logger = currLogger;
                 reasons.AddRange( oodReasons );
@@ -685,28 +690,36 @@ namespace Statistics2026.Utilities
             }
         }
 
-        public static object HandleRequest( string requestName, EmbyInterfaces embyInterfaces, Func<AutoTimer, object> requestFunc )
+        public static async Task<T> HandleRequest<T>( string requestName, EmbyInterfaces embyInterfaces, Func<AutoTimer, Task<T>> requestFunc )
         {
             using( var timer = new AutoTimer( $"Request: {requestName}", embyInterfaces.Logger() ) )
             {
-                try
-                {
-                    return requestFunc( timer );
-                }
-                catch( Exception )
-                {
-                    throw;
-                }
+                return await requestFunc( timer ).ConfigureAwait( false );
             }
         }
+
+        //public async static Task<object> HandleRequest( string requestName, EmbyInterfaces embyInterfaces, Func<AutoTimer, Task<object>> requestFunc )
+        //{
+        //    using( var timer = new AutoTimer( $"Request: {requestName}", embyInterfaces.Logger() ) )
+        //    {
+        //        try
+        //        {
+        //            return requestFunc( timer );
+        //        }
+        //        catch( Exception )
+        //        {
+        //            throw;
+        //        }
+        //    }
+        //}
 
         public static bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
         {
             if( dto == null )
                 return true;
 
-            var numDaysToAdd = ignoreConfig ? 0 : Plugin.Instance!.Configuration.numDaysFutureForMissing;
-            var maxDate = DateTimeOffset.Now.Date.AddDays( numDaysToAdd );
+            int numDaysToAdd = ignoreConfig ? 0 : Plugin.Instance!.Configuration.numDaysFutureForMissing;
+            DateTime maxDate = DateTimeOffset.Now.Date.AddDays( numDaysToAdd );
             if( dto.Value.Date > maxDate )
                 return true;
 
@@ -788,6 +801,36 @@ namespace Statistics2026.Utilities
             using var currentProcess = Process.GetCurrentProcess();
             currentProcess.Refresh();
             return currentProcess.WorkingSet64;
+        }
+
+        public static StringBuilder getStackTrace( IEnumerable<string>? ignoreCallList = null )
+        {
+            StringBuilder retVal = new();
+    
+            string currentStack = Environment.StackTrace;
+
+            string[] list = currentStack.Split( new string[] { "\r\n" }, StringSplitOptions.None );
+            for( int ii = 0; ii < list.Count(); ++ii )
+            {
+                list[ ii ] = list[ ii ].Trim();
+                if( list[ ii ].Contains( "get_StackTrace" ) )
+                    continue;
+                if( list[ ii ].Contains( "getStackTrace" ) )
+                    continue;
+
+                if( ignoreCallList != null )
+                {
+                    foreach( string curr in ignoreCallList )
+                    {
+                        if( list[ ii ].Contains( curr ) )
+                            continue;
+                    }
+                }
+
+                retVal.AppendLine( $"    {list[ ii ]}" );
+            }
+
+            return retVal;
         }
     }
 }

@@ -72,18 +72,17 @@ namespace Statistics2026.Services
         {
         }
 
-        public object Get( GetTVSeriesProgress request )
+        public Task<object> Get( GetTVSeriesProgress request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var userName = request.user;
-                var user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                string userName = request.user;
+                User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
                 if( user == null )
-                    return new StatCardResponse();
+                    return new List<GetTVSeriesProgressResponse>();
 
-                var retVal = db.GetTVSeriesProgress( user );
-                return retVal;
+                return await db.GetTVSeriesProgress( user );
             } );
         }
     }

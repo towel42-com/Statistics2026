@@ -56,7 +56,7 @@ namespace Statistics2026.Utilities
 
         public void AddLine( TextValueLine key, TextValueLine value )
         {
-            if( ValueKeyPosMap.TryGetValue( key, out var pos ) )
+            if( ValueKeyPosMap.TryGetValue( key, out int pos ) )
             {
                 Values[ pos ].Item2.Add( value );
             }
@@ -74,13 +74,13 @@ namespace Statistics2026.Utilities
         {
             if( currValue.data.IsNullOrEmpty() )
                 return string.Empty;
-            var value = currValue.data;
+            string value = currValue.data;
             if( Values.Count() > 1 )
                 value = CheckMaxLength( currValue.data );
 
-            var dataHtml = $"<div class=\"{statCardClass( currValue.asTitle )}\" {style}>{value}</div>";
+            string dataHtml = $"<div class=\"{statCardClass( currValue.asTitle )}\" {style}>{value}</div>";
 
-            var showImage = !currValue.url.IsNullOrEmpty() && !currValue.itemId.IsNullOrEmpty();
+            bool showImage = !currValue.url.IsNullOrEmpty() && !currValue.itemId.IsNullOrEmpty();
             if( showImage )
             {
                 dataHtml = ItemImageUrl.ItemUrlFromItemId( currValue.itemId, currValue.url, dataHtml, "50px" );
@@ -99,22 +99,22 @@ namespace Statistics2026.Utilities
             if( IsEmpty() )
                 return string.Empty;
 
-            var style = GetStyleString( EAlignment.eLeft );
-            var rootListType = ( ListType == EListType.eUnordered ) ? "ul" : "ol";
+            string style = GetStyleString( EAlignment.eLeft );
+            string rootListType = ( ListType == EListType.eUnordered ) ? "ul" : "ol";
 
             int getKeyCount( TextValueLine key )
             {
-                if( ValueKeyPosMap.TryGetValue( key, out var values ) )
+                if( ValueKeyPosMap.TryGetValue( key, out int values ) )
                 {
                     return Values[ values ].values.Count;
                 }
                 return 0;
             }
 
-            var retVal = string.Empty;
+            string retVal = string.Empty;
             retVal += HelperFuncs.addToHtml( depth++, $"<{rootListType}>" );
 
-            for( var ii = 0; ii < Values.Count; ++ii )
+            for( int ii = 0; ii < Values.Count; ++ii )
             {
                 if( ii != 0 )
                 {
@@ -139,10 +139,10 @@ namespace Statistics2026.Utilities
                     retVal += HelperFuncs.addToHtml( depth++, "<ul>" );
                 }
 
-                for( var jj = 0; jj < Values[ ii ].values.Count; ++jj )
+                for( int jj = 0; jj < Values[ ii ].values.Count; ++jj )
                 {
-                    var dataHtml = getDataHtmlForItem( Values[ ii ].values[ jj ], style );
-                    var html = $"<li {style}>" + dataHtml + "</li>";
+                    string dataHtml = getDataHtmlForItem( Values[ ii ].values[ jj ], style );
+                    string html = $"<li {style}>" + dataHtml + "</li>";
                     retVal += HelperFuncs.addToHtml( depth, html );
                 }
             }

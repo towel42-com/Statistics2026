@@ -6,7 +6,7 @@ namespace Statistics2026.Utilities
 {
     public class AutoTimer : IDisposable
     {
-        public string? Text = null;
+        public string? Text { get; set; } = null;
         private readonly Stopwatch _stopWatch = Stopwatch.StartNew();
         private readonly ILogger _logger;
         private readonly bool _debug = true;

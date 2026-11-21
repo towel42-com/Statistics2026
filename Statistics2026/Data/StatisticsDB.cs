@@ -1,4 +1,7 @@
-﻿//#define DEBUG_DB
+﻿#if DEBUG
+//#define DEBUG_DB
+//#define DEBUG_DB_VEBOSE
+#endif
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
@@ -7,6 +10,7 @@ using MediaBrowser.Model.Logging;
 using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Utilities;
+using System.Text;
 
 namespace Statistics2026.Data
 {
@@ -17,7 +21,7 @@ namespace Statistics2026.Data
         eEpisode
     }
 
-    public sealed partial class Statistics2026DB : IDisposable, IHasEmbyInterface
+    public sealed partial class Statistics2026DB : IAsyncDisposable, IHasEmbyInterface
     {
         public EmbyInterfaces _embyInterfaces { get; }
         private bool _disposed = false;
@@ -32,61 +36,214 @@ namespace Statistics2026.Data
         public CancellationToken? CancellationToken { get; set; } = null;
         public IProgress<double>? Progress { get; set; } = null;
 
-        public static Statistics2026DB GetInstance( EmbyInterfaces? embyInterfaces )
+        private class DBInitiator
         {
-            lock( SQLCmdDef._dbLock )
+            public async Task<Statistics2026DB> Init( EmbyInterfaces? embyInterfaces, string instanceLocation )
             {
                 if( embyInterfaces == null )
                     throw new ArgumentNullException( "EmbyInterfaces is null." );
 
-                var retVal = new Statistics2026DB( embyInterfaces );
-                retVal.dbStatusMessage( "New Instance Created" );
-                Plugin.Instance?.Configuration.UpdateBuildDateAndVersionInfo();
+                Statistics2026DB? retVal = null;
+                SQLCmdDef.setWarningLogger( ( msg ) => { embyInterfaces.Logger().Warn( msg ); } );
+
+                await SQLCmdDef.lockDB( null, async () =>
+                {
+                    retVal = new Statistics2026DB( embyInterfaces, instanceLocation );
+
+                    retVal.dbStatusMessage( "New Instance Created" );
+                    Plugin.Instance?.Configuration.UpdateBuildDateAndVersionInfo();
+                    retVal.dbStatusMessage( "Creating Database" );
+                    CreateConnection( retVal );
+                    Plugin.Instance?._tableDefs.SetDatabase( retVal );
+                    retVal.dbStatusMessage( "Finished Creating Database" );
+                } );
+
+                if( retVal == null )
+                    throw new Exception( "Problem getting db instance" );
+
+                await retVal.ComputeDBState();
+
                 return retVal;
             }
-        }
 
-        private Statistics2026DB( EmbyInterfaces embyInterfaces )
-        {
-            lock( SQLCmdDef._dbLock )
+            private void CreateConnection( Statistics2026DB db )
             {
-                _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
-#if DEBUG_DB
-                _DBConnLogger = embyInterfaces.LogManager().GetLogger( "Statistics2026 - DBMonitor" );
-#endif
-                dbStatusMessage( "Creating Database", true );
-                CreateConnection();
-                Plugin.Instance?._tableDefs.SetDatabase( this );
-                dbStatusMessage( "Finished Creating Database" );
-                ComputeDBState();
+                string oldFileName = Path.Combine( db.ConfigManager().ApplicationPaths.DataPath, "Statistics2026.db" );
+                string newFileName = Path.Combine( db.ConfigManager().ApplicationPaths.PluginConfigurationsPath, "Statistics2026.db" );
+
+                if( File.Exists( oldFileName ) )
+                {
+                    try
+                    {
+                        db.Logger().Info( "DB exists in old location, moving to plugin/config" );
+                        File.Move( oldFileName, newFileName );
+                        db.Logger().Info( "   Moved successfully" );
+                    }
+                    catch( IOException ex )
+                    {
+                        // Handles scenarios like: file already exists at destination, or file is locked
+                        // Handles scenarios like: file already exists at destination, or file is locked
+                        db.Logger().Error( $"   Failed to be moved, removing and new db will be built - {ex.Message}" );
+                    }
+                    catch( UnauthorizedAccessException ex )
+                    {
+                        db.Logger().Error( $"   Failed to be moved, removing and new db will be built - Check Permissions - {ex.Message}" );
+                    }
+                }
+
+                if( File.Exists( oldFileName ) ) // could not move, try deleting
+                {
+                    try
+                    {
+                        db.Logger().Info( "Deleting old DB file" );
+                        File.Delete( oldFileName );
+                        db.Logger().Info( "   Deleted successfully" );
+                    }
+                    catch( Exception ex )
+                    {
+                        db.Logger().Error( $"   Failed to be delete - {ex.Message}" );
+                    }
+                }
+
+                CreateConnection( db, newFileName );
             }
-        }
 
-        public void Dispose()
+            private void CreateConnection( Statistics2026DB db, string db_file )
+            {
+                _ = db.CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );
+
+                db.Logger().Debug( $"CreateConnection - ThreadID: {Environment.CurrentManagedThreadId}" );
+                ConnectionFlags connectionFlags;
+
+                //_embyInterfaces!.Logger().Debug("Opening write _connection");
+                connectionFlags = ConnectionFlags.Create; // create if missing
+                connectionFlags |= ConnectionFlags.ReadWrite; // open for read-write
+                connectionFlags |= ConnectionFlags.PrivateCache;
+                connectionFlags |= ConnectionFlags.NoMutex;
+
+                try
+                {
+                    SQLiteDatabaseConnection sqliteDb = SQLite3.Open( db_file, connectionFlags, null, true );
+                    db.Connection = sqliteDb;
+                    db.dbStatusMessage( "DB Opened" );
+
+                    List<string> queries =
+                        [
+                            "PRAGMA busy_timeout = 5000",
+                            "PRAGMA journal_mode=WAL",
+                            "PRAGMA busy_timeout=5000",
+                            "PRAGMA synchronous=Normal",
+                            "PRAGMA temp_store=file"
+                        ];
+
+                    foreach( string query in queries )
+                    {
+                        db.Connection.Execute( query );
+                    }
+                    db.dbStatusMessage( "Pragmas Set" );
+                }
+                catch
+                {
+                    throw;
+                }
+
+                db.dbStatusMessage( "Connection Created" );
+            }
+        };
+
+        public async static Task<Statistics2026DB> GetInstance( EmbyInterfaces? embyInterfaces, string instanceLocation )
         {
-            Dispose( true );
-            GC.SuppressFinalize( this );
+            DBInitiator dbInit = new();
+            Statistics2026DB retVal = await dbInit.Init( embyInterfaces, instanceLocation );
+            return retVal;
         }
 
-        ~Statistics2026DB()
+        private Statistics2026DB( EmbyInterfaces embyInterfaces, string instanceLocation )
         {
-            Dispose( false );
+            _embyInterfaces = embyInterfaces ?? throw new ArgumentNullException( "embyInterfaces is null." );
+#if DEBUG_DB
+            _DBConnLogger = embyInterfaces.LogManager().GetLogger( "Statistics2026 - DBMonitor" );
+#endif
+            _instanceLocation = instanceLocation;
         }
 
-        void Dispose( bool disposing )
+        public async ValueTask DisposeAsync()
         {
             if( _disposed )
                 return;
-            if( disposing )
-            {
-                CloseConnection();
-            }
+
+            await CloseConnection();
+
+            GC.SuppressFinalize( this );
+        }
+
+        void Dispose()
+        {
+            if( _disposed )
+                return;
+
+            CloseConnectionSynchronous();
+
             _disposed = true;
         }
 
-        public ILogger? DBLogger()
+        private string? _instanceLocation = null;
+        private string? _DBLogPrefix = null;
+
+        private string getDBLogPrefix()
         {
-            return _DBConnLogger;
+            if( _DBLogPrefix == null )
+            {
+                if( _instanceLocation == null )
+                    throw new Exception( "_instanceLocation not set" );
+
+                if( Connection == null )
+                    return $"0x{(long)-1:X16} - {_instanceLocation!}";
+
+                _DBLogPrefix = $"0x{GetDBHashCode():X16} - {_instanceLocation!}";
+            }
+            return _DBLogPrefix;
+        }
+
+        public void dbLog( string msg, LogSeverity severity = LogSeverity.Info, bool verbose = false, bool includeStack = false )
+        {
+            if( !includeStack )
+            {
+                _DBConnLogger?.Log( severity, $"{getDBLogPrefix()}: {msg}" );
+                return;
+            }
+
+            dbLogMultiLine( msg, null, severity, verbose, includeStack );
+
+        }
+
+        public void dbLogMultiLine( string title, StringBuilder? msgs, LogSeverity severity, bool verbose, bool includeStack = false )
+        {
+            if( msgs == null && !includeStack )
+                return;
+
+            if( verbose == true )
+            {
+#if !DEBUG_DB_VEBOSE
+                return;
+#endif
+            }
+
+            if( includeStack )
+            {
+                if( msgs == null )
+                    msgs = new();
+                else
+                    msgs.AppendLine( "======================================" );
+                msgs.Append( HelperFuncs.getStackTrace( [ "Statistics2026DB.dbStatusMessage", "Statistics2026DB..ctor", "Statistics2026DB.GetInstance", "Statistics2026DB.dbLog", "Statistics2026DB.dbLogMultiLine" ] ) );
+                msgs.AppendLine( "======================================" );
+            }
+            _DBConnLogger?.LogMultiline( $"{getDBLogPrefix()}: {title}", LogSeverity.Info, msgs! );
+        }
+
+        public bool dbLoggerEnabled()
+        {
+            return _DBConnLogger != null;
         }
 
         public TableDefs TableDefs()
@@ -133,93 +290,6 @@ namespace Statistics2026.Data
             return _embyInterfaces!._configManager!;
         }
 
-        private void CreateConnection()
-        {
-            var oldFileName = Path.Combine( ConfigManager().ApplicationPaths.DataPath, "Statistics2026.db" );
-            var newFileName = Path.Combine( ConfigManager().ApplicationPaths.PluginConfigurationsPath, "Statistics2026.db" );
-
-            if( File.Exists( oldFileName ) )
-            {
-                try
-                {
-                    Logger().Info( "DB exists in old location, moving to plugin/config" );
-                    File.Move( oldFileName, newFileName );
-                    Logger().Info( "   Moved successfully" );
-                }
-                catch( IOException ex )
-                {
-                    // Handles scenarios like: file already exists at destination, or file is locked
-                    // Handles scenarios like: file already exists at destination, or file is locked
-                    Logger().Error( $"   Failed to be moved, removing and new db will be built - {ex.Message}" );
-                }
-                catch( UnauthorizedAccessException ex )
-                {
-                    Logger().Error( $"   Failed to be moved, removing and new db will be built - Check Permissions - {ex.Message}" );
-                }
-            }
-
-            if( File.Exists( oldFileName ) ) // could not move, try deleting
-            {
-                try
-                {
-                    Logger().Info( "Deleting old DB file" );
-                    File.Delete( oldFileName );
-                    Logger().Info( "   Deleted successfully" );
-                }
-                catch( Exception ex )
-                {
-                    Logger().Error( $"   Failed to be delete - {ex.Message}" );
-                }
-            }
-
-            CreateConnection( newFileName );
-        }
-
-        private void CreateConnection( string db_file )
-        {
-            _ = CheckIsValid( ECheckLevel.eLogger | ECheckLevel.eThrowOnFailure );
-
-            Logger().Debug( $"CreateConnection - ThreadID: {Environment.CurrentManagedThreadId}" );
-            ConnectionFlags connectionFlags;
-
-            //_embyInterfaces!.Logger().Debug("Opening write _connection");
-            connectionFlags = ConnectionFlags.Create; // create if missing
-            connectionFlags |= ConnectionFlags.ReadWrite; // open for read-write
-            connectionFlags |= ConnectionFlags.PrivateCache;
-            connectionFlags |= ConnectionFlags.NoMutex;
-
-            try
-            {
-                lock( SQLCmdDef._dbLock )
-                {
-                    var db = SQLite3.Open( db_file, connectionFlags, null, true );
-                    Connection = db;
-                    dbStatusMessage( "DB Opened" );
-
-                    List<string> queries =
-                        [
-                            "PRAGMA busy_timeout = 5000",
-                            "PRAGMA journal_mode=WAL",
-                            "PRAGMA busy_timeout=5000",
-                            "PRAGMA synchronous=Normal",
-                            "PRAGMA temp_store=file"
-                        ];
-
-                    foreach( var query in queries )
-                    {
-                        db.Execute( query );
-                    }
-                }
-                dbStatusMessage( "Pragmas Set" );
-            }
-            catch
-            {
-                throw;
-            }
-
-            dbStatusMessage( "Connection Created" );
-        }
-
         public int GetDBHashCode()
         {
             return Connection?.GetHashCode() ?? 0;
@@ -227,32 +297,13 @@ namespace Statistics2026.Data
 
         private void dbStatusMessage( string message, bool includeStack = false )
         {
-            DBLogger()?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4} - Statistics2026DB Hash: 0x{GetHashCode():X16} - DB Hash: 0x{GetDBHashCode():X16} : '{message}'" );
-            if( includeStack )
-            {
-                string currentStack = Environment.StackTrace;
-                var list = currentStack.Split( new string[] { "\r\n" }, StringSplitOptions.None );
-                DBLogger()?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4}    Stack:" );
-                for( int ii = 0; ii < list.Count(); ++ii )
-                {
-                    if( list[ ii ].Contains( "get_StackTrace" ) )
-                        continue;
-                    else if( list[ ii ].Contains( "Statistics2026DB.dbStatusMessage" ) )
-                        continue;
-                    else if( list[ ii ].Contains( "Statistics2026DB..ctor" ) )
-                        continue;
-                    else if( list[ ii ].Contains( "Statistics2026DB.GetInstance" ) )
-                        continue;
-
-                    DBLogger()?.Debug( $"Thread ID: {Environment.CurrentManagedThreadId:D4}        {list[ ii ].Trim()}" );
-                }
-
-            }
+            StringBuilder builder = new();
+            dbLog( $"Thread ID: {Environment.CurrentManagedThreadId:D4} - Statistics2026DB Hash: 0x{GetHashCode():X16}: '{message}'", includeStack: includeStack );
         }
 
-        public void CloseConnection()
+        public void CloseConnectionSynchronous()
         {
-            lock( SQLCmdDef._dbLock )
+            SQLCmdDef.lockDBSynchronous( this, () =>
             {
                 try
                 {
@@ -267,15 +318,34 @@ namespace Statistics2026.Data
                 catch( Exception )
                 {
                 }
-            }
+            } );
         }
 
-        public void Initialize( MediaBrowser.Model.Tasks.IScheduledTask? runningTask, CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false )
+        public Task CloseConnection()
+        {
+            return SQLCmdDef.lockDB( this, async () =>
+            {
+                try
+                {
+                    dbStatusMessage( "Cleaning up" );
+                    if( Connection != null )
+                    {
+                        Connection.Close();
+                        dbStatusMessage( "DB Connection Closed" );
+                        Connection = null;
+                    }
+                }
+                catch( Exception )
+                {
+                }
+            } );
+        }
+
+        public Task Initialize( MediaBrowser.Model.Tasks.IScheduledTask? runningTask, CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false )
         {
             _currentTask = runningTask;
             SetCancellationToken( cancellationToken, progress );
-            TableDefs().CreateTables( reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate, cancellationToken,
-                value => { progress?.Report( value ); } );
+            return TableDefs().CreateTables( reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate, cancellationToken, value => { progress?.Report( value ); } );
         }
 
         public void ResetCancellationToken()
@@ -292,7 +362,7 @@ namespace Statistics2026.Data
 
         public bool TryBind<T>( IStatement statement, string name, T? value )
         {
-            if( !statement.BindParameters.TryGetValue( name, out var bindParam ) )
+            if( !statement.BindParameters.TryGetValue( name, out IBindParameter? bindParam ) )
             {
                 _embyInterfaces!.Logger().Error( $"Error Binding {name} to {value}" );
                 return false;
@@ -346,10 +416,10 @@ namespace Statistics2026.Data
             return true;
         }
 
-        public void ExecuteCommand( SQLCmdDef cmd, Func<IStatement, bool>? onStatement = null, bool useTransaction = true )
+        public Task ExecuteCommand( SQLCmdDef cmd, Func<IStatement, Task<bool>>? onStatement = null, bool useTransaction = true, bool locked = false )
         {
             List<SQLCmdDef> cmds = [ cmd ];
-            ExecuteCommands( cmds, true, onStatement, useTransaction );
+            return ExecuteCommands( cmds, true, onStatement, useTransaction, locked );
         }
 
         private void SetProgress( double value )
@@ -357,41 +427,65 @@ namespace Statistics2026.Data
             Progress?.Report( value );
         }
 
-        public void ExecuteCommands( List<SQLCmdDef> cmds, bool useProgress = true, Func<IStatement, bool>? onStatement = null, bool useTransaction = true )
+        public async Task ExecuteCommands( List<SQLCmdDef> cmds, bool useProgress = true, Func<IStatement, Task<bool>>? onStatement = null, bool useTransaction = true, bool locked = false )
         {
             _ = CheckIsValid( ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
 
-            void runCommands( IDatabaseConnection connection, List<SQLCmdDef> cmds, Func<IStatement, bool>? onStatement )
+            async Task runCommands( IDatabaseConnection? connection, List<SQLCmdDef> cmds, Func<IStatement, Task<bool>>? onStatement, bool locked, bool withTransaction )
             {
-                for( var ii = 0; ii < cmds.Count; ++ii )
-                {
-                    CancellationToken?.ThrowIfCancellationRequested();
+                if( connection == null )
+                    return;
 
-                    var cmd = cmds[ ii ];
-                    cmd.Execute( connection, this, onStatement );
-                    if( useProgress && ( cmds.Count > 1 ) )
+                if( withTransaction )
+                {
+                    connection.Execute( "BEGIN TRANSACTION;" );
+                }
+
+                try
+                {
+                    for( int ii = 0; ii < cmds.Count; ++ii )
                     {
-                        var value = 80 + ( 20.0 * ii / cmds.Count );
-                        SetProgress( value );
+                        CancellationToken?.ThrowIfCancellationRequested();
+
+                        SQLCmdDef cmd = cmds[ ii ];
+                        await cmd.Execute( connection, this, onStatement, locked ).ConfigureAwait( false );
+                        if( useProgress && ( cmds.Count > 1 ) )
+                        {
+                            double value = 80 + ( 20.0 * ii / cmds.Count );
+                            SetProgress( value );
+                        }
                     }
+
+                    if( withTransaction )
+                    {
+                        connection.Execute( "COMMIT;" );
+                    }
+                }
+                catch
+                {
+                    if( withTransaction )
+                    {
+                        try
+                        { 
+                            connection.Execute( "ROLLBACK;" );
+                        }
+                        catch { }
+                    }
+                    throw;
                 }
             }
 
             try
             {
-                if( useTransaction && ( cmds.Count > 1 ) )
+                bool runInTx = useTransaction && ( cmds.Count > 1 );
+
+                if( runInTx && !locked )
                 {
-                    lock( SQLCmdDef._dbLock )
-                    {
-                        Connection.RunInTransaction( connection =>
-                        {
-                            runCommands( connection, cmds, onStatement );
-                        } );
-                    }
+                    await SQLCmdDef.lockDB( this, () => runCommands( Connection, cmds, onStatement, true, withTransaction: runInTx ) ).ConfigureAwait( false );
                 }
                 else
                 {
-                    runCommands( Connection!, cmds, onStatement );
+                    await runCommands( Connection, cmds, onStatement, locked, withTransaction: runInTx ).ConfigureAwait( false );
                 }
             }
             catch( Exception )
@@ -400,58 +494,58 @@ namespace Statistics2026.Data
             }
         }
 
-        public void ExecuteCommands( List<string> cmds, bool useTransaction = true )
+        public Task ExecuteCommands( List<string> cmds, bool useTransaction = true )
         {
             List<SQLCmdDef> cmdDefs = [];
-            foreach( var cmd in cmds )
+            foreach( string cmd in cmds )
             {
                 CancellationToken?.ThrowIfCancellationRequested();
                 cmdDefs.Add( new SQLCmdDef( cmd ) );
             }
 
-            ExecuteCommands( cmdDefs, true, null, useTransaction );
+            return ExecuteCommands( cmdDefs, true, null, useTransaction );
         }
 
-        public void ExecuteCommand( string cmd )
+        public Task ExecuteCommand( string cmd )
         {
-            ExecuteCommand( new SQLCmdDef( cmd ), null, false );
+            return ExecuteCommand( new SQLCmdDef( cmd ), null, false );
         }
 
-        public bool ColumnExists( string tableName, string columnName )
+        public async Task<bool> ColumnExists( string tableName, string columnName )
         {
-            var sql = $"SELECT 1 FROM pragma_table_info(@TableName) WHERE name=@ColumnName";
+            string sql = $"SELECT 1 FROM pragma_table_info(@TableName) WHERE name=@ColumnName";
             List<(string name, object? value)> parameters =
                 [
                     ("@TableName", tableName),
                     ("@ColumnName", columnName)
                 ];
 
-            var exists = false;
+            bool exists = false;
 
-            ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
             {
-                var row = statement.Current;
-                var value = row.GetInt64( 0 );
+                IResultSet row = statement.Current;
+                long value = row.GetInt64( 0 );
                 exists = value != 0;
-                return true;
+                return Task.FromResult( true );
             } );
 
             return exists;
         }
 
-        public bool TableExists( string tableName )
+        public async Task<bool> TableExists( string tableName )
         {
-            var sql = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@TableName";
+            string sql = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@TableName";
             List<(string name, object? value)> parameters = [ ("@TableName", tableName) ];
 
-            var exists = false;
+            bool exists = false;
 
-            ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
             {
-                var row = statement.Current;
-                var value = row.GetInt64( 0 );
+                IResultSet row = statement.Current;
+                long value = row.GetInt64( 0 );
                 exists = value != 0;
-                return true;
+                return Task.FromResult( true );
             } );
 
             return exists;
@@ -463,7 +557,7 @@ namespace Statistics2026.Data
             return runtime.ToLongString();
         }
 
-        public void ValidateTables( List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState )
+        public async Task ValidateTables( List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState )
         {
             if( tables.IsNullOrEmpty() )
             {
@@ -471,17 +565,17 @@ namespace Statistics2026.Data
                 return;
             }
 
-            var aTableMissing = false;
-            var aColumnMissing = false;
-            var aTableNeedsData = false;
-            foreach( var tableName in tables )
+            bool aTableMissing = false;
+            bool aColumnMissing = false;
+            bool aTableNeedsData = false;
+            foreach( string tableName in tables )
             {
-                var tableMissing = !TableExists( tableName );
-                var columnMissing = false;
-                var tableNeedsData = false;
+                bool tableMissing = !( await TableExists( tableName ) );
+                bool columnMissing = false;
+                bool tableNeedsData = false;
                 if( !tableMissing )
                 {
-                    (columnMissing, tableNeedsData) = ValidateTable( tableName, getColumnsFunc( tableName ), validationRequiresDataFunc, additionalNeedsDataFunc );
+                    (columnMissing, tableNeedsData) = await ValidateTable( tableName, getColumnsFunc( tableName ), validationRequiresDataFunc, additionalNeedsDataFunc );
                 }
                 else
                 {
@@ -512,26 +606,26 @@ namespace Statistics2026.Data
             updateDBState( aTableMissing || aColumnMissing, aTableNeedsData );
         }
 
-        public (bool columnMissing, bool dataMissing) ValidateTable( string tableName, List<string> columns, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc )
+        public async Task<(bool columnMissing, bool dataMissing)> ValidateTable( string tableName, List<string> columns, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc )
         {
-            var columnMissing = false;
-            foreach( var columnName in columns )
+            bool columnMissing = false;
+            foreach( string columnName in columns )
             {
-                columnMissing = columnMissing || !ColumnExists( tableName, columnName );
+                columnMissing = columnMissing || !( await ColumnExists( tableName, columnName ) );
             }
 
-            var validationRequiresData = validationRequiresDataFunc( tableName );
-            var tableNeedsData = columnMissing;
+            bool validationRequiresData = validationRequiresDataFunc( tableName );
+            bool tableNeedsData = columnMissing;
             if( !columnMissing && validationRequiresData )
             {
-                var sql = $"SELECT COUNT(*) FROM {tableName} LIMIT 1";
+                string sql = $"SELECT COUNT(*) FROM {tableName} LIMIT 1";
 
                 tableNeedsData = false;
-                ExecuteCommand( new SQLCmdDef( sql ), statement =>
+                await ExecuteCommand( new SQLCmdDef( sql ), statement =>
                 {
-                    var row = statement.Current;
+                    IResultSet row = statement.Current;
                     tableNeedsData = row.GetInt64( 0 ) == 0;
-                    return false;
+                    return Task.FromResult( false );
                 }
                 );
 
@@ -543,7 +637,7 @@ namespace Statistics2026.Data
 
         static public SQLCmdDef CreateSQLCmdDef( string sql, string paramListName, List<object> paramList )
         {
-            var placeHolderNames = string.Join( ", ", paramList.Select( ( _, index ) => $"@p{index}" ).ToArray() );
+            string placeHolderNames = string.Join( ", ", paramList.Select( ( _, index ) => $"@p{index}" ).ToArray() );
 
             var sqlDefParams = new List<(string name, object? value)>();
             for( int ii = 0; ii < paramList.Count; ++ii )
@@ -556,20 +650,20 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public void DeleteAllInvalid( List<string> ids, string tableName, string idColName, List<string>? whereClauses = null )
+        public Task DeleteAllInvalid( List<string> ids, string tableName, string idColName, List<string>? whereClauses = null )
         {
             whereClauses = whereClauses ?? [];
             whereClauses.Add( $"{idColName} NOT IN (<KEYLIST>)" );
+            string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
 
-            var whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
-
-            ExecuteCommand( SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM {tableName} WHERE {idColName} NOT IN (<KEYLIST>)", "<KEYLIST>", ids.ConvertAll( item => (object)item ) ) );
+            SQLCmdDef cmd = SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM {tableName} {whereClause}", "<KEYLIST>", ids.ConvertAll( item => (object)item ) );
+            return ExecuteCommand( cmd );
         }
 
-        public void DeleteAllInvalid( List<BaseItem> items, string tableName, string idColName, List<string>? whereClauses = null )
+        public Task DeleteAllInvalid( List<BaseItem> items, string tableName, string idColName, List<string>? whereClauses = null )
         {
-            var ids = EmbyHelperFuncs.GetAllIds( items );
-            DeleteAllInvalid( ids, tableName, idColName, whereClauses );
+            List<string> ids = EmbyHelperFuncs.GetAllIds( items );
+            return DeleteAllInvalid( ids, tableName, idColName, whereClauses );
         }
 
         //public async Task AnalyzeData<T>( string dataType, List<T> items, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, string> itemNameFunc, List<SQLCmdDef?> initCmds )

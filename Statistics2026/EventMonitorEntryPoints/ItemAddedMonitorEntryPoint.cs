@@ -98,7 +98,7 @@ namespace Statistics2026.EventMonitorEntryPoints
         {
             if( e.Item == null )
                 return;
-            var enabledStr = _debounceTimer.Enabled ? "Enabled" : "NOT Enabled";
+            string enabledStr = _debounceTimer.Enabled ? "Enabled" : "NOT Enabled";
             _embyInterfaces.Logger().Debug( $"Notification of item added: Timer currently {enabledStr}" );
             Reasons.Add( "Item Added" );
             _debounceTimer.Stop();
@@ -110,17 +110,17 @@ namespace Statistics2026.EventMonitorEntryPoints
             if( e.Argument == null )
                 return;
 
-            var enabledStr = _debounceTimer.Enabled ? "Enabled" : "NOT Enabled";
+            string enabledStr = _debounceTimer.Enabled ? "Enabled" : "NOT Enabled";
             _embyInterfaces.Logger().Debug( $"Notification of user added: Timer currently {enabledStr}" );
             Reasons.Add( "User Added" );
             _debounceTimer.Stop();
             _debounceTimer.Start();
         }
 
-        private void OnTimerElapsed( object sender, ElapsedEventArgs e )
+        private async void OnTimerElapsed( object sender, ElapsedEventArgs e )
         {
             _embyInterfaces.Logger().Debug( $"Timer Expired" );
-            HelperFuncs.CheckForOOD( _embyInterfaces, false, Reasons, GetType(), false );
+            await HelperFuncs.CheckForOOD( _embyInterfaces, Reasons, GetType(), false );
             Reasons.Clear();
             _debounceTimer.Stop();
         }

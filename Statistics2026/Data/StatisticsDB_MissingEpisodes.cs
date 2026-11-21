@@ -1,21 +1,10 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
 using Statistics2026.Notifications;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Globalization;
-using System.Linq;
-using System.Net;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Statistics2026.Data
 {
@@ -27,31 +16,31 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting Analysis" );
             SetProgress( 0 );
-            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
+            List<Series> seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
             seriesList.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             SetProgress( 100 );
 
-            var reader = new TmdbInterface( _embyInterfaces, CancellationToken );
+            TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken );
 
             double count = seriesList.Count();
-            var completedCount = 0;
+            int completedCount = 0;
 
             List<SQLCmdDef> sqlCmds = [];
             List<string> nowAvailable = [];
 
             SetProgress( 0 );
-            DeleteAllInvalid( seriesList.ConvertAll( item => (BaseItem)item ), "Missing", "ParentId", whereClauses:["IsEpisode"] );
+            await DeleteAllInvalid( seriesList.ConvertAll( item => (BaseItem)item ), "Missing", "ParentId", whereClauses: [ "IsEpisode" ] );
 
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
+                using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim();
 
                 var pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
                 {
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        var retVal = (index: index, item: series, sqlCmds: new List<SQLCmdDef>(), nowAvailable: new List<string>());
+                        (int index, Series item, List<SQLCmdDef> sqlCmds, List<string> nowAvailable) retVal = (index: index, item: series, sqlCmds: new List<SQLCmdDef>(), nowAvailable: new List<string>());
                         if( series == null )
                             return retVal;
 
@@ -60,7 +49,7 @@ namespace Statistics2026.Data
                         CancellationToken?.ThrowIfCancellationRequested();
 
 
-                        var currProgress = Interlocked.Increment( ref completedCount );
+                        int currProgress = Interlocked.Increment( ref completedCount );
                         SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
 
                         Logger().Info( $"    Processed Series ({currProgress} of {count}) - {series.Name}" );
@@ -72,7 +61,7 @@ namespace Statistics2026.Data
                     }
                 } ) ).ToList();
 
-                var unsortedResults = await Task.WhenAll( pool );
+                (int index, Series item, List<SQLCmdDef> sqlCmds, List<string> nowAvailable)[] unsortedResults = await Task.WhenAll( pool );
                 sqlCmds = unsortedResults
                             .Where( item => item.sqlCmds != null )
                             .OrderBy( item => item.index )
@@ -95,27 +84,27 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                ExecuteCommands( sqlCmds );
+                await ExecuteCommands( sqlCmds );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Missing Episodes Analysis" );
             }
 
             if( nowAvailable.Count() != 0 )
             {
-                var lastUpdated = GetLastUpdated( EAction.NotifyAvailableToday ).when;
+                DateTimeOffset? lastUpdated = ( await GetLastUpdated( EAction.NotifyAvailableToday ) ).when;
                 if( lastUpdated == null || lastUpdated.Value.LocalDateTime.Date != DateTimeOffset.Now.LocalDateTime.Date )
                 {
                     NotificationSender.SendEpisodesAvailableNotification( nowAvailable, _embyInterfaces );
                 }
             }
-            SetLastUpdated( EAction.NotifyAvailableToday, [ "Task" ], 0 );
+            await SetLastUpdated( EAction.NotifyAvailableToday, [ "Task" ], 0 );
         }
 
         private async Task<(List<SQLCmdDef> cmds, List<string> episodesNowAvailable)> AnalyzeMissingEpisodesAsync( TmdbInterface reader, Series series )
         {
             Logger().Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
 
-            var seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
+            string seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( seriesTmbdId ) )
                 return ([], []);
 
@@ -142,30 +131,30 @@ namespace Statistics2026.Data
                 return ([], []);
             }
 
-            foreach( var tmdbSeason in tmdbSeries.Seasons )
+            foreach( TmdbSeason tmdbSeason in tmdbSeries.Seasons )
             {
                 if( tmdbSeason.SeasonNumber == 0 && !Plugin.Instance!.Configuration.reportOnMissingSpecials )
                     continue;
 
-                var embySeason = EmbyHelperFuncs.GetSeasonFromSeries( series, tmdbSeason.SeasonNumber );
+                Season? embySeason = EmbyHelperFuncs.GetSeasonFromSeries( series, tmdbSeason.SeasonNumber );
 
-                foreach( var tmdbEpisode in tmdbSeason.Episodes )
+                foreach( TmdbEpisode tmdbEpisode in tmdbSeason.Episodes )
                 {
                     if( HelperFuncs.InvalidDateForMissingAnalysis( tmdbEpisode.AirDate() ) )
                         continue;
 
-                    var episodeTmdbId = tmdbEpisode.Id;
-                    var episodeIdent = $"S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2}";
+                    string episodeTmdbId = tmdbEpisode.Id;
+                    string episodeIdent = $"S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2}";
                     Logger().Debug( $"         Checking for episode {episodeIdent} for {series.Name} on server" );
-                    var embyEpisode = ( embySeason != null ) ? EmbyHelperFuncs.GetEpisodeFromTmdbId( LibraryManager(), embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber ) : null;
+                    Episode? embyEpisode = ( embySeason != null ) ? EmbyHelperFuncs.GetEpisodeFromTmdbId( LibraryManager(), embySeason, episodeTmdbId, tmdbEpisode.EpisodeNumber ) : null;
 
                     if( embyEpisode == null )
                     {
                         Logger().Info( $"             {series.Name} - {episodeIdent} is missing - Series ID: {series.Id.ToString()}" );
 
-                        var key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
+                        string key = $"{tmdbSeries.Id}-{tmdbSeason.Id}-{tmdbEpisode.Id}";
 
-                        var title = $"{tmdbSeries.Name} - S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2} - {tmdbEpisode.Name}";
+                        string title = $"{tmdbSeries.Name} - S{tmdbSeason.SeasonNumber:D2}E{tmdbEpisode.EpisodeNumber:D2} - {tmdbEpisode.Name}";
                         if( tmdbEpisode.AirDate()?.LocalDateTime.Date == DateTimeOffset.Now.Date )
                         {
                             episodesNowAvailable.Add( title );

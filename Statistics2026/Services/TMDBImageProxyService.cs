@@ -73,7 +73,7 @@ namespace Statistics2026.Services
         public async Task<object> Get( GetTmdbImage request )
         {
             _embyInterfaces.Logger().Info( $"Request for TMDB image: {request.path} - {request.size}" );
-            var options = HelperFuncs.getRequestOptions( HelperFuncs.GetTMDBUrl( request.path, request.size, false ), CancellationToken.None );
+            HttpRequestOptions options = HelperFuncs.getRequestOptions( HelperFuncs.GetTMDBUrl( request.path, request.size, false ), CancellationToken.None, 5000 );
 
             try
             {

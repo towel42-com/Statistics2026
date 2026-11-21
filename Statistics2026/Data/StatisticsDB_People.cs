@@ -15,7 +15,7 @@ namespace Statistics2026.Data
             Logger().Debug( $"Starting People Analysis" );
 
             SetProgress( 0 );
-            var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
+            List<Video> videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
             SetProgress( 100 );
 
             if( videoList == null )
@@ -27,33 +27,33 @@ namespace Statistics2026.Data
 
             ConcurrentDictionary<Person, bool> allActors = [];
             HashSet<string> allActorIds = [];
-            foreach( var video in videoList )
+            foreach( Video video in videoList )
             {
-                var actors = EmbyHelperFuncs.GetActorsForVideo( video, LibraryManager() );
-                foreach( var actor in actors )
+                Person[] actors = EmbyHelperFuncs.GetActorsForVideo( video, LibraryManager() );
+                foreach( Person actor in actors )
                 {
                     allActors.TryAdd( actor, true );
                     allActorIds.Add( actor.Id.ToString() );
                 }
             }
 
-            DeleteAllInvalid( allActorIds.ToList(), "People", "ItemId" );
+            await DeleteAllInvalid( allActorIds.ToList(), "People", "ItemId" );
 
             double count = allActors.Count;
-            var completedCount = 0;
+            int completedCount = 0;
 
             List<SQLCmdDef> sqlCmds = [];
             using( var timer = new AutoTimer( $"    Analyze People - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
+                using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim();
 
-                var pool = allActors.Select( ( kvp, index ) => Task.Run( async () =>
+                IEnumerable<Task<(int index, Person item, List<SQLCmdDef?> cmds)>> pool = allActors.Select( ( kvp, index ) => Task.Run( async () =>
                 {
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        var actor = kvp.Key;
-                        var retVal = (index: index, item: actor, cmds: new List<SQLCmdDef?>());
+                        Person actor = kvp.Key;
+                        (int index, Person item, List<SQLCmdDef?> cmds) retVal = (index: index, item: actor, cmds: new List<SQLCmdDef?>());
                         if( actor == null )
                             return retVal;
 
@@ -73,7 +73,7 @@ namespace Statistics2026.Data
                     }
                 } ) );
 
-                var unsortedResults = await Task.WhenAll( pool );
+                (int index, Person item, List<SQLCmdDef?> cmds)[] unsortedResults = await Task.WhenAll( pool );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -86,7 +86,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                ExecuteCommands( sqlCmds );
+                await ExecuteCommands( sqlCmds );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
             }
@@ -101,7 +101,7 @@ namespace Statistics2026.Data
                 return null;
             }
 
-            var sql =
+            string sql =
                 "INSERT INTO People \n" +
                 "(\n" +
                     "  ItemId\n" +
@@ -127,19 +127,19 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> ActorCountValues( User? user, bool movies, bool playedOnly )
+        private Task<Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)>> ActorCountValues( User? user, bool movies, bool playedOnly )
         {
             return GroupedMediaKeyCountValues( "ActorIds", true, user, movies, playedOnly );
         }
 
-        public StatCard ActorsList( bool movies, bool? series )
+        public async Task<StatCard> ActorsList( bool movies, bool? series )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var actorsMap = ActorCountValues( null, movies, false );
+            Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> actorsMap = await ActorCountValues( null, movies, false );
 
-            var title = movies ? Constants.MovieActors : ( ( series == null || series! == true ) ? Constants.TVSeriesActors : Constants.TVEpisodeActors );
-            var help = movies ? Constants.MovieActorsHelp : ( ( series == null || series! == true ) ? Constants.TVSeriesActorsHelp : Constants.TVEpisodeActorsHelp );
+            string title = movies ? Constants.MovieActors : ( ( series == null || series! == true ) ? Constants.TVSeriesActors : Constants.TVEpisodeActors );
+            string help = movies ? Constants.MovieActorsHelp : ( ( series == null || series! == true ) ? Constants.TVSeriesActorsHelp : Constants.TVEpisodeActorsHelp );
 
             var retVal = new GroupedTextBasedStatCard( title, help, EStatCardStyle.eDetailed )
             {
@@ -156,14 +156,14 @@ namespace Statistics2026.Data
             ).ToList();
             for( int ii = 0; ( ii < sortedActors.Count() ) && ( ii < Plugin.Instance!.Configuration.numActorsToReport ); ++ii )
             {
-                var curr = sortedActors[ ii ];
+                KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedActors[ ii ];
                 try
                 {
-                    var person = LibraryManager().GetItemById( new Guid( curr.Key ) );
+                    BaseItem person = LibraryManager().GetItemById( new Guid( curr.Key ) );
                     if( person == null )
                         continue;
 
-                    var text = string.Empty;
+                    string text = string.Empty;
                     if( movies )
                         text = $"{person.Name}: {curr.Value.total} Movie{( ( curr.Value.total == 1 ) ? "" : "s" )}";
                     else if( series == null || series! == true )
@@ -171,7 +171,7 @@ namespace Statistics2026.Data
                     else
                         text = $"{person.Name}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}";
 
-                    var imageUrl = ItemImageUrl._ItemImageUrl( person );
+                    string imageUrl = ItemImageUrl._ItemImageUrl( person );
                     if( !imageUrl.IsNullOrEmpty() )
                     {
                         text = ItemImageUrl.ItemUrlFromItemId( person.Id.ToString(), imageUrl, text );

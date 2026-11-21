@@ -8,7 +8,7 @@
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
 		<NoWarn>$(NoWarn);SYSLIB1030;CS0436;CS0618</NoWarn>
-
+		<WarningsAsErrors>$(WarningsAsErrors);CS4014</WarningsAsErrors>
 		<!-- set in Statistics2026.csproj.user-->
 		<TmdbApiKeyV3 Condition="'$(TmdbApiKeyV3)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV3>
 		<TmdbApiKeyV4 Condition="'$(TmdbApiKeyV4)' == ''">"EMPTY_FALLBACK_KEY"</TmdbApiKeyV4>
@@ -17,6 +17,12 @@
 		<LimitDBUsersTo Condition="'$(LimitDBUsersTo)' == ''">""</LimitDBUsersTo>
 	</PropertyGroup>
 
+	<PropertyGroup>
+		<AnalysisLevel>none</AnalysisLevel>
+		<EnableNETAnalyzers>true</EnableNETAnalyzers>
+		<RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<Using Include="System" />
@@ -119,6 +125,7 @@
 		<!-- CS0122: Inaccessible protection level -->
 		<!-- CS0433: Type exists in both assemblies/files -->
 		<NoWarn>$(NoWarn);CS0122;CS0433</NoWarn>
+		<UserSecretsId>edfbe7cb-a45d-45ce-8ed9-eaa22811292a</UserSecretsId>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
@@ -137,6 +144,10 @@
 		<EmbeddedResource Include="Pages\**\*.js" />
 	</ItemGroup>
 	<ItemGroup>
+		<PackageReference Include="AsyncFixer" Version="2.1.0">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 		<PackageReference Include="Emby.ApiClient" Version="4.8.10" />
 		<PackageReference Include="MediaBrowser.Server.Core" Version="4.9.1.90" />
 		<PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2" />

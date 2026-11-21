@@ -261,7 +261,7 @@ namespace Statistics2026.Utilities
             {
                 if( _logger != null )
                 {
-                    foreach( var msg in msgs )
+                    foreach( string msg in msgs )
                     {
                         _logger!.Error( msg );
                     }

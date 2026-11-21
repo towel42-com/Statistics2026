@@ -34,7 +34,7 @@ namespace Statistics2026.Data
         eThrowOnFailure = 0x00010000,
     }
 
-    public sealed partial class Statistics2026DB : IDisposable
+    public sealed partial class Statistics2026DB
     {
         public string ToString( ECheckLevel checkLevel )
         {
@@ -64,7 +64,7 @@ namespace Statistics2026.Data
         public bool CheckIsValid( ECheckLevel checkLevel )
         {
             List<string> msgs = [ $"\nStatistics2026DB is not valid {ToString( checkLevel )}" ];
-            var retVal = true;
+            bool retVal = true;
             if( Statistics2026.Plugin.Instance == null )
             {
                 retVal = false;
@@ -112,7 +112,7 @@ namespace Statistics2026.Data
 
             if( retVal == false && ( ( checkLevel & ECheckLevel.eThrowOnFailure ) != 0 ) )
             {
-                var msg = string.Join( "\n", msgs );
+                string msg = string.Join( "\n", msgs );
                 throw new ArgumentNullException( msg );
             }
 

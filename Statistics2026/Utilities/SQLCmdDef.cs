@@ -1,8 +1,11 @@
-﻿using ServiceStack;
+﻿using MediaBrowser.Model.Logging;
+using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Data;
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
+using Utilities;
 
 namespace Statistics2026.Utilities
 {
@@ -76,7 +79,7 @@ namespace Statistics2026.Utilities
             if( Parameters == null )
                 return string.Empty;
 
-            foreach( var param in Parameters )
+            foreach( (string name, object? value) param in Parameters )
             {
                 if( param.name == "@Key" )
                 {
@@ -86,36 +89,62 @@ namespace Statistics2026.Utilities
             return null;
         }
 
-        public static readonly object _dbLock = new Object();
-        private void _Execute( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, bool>? onStatement )
-        {
-            if( !Monitor.IsEntered( _dbLock ) )
-            {
-                db.DBLogger()?.Warn( "Warning: _Execute called without holding _dbLock!" );
-            }
+        private static readonly TrackingSemaphoreSlim _dbLock = new TrackingSemaphoreSlim( 1, 1 );
+        private static ConcurrentStack<StringBuilder> _dbLockStacks = new();
 
-            lock( _dbLock )
+        public static void setWarningLogger( Action<string> warnLogger )
+        {
+            _dbLock.setWarningLogger( warnLogger );
+        }
+
+        public static void lockDBSynchronous( Statistics2026DB? db, Action onAction )
+        {
+            _dbLock.Wait();
+            try
             {
-                using( var statement = connection.PrepareStatement( Statement ) )
+                _dbLockStacks.Push( HelperFuncs.getStackTrace() );
+                onAction();
+                _dbLockStacks.TryPop( out _ );
+            }
+            finally
+            {
+                _dbLock.Release();
+            }
+        }
+
+        public static async Task lockDB( Statistics2026DB? db, Func<Task> onAction )
+        {
+            await _dbLock.WaitAsync().ConfigureAwait( false );
+            try
+            {
+                await onAction();
+            }
+            finally
+            {
+                _dbLock.Release();
+            }
+        }
+
+        private Task _Execute( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, Task<bool>>? onStatement, bool locked )
+        {
+            async Task runCommand( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, Task<bool>>? onStatement )
+            {
+                using( IStatement statement = connection.PrepareStatement( Statement ) )
                 {
                     StringBuilder? msgs = null;
-                    if( db.DBLogger() != null )
+                    if( db.dbLoggerEnabled() )
                         msgs = new StringBuilder();
                     if( HasParameters() )
                     {
-                        db.DBLogger()?.Debug( $"{Statement.GetHashCode():X16} -    Parameters:" );
-                        foreach( var (name, value) in Parameters! )
+                        msgs?.AppendLine( $"{Statement.GetHashCode():X16} -    Parameters:" );
+                        foreach( (string? name, object? value) in Parameters! )
                         {
                             _ = db.TryBind( statement, name, value );
-                            if( msgs != null )
-                                msgs.AppendLine( $"{Statement.GetHashCode():X16} -     {name} = {value}" );
+                            msgs?.AppendLine( $"{Statement.GetHashCode():X16} -     {name} = {value}" );
                         }
                     }
 
-                    if( ( db.DBLogger() != null ) && ( msgs != null ) )
-                    {
-                        db.DBLogger()?.LogMultiline( $"{Statement.GetHashCode():X16} - Executing SQL Statement: - {Statement}", MediaBrowser.Model.Logging.LogSeverity.Debug, msgs );
-                    }
+                    db.dbLogMultiLine( $"{Statement.GetHashCode():X16} - Executing SQL Statement: - {Statement}", msgs, LogSeverity.Debug, true );
 
                     try
                     {
@@ -127,7 +156,8 @@ namespace Statistics2026.Utilities
                         {
                             while( statement.MoveNext() )
                             {
-                                if( !onStatement( statement ) )
+                                bool continueLoop = await onStatement( statement );
+                                if( !continueLoop )
                                     break;
                                 db.CancellationToken?.ThrowIfCancellationRequested();
                             }
@@ -139,15 +169,24 @@ namespace Statistics2026.Utilities
                     }
                 }
             }
+
+            if( locked )
+            {
+                return runCommand( connection, db, onStatement );
+            }
+            else
+            {
+                return lockDB( db, () => { return runCommand( connection, db, onStatement ); }  );
+            }
         }
 
-        public void Execute( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, bool>? onStatement )
+        public async Task Execute( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, Task<bool>>? onStatement, bool locked )
         {
             if( FailureAllowed )
             {
                 try
                 {
-                    _Execute( connection, db, onStatement );
+                    await _Execute( connection, db, onStatement, locked );
                 }
                 catch
                 {
@@ -155,7 +194,7 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                _Execute( connection, db, onStatement );
+                await _Execute( connection, db, onStatement, locked );
             }
         }
 
@@ -172,10 +211,10 @@ namespace Statistics2026.Utilities
 
             for( int ii = 0; ii < values.Count; ++ii )
             {
-                var currLines = values[ ii ].Split( '\n' ).ToList();
-                for( var jj = 1; jj < currLines.Count; ++jj )
+                List<string> currLines = values[ ii ].Split( '\n' ).ToList();
+                for( int jj = 1; jj < currLines.Count; ++jj )
                 {
-                    var line = currLines[ jj ];
+                    string line = currLines[ jj ];
                     line = "    " + line;
                     currLines[ jj ] = line;
                 }
@@ -187,7 +226,7 @@ namespace Statistics2026.Utilities
 
         static public SQLCmdDef CreateSQLCmdDef( string sql, string paramListName, List<object> paramList )
         {
-            var subTable = "SELECT value FROM json_each(@JsonParamList)";
+            string subTable = "SELECT value FROM json_each(@JsonParamList)";
             sql = sql.Replace( paramListName, subTable );
 
             var sqlDefParams = new List<(string name, object? value)>

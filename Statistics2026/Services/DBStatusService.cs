@@ -68,14 +68,16 @@ namespace Statistics2026.Services
         {
         }
 
-        public object Get( GetDatabaseStatus request )
-        {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
-            {
-                if( Plugin.Instance == null )
-                    return new GetDatabaseStatusReponse();
 
-                return new GetDatabaseStatusReponse( Plugin.Instance.Configuration );
+        public Task<object> Get( GetDatabaseStatus request )
+        {
+            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, ( timer ) =>
+            {
+                GetDatabaseStatusReponse retVal = Plugin.Instance == null
+                    ? new GetDatabaseStatusReponse()
+                    : new GetDatabaseStatusReponse( Plugin.Instance.Configuration );
+
+                return Task.FromResult<object>( retVal );
             } );
         }
     }

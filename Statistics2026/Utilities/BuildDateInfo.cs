@@ -8,7 +8,7 @@ namespace Statistics2026.Utilities
     {
         public static DateTimeOffset GetBuildDate()
         {
-            var attribute = Assembly.GetExecutingAssembly()
+            AssemblyMetadataAttribute attribute = Assembly.GetExecutingAssembly()
                 .GetCustomAttributes<AssemblyMetadataAttribute>()
                 .FirstOrDefault( a => a.Key == "BuildDate" );
 

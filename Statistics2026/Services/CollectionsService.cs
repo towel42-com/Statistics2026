@@ -76,32 +76,32 @@ namespace Statistics2026.Services
         {
         }
 
-        public object Get( GetTotalCollectionCount request )
+        public Task<object> Get( GetTotalCollectionCount request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                var groupData = db.TotalCollectionCount();
+                StatCard groupData = await db.TotalCollectionCount();
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
 
-        public object Get( GetMultiCollectionMovies request )
+        public Task<object> Get( GetMultiCollectionMovies request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                var groupData = db.MultiCollectionMovies();
+                StatCard groupData = await db.MultiCollectionMovies();
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }

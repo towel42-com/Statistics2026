@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Model.Querying;
+﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Model.Querying;
 using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
@@ -8,7 +9,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class Statistics2026DB
     {
-        private void ComputeDBState()
+        private async Task ComputeDBState()
         {
             CheckIsValid( ECheckLevel.eInit );
 
@@ -17,9 +18,9 @@ namespace Statistics2026.Data
 
             Plugin.Instance.ResetDBState();
 
-            var tableNames = TableDefs().tableNames();
+            List<string> tableNames = TableDefs().tableNames();
 
-            ValidateTables( tableNames,
+            await ValidateTables( tableNames,
                 tableName =>
                 {
                     return TableDefs().getTableDef( tableName )?.ColumnNames() ?? [];
@@ -36,13 +37,13 @@ namespace Statistics2026.Data
                 }
             );
 
-            ComputeUserDataDBState();
+            await ComputeUserDataDBState();
 
             Plugin.Instance!.Configuration.resetDBState = false;
             Statistics2026.Plugin.Instance.UpdateConfiguration( Plugin.Instance!.Configuration );
         }
 
-        private void ComputeUserDataDBState()
+        private async Task ComputeUserDataDBState()
         {
             CheckIsValid( ECheckLevel.eInit );
 
@@ -51,16 +52,16 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException( "Plugin.Instance is null or Plugin.Instance.DBState is null" );
             }
 
-            var users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
+            List<User> users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
             Plugin.Instance.RemoveDBState( EDBState.eUserTablesCreated );
             if( users == null )
             {
                 return;
             }
 
-            var tableNames = TableDefs().allUserMediaTables( false );
+            List<string> tableNames = await TableDefs().allUserMediaTables( false );
             var missing = new List<List<object>>();
-            ValidateTables( tableNames,
+            await ValidateTables( tableNames,
                 tableName =>
                 {
                     return TableDefs().UserMediaUsageColumnNames();
@@ -71,11 +72,11 @@ namespace Statistics2026.Data
                 },
                 tableName =>
                 {
-                    var user = TableDefs().getUserForTableName( tableName );
+                    User? user = TableDefs().getUserForTableName( tableName );
                     if( ( user != null ) && ( user.Policy.IsAdministrator ) )
                         return false;
 
-                    var missingRows = CheckUserMediaTableHasData( tableName );
+                    List<List<object>>? missingRows = CheckUserMediaTableHasData( tableName ).GetAwaiter().GetResult();
                     if( missingRows != null )
                         missing.AddRange( missingRows );
                     return missingRows != null;

@@ -37,7 +37,7 @@ namespace Statistics2026.Utilities
 
         public string ToString( bool embedded, int columnNum )
         {
-            var retVal = $"<th class=\"statCard-stats-title\"";
+            string retVal = $"<th class=\"statCard-stats-title\"";
             if( embedded && ( columnNum == 1 ) )
             {
                 retVal += ">";
@@ -65,7 +65,7 @@ namespace Statistics2026.Utilities
 
         public void addDynamicButton( DynamicButton button )
         {
-            var local = dynamicButtons;
+            DynamicButton[] local = dynamicButtons;
             Array.Resize( ref local, local.Length + 1 );
             local[ local.Length - 1 ] = button;
             dynamicButtons = local;
@@ -73,8 +73,8 @@ namespace Statistics2026.Utilities
 
         public int cnt( string text, string substring )
         {
-            var count = 0;
-            var minIndex = text.IndexOf( substring, 0 );
+            int count = 0;
+            int minIndex = text.IndexOf( substring, 0 );
             while( minIndex != -1 )
             {
                 count++;
@@ -162,7 +162,7 @@ namespace Statistics2026.Utilities
 
         public static string GetStyleString( EAlignment alignment )
         {
-            var retVal = string.Empty;
+            string retVal = string.Empty;
             if( alignment != EAlignment.eUnset )
             {
                 retVal = $"style=\"text-align: {AlignmentText( alignment )} !important; white-space: nowrap;\"";
@@ -176,8 +176,8 @@ namespace Statistics2026.Utilities
 
         public static EAlignment GetAlignmentForColumn( int column, Dictionary<int, StatCard.EAlignment>? columnAlignment )
         {
-            var colAlign = StatCard.EAlignment.eUnset;
-            if( columnAlignment != null && columnAlignment.TryGetValue( column, out var columnAlign ) )
+            EAlignment colAlign = StatCard.EAlignment.eUnset;
+            if( columnAlignment != null && columnAlignment.TryGetValue( column, out EAlignment columnAlign ) )
                 colAlign = columnAlign;
             return colAlign;
         }
@@ -221,20 +221,20 @@ namespace Statistics2026.Utilities
 
         protected string AddHeader( int depth = 0, bool embedded = false )
         {
-            var retVal = string.Empty;
+            string retVal = string.Empty;
             if( HideHeaders || ( Headers == null ) )
                 return retVal;
 
             retVal += HelperFuncs.addToHtml( depth++, "<thead>" );
 
-            foreach( var currRow in Headers )
+            foreach( List<HeaderDef> currRow in Headers )
             {
                 retVal += HelperFuncs.addToHtml( depth++, "<tr>" );
                 if( ShowHeaderColumn( 0 ) )
                     retVal += HelperFuncs.addToHtml( depth, "<td>&nbsp;</td>" );
 
-                var colNum = 1;
-                foreach( var currColumn in currRow )
+                int colNum = 1;
+                foreach( HeaderDef currColumn in currRow )
                 {
                     if( !ShowHeaderColumn( colNum ) )
                         continue;
@@ -256,7 +256,7 @@ namespace Statistics2026.Utilities
             if( IsEmpty() )
                 return string.Empty;
 
-            var retVal = string.Empty;
+            string retVal = string.Empty;
             if( DataIsTable() )
             {
                 retVal = HelperFuncs.addToHtml( depth++, "<table>" );
@@ -282,7 +282,7 @@ namespace Statistics2026.Utilities
 
         public string ToString( int depth = 0 )
         {
-            var retVal = string.Empty;
+            string retVal = string.Empty;
 
             retVal = addData( depth );
 
@@ -291,7 +291,7 @@ namespace Statistics2026.Utilities
 
         public string DivId( string suffix = "" )
         {
-            var divId = Regex.Replace( Title, @"\s", string.Empty );
+            string divId = Regex.Replace( Title, @"\s", string.Empty );
             divId = Regex.Replace( divId, @"[^0-9A-Za-z]", "_" );
             if( !suffix.IsNullOrEmpty() )
                 divId += "-" + suffix;
@@ -302,7 +302,7 @@ namespace Statistics2026.Utilities
         {
             if( !HelpText.IsNullOrEmpty() )
             {
-                var id = DivId();
+                string id = DivId();
 
                 retVal.html += HelperFuncs.addToHtml( depth, $"<div id=\"{id}\" class=\"infoBlock\"><i class=\"md-icon\">info</i></div>" );
 
@@ -312,11 +312,11 @@ namespace Statistics2026.Utilities
 
         private void addTitle( ref StatCardResponse retVal, ref int depth )
         {
-            var showImage = !ImageUrl.IsNullOrEmpty() && !MediaItemId.IsNullOrEmpty();
+            bool showImage = !ImageUrl.IsNullOrEmpty() && !MediaItemId.IsNullOrEmpty();
             string? titleClass;
             if( showImage )
             {
-                var itemUrl = ItemImageUrl.ItemUrlFromItemId( MediaItemId, ImageUrl );
+                string itemUrl = ItemImageUrl.ItemUrlFromItemId( MediaItemId, ImageUrl );
                 retVal.html += HelperFuncs.addToHtml( depth, itemUrl );
                 retVal.html += HelperFuncs.addToHtml( depth++, "<div>" );
                 titleClass = "statCard-stats-title-left";
@@ -347,12 +347,12 @@ namespace Statistics2026.Utilities
 
         private int addData( int depth, ref StatCardResponse retVal )
         {
-            var tableInfo = addData( depth+1 );
+            string tableInfo = addData( depth+1 );
 
             if( !tableInfo.IsNullOrEmpty() )
             {
-                var divId = DivId( "statTable" );
-                var divData = $"id=\"{divId}\" class=\"{statCardClass( true )}\"";
+                string divId = DivId( "statTable" );
+                string divData = $"id=\"{divId}\" class=\"{statCardClass( true )}\"";
                 if( IsClickableTable() )
                     divData += " data-is-clickable=\"true\"";
 
@@ -368,12 +368,12 @@ namespace Statistics2026.Utilities
         {
             var retVal = new StatCardResponse();
 
-            var depth = 0;
+            int depth = 0;
             retVal.html += HelperFuncs.addToHtml( depth++, $"<div class=\"col {ToString( Style )}\">" );
             retVal.html += HelperFuncs.addToHtml( depth++, "<div class=\"statCard\">" );
             retVal.html += HelperFuncs.addToHtml( depth++, "<div class=\"statCard-content\">" );
 
-            var preHelpDepth = depth;
+            int preHelpDepth = depth;
             addHelp( ref retVal, ref depth );
             addTitle( ref retVal, ref depth );
 
@@ -389,7 +389,7 @@ namespace Statistics2026.Utilities
 
             if( IsClickableTable() )
             {
-                var divId = DivId( "statTable" );
+                string divId = DivId( "statTable" );
                 retVal.html += HelperFuncs.addToHtml( depth++, "<img src=\"data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///w==\"" );
                 retVal.html += HelperFuncs.addToHtml( depth, "style=\"display:none\"" );
                 retVal.html += HelperFuncs.addToHtml( depth, $"onerror=\"console.info('trigger on loading dummy gif hit'); if(window.MyPluginHelpers && window.MyPluginHelpers.initCollapsibleTable){{window.MyPluginHelpers.initCollapsibleTable('{divId}'); }} else {{ throw new Error('Emby Table Engine Failure: window.MyPluginHelpers.initCollapsibleTable is not defined or loaded yet.'); }} \"" );

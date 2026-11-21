@@ -71,19 +71,19 @@ namespace Statistics2026.ScheduledTasks
 
         async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            var memoryReport = await HelperFuncs.RunAndReportMemory( true, async () =>
+            HelperFuncs.MemoryUsage memoryReport = await HelperFuncs.RunAndReportMemory( true, async () =>
             {
                 if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
                 {
                     throw new Exception( "Statistics 2026 task is running" );
                 }
 
-                var taskName = "Analyze Streaming Providers";
+                string taskName = "Analyze Streaming Providers";
                 _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                db.Initialize( this, cancellationToken, progress );
-                db.ClearLastUpdated( Statistics2026DB.EAction.StreamingProviders );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, GetType().Name );
+                await db.Initialize( this, cancellationToken, progress );
+                await db.ClearLastUpdated( Statistics2026DB.EAction.StreamingProviders );
 
                 long runtimeMS = 0;
                 using( var timer = new AutoTimer( $"Find all Media Providers", _embyInterfaces.Logger() ) )
@@ -102,7 +102,7 @@ namespace Statistics2026.ScheduledTasks
                 cancellationToken.ThrowIfCancellationRequested();
 
                 HelperFuncs.RunTimeSummary( runtimeMS, taskName, _embyInterfaces );
-                db.SetLastUpdated( Statistics2026DB.EAction.StreamingProviders, ReasonsForExecute, runtimeMS );
+                await db.SetLastUpdated( Statistics2026DB.EAction.StreamingProviders, ReasonsForExecute, runtimeMS );
 
                 db.ResetCancellationToken();
             } );

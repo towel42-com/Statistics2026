@@ -2,6 +2,7 @@
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using ServiceStack;
+using SQLitePCL.pretty;
 using Statistics2026.Responses;
 using Statistics2026.Utilities;
 using System.Collections.Concurrent;
@@ -10,14 +11,14 @@ namespace Statistics2026.Data
 {
     public sealed partial class Statistics2026DB
     {
-        public List<GetTVSeriesProgressResponse> GetTVSeriesProgress( User? user )
+        public async Task<List<GetTVSeriesProgressResponse>> GetTVSeriesProgress( User? user )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var getSeriesSQL = "SELECT " +
+            string getSeriesSQL = "SELECT " +
                 "  Series.Name" +
                 ", strftime('%Y', Series.PremiereDate) AS PremiereDate" +
                 ", Series.NumEpisodes" +
@@ -31,18 +32,18 @@ namespace Statistics2026.Data
                 ;
 
             var series = new Dictionary<string, GetTVSeriesProgressResponse>();
-            ExecuteCommand( new SQLCmdDef( getSeriesSQL ), statement =>
+            await ExecuteCommand( new SQLCmdDef( getSeriesSQL ), statement =>
             {
-                var row = statement.Current;
-                var col = 0;
-                var name = row.GetString( col++ );
-                var premiereYear = row.GetInt( col++ );
-                var totalEpisodes = row.GetInt( col++ );
-                var totalSpecials = row.GetInt( col++ );
-                var score = row.GetDouble( col++ );
-                var status = row.GetString( col++ );
-                var seriesId = row.GetString( col++ );
-                var imageUrl = row.GetString( col++ );
+                IResultSet row = statement.Current;
+                int col = 0;
+                string name = row.GetString( col++ );
+                int premiereYear = row.GetInt( col++ );
+                int totalEpisodes = row.GetInt( col++ );
+                int totalSpecials = row.GetInt( col++ );
+                double score = row.GetDouble( col++ );
+                string status = row.GetString( col++ );
+                string seriesId = row.GetString( col++ );
+                string imageUrl = row.GetString( col++ );
 
                 var curr = new GetTVSeriesProgressResponse()
                 {
@@ -63,11 +64,11 @@ namespace Statistics2026.Data
                 curr.Specials.Total = totalSpecials;
 
                 series[ seriesId ] = curr;
-                return true;
+                return Task.FromResult( true );
             } );
 
-            var tableName = TableDefs().getUserTableName( user );
-            var sqlBase = "SELECT " +
+            string? tableName = TableDefs().getUserTableName( user );
+            string sqlBase = "SELECT " +
                 $"  SUM({tableName}.NumEpisodes) " +
                 $", {tableName}.SeriesId " +
                 $" FROM " +
@@ -80,41 +81,41 @@ namespace Statistics2026.Data
                 $" GROUP BY {tableName}.SeriesId "
                 ;
 
-            var sqlEpisodes = sqlBase.Replace( "<isTVSpecial>", $"NOT {tableName}.IsTVSpecial" );
-            var sqlSpecials = sqlBase.Replace( "<isTVSpecial>", $"{tableName}.IsTVSpecial" );
+            string sqlEpisodes = sqlBase.Replace( "<isTVSpecial>", $"NOT {tableName}.IsTVSpecial" );
+            string sqlSpecials = sqlBase.Replace( "<isTVSpecial>", $"{tableName}.IsTVSpecial" );
 
             List<(string name, object? value)> paramList = [ ("@UserId", user.Id.ToString()) ];
 
-            ExecuteCommand( new SQLCmdDef( sqlEpisodes, paramList ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sqlEpisodes, paramList ), statement =>
             {
-                var row = statement.Current;
-                var col = 0;
-                var watchedCount = row.GetInt( col++ );
-                var seriesId = row.GetString( col++ ); // should be true
+                IResultSet row = statement.Current;
+                int col = 0;
+                int watchedCount = row.GetInt( col++ );
+                string seriesId = row.GetString( col++ ); // should be true
 
-                if( series.TryGetValue( seriesId, out var curr ) )
+                if( series.TryGetValue( seriesId, out GetTVSeriesProgressResponse? curr ) )
                 {
                     curr.Episodes.Count = watchedCount;
                     series[ seriesId ] = curr;
                 }
 
-                return true;
+                return Task.FromResult( true );
             } );
 
-            ExecuteCommand( new SQLCmdDef( sqlSpecials, paramList ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sqlSpecials, paramList ), statement =>
             {
-                var row = statement.Current;
-                var col = 0;
-                var watchedCount = row.GetInt( col++ );
-                var seriesId = row.GetString( col++ ); // should be true
+                IResultSet row = statement.Current;
+                int col = 0;
+                int watchedCount = row.GetInt( col++ );
+                string seriesId = row.GetString( col++ ); // should be true
 
-                if( series.TryGetValue( seriesId, out var curr ) )
+                if( series.TryGetValue( seriesId, out GetTVSeriesProgressResponse? curr ) )
                 {
                     curr.Specials.Count = watchedCount;
                     series[ seriesId ] = curr;
                 }
 
-                return true;
+                return Task.FromResult( true );
             } );
 
             var retVal = series.Values.ToList();

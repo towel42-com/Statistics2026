@@ -1,14 +1,8 @@
-﻿using MediaBrowser.Model.MediaInfo;
-using MediaBrowser.Model.Services;
-using ServiceStack;
+﻿using ServiceStack;
+using SQLitePCL.pretty;
+using Statistics2026.Responses;
 using Statistics2026.ScheduledTasks;
 using Statistics2026.Utilities;
-using Statistics2026.Responses;
-using System;
-using System.Collections.Generic;
-using System.Net.Http.Headers;
-using System.Net.NetworkInformation;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -32,58 +26,58 @@ namespace Statistics2026.Data
             PeopleAnalysis
         }
 
-        public (DateTimeOffset? when, long ms, List<string> reasons) GetLastUpdated( EAction action )
+        public async Task<(DateTimeOffset? when, long ms, List<string> reasons)> GetLastUpdated( EAction action )
         {
-            var sql = "SELECT LastUpdated, RunTimeMS, Reason FROM \n" +
+            string sql = "SELECT LastUpdated, RunTimeMS, Reason FROM \n" +
                 "LastUpdateTable \n" +
                 $"WHERE Action = '{action.ToString()}'\n"
                 ;
             DateTimeOffset? lastUpdated = DateTimeOffset.MinValue;
             long ms = 0;
             List<string> reasons = [];
-            ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
-                var row = statement.Current;
-                var count = 0;
+                IResultSet row = statement.Current;
+                int count = 0;
                 lastUpdated = HelperFuncs.ReadDateTime( row.GetString( count++ ) );
                 ms = row.GetInt64( count++ );
                 reasons = HelperFuncs.JsonToStringArray( row.GetString( count++ ) );
                 if( reasons.IsNullOrEmpty() )
                     reasons = [ row.GetString( count - 1 ) ];
-                return false;
+                return Task.FromResult( false );
             } );
             return (lastUpdated, ms, reasons);
         }
 
-        public HtmlJsonResponse GetSystemStatus()
+        public async Task<HtmlJsonResponse> GetSystemStatus()
         {
-            var version = Plugin.Instance?.Configuration.Version ?? String.Empty;
-            var buildDate = Plugin.Instance?.Configuration.BuildDate ?? String.Empty;
-            var dbState = Plugin.Instance?.DBStateString() ?? String.Empty;
+            string version = Plugin.Instance?.Configuration.Version ?? String.Empty;
+            string buildDate = Plugin.Instance?.Configuration.BuildDate ?? String.Empty;
+            string dbState = Plugin.Instance?.DBStateString() ?? String.Empty;
 
-            var depth = 0;
+            int depth = 0;
 
-            var systemHtml = HelperFuncs.addToHtml( depth++, "<ul>" );
+            string systemHtml = HelperFuncs.addToHtml( depth++, "<ul>" );
             systemHtml += HelperFuncs.addToHtml( depth, $"<li>Version: {version}</li>" );
             systemHtml += HelperFuncs.addToHtml( depth, $"<li>Build Date: {buildDate}</li>" );
             systemHtml += HelperFuncs.addToHtml( depth, $"<li>Database Status: {dbState}</li>" );
             systemHtml += HelperFuncs.addToHtml( --depth, "</ul>" );
 
-            var retVal = GetLastRunHtml( "All" );
+            HtmlJsonResponse retVal = await GetLastRunHtml( "All" );
 
             retVal.html = systemHtml + retVal.html;
 
-            var status = Plugin.Instance?.CurrDBState() ?? EDBState.eEmpty;
+            EDBState status = Plugin.Instance?.CurrDBState() ?? EDBState.eEmpty;
             List<(string key, string value)> dbStates = [];
-            foreach( var curr in new[] { EDBState.eSystemTablesCreated, EDBState.eUserTablesCreated, EDBState.eSystemDataInitialized, EDBState.eUserDataInitialized } )
+            foreach( EDBState curr in new[] { EDBState.eSystemTablesCreated, EDBState.eUserTablesCreated, EDBState.eSystemDataInitialized, EDBState.eUserDataInitialized } )
             {
-                var currState = curr.ToString();
+                string currState = curr.ToString();
                 currState = Regex.Replace( currState, "^e", "" ) + ":";
-                var value = ( ( curr & status ) != 0 ).ToString();
+                string value = ( ( curr & status ) != 0 ).ToString();
                 dbStates.Add( (currState, $"<b>{value}</b>") );
             }
 
-            var dbStateHtml = HelperFuncs.MakeTableHtml( "Database State:", dbStates );
+            string dbStateHtml = HelperFuncs.MakeTableHtml( "Database State:", dbStates );
             retVal.html += dbStateHtml;
 
             return retVal;
@@ -91,7 +85,7 @@ namespace Statistics2026.Data
 
         List<EAction> ActionsFromStringList( string whichRuns )
         {
-            var list = whichRuns.Split( ',' );
+            string[] list = whichRuns.Split( ',' );
             if( list.Length == 1 && list[ 0 ].ToLower() == "all" )
             {
                 list = new[]
@@ -111,7 +105,7 @@ namespace Statistics2026.Data
                     };
             }
             List<EAction> retVal = [];
-            foreach( var whichRun in list )
+            foreach( string? whichRun in list )
             {
                 if( Enum.TryParse( whichRun, true, out Statistics2026DB.EAction whichRunEnum ) )
                 {
@@ -126,16 +120,16 @@ namespace Statistics2026.Data
 
         public List<string> TasksRunning( string whichRuns )
         {
-            var actions = ActionsFromStringList( whichRuns );
+            List<EAction> actions = ActionsFromStringList( whichRuns );
             return TasksRunning( actions );
         }
 
         public List<string> TasksRunning( List<EAction> whichRuns )
         {
             List<string> retVal = [];
-            foreach( var curr in whichRuns )
+            foreach( EAction curr in whichRuns )
             {
-                 if ( TaskDef.IsTaskRunning( _embyInterfaces, TypeForAction( curr ) ) )
+                if( TaskDef.IsTaskRunning( _embyInterfaces, TypeForAction( curr ) ) )
                 {
                     retVal.Add( TitleForAction( curr ) );
                 }
@@ -143,7 +137,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public HtmlJsonResponse GetLastRunHtml( string whichRuns ) // whichRuns comma separated list
+        public async Task<HtmlJsonResponse> GetLastRunHtml( string whichRuns ) // whichRuns comma separated list
         {
             List<string> results = [];
             List<string> errors = [];
@@ -151,9 +145,10 @@ namespace Statistics2026.Data
             try
             {
                 List<EAction> actions = ActionsFromStringList( whichRuns );
-                foreach( var whichRun in actions )
+                foreach( EAction whichRun in actions )
                 {
-                    results.Add( GetLastRunInfo( whichRun ) );
+                    string curr = await GetLastRunInfo( whichRun );
+                    results.Add( curr );
                 }
             }
             catch( Exception ex )
@@ -161,8 +156,8 @@ namespace Statistics2026.Data
                 errors.Add( ex.ToString() );
             }
 
-            var resultText = string.Empty;
-            var depth = 0;
+            string resultText = string.Empty;
+            int depth = 0;
 
             resultText = HelperFuncs.addToHtml( depth++, "<br>\n<div>" );
             resultText += HelperFuncs.addToHtml( depth, $"<h3>Last Analysis:</h3>" );
@@ -172,7 +167,7 @@ namespace Statistics2026.Data
             resultText += HelperFuncs.addToHtml( --depth, "</ul>" );
             resultText += HelperFuncs.addToHtml( --depth, "</div>" );
 
-            var errorText = HelperFuncs.MakeTableHtml( "Error Getting Last Run Information:", errors );
+            string errorText = HelperFuncs.MakeTableHtml( "Error Getting Last Run Information:", errors );
             return new HtmlJsonResponse() { html = resultText, error = errorText };
         }
 
@@ -267,12 +262,12 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private string GetLastRunInfo( EAction action )
+        private async Task<string> GetLastRunInfo( EAction action )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var (lastUpdated, runtimeMS, reason) = GetLastUpdated( action );
-            var updateText = string.Empty;
+            (DateTimeOffset? lastUpdated, long runtimeMS, List<string>? reason) = await GetLastUpdated( action );
+            string updateText = string.Empty;
             bool run = ( lastUpdated != null && lastUpdated.HasValue && lastUpdated.Value != DateTimeOffset.MinValue );
             if( run )
             {
@@ -287,16 +282,16 @@ namespace Statistics2026.Data
                 updateText = "<b>Not Run</b>";
             }
 
-            var titleText = TitleForAction( action );
+            string titleText = TitleForAction( action );
             var rt = RunTime.CreateFromMS( runtimeMS );
             int depth = 2; // div and ul
-            var retVal = string.Empty;
+            string retVal = string.Empty;
 
             retVal += HelperFuncs.addToHtml( depth++, "<li>" );
             retVal += HelperFuncs.addToHtml( depth++, "<div class=\"row\">" );
             retVal += HelperFuncs.addToHtml( depth, $"<span class=\"label\">{titleText}:</span>" );
 
-            var data = updateText;
+            string data = updateText;
             if( Plugin.Instance!.Configuration.ShowDebugInfo( _embyInterfaces ) )
             {
                 if( run )
@@ -316,14 +311,14 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public void ClearLastUpdated( EAction action )
+        public Task ClearLastUpdated( EAction action )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            var buildDate = BuildDateInfo.GetBuildDate();
-            var version = Plugin.Instance!.Configuration.Version;
+            DateTimeOffset buildDate = BuildDateInfo.GetBuildDate();
+            string version = Plugin.Instance!.Configuration.Version;
 
-            var sql = "UPDATE \n" +
+            string sql = "UPDATE \n" +
                 "LastUpdateTable \n" +
                 "SET \n" +
                 "  LastUpdated = @LastUpdated\n" +
@@ -347,22 +342,22 @@ namespace Statistics2026.Data
                         ] )
             ];
 
-            ExecuteCommands( sqlCmds );
+            return ExecuteCommands( sqlCmds );
         }
 
-        public void SetLastUpdated( EAction action, List<string> reasons, long runtimeMS )
+        public Task SetLastUpdated( EAction action, List<string> reasons, long runtimeMS )
         {
-            SetLastUpdated( action, reasons, runtimeMS, DateTimeOffset.UtcNow );
+            return SetLastUpdated( action, reasons, runtimeMS, DateTimeOffset.UtcNow );
         }
 
-        public void SetLastUpdated( EAction action, List<string> reasons, long runtimeMS, DateTimeOffset updateTime )
+        public Task SetLastUpdated( EAction action, List<string> reasons, long runtimeMS, DateTimeOffset updateTime )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            var buildDate = BuildDateInfo.GetBuildDate();
-            var version = Plugin.Instance!.Configuration.Version;
+            DateTimeOffset buildDate = BuildDateInfo.GetBuildDate();
+            string version = Plugin.Instance!.Configuration.Version;
 
-            var sql = "INSERT INTO \n" +
+            string sql = "INSERT INTO \n" +
                 "LastUpdateTable \n" +
                 "(\n" +
                 "  Action\n" +
@@ -404,7 +399,7 @@ namespace Statistics2026.Data
                         ] )
             ];
 
-            ExecuteCommands( sqlCmds );
+            return ExecuteCommands( sqlCmds );
         }
     }
 }

@@ -1,7 +1,10 @@
 ﻿using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Model.Configuration;
+using MediaBrowser.Model.Providers;
 using ServiceStack;
+using SQLitePCL.pretty;
 using Statistics2026.Responses;
 using Statistics2026.Utilities;
 using System.Collections.Concurrent;
@@ -20,9 +23,9 @@ namespace Statistics2026.Data
             public long averageBitrate = 0;
         }
 
-        private (ConcurrentDictionary<string, SeriesInfo> seriesInfoMap, List<object> validSeriesIds) ComputeSeriesInfo( List<Series> seriesList )
+        private async Task<(ConcurrentDictionary<string, SeriesInfo> seriesInfoMap, List<object> validSeriesIds)> ComputeSeriesInfo( List<Series> seriesList )
         {
-            var sql = "SELECT " +
+            string sql = "SELECT " +
                 "  Media.SeriesId" +
                 ", Series.Name" +
                 ", SUM(Media.FileSize)" +
@@ -38,12 +41,12 @@ namespace Statistics2026.Data
             ConcurrentDictionary<string, SeriesInfo> seriesInfoMap = [];
             var cmd = new SQLCmdDef( sql );
             List<object> validSeriesIds = [];
-            ExecuteCommand( cmd,
+            await ExecuteCommand( cmd,
                 statement =>
                 {
-                    var row = statement.Current;
-                    var col = 0;
-                    var id = row.GetString( col++ );
+                    IResultSet row = statement.Current;
+                    int col = 0;
+                    string id = row.GetString( col++ );
                     validSeriesIds.Add( id );
                     SeriesInfo seriesInfo = new()
                     {
@@ -56,10 +59,10 @@ namespace Statistics2026.Data
                     };
 
                     seriesInfoMap[ seriesInfo.id ] = seriesInfo;
-                    return true;
+                    return Task.FromResult( true );
                 } );
 
-            foreach( var series in seriesList )
+            foreach( Series series in seriesList )
             {
                 if( !seriesInfoMap.TryGetValue( series.Id.ToString(), out _ ) )
                 {
@@ -75,26 +78,26 @@ namespace Statistics2026.Data
             Logger().Debug( $"Starting Series Analysis" );
 
             SetProgress( 0 );
-            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
+            List<Series> seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
             SetProgress( 100 );
             if( seriesList == null )
                 return;
 
             SetProgress( 0 );
-            DeleteAllInvalid( seriesList.ConvertAll( item => (BaseItem)item ), "Series", "ItemId" );
+            await DeleteAllInvalid( seriesList.ConvertAll( item => (BaseItem)item ), "Series", "ItemId" );
 
-            var (seriesInfoMap, validSeriesIds) = ComputeSeriesInfo( seriesList );
+            (ConcurrentDictionary<string, SeriesInfo>? seriesInfoMap, List<object>? validSeriesIds) = await ComputeSeriesInfo( seriesList );
 
             var sqlCmds = new List<SQLCmdDef>();
-            sqlCmds.AddRange( UpdateSeriesFilter() );
+            sqlCmds.AddRange( await UpdateSeriesFilter() );
 
             int completedCount = 0;
 
             using( var timer = new AutoTimer( $"    Analyze Series - Getting Commands", Logger() ) )
             {
-                var pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
+                IEnumerable<Task<(int index, Series item, List<SQLCmdDef?> cmds)>> pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
                 {
-                    var retVal = (index: index, item: series, cmds: new List<SQLCmdDef?>());
+                    (int index, Series item, List<SQLCmdDef?> cmds) retVal = (index: index, item: series, cmds: new List<SQLCmdDef?>());
                     if( series == null )
                         return retVal;
 
@@ -115,7 +118,7 @@ namespace Statistics2026.Data
                 } ) );
 
                 CancellationToken?.ThrowIfCancellationRequested();
-                var unsortedResults = await Task.WhenAll( pool );
+                (int index, Series item, List<SQLCmdDef?> cmds)[] unsortedResults = await Task.WhenAll( pool );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -130,7 +133,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Series - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                ExecuteCommands( sqlCmds );
+                await ExecuteCommands( sqlCmds );
                 SetProgress( 100 );
                 CancellationToken?.ThrowIfCancellationRequested();
                 Logger().Debug( $"Finished Series Analysis" );
@@ -141,11 +144,11 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            var libraryOptions = LibraryManager().GetLibraryOptions( series );
-            var allEpisodes = await ProviderManager().GetAllEpisodes( series, libraryOptions, CancellationToken!.Value ).ConfigureAwait( false );
+            LibraryOptions libraryOptions = LibraryManager().GetLibraryOptions( series );
+            RemoteSearchResult[] allEpisodes = await ProviderManager().GetAllEpisodes( series, libraryOptions, CancellationToken!.Value ).ConfigureAwait( false );
 
-            var episodes = allEpisodes.Where( e => !Statistics2026.Utilities.MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTimeOffset.Now ) ).Count();
-            var specials = allEpisodes.Where( e => Statistics2026.Utilities.MediaInfo.isTVSpecial( e ) ).Count();
+            int episodes = allEpisodes.Where( e => !Statistics2026.Utilities.MediaInfo.isTVSpecial( e ) && ( e.PremiereDate <= DateTimeOffset.Now ) ).Count();
+            int specials = allEpisodes.Where( e => Statistics2026.Utilities.MediaInfo.isTVSpecial( e ) ).Count();
 
             if( episodes == 0 && specials == 0 )// when providers are disabled
             {
@@ -154,15 +157,15 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                ExecuteCommand( cmd, statement =>
+                await ExecuteCommand( cmd, statement =>
                 {
                     if( statement != null )
                     {
-                        var row = statement.Current;
+                        IResultSet row = statement.Current;
                         episodes = row.GetInt( 0 );
                     }
 
-                    return false;
+                    return Task.FromResult( false );
                 } );
 
                 cmd = new SQLCmdDef( $"SELECT NumSpecials FROM Series WHERE ItemId=@SeriesId",
@@ -170,15 +173,15 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                ExecuteCommand( cmd, statement =>
+                await ExecuteCommand( cmd, statement =>
                 {
                     if( statement != null )
                     {
-                        var row = statement.Current;
+                        IResultSet row = statement.Current;
                         specials = row.GetInt( 0 );
                     }
 
-                    return false;
+                    return Task.FromResult( false );
                 } );
             }
 
@@ -189,15 +192,15 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                ExecuteCommand( cmd, statement =>
+                await ExecuteCommand( cmd, statement =>
                 {
                     if( statement != null )
                     {
-                        var row = statement.Current;
+                        IResultSet row = statement.Current;
                         episodes = row.GetInt( 0 );
                     }
 
-                    return false;
+                    return Task.FromResult( false );
                 } );
 
                 cmd = new SQLCmdDef( $"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND IsTVSpecial",
@@ -205,15 +208,15 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                ExecuteCommand( cmd, statement =>
+                await ExecuteCommand( cmd, statement =>
                 {
                     if( statement != null )
                     {
-                        var row = statement.Current;
+                        IResultSet row = statement.Current;
                         specials = row.GetInt( 0 );
                     }
 
-                    return false;
+                    return Task.FromResult( false );
                 } );
             }
 
@@ -230,10 +233,10 @@ namespace Statistics2026.Data
                 DtoOptions = new DtoOptions( true )
             };
 
-            var seasons = LibraryManager().GetItemList( query );
-            var numSeasons = seasons.Count();
+            BaseItem[] seasons = LibraryManager().GetItemList( query );
+            int numSeasons = seasons.Count();
             bool hasSpecials = false;
-            foreach( var season in seasons )
+            foreach( BaseItem? season in seasons )
             {
                 if( season.IndexNumber == 0 )
                 {
@@ -260,14 +263,14 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"   AddSeries - Adding Series {series.Name}" );
 
-            var seriesStatus = series.Status?.ToString() ?? string.Empty;
-            var (numSeasons, hasSpecials) = GetSeasonCount( series );
+            string seriesStatus = series.Status?.ToString() ?? string.Empty;
+            (int numSeasons, bool hasSpecials) = GetSeasonCount( series );
 
             var tmdbService = new TmdbInterface();
 
-            var (numEpisodes, numSpecials) = await GetCountForSeriesAsync( series ).ConfigureAwait( false );
+            (int numEpisodes, int numSpecials) = await GetCountForSeriesAsync( series ).ConfigureAwait( false );
             List<(string name, object? value)>? paramsList = null;
-            var sql = "INSERT INTO Series " +
+            string sql = "INSERT INTO Series " +
             "(" +
                 "  ItemId" +
                 ", Name" +

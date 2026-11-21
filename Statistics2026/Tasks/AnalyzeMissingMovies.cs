@@ -71,19 +71,19 @@ namespace Statistics2026.ScheduledTasks
 
         async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            var memoryReport = await HelperFuncs.RunAndReportMemory( true, async () =>
+            HelperFuncs.MemoryUsage memoryReport = await HelperFuncs.RunAndReportMemory( true, async () =>
             {
                 if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), true ) )
                 {
                     throw new Exception( "Statistics 2026 task is running" );
                 }
 
-                var taskName = "Analyze Missing";
+                string taskName = "Analyze Missing";
                 _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                db.Initialize( this, cancellationToken, progress );
-                db.ClearLastUpdated( Statistics2026DB.EAction.MissingMoviesAnalysis );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, GetType().Name );
+                await db.Initialize( this, cancellationToken, progress );
+                await db.ClearLastUpdated( Statistics2026DB.EAction.MissingMoviesAnalysis );
 
                 long runtimeMS = 0;
                 using( var timer = new AutoTimer( $"Analyzing Missing", _embyInterfaces.Logger() ) )
@@ -102,7 +102,7 @@ namespace Statistics2026.ScheduledTasks
                 cancellationToken.ThrowIfCancellationRequested();
 
                 HelperFuncs.RunTimeSummary( runtimeMS, taskName, _embyInterfaces );
-                db.SetLastUpdated( Statistics2026DB.EAction.MissingMoviesAnalysis, ReasonsForExecute, runtimeMS );
+                await db.SetLastUpdated( Statistics2026DB.EAction.MissingMoviesAnalysis, ReasonsForExecute, runtimeMS );
 
                 db.ResetCancellationToken();
             } );

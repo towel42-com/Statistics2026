@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Session;
+using MediaBrowser.Model.Dto;
 using ServiceStack;
 using Statistics2026.Data;
 using System.Collections.Generic;
@@ -9,13 +10,13 @@ namespace Statistics2026.Utilities
 {
     public class PlaybackInfo
     {
-        public static PlaybackInfo Create( SessionInfo session, EmbyInterfaces embyInterfaces )
+        public static async Task<PlaybackInfo> Create( SessionInfo session, EmbyInterfaces embyInterfaces )
         {
             _PlaybackTracker ??= [];
 
-            var serverItem = embyInterfaces._libraryManager.GetItemById( session.NowPlayingItem.Id );
+            BaseItem serverItem = embyInterfaces._libraryManager.GetItemById( session.NowPlayingItem.Id );
 
-            var key = CreateKey( session, serverItem );
+            string key = CreateKey( session, serverItem );
             PlaybackInfo? retVal;
             if( _PlaybackTracker.ContainsKey( key ) )
             {
@@ -33,7 +34,7 @@ namespace Statistics2026.Utilities
 
                 _PlaybackTracker[ key ] = retVal;
 
-                retVal.LoadPlaybackState( embyInterfaces );
+                await retVal.LoadPlaybackState( embyInterfaces );
             }
 
             if( session.PlayState.PositionTicks != null )
@@ -51,14 +52,14 @@ namespace Statistics2026.Utilities
 
             List<string> key_list = [ .. _PlaybackTracker.Keys ];
 
-            foreach( var key in key_list )
+            foreach( string key in key_list )
             {
-                var playbackInfo = _PlaybackTracker[ key ];
+                PlaybackInfo playbackInfo = _PlaybackTracker[ key ];
                 if( activeSessions.Contains( playbackInfo ) == false )
                 {
                     embyInterfaces.Logger().Info( "Saving final duration for Item : " + key );
 
-                    playbackInfo.UpdatePlaybackState( embyInterfaces );
+                    playbackInfo.UpdatePlaybackState( embyInterfaces ).GetAwaiter().GetResult();
 
                     embyInterfaces.Logger().Info( "Removing Old Key from playback_trackers : " + key );
                     _ = _PlaybackTracker.Remove( key );
@@ -86,7 +87,7 @@ namespace Statistics2026.Utilities
 
         private static string GetItemName( MediaBrowser.Model.Dto.BaseItemDto item )
         {
-            var retVal = "Not Known";
+            string retVal = "Not Known";
 
             if( item == null )
             {
@@ -99,11 +100,11 @@ namespace Statistics2026.Utilities
             }
             else if( item.Type == "Audio" )
             {
-                var artist = "Not Known";
+                string artist = "Not Known";
                 if( item.ArtistItems != null && item.AlbumArtists.Length > 0 )
                 {
                     List<string> artists_list = [];
-                    foreach( var artist_pair in item.AlbumArtists )
+                    foreach( NameIdPair? artist_pair in item.AlbumArtists )
                     {
                         artists_list.Add( artist_pair.Name );
                     }
@@ -111,7 +112,7 @@ namespace Statistics2026.Utilities
                     artist = string.Join( ", ", artists_list );
                 }
 
-                var album = "Not Known";
+                string album = "Not Known";
                 if( string.IsNullOrEmpty( item.Album ) == false )
                 {
                     album = item.Album;
@@ -130,7 +131,7 @@ namespace Statistics2026.Utilities
 
         private static string GetPlaybackMethod( SessionInfo session )
         {
-            var retVal = "na";
+            string retVal = "na";
             if( session.PlayState != null && session.PlayState.PlayMethod != null )
             {
                 retVal = session.PlayState.PlayMethod.Value.ToString();
@@ -140,13 +141,13 @@ namespace Statistics2026.Utilities
             {
                 if( session.TranscodingInfo != null )
                 {
-                    var video_codec = "direct";
+                    string video_codec = "direct";
                     if( session.TranscodingInfo.IsVideoDirect == false )
                     {
                         video_codec = session.TranscodingInfo.VideoCodec;
                     }
 
-                    var audio_codec = "direct";
+                    string audio_codec = "direct";
                     if( session.TranscodingInfo.IsAudioDirect == false )
                     {
                         audio_codec = session.TranscodingInfo.AudioCodec;
@@ -159,11 +160,11 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public void LoadPlaybackState( EmbyInterfaces embyInterfaces )
+        public async Task LoadPlaybackState( EmbyInterfaces embyInterfaces )
         {
-            using var db = Statistics2026DB.GetInstance( embyInterfaces );
+            await using Statistics2026DB db = await Statistics2026DB.GetInstance( embyInterfaces, GetType().Name );
 
-            var totalTicksPlayed = db.GetTotalTicksPlayed( UserId, ItemId );
+            long? totalTicksPlayed = await db.GetTotalTicksPlayed( UserId, ItemId );
 
             TotalTicksPlayed = totalTicksPlayed ?? 0;
         }
@@ -179,14 +180,14 @@ namespace Statistics2026.Utilities
                 SessionCurrTickPos = ticks;
         }
 
-        public void UpdatePlaybackState( EmbyInterfaces embyInterfaces )
+        public async Task UpdatePlaybackState( EmbyInterfaces embyInterfaces )
         {
             if( SessionStartTickPos == null || SessionCurrTickPos == null )
                 return;
 
             TotalTicksPlayed += SessionCurrTickPos.Value - SessionStartTickPos.Value;
-            using var db = Statistics2026DB.GetInstance( embyInterfaces );
-            db.UpdateTotalTicksPlayed( UserId, ItemId, TotalTicksPlayed );
+            await using Statistics2026DB db = await Statistics2026DB.GetInstance( embyInterfaces, GetType().Name );
+            await db.UpdateTotalTicksPlayed( UserId, ItemId, TotalTicksPlayed );
 
             SessionStartTickPos = SessionCurrTickPos;
             SessionCurrTickPos = null;

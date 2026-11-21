@@ -130,136 +130,109 @@ namespace Statistics2026.Services
         {
         }
 
-        public object Get( GetUserCount request )
+        public Task<object> Get( GetUserCount request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                var groupData = db.UserCount();
+                StatCard groupData = await db.UserCount();
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
 
-        public object Get( GetMostActiveUsers request )
+        public Task<object> Get( GetMostActiveUsers request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                var groupData = db.MostActiveUsers();
+                StatCard groupData = await db.MostActiveUsers();
                 if( groupData == null )
                     return new StatCardResponse();
                 groupData.SortByKey = false;
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
 
                 return vgReponse;
             } );
         }
 
-        public object Get( GetLeastWatchedMovies request )
+        public Task<object> Get( GetLeastWatchedMovies request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var groupData = db.WatchedMedia( null, true, EMediaType.eMovie );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                StatCard groupData = await db.WatchedMedia( null, true, EMediaType.eMovie );
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
 
-        public object Get( GetMostWatchedMovies request )
+        public Task<object> Get( GetMostWatchedMovies request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                var userName = request.user;
-                var user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
+                string userName = request.user;
+                User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
                 if( user == null )
                     return new StatCardResponse();
 
-                var groupData = db.WatchedMedia( user, false, EMediaType.eMovie );
+                StatCard groupData = await db.WatchedMedia( user, false, EMediaType.eMovie );
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
 
-        public object Get( GetMostWatchedMoviesNoUser request )
+        public Task<object> Get( GetMostWatchedMoviesNoUser request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                var groupData = db.WatchedMedia( null, false, EMediaType.eMovie );
+                StatCard groupData = await db.WatchedMedia( null, false, EMediaType.eMovie );
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
 
-        public object Get( GetLeastWatchedShows request )
+        public Task<object> Get( GetLeastWatchedShows request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                var groupData = db.WatchedMedia( null, true, EMediaType.eSeries );
+                StatCard groupData = await db.WatchedMedia( null, true, EMediaType.eSeries );
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
 
-        public object Get( GetTotalTimeWatched request )
+        public Task<object> Get( GetTotalTimeWatched request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var userName = request.user;
-                var user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
-                if( user == null )
-                    return new StatCardResponse();
-
-                bool? showEpisodes = null;
-                if( request.episodes == "true" )
-                    showEpisodes = true;
-                else if( request.episodes == "all" )
-                    showEpisodes = null;
-                else
-                    showEpisodes = false;
-
-                var groupData = db.TotalTimeWatched( user, showEpisodes );
-                if( groupData == null )
-                    return new StatCardResponse();
-
-                var vgReponse = groupData.createStat();
-                return vgReponse;
-            } );
-        }
-
-        public object Get( GetTotalWatchableTime request )
-        {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
-            {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var userName = request.user;
-                var user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                string userName = request.user;
+                User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
                 if( user == null )
                     return new StatCardResponse();
 
@@ -271,32 +244,59 @@ namespace Statistics2026.Services
                 else
                     showEpisodes = false;
 
-                var groupData = db.TotalWatchableTime( user, showEpisodes );
+                StatCard groupData = await db.TotalTimeWatched( user, showEpisodes );
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
 
-        public object Get( GetLastSeen request )
+        public Task<object> Get( GetTotalWatchableTime request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-                var userName = request.user;
-                var user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                string userName = request.user;
+                User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
                 if( user == null )
                     return new StatCardResponse();
 
-                var episodes = request.episodes;
+                bool? showEpisodes = null;
+                if( request.episodes == "true" )
+                    showEpisodes = true;
+                else if( request.episodes == "all" )
+                    showEpisodes = null;
+                else
+                    showEpisodes = false;
 
-                var groupData = db.LastSeen( user, !episodes );
+                StatCard groupData = await db.TotalWatchableTime( user, showEpisodes );
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
+                return vgReponse;
+            } );
+        }
+
+        public Task<object> Get( GetLastSeen request )
+        {
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async (timer) =>
+            {
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                string userName = request.user;
+                User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
+                if( user == null )
+                    return new StatCardResponse();
+
+                bool episodes = request.episodes;
+
+                StatCard groupData = await db.LastSeen( user, !episodes );
+                if( groupData == null )
+                    return new StatCardResponse();
+
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }

@@ -50,7 +50,7 @@ namespace Statistics2026.Utilities
         {
             get
             {
-                var difference = Result.EndTimeUtc - Result.StartTimeUtc;
+                TimeSpan difference = Result.EndTimeUtc - Result.StartTimeUtc;
                 return (long)difference.TotalMilliseconds;
             }
         }
@@ -68,8 +68,8 @@ namespace Statistics2026.Utilities
             if( embyInterfaces._taskManager == null )
                 return false;
 
-            var allTasks = embyInterfaces.TaskManager().ScheduledTasks;
-            foreach( var task in allTasks )
+            IScheduledTaskWorker[] allTasks = embyInterfaces.TaskManager().ScheduledTasks;
+            foreach( IScheduledTaskWorker? task in allTasks )
             {
                 if( task.State == MediaBrowser.Model.Tasks.TaskState.Idle )
                     continue;
@@ -109,21 +109,21 @@ namespace Statistics2026.Utilities
             {
                 okIfRunning.AddRange( [ typeof( ItemAddedMonitorEntryPoint ), typeof( RunAllTasksTask ) ] );
             }
-            var knownTasks = TaskDef.GetKnownTasks( true );
+            List<TaskDef> knownTasks = TaskDef.GetKnownTasks( true );
 
-            var allTasks = embyInterfaces.TaskManager().ScheduledTasks;
-            foreach( var task in allTasks )
+            IScheduledTaskWorker[] allTasks = embyInterfaces.TaskManager().ScheduledTasks;
+            foreach( IScheduledTaskWorker? task in allTasks )
             {
                 if( task.State == MediaBrowser.Model.Tasks.TaskState.Idle )
                     continue;
 
-                foreach( var currTask in knownTasks )
+                foreach( TaskDef currTask in knownTasks )
                 {
                     if( currTask == null )
                         continue;
 
-                    var okToBeRunning = false;
-                    foreach( var okTask in okIfRunning )
+                    bool okToBeRunning = false;
+                    foreach( Type okTask in okIfRunning )
                     {
                         if( okTask == task.ScheduledTask.GetType() )
                         {
@@ -148,10 +148,10 @@ namespace Statistics2026.Utilities
         public static TaskDef? GetTaskDef( Type taskType, ref int pos )
         {
             pos = -1;
-            var tasks = GetKnownTasks( true );
+            List<TaskDef> tasks = GetKnownTasks( true );
             for( int ii = 0; ii < tasks.Count(); ++ii )
             {
-                var task = tasks[ ii ];
+                TaskDef task = tasks[ ii ];
                 if( task.TaskType == taskType )
                 {
                     pos = ii;
@@ -170,7 +170,7 @@ namespace Statistics2026.Utilities
         public static string GetTaskName( Type taskType )
         {
             int pos = -1;
-            var task = GetTaskDef( taskType, ref pos );
+            TaskDef? task = GetTaskDef( taskType, ref pos );
             if( task == null )
                 throw new Exception( $"Could not find task defintion for type '{taskType}'" );
 
@@ -181,7 +181,7 @@ namespace Statistics2026.Utilities
 
         public static string GetTaskDescription( Type taskType )
         {
-            var task = GetTaskDef( taskType );
+            TaskDef? task = GetTaskDef( taskType );
             if( task == null )
                 throw new Exception( $"Could not find task defintion for type '{taskType}'" );
 
@@ -210,23 +210,23 @@ namespace Statistics2026.Utilities
             return tasks;
         }
 
-        public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<Type> taskTypes, List<string> reasons, CancellationToken? cancellationToken, bool runAllOkIfRunning )
+        public static Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<Type> taskTypes, List<string> reasons, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
             List<TaskDef?> taskDefs = [];
-            foreach( var taskType in taskTypes )
+            foreach( Type taskType in taskTypes )
             {
-                var taskDef = GetTaskDef( taskType );
+                TaskDef? taskDef = GetTaskDef( taskType );
                 taskDefs.Add( taskDef );
             }
 
-            return await ExecuteSubTasksAsync( embyInterfaces, taskDefs, reasons, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
+            return ExecuteSubTasksAsync( embyInterfaces, taskDefs, reasons, cancellationToken, runAllOkIfRunning );
         }
 
         public static async Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<TaskDef?> taskDefs, List<string> reasons, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
             List<TaskResult> retVal = [];
-            var beenCanceled = false;
-            foreach( var taskDef in taskDefs )
+            bool beenCanceled = false;
+            foreach( TaskDef? taskDef in taskDefs )
             {
                 if( beenCanceled )
                 {
@@ -234,7 +234,7 @@ namespace Statistics2026.Utilities
                 }
                 else
                 {
-                    var taskResult = await ExecuteSubTaskAsync( embyInterfaces, taskDef, reasons, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
+                    TaskResult taskResult = await ExecuteSubTaskAsync( embyInterfaces, taskDef, reasons, cancellationToken, runAllOkIfRunning ).ConfigureAwait( false );
                     beenCanceled = beenCanceled || ( taskResult.Status == TaskCompletionStatus.Cancelled );
                     retVal.Add( taskResult );
                     cancellationToken?.ThrowIfCancellationRequested();
@@ -245,7 +245,7 @@ namespace Statistics2026.Utilities
 
         public static async Task<TaskResult> ExecuteSubTaskAsync( EmbyInterfaces embyInterfaces, Type taskType, List<string> reasons, CancellationToken? cancellationToken, bool runAllOkIfRunning )
         {
-            var taskDef = GetTaskDef( taskType );
+            TaskDef? taskDef = GetTaskDef( taskType );
             if( taskDef == null )
             {
                 return TaskDef.EmptyTaskResult;
@@ -279,7 +279,7 @@ namespace Statistics2026.Utilities
 
             using( var timer = new AutoTimer( task.Description, embyInterfaces.Logger() ) )
             {
-                var taskToRun = embyInterfaces.TaskManager().ScheduledTasks.FirstOrDefault( currTask => currTask.ScheduledTask.GetType() == task.TaskType );
+                IScheduledTaskWorker taskToRun = embyInterfaces.TaskManager().ScheduledTasks.FirstOrDefault( currTask => currTask.ScheduledTask.GetType() == task.TaskType );
                 if( taskToRun == null )
                     throw new Exception( $"Task not found {task.TaskType?.Name}" );
 
@@ -292,7 +292,7 @@ namespace Statistics2026.Utilities
 
                 cancellationToken?.ThrowIfCancellationRequested();
 
-                var taskResult = taskToRun.LastExecutionResult;
+                TaskResult taskResult = taskToRun.LastExecutionResult;
                 switch( taskResult.Status )
                 {
                     case TaskCompletionStatus.Completed:

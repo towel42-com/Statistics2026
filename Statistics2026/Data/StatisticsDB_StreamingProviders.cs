@@ -3,6 +3,7 @@ using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using ServiceStack;
+using SQLitePCL.pretty;
 using Statistics2026.Utilities;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -18,8 +19,8 @@ namespace Statistics2026.Data
             Logger().Debug( $"Starting Video Analysis" );
 
             SetProgress( 0 );
-            var seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
-            var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
+            List<Series> seriesList = EmbyHelperFuncs.GetAllSeries( null, LibraryManager(), false );
+            List<Video> videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
             SetProgress( 100 );
 
             List<BaseItem> allItems = [];
@@ -33,7 +34,7 @@ namespace Statistics2026.Data
             }
 
             double count = allItems.Count;
-            var completedCount = 0;
+            int completedCount = 0;
 
             TmdbStreamingProvider.ClearCache();
 
@@ -52,10 +53,10 @@ namespace Statistics2026.Data
 
             using( var timer = new AutoTimer( $"    Analyze Streaming Providers - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim( true );
-                var reader = new TmdbInterface( _embyInterfaces, CancellationToken );
+                using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim( true );
+                TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken );
 
-                var pool = allItems.Select( ( baseItem, index ) => Task.Run( async () =>
+                IEnumerable<Task<(int index, BaseItem item, List<SQLCmdDef?>? cmds)>> pool = allItems.Select( ( baseItem, index ) => Task.Run( async () =>
                 {
                     await gatekeeper.WaitAsync();
                     try
@@ -69,7 +70,7 @@ namespace Statistics2026.Data
 
                         existing.TryAdd( baseItem.Id.ToString(), true );
 
-                        var name = Utilities.MediaInfo.GetDescName( baseItem ).descName;
+                        string name = Utilities.MediaInfo.GetDescName( baseItem ).descName;
                         retVal.cmds.AddRange( await FindAllStreamingProviders( reader, baseItem ) );
                         CancellationToken?.ThrowIfCancellationRequested();
                         int currProgress = Interlocked.Increment( ref completedCount );
@@ -85,7 +86,7 @@ namespace Statistics2026.Data
                     }
                 } ) );
 
-                var unsortedResults = await Task.WhenAll( pool );
+                (int index, BaseItem item, List<SQLCmdDef?>? cmds)[] unsortedResults = await Task.WhenAll( pool );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -98,7 +99,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Streaming Providers - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                ExecuteCommands( sqlCmds );
+                await ExecuteCommands( sqlCmds );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
             }
@@ -108,7 +109,7 @@ namespace Statistics2026.Data
         {
             List<SQLCmdDef?> retVal = [];
 
-            var tmdbId = baseItem.GetProviderId( MetadataProviders.Tmdb );
+            string tmdbId = baseItem.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( tmdbId ) )
                 return [];
 
@@ -119,11 +120,11 @@ namespace Statistics2026.Data
                 if( streamingProviders == null )
                     return [];
 
-                var allProviders = streamingProviders?.allProviders ?? [];
+                Dictionary<string, HashSet<int>> allProviders = streamingProviders?.allProviders ?? [];
                 retVal.AddRange( streamingProviders?.addProviderCmds ?? [] );
 
-                var allProvidersJSON = JsonSerializer.Serialize( allProviders );
-                var sql = string.Empty;
+                string allProvidersJSON = JsonSerializer.Serialize( allProviders );
+                string sql = string.Empty;
                 if( baseItem is Movie )
                 {
                     sql = "UPDATE Media SET StreamingProviders=@StreamingProviders WHERE ItemId=@ItemId";
@@ -161,7 +162,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public List<StreamingProvider> GetStreamingProviders( List<int> ids, bool forceIncludeJustWatch )
+        public async Task<List<StreamingProvider>> GetStreamingProviders( List<int> ids, bool forceIncludeJustWatch, bool locked )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -174,15 +175,15 @@ namespace Statistics2026.Data
 
             var cmd = SQLCmdDef.CreateSQLCmdDef( "SELECT ProviderId, Name, LogoPath, DisplayPriority, UrlTemplate FROM StreamingProviders WHERE ProviderId IN (<KEYLIST>) ORDER BY DisplayPriority ASC", "<KEYLIST>", ids.ConvertAll( x => (object)x ) );
             List<StreamingProvider> retVal = [];
-            ExecuteCommand( cmd, statement =>
+            await ExecuteCommand( cmd, statement =>
             {
-                var row = statement.Current;
+                IResultSet row = statement.Current;
                 int curr = 0;
-                var id = row.GetInt( curr++ );
-                var name = row.GetString( curr++ );
-                var logoPath = row.GetString( curr++ );
-                var displayPriority = row.GetInt( curr++ );
-                var urlTemplate = row.GetString( curr++ );
+                int id = row.GetInt( curr++ );
+                string name = row.GetString( curr++ );
+                string logoPath = row.GetString( curr++ );
+                int displayPriority = row.GetInt( curr++ );
+                string urlTemplate = row.GetString( curr++ );
 
                 var currProvider = new StreamingProvider()
                 {
@@ -194,8 +195,8 @@ namespace Statistics2026.Data
                     UrlTemplate = urlTemplate
                 };
                 retVal.Add( currProvider );
-                return true;
-            } );
+                return Task.FromResult( true );
+            }, locked: locked );
 
             retVal = retVal.OrderBy( provider => provider.DisplayPriority ).ToList();
             return retVal;

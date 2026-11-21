@@ -48,7 +48,7 @@ namespace Statistics2026.Utilities
             {
                 lock( _syncRoot )
                 {
-                    if( _dictionary.TryGetValue( key, out var entry ) )
+                    if( _dictionary.TryGetValue( key, out (TValue Value, LinkedListNode<TKey> Node) entry ) )
                     {
                         // Refresh LRU order on Read
                         _keyList.Remove( entry.Node );
@@ -62,7 +62,7 @@ namespace Statistics2026.Utilities
             {
                 lock( _syncRoot )
                 {
-                    if( _dictionary.TryGetValue( key, out var entry ) )
+                    if( _dictionary.TryGetValue( key, out (TValue Value, LinkedListNode<TKey> Node) entry ) )
                     {
                         // Update existing entry
                         _keyList.Remove( entry.Node );
@@ -86,7 +86,7 @@ namespace Statistics2026.Utilities
         {
             lock( _syncRoot )
             {
-                if( _dictionary.TryGetValue( key, out var entry ) )
+                if( _dictionary.TryGetValue( key, out (TValue Value, LinkedListNode<TKey> Node) entry ) )
                 {
                     _keyList.Remove( entry.Node );
                     _keyList.AddFirst( entry.Node );
@@ -111,7 +111,7 @@ namespace Statistics2026.Utilities
             // Internal helper assuming caller holds the lock
             while( _dictionary.Count > _maxCapacity && _keyList.Count > 0 )
             {
-                var oldestNode = _keyList.Last;
+                LinkedListNode<TKey> oldestNode = _keyList.Last;
                 _keyList.RemoveLast();
                 _dictionary.Remove( oldestNode.Value );
             }
@@ -126,13 +126,13 @@ namespace Statistics2026.Utilities
                 snapshot = new List<KeyValuePair<TKey, TValue>>( _dictionary.Count );
                 // Maintain LRU chronological order in output if preferred, 
                 // or just iterate the dictionary. Let's iterate chronologically:
-                foreach( var key in _keyList )
+                foreach( TKey key in _keyList )
                 {
                     snapshot.Add( new KeyValuePair<TKey, TValue>( key, _dictionary[ key ].Value ) );
                 }
             }
 
-            foreach( var item in snapshot )
+            foreach( KeyValuePair<TKey, TValue> item in snapshot )
             {
                 yield return item;
             }
@@ -146,7 +146,7 @@ namespace Statistics2026.Utilities
         public static ConcurrentCache<TKey, TValue> Create<TKey, TValue>( ReadOnlySpan<KeyValuePair<TKey, TValue>> items ) where TKey : notnull
         {
             var cache = new ConcurrentCache<TKey, TValue>( items.Length == 0 ? 50 : items.Length );
-            foreach( var item in items )
+            foreach( KeyValuePair<TKey, TValue> item in items )
             {
                 cache.Add( item.Key, item.Value );
             }

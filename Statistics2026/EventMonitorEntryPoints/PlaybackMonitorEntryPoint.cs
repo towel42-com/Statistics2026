@@ -18,6 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
+using Utilities;
 
 namespace Statistics2026.EventMonitorEntryPoints
 {
@@ -25,7 +26,7 @@ namespace Statistics2026.EventMonitorEntryPoints
     {
         public EmbyInterfaces _embyInterfaces { get; }
 
-        private readonly object syncLock = new();
+        private readonly TrackingSemaphoreSlim synclock = new TrackingSemaphoreSlim( 1, 1 );
 
         public PlaybackMonitorEntryPoint(
             IFileSystem fileSystem,
@@ -91,41 +92,32 @@ namespace Statistics2026.EventMonitorEntryPoints
             _ = Task.Run( () => PlaybackMonitoringTaskAsync() );
         }
 
-        private void _sessionManager_PlaybackStart( object sender, PlaybackProgressEventArgs e )
+        private async void _sessionManager_PlaybackStart( object sender, PlaybackProgressEventArgs e )
         {
             CheckIsValid();
             _embyInterfaces.Logger().Info( "_sessionManager_PlaybackStart : Entered" );
-            lock( syncLock )
-            {
-                ProcessSessions();
-            }
+            await ProcessSessions();
         }
 
-        private void _sessionManager_PlaybackStop( object sender, PlaybackStopEventArgs e )
+        private async void _sessionManager_PlaybackStop( object sender, PlaybackStopEventArgs e )
         {
             CheckIsValid();
             _embyInterfaces.Logger().Info( "_sessionManager_PlaybackStop : Entered" );
-            lock( syncLock )
-            {
-                ProcessSessions();
-            }
+            await ProcessSessions();
         }
 
         public async Task PlaybackMonitoringTaskAsync()
         {
             CheckIsValid();
             _embyInterfaces.Logger().Info( "PlaybackMonitoringTask : Started" );
-            var currThreadSleep = 20;
+            int currThreadSleep = 20;
             const int maxThreadSleep = 300;
 
             while( true )
             {
                 try
                 {
-                    lock( syncLock )
-                    {
-                        ProcessSessions();
-                    }
+                    await ProcessSessions();
 
                     currThreadSleep = 20;
                 }
@@ -148,56 +140,64 @@ namespace Statistics2026.EventMonitorEntryPoints
 
         private List<PlaybackInfo>? ActiveSessions = null;
 
-        private void ProcessSessions()
+        private async Task ProcessSessions()
         {
-            CheckIsValid();
-
-            if( Plugin.Instance == null )
-                return;
-
-            if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, false ) )
+            await synclock.WaitAsync().ConfigureAwait( false );
+            try
             {
-                _embyInterfaces.Logger().Warn( "Task is running" );
-                return;
-            }
+                CheckIsValid();
 
-            if( !Plugin.Instance.DBStateInitialized() )
-            {
-                _ = Statistics2026DB.GetInstance( _embyInterfaces );
-                if( !Plugin.Instance.DBStateInitialized() )
+                if( Plugin.Instance == null )
+                    return;
+
+                if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, false ) )
                 {
-                    _embyInterfaces.Logger().Warn( "Databases have not been initialized" );
+                    _embyInterfaces.Logger().Warn( "Task is running" );
                     return;
                 }
-            }
 
-            if( !Plugin.Instance.IsDBStateSet( EDBState.eSystemTablesCreated | EDBState.eUserTablesCreated | EDBState.eUserDataInitialized ) )
-            {
-                _embyInterfaces.Logger().Warn( "Database state is invalid" );
-                return;
-            }
-
-            _embyInterfaces.Logger().Debug( "ProcessSessions Start" );
-            ActiveSessions = [];
-
-            foreach( var session in _embyInterfaces.SessionManager().Sessions )
-            {
-                if( session.NowPlayingItem == null )
+                if( !Plugin.Instance.DBStateInitialized() )
                 {
-                    _embyInterfaces.Logger().Debug( $"user: {session.UserName} - No Media being played" );
-                    // nothing playing so move on to next
-                    continue;
+                    _ = Statistics2026DB.GetInstance( _embyInterfaces, this.GetType().ToString() );
+                    if( !Plugin.Instance.DBStateInitialized() )
+                    {
+                        _embyInterfaces.Logger().Warn( "Databases have not been initialized" );
+                        return;
+                    }
                 }
 
-                var playbackInfo = PlaybackInfo.Create( session, _embyInterfaces );
-                ActiveSessions.Add( playbackInfo );
+                if( !Plugin.Instance.IsDBStateSet( EDBState.eSystemTablesCreated | EDBState.eUserTablesCreated | EDBState.eUserDataInitialized ) )
+                {
+                    _embyInterfaces.Logger().Warn( "Database state is invalid" );
+                    return;
+                }
 
-                playbackInfo.UpdatePlaybackState( _embyInterfaces );
+                _embyInterfaces.Logger().Debug( "ProcessSessions Start" );
+                ActiveSessions = [];
+
+                foreach( SessionInfo session in _embyInterfaces.SessionManager().Sessions )
+                {
+                    if( session.NowPlayingItem == null )
+                    {
+                        _embyInterfaces.Logger().Debug( $"user: {session.UserName} - No Media being played" );
+                        // nothing playing so move on to next
+                        continue;
+                    }
+
+                    PlaybackInfo playbackInfo = await PlaybackInfo.Create( session, _embyInterfaces );
+                    ActiveSessions.Add( playbackInfo );
+
+                    playbackInfo.UpdatePlaybackState( _embyInterfaces ).GetAwaiter().GetResult();
+                }
+
+                PlaybackInfo.RemoveInactivePlayinfo( ActiveSessions, _embyInterfaces );
+                ActiveSessions.Clear();
+                _embyInterfaces.Logger().Debug( "ProcessSessions End" );
             }
-
-            PlaybackInfo.RemoveInactivePlayinfo( ActiveSessions, _embyInterfaces );
-            ActiveSessions.Clear();
-            _embyInterfaces.Logger().Debug( "ProcessSessions End" );
+            finally
+            {
+                synclock.Release();
+            }
         }
     }
 }

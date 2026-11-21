@@ -83,7 +83,7 @@ namespace Statistics2026.Services
                 throw new InvalidOperationException( "Request context is unavailable." );
             }
 
-            var user = _sessionContext.GetUser( Request );
+            User user = _sessionContext.GetUser( Request );
             if( user == null )
             {
                 throw new UnauthorizedAccessException( "User is not authenticated." );
@@ -94,20 +94,20 @@ namespace Statistics2026.Services
 
         public object Get( GetUserConfig request )
         {
-            var user = GetCurrentUser();
-            var config = Plugin.Instance!.Configuration;
+            User user = GetCurrentUser();
+            PluginConfiguration config = Plugin.Instance!.Configuration;
 
-            var userConfig = config.ConfigForUser( user );
+            UserConfig userConfig = config.ConfigForUser( user );
 
             return userConfig ?? new object();
         }
 
         public void Post( SetUserConfig request )
         {
-            var user = GetCurrentUser();
-            var config = Plugin.Instance!.Configuration;
+            User user = GetCurrentUser();
+            PluginConfiguration config = Plugin.Instance!.Configuration;
 
-            var userConfig = config.ConfigForUser( user );
+            UserConfig userConfig = config.ConfigForUser( user );
 
             userConfig.TableSortEntries = request.TableSortEntries;
             Plugin.Instance.SaveConfiguration();

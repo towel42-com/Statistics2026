@@ -42,7 +42,7 @@ namespace Statistics2026.Responses
         } = string.Empty;
         public string ItemId { get; set; } = string.Empty;
 
-        public static List<(string id, string name, string sortName, string displayText, string url)>? getParentInfo( string parentJson, Func<string, string, string, bool> isFiltered )
+        public static async Task<List<(string id, string name, string sortName, string displayText, string url)>?> getParentInfo( string parentJson, Func<string, string, string, Task<bool>> isFiltered )
         {
             List<(string id, string name, string sortName, string displayText, string url)> retVal = [];
 
@@ -65,27 +65,27 @@ namespace Statistics2026.Responses
 
             for( int ii = 0; ii < parentArray.Count(); ++ii )
             {
-                var parentNode = parentArray[ ii ];
+                JsonNode? parentNode = parentArray[ ii ];
                 if( parentNode == null )
                     continue;
 
-                var name = parentNode[ "name" ]?.GetValue<string>() ?? string.Empty;
-                var sortName = parentNode[ "sort_name" ]?.GetValue<string>() ?? string.Empty;
-                var id = parentNode[ "id" ]?.GetValue<string>() ?? string.Empty;
-                var url = parentNode[ "url" ]?.GetValue<string>() ?? string.Empty;
+                string name = parentNode[ "name" ]?.GetValue<string>() ?? string.Empty;
+                string sortName = parentNode[ "sort_name" ]?.GetValue<string>() ?? string.Empty;
+                string id = parentNode[ "id" ]?.GetValue<string>() ?? string.Empty;
+                string url = parentNode[ "url" ]?.GetValue<string>() ?? string.Empty;
                 if( name.IsNullOrEmpty() || sortName.IsNullOrEmpty() )
                     continue;
 
-                if( isFiltered( id, name, sortName ) )
+                if( await isFiltered( id, name, sortName ) )
                     return null;
 
                 string parentUrl = string.Empty;
-                var displayText = name;
+                string displayText = name;
 
-                var urlName = name;
+                string urlName = name;
                 if( ii != 0 )
                     urlName = $", {urlName}";
-                var currParentUrl = ItemImageUrl.ItemUrlFromItemId( id, url, urlName ) ?? string.Empty;
+                string currParentUrl = ItemImageUrl.ItemUrlFromItemId( id, url, urlName ) ?? string.Empty;
 
                 if( currParentUrl.IsNullOrEmpty() )
                 {
@@ -110,7 +110,7 @@ namespace Statistics2026.Responses
             var parentNamesSortBy = new List<string>();
             var parentUrls = new List<string>();
 
-            foreach( var currParentInfo in parentInfo )
+            foreach( (string id, string name, string sortName, string displayText, string url) currParentInfo in parentInfo )
             {
                 ParentIds.Add( currParentInfo.id );
                 parentNamesText.Add( currParentInfo.displayText );
@@ -126,13 +126,13 @@ namespace Statistics2026.Responses
 
         private static string CleanSortName( string sortName )
         {
-            var retVal = Regex.Replace( sortName, @"^[^a-zA-Z0-9]+", "" );
+            string retVal = Regex.Replace( sortName, @"^[^a-zA-Z0-9]+", "" );
             return retVal;
         }
 
         private static SortByText getSearchData( string searchLink, string searchLocationName, string searchKey, string subKey )
         {
-            var searchUrl = searchLink;
+            string searchUrl = searchLink;
             if( !searchUrl.EndsWith( "=" ) )
                 searchUrl += "?q=";
             searchUrl += searchKey;
@@ -140,7 +140,7 @@ namespace Statistics2026.Responses
             if( !subKey.IsEmpty() )
                 searchUrl += $" {subKey}";
 
-            var sortBy = searchKey;
+            string sortBy = searchKey;
             if( !subKey.IsEmpty() )
                 sortBy += $" - {subKey}";
 
@@ -153,8 +153,8 @@ namespace Statistics2026.Responses
                 }
             }
 
-            var displayText = $"{( string.IsNullOrWhiteSpace( searchLocationName ) ? "" : $"{searchLocationName} - " )}Click to Search for '{sortBy}'";
-            var searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {sortBy}\">{displayText}</a>";
+            string displayText = $"{( string.IsNullOrWhiteSpace( searchLocationName ) ? "" : $"{searchLocationName} - " )}Click to Search for '{sortBy}'";
+            string searchLocation = $"<a is=\"emby-linkbutton\" href=\"{searchUrl}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Search for {sortBy}\">{displayText}</a>";
 
             var retVal = new SortByText()
             {
@@ -165,25 +165,25 @@ namespace Statistics2026.Responses
             return retVal;
         }
 
-        private static MediaItemResponse? SetMissingData( MediaItemResponse retVal, IResultSet row, ref int col, DateTimeOffset? premiereDate, bool isEpisode, Func<string, int, bool> isSeriesFiltered, Func<string, bool> isCollectionFiltered, Func<string, SortByText?> getCollectionName )
+        private static MediaItemResponse? SetMissingData( MediaItemResponse retVal, IResultSet row, ref int col, DateTimeOffset? premiereDate, bool isEpisode, Func<string, int, Task<bool>> isSeriesFiltered, Func<string, bool> isCollectionFiltered, Func<string, Task<SortByText?>> getCollectionName )
         {
             if( col != (int)Statistics2026DB.EMediaListResponseColumns.ePosterPath )
                 throw new Exception( "SetMissingData called with the wrong column" );
 
-            var tmdbPosterPath = row.GetString( col++ ); // blank for onServer
-            var seasonNum = row.GetInt( col++ );
-            var episodeNum = row.GetInt( col++ );
-            var parentId = row.GetString( col++ );  // blank for onServer
+            string tmdbPosterPath = row.GetString( col++ ); // blank for onServer
+            int seasonNum = row.GetInt( col++ );
+            int episodeNum = row.GetInt( col++ );
+            string parentId = row.GetString( col++ );  // blank for onServer
 
-            var futureDate = HelperFuncs.InvalidDateForMissingAnalysis( premiereDate, true );
+            bool futureDate = HelperFuncs.InvalidDateForMissingAnalysis( premiereDate, true );
             if( !tmdbPosterPath.IsNullOrEmpty() )
             {
-                var tmp = string.Empty;
+                string tmp = string.Empty;
                 (retVal.ItemUrl, retVal.DisplayName.Text, tmp) = HelperFuncs.GetTMDBLink( tmdbPosterPath, retVal.DisplayName.Text );
             }
 
-            var searchKey = retVal.DisplayName.SortBy;
-            var subKey = string.Empty;
+            string searchKey = retVal.DisplayName.SortBy;
+            string subKey = string.Empty;
             if( isEpisode )
             {
                 if( retVal.ParentName.SortBy.IsNullOrEmpty() )
@@ -199,7 +199,7 @@ namespace Statistics2026.Responses
             }
             else
             {
-                var premiereYear = premiereDate?.Year ?? 0;
+                int premiereYear = premiereDate?.Year ?? 0;
                 if( premiereYear > 0 )
                 {
                     subKey = $"{premiereYear}";
@@ -211,10 +211,10 @@ namespace Statistics2026.Responses
                 retVal.SearchLocation = new SortByText( WebUtility.HtmlEncode( "<FUTURE RELEASE>" ) );
                 if( premiereDate != null )
                 {
-                    var daysTo = Math.Ceiling( ( premiereDate.Value - DateTimeOffset.Now ).TotalDays );
+                    double daysTo = Math.Ceiling( ( premiereDate.Value - DateTimeOffset.Now ).TotalDays );
                     if( daysTo == 0 && premiereDate.Value.Date != DateTimeOffset.Now.Date )
                         daysTo = 1;
-                    var msg = $"Available in {daysTo} day";
+                    string msg = $"Available in {daysTo} day";
                     if( daysTo != 1 )
                         msg += "s";
                     retVal.SearchLocation = new SortByText( msg );
@@ -223,7 +223,7 @@ namespace Statistics2026.Responses
             }
             else
             {
-                var canSearch = Plugin.Instance!.Configuration.CanSearch();
+                bool canSearch = Plugin.Instance!.Configuration.CanSearch();
                 if( canSearch )
                 {
                     if( premiereDate != null )
@@ -247,7 +247,7 @@ namespace Statistics2026.Responses
 
                 if( Plugin.Instance!.Configuration.HasCustomSearches() )
                 {
-                    foreach( var curr in Plugin.Instance!.Configuration.searchLocations )
+                    foreach( string curr in Plugin.Instance!.Configuration.searchLocations )
                     {
                         if( string.IsNullOrWhiteSpace( curr ) )
                         {
@@ -264,11 +264,11 @@ namespace Statistics2026.Responses
                 }
                 else if( searchData.Count > 1 )
                 {
-                    var depth = 0;
+                    int depth = 0;
                     retVal.SearchLocation.SortBy = searchData[ 0 ].SortBy;
                     retVal.SearchLocation.Text = HelperFuncs.addToHtml( depth++, "<ul>" );
 
-                    foreach( var curr in searchData )
+                    foreach( SortByText curr in searchData )
                     {
                         retVal.SearchLocation.Text += HelperFuncs.addToHtml( depth++, "<li>" );
                         retVal.SearchLocation.Text += HelperFuncs.addToHtml( depth, curr.Text );
@@ -281,14 +281,14 @@ namespace Statistics2026.Responses
             return retVal;
         }
 
-        private static MediaItemResponse? AddStreamingProviders( MediaItemResponse retVal, string isoCode, string streamingProvidersString, EmbyInterfaces embyInterfaces, Statistics2026DB db )
+        private static async Task<MediaItemResponse?> AddStreamingProviders( MediaItemResponse retVal, string isoCode, string streamingProvidersString, EmbyInterfaces embyInterfaces, Statistics2026DB db, bool locked )
         {
             List<int>? streamingProviders = null;
 
-            var allStreamingProviders = embyInterfaces.JsonSerializer().DeserializeFromString<Dictionary<string, List<int>>>( streamingProvidersString );
+            Dictionary<string, List<int>> allStreamingProviders = embyInterfaces.JsonSerializer().DeserializeFromString<Dictionary<string, List<int>>>( streamingProvidersString );
             if( allStreamingProviders != null )
             {
-                if( allStreamingProviders.TryGetValue( isoCode, out var streamingProvidersList ) )
+                if( allStreamingProviders.TryGetValue( isoCode, out List<int>? streamingProvidersList ) )
                 {
                     streamingProviders = streamingProvidersList;
                 }
@@ -299,24 +299,24 @@ namespace Statistics2026.Responses
 
             PluginConfiguration? config = Plugin.Instance?.Configuration ?? null;
 
-            var providerInfos = db.GetStreamingProviders( streamingProviders, ( config?.alwaysShowJustWatch ?? true ) );
+            List<StreamingProvider> providerInfos = await db.GetStreamingProviders( streamingProviders, ( config?.alwaysShowJustWatch ?? true ), locked );
 
-            var depth = 0;
-            var html = HelperFuncs.addToHtml( depth++, "<ul>" );
+            int depth = 0;
+            string html = HelperFuncs.addToHtml( depth++, "<ul>" );
             List<string> providerNames = [];
             int maxNumProviders = config?.maxNumStreamingProviders ?? 3;
             for( int ii = 0; ( ( maxNumProviders == -1 ) || ( ii < maxNumProviders ) ) && ii < providerInfos.Count(); ++ii )
             {
-                var provider = providerInfos[ ii ];
-                var providerUrl = provider.TargetUrl( retVal.DisplayName.SortBy, isoCode );
+                StreamingProvider provider = providerInfos[ ii ];
+                string providerUrl = provider.TargetUrl( retVal.DisplayName.SortBy, isoCode );
 
                 providerNames.Add( provider.ProviderName );
 
-                var htmlTemplate =
+                string htmlTemplate =
                     "<a is=\"emby-linkbutton\" target=\"_blank\" referrerpolicy=\"no-referrer\" rel=\"noopener noreferrer\" href=\"<TARGET_URL>\" class=\"emby-button emby-button-focusscale\">" +
                     "   <TARGET_TEXT>" +
                     "</a>";
-                var (imageUrl, itemText, itemUrl) = provider.ImageUrl( targetUrl: providerUrl, targetHtml: htmlTemplate, imageHeight: "45px" );
+                (string? imageUrl, string? itemText, string? itemUrl) = provider.ImageUrl( targetUrl: providerUrl, targetHtml: htmlTemplate, imageHeight: "45px" );
                 html += HelperFuncs.addToHtml( depth++, "<li>" );
                 html += HelperFuncs.addToHtml( depth, itemUrl );
                 html += HelperFuncs.addToHtml( --depth, "</li>" );
@@ -328,26 +328,26 @@ namespace Statistics2026.Responses
         }
 
         // if isEpisode is null its a series item, true its an episode item, false movie
-        public static MediaItemResponse? CreateFromStatementRow( IResultSet row, bool? isEpisode, string isoCode, Func<string, int, bool>? isSeriesFiltered, Func<string, bool>? isCollectionFiltered, Func<string, SortByText?>? getCollectionName, EmbyInterfaces? embyInterfaces, Statistics2026DB db )
+        public static async Task<MediaItemResponse?> CreateFromStatementRow( IResultSet row, bool? isEpisode, string isoCode, Func<string, int, Task<bool>>? isSeriesFiltered, Func<string, bool>? isCollectionFiltered, Func<string, Task<SortByText?>>? getCollectionName, EmbyInterfaces? embyInterfaces, Statistics2026DB db )
         {
             if( embyInterfaces == null )
                 return null;
 
-            var col = 0;
-            var isMissing = row.GetBoolean( col++ );
-            var title = CleanSortName( row.GetString( col++ ) );
-            var sortName = row.GetString( col++ );
+            int col = 0;
+            bool isMissing = row.GetBoolean( col++ );
+            string title = CleanSortName( row.GetString( col++ ) );
+            string sortName = row.GetString( col++ );
 
-            var premiereDate = HelperFuncs.ReadDateTime( row.GetString( col++ ) ) ?? DateTimeOffset.MinValue;
-            var studioNames = HelperFuncs.JsonToStringArray( row.GetString( col++ ) ).Join( ", " );
-            var streamingProvidersString = row.GetString( col++ );
+            DateTimeOffset premiereDate = HelperFuncs.ReadDateTime( row.GetString( col++ ) ) ?? DateTimeOffset.MinValue;
+            string studioNames = HelperFuncs.JsonToStringArray( row.GetString( col++ ) ).Join( ", " );
+            string streamingProvidersString = row.GetString( col++ );
 
-            var resolutionDetail = row.GetString( col++ ); // blank for missing
-            var codec = row.GetString( col++ ); // blank for missing
-            var dolbyVisionProfile = row.GetString( col++ ); // blank for missing
-            var serverLocation = row.GetString( col++ ); // blank for missing
-            var itemId = row.GetString( col++ ); // blank for missing
-            var itemImageUrl = row.GetString( col++ ); // blank for missing
+            string resolutionDetail = row.GetString( col++ ); // blank for missing
+            string codec = row.GetString( col++ ); // blank for missing
+            string dolbyVisionProfile = row.GetString( col++ ); // blank for missing
+            string serverLocation = row.GetString( col++ ); // blank for missing
+            string itemId = row.GetString( col++ ); // blank for missing
+            string itemImageUrl = row.GetString( col++ ); // blank for missing
 
             var retVal = new MediaItemResponse();
             retVal.DisplayName = new SortByText( title );
@@ -365,17 +365,17 @@ namespace Statistics2026.Responses
                 retVal.ItemUrl = ItemImageUrl.ItemUrlFromItemId( itemId, itemImageUrl, title );
 
 
-            var parentInfoJSON = row.GetString( col++ );
-            var seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
+            string parentInfoJSON = row.GetString( col++ );
+            int seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
 
-            var parentInfo = getParentInfo( parentInfoJSON,
-                ( string id, string name, string sortName ) =>
+            List<(string id, string name, string sortName, string displayText, string url)>? parentInfo = await getParentInfo( parentInfoJSON,
+                async ( string id, string name, string sortName ) =>
                 {
                     if( isMissing && ( isEpisode != null ) )
                     {
                         if( isEpisode.Value && ( isSeriesFiltered != null ) )
                         {
-                            return isSeriesFiltered( id, seasonNum );
+                            return await isSeriesFiltered( id, seasonNum );
                         }
                         else if( isCollectionFiltered != null )
                         {
@@ -400,7 +400,7 @@ namespace Statistics2026.Responses
                 if( retVal == null )
                     return null;
             }
-            retVal = AddStreamingProviders( retVal, isoCode, streamingProvidersString, embyInterfaces, db );
+            retVal = await AddStreamingProviders( retVal, isoCode, streamingProvidersString, embyInterfaces, db, true );
 
             return retVal;
         }

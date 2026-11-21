@@ -1,9 +1,9 @@
 ﻿using MediaBrowser.Controller.Entities;
 using ServiceStack;
+using SQLitePCL.pretty;
 using Statistics2026.Utilities;
 using System.Collections.Concurrent;
 using System.Text.Json;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Data
 {
@@ -16,7 +16,7 @@ namespace Statistics2026.Data
             Logger().Debug( $"Starting Video Analysis" );
 
             SetProgress( 0 );
-            var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
+            List<Video> videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
             SetProgress( 100 );
 
             if( videoList == null )
@@ -25,11 +25,11 @@ namespace Statistics2026.Data
             }
 
             double count = videoList.Count;
-            var completedCount = 0;
+            int completedCount = 0;
 
             SetProgress( 0 );
 
-            DeleteAllInvalid( videoList.ConvertAll( item => (BaseItem)item ), "Media", "ItemId" );
+            await DeleteAllInvalid( videoList.ConvertAll( item => (BaseItem)item ), "Media", "ItemId" );
 
             var sqlCmds = new List<SQLCmdDef>();
             var existing = new ConcurrentDictionary<string, bool>();
@@ -37,14 +37,14 @@ namespace Statistics2026.Data
 
             using( var timer = new AutoTimer( $"    Analyze Media - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
+                using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim();
 
-                var pool = videoList.Select( ( video, index ) => Task.Run( async () =>
+                IEnumerable<Task<(int index, Video video, List<SQLCmdDef?> cmds)>> pool = videoList.Select( ( video, index ) => Task.Run( async () =>
                 {
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        var retVal = (index: index, video: video, cmds: new List<SQLCmdDef?>());
+                        (int index, Video video, List<SQLCmdDef?> cmds) retVal = (index: index, video: video, cmds: new List<SQLCmdDef?>());
                         if( video == null )
                             return retVal;
 
@@ -72,7 +72,7 @@ namespace Statistics2026.Data
                     }
                 } ) );
 
-                var unsortedResults = await Task.WhenAll( pool );
+                (int index, Video video, List<SQLCmdDef?> cmds)[] unsortedResults = await Task.WhenAll( pool );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -85,7 +85,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                ExecuteCommands( sqlCmds );
+                await ExecuteCommands( sqlCmds );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
             }
@@ -101,7 +101,7 @@ namespace Statistics2026.Data
                 return null;
             }
 
-            var sql =
+            string sql =
                 "INSERT INTO Media \n" +
                 "(\n" +
                     "  ItemId\n" +
@@ -223,7 +223,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard MediaResolutions()
+        public async Task<StatCard> MediaResolutions()
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -238,7 +238,7 @@ namespace Statistics2026.Data
                 retVal.addRow( Constants.SD, [ 0, 0 ] );
             }
 
-            var sql =
+            string sql =
                 "SELECT \n" +
                 "ResolutionBase as Resolution, \n" +
                 "sum(IsEpisode) AS Episodes, \n" +
@@ -247,25 +247,25 @@ namespace Statistics2026.Data
                 "GROUP BY Resolution \n" +
                 "ORDER BY Resolution ASC"
                 ;
-            ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
-                var row = statement.Current;
-                var resolution = row.GetString( 0 );
-                var episodeCount = row.GetInt( 1 );
-                var movieCount = row.GetInt( 2 );
+                IResultSet row = statement.Current;
+                string resolution = row.GetString( 0 );
+                int episodeCount = row.GetInt( 1 );
+                int movieCount = row.GetInt( 2 );
                 retVal.addRow( resolution, [ movieCount, episodeCount ] );
-                return true;
+                return Task.FromResult( true );
             } );
 
             return retVal;
         }
 
-        public StatCard MediaCodecs()
+        public async Task<StatCard> MediaCodecs()
         {
             CheckIsValid( ECheckLevel.eReport );
 
             var retVal = new TableBasedStatCard( Constants.MediaCodecs, Constants.HelpMediaCodecs, [ "Movies", "Episodes" ] );
-            var sql =
+            string sql =
                 "SELECT \n" +
                 "Codec as Codec, \n" +
                 "sum(IsEpisode) AS Episodes, \n" +
@@ -275,24 +275,24 @@ namespace Statistics2026.Data
                 "ORDER BY Codec ASC"
                 ;
 
-            ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
-                var row = statement.Current;
-                var codec = row.GetString( 0 );
-                var episodeCount = row.GetInt( 1 );
-                var movieCount = row.GetInt( 2 );
+                IResultSet row = statement.Current;
+                string codec = row.GetString( 0 );
+                int episodeCount = row.GetInt( 1 );
+                int movieCount = row.GetInt( 2 );
                 retVal.addRow( codec, [ movieCount, episodeCount ] );
-                return true;
+                return Task.FromResult( true );
             } );
 
             return retVal;
         }
 
-        public StatCard DVProfileInfo()
+        public async Task<StatCard> DVProfileInfo()
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var sql =
+            string sql =
                 "SELECT \n" +
                 "DolbyVisionProfile as DVProfile, \n" +
                 "sum(IsEpisode) AS Episodes, \n" +
@@ -310,33 +310,33 @@ namespace Statistics2026.Data
             if( Plugin.Instance!.Configuration.showUnknownDVProfiles )
                 retVal.addRow( "Unknown Dolby Profile", [ 0, 0 ] );
 
-            ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
-                var row = statement.Current;
-                var dvProfile = row.GetString( 0 );
-                var episodeCount = row.GetInt( 1 );
-                var movieCount = row.GetInt( 2 );
+                IResultSet row = statement.Current;
+                string dvProfile = row.GetString( 0 );
+                int episodeCount = row.GetInt( 1 );
+                int movieCount = row.GetInt( 2 );
                 retVal.addRow( dvProfile, [ movieCount, episodeCount ] );
-                return true;
+                return Task.FromResult( true );
             } );
 
             return retVal;
         }
 
-        public StatCard TotalMovieCount( User? user, bool watched )
+        public async Task<StatCard> TotalMovieCount( User? user, bool watched )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var sql = string.Empty;
+            string sql = string.Empty;
             var parameters = new List<(string, object?)>();
-            var title = Constants.TotalMovies;
-            var help = Constants.HelpTotalMovies;
+            string title = Constants.TotalMovies;
+            string help = Constants.HelpTotalMovies;
             long total = 0;
             long totalTicks = 0;
             if( user == null )
             {
                 sql = "SELECT SUM(NOT IsEpisode) FROM Media";
-                totalTicks = GetSingleValueFromSQL( $"SELECT SUM(RunTimeTicks) FROM MEDIA WHERE NOT IsEpisode" ).ToLong();
+                totalTicks = ( await GetSingleValueFromSQL( $"SELECT SUM(RunTimeTicks) FROM MEDIA WHERE NOT IsEpisode" ) ).ToLong();
             }
             else
             {
@@ -350,22 +350,22 @@ namespace Statistics2026.Data
 
                 if( watched )
                 {
-                    total = GetSingleValueFromSQL( $"SELECT SUM(NOT IsEpisode) FROM {TableDefs().getUserTableName( user )} WHERE UserId=@UserId", parameters ).ToLong();
+                    total = ( await GetSingleValueFromSQL( $"SELECT SUM(NOT IsEpisode) FROM {TableDefs().getUserTableName( user )} WHERE UserId=@UserId", parameters ) ).ToLong();
                 }
             }
 
-            var retVal = ValueGroupForSingleItem( title, help, sql, parameters, count =>
-            {
-                var retVal = count.ToString();
-
-                if( watched && total != 0 )
+            TextBasedStatCard retVal = await ValueGroupForSingleItem( title, help, sql, parameters, count =>
                 {
-                    var value = 100.0 * count / ( 1.0 * total );
-                    retVal += $" ({value:F1})%";
-                }
+                    string retVal = count.ToString();
 
-                return retVal;
-            } );
+                    if( watched && total != 0 )
+                    {
+                        double value = 100.0 * count / ( 1.0 * total );
+                        retVal += $" ({value:F1})%";
+                    }
+
+                    return retVal;
+                } );
 
             if( totalTicks != 0 )
             {
@@ -376,15 +376,15 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard TotalTVCount( User? user, bool watched, bool forSeries )
+        public async Task<StatCard> TotalTVCount( User? user, bool watched, bool forSeries )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var runtimeColumn = string.Empty;
+            string runtimeColumn = string.Empty;
 
             List<(string name, object? value)>? paramList = null;
 
-            var tableName = TableDefs().getUserTableName( user );
+            string? tableName = TableDefs().getUserTableName( user );
 
             string? seriesColumn;
 
@@ -421,7 +421,7 @@ namespace Statistics2026.Data
                 helpEpisodes = Constants.HelpTotalUserTVEpisodes;
                 helpSeries = Constants.HelpTotalUserTVShows;
 
-                var from = $"{tableName} LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId WHERE Media.IsEpisode AND NOT Media.IsTVSpecial AND ( {tableName}.UserId=@UserId )";
+                string from = $"{tableName} LEFT JOIN Media ON {tableName}.ItemId=Media.ItemId WHERE Media.IsEpisode AND NOT Media.IsTVSpecial AND ( {tableName}.UserId=@UserId )";
 
                 if( watched )
                 {
@@ -438,16 +438,16 @@ namespace Statistics2026.Data
             TextBasedStatCard retVal;
             if( forSeries )
             {
-                retVal = ValueGroupForSingleItem( titleSeries, helpSeries, $"SELECT {seriesColumn} FROM {seriesFrom}", paramList );
+                retVal = await ValueGroupForSingleItem( titleSeries, helpSeries, $"SELECT {seriesColumn} FROM {seriesFrom}", paramList );
             }
             else
             {
-                retVal = ValueGroupForSingleItem( titleEpisodes, helpEpisodes, $"SELECT {episodeColumn} FROM {episodeFrom}", paramList );
+                retVal = await ValueGroupForSingleItem( titleEpisodes, helpEpisodes, $"SELECT {episodeColumn} FROM {episodeFrom}", paramList );
             }
 
             if( user == null )
             {
-                var value = GetSingleValueFromSQL( "SELECT SUM(RunTimeTicks) FROM MEDIA WHERE IsEpisode" );
+                string value = await GetSingleValueFromSQL( "SELECT SUM(RunTimeTicks) FROM MEDIA WHERE IsEpisode" );
                 value = FormatTicks( value.ToInt64() );
                 retVal.AddLine( value, false );
             }
@@ -455,11 +455,11 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private long TotalStudioCountValue( User? user, bool movies, bool forSeries )
+        private async Task<long> TotalStudioCountValue( User? user, bool movies, bool forSeries )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
+            string sql = "SELECT DISTINCT StudioNames FROM Media WHERE ";
             if( movies )
                 sql += "NOT ";
             sql += "IsEpisode AND StudioNames IS NOT NULL AND StudioNames<>''";
@@ -468,50 +468,50 @@ namespace Statistics2026.Data
             HashSet<string> studios = [];
 
             var cmd = new SQLCmdDef( sql );
-            ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
-                var row = statement.Current;
-                var currStudios = HelperFuncs.JsonToStringArray( row.GetString( 0 ) );
+                IResultSet row = statement.Current;
+                List<string> currStudios = HelperFuncs.JsonToStringArray( row.GetString( 0 ) );
                 studios.UnionWith( currStudios );
-                return true;
+                return Task.FromResult( true );
             } );
 
             return studios.Count();
         }
 
-        private StatCard TotalStudioCount( User? user, bool movies, bool forSeries )
+        private async Task<StatCard> TotalStudioCount( User? user, bool movies, bool forSeries )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             var retVal = new TextBasedStatCard( movies ? Constants.TotalStudios : Constants.TotalTVNetworks, movies ? Constants.HelpTotalStudios : Constants.HelpTotalTVNetworks, EStatCardStyle.eCompact );
-            var value = TotalStudioCountValue( user, movies, forSeries );
+            long value = await TotalStudioCountValue( user, movies, forSeries );
             retVal.AddLine( value.ToString(), false );
             return retVal;
         }
 
-        public StatCard TotalMovieStudioCount( User? user )
+        public Task<StatCard> TotalMovieStudioCount( User? user )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             return TotalStudioCount( user, true, false );
         }
 
-        public StatCard TotalTVStudioCount( User? user, bool forSeries )
+        public Task<StatCard> TotalTVStudioCount( User? user, bool forSeries )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             return TotalStudioCount( user, false, forSeries );
         }
 
-        private List<(int year, long count)> FavoriteYearValues( User? user, bool movies )
+        private async Task<List<(int year, long count)>> FavoriteYearValues( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
                 throw new ArgumentNullException( "user" );
 
-            var tableName = TableDefs().getUserTableName( user );
-            var sql =
+            string? tableName = TableDefs().getUserTableName( user );
+            string sql =
                 "SELECT COUNT(*) as NumVideos, StartYear From Media "
                 + $"INNER JOIN {tableName} On Media.ItemId={tableName}.ItemId "
                 + "WHERE "
@@ -538,26 +538,26 @@ namespace Statistics2026.Data
                                         ] );
 
             var retVal = new List<(int year, long count)>();
-            ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommand( sqlCmd, statement =>
             {
-                var row = statement.Current;
-                var count = row.GetInt64( 0 );
-                var year = row.GetInt( 1 );
+                IResultSet row = statement.Current;
+                long count = row.GetInt64( 0 );
+                int year = row.GetInt( 1 );
                 retVal.Add( (year, count) );
-                return true;
+                return Task.FromResult( true );
             } );
 
             return retVal;
         }
 
-        public StatCard FavoriteYears( User? user, bool movies )
+        public async Task<StatCard> FavoriteYears( User? user, bool movies )
         {
-            var videoType = movies ? "Movies" : "Episodes";
+            string videoType = movies ? "Movies" : "Episodes";
             var retVal = new TableBasedStatCard( Constants.FavoriteMovieYears, "Genre", [ $"# of {videoType} Watched" ] );
             retVal.SetDataColumnAlignment( 0, StatCard.EAlignment.eCenter );
-            var values = FavoriteYearValues( user, movies );
+            List<(int year, long count)> values = await FavoriteYearValues( user, movies );
 
-            foreach( var (year, count) in values )
+            foreach( (int year, long count) in values )
             {
                 retVal.addRow( year.ToString(), [ count ] );
             }
@@ -566,12 +566,12 @@ namespace Statistics2026.Data
         }
 
 
-        private Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> GroupedMediaKeyCountValues( string mediaColumnName, bool isJSONArray, User? user, bool movies, bool playedOnly )
+        private async Task<Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)>> GroupedMediaKeyCountValues( string mediaColumnName, bool isJSONArray, User? user, bool movies, bool playedOnly )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var tableName = ( user != null ) ? TableDefs().getUserTableName( user ) : string.Empty;
-            var sql =
+            string? tableName = ( user != null ) ? TableDefs().getUserTableName( user ) : string.Empty;
+            string sql =
                 $"SELECT PrimaryName, {mediaColumnName}, COUNT({mediaColumnName}) From Media ";
             if( user != null )
             {
@@ -608,42 +608,42 @@ namespace Statistics2026.Data
             var sqlCmd = new SQLCmdDef( sql, parameters );
 
             Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> retVal = [];
-            ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommand( sqlCmd, statement =>
             {
-                var row = statement.Current;
-                var pos = 0;
-                var name = row.GetString( pos++ );
-                var valueString = row.GetString( pos++ );
+                IResultSet row = statement.Current;
+                int pos = 0;
+                string name = row.GetString( pos++ );
+                string valueString = row.GetString( pos++ );
                 List<string> values = [];
                 if( isJSONArray )
                     values = HelperFuncs.JsonToStringArray( valueString );
                 else
                     values.Add( valueString );
-                var num = row.GetInt( pos++ );
-                foreach( var value in values )
+                int num = row.GetInt( pos++ );
+                foreach( string value in values )
                 {
                     if( !retVal.ContainsKey( value ) )
                         retVal[ value ] = (0, new Dictionary<string, int>());
 
-                    var curr = retVal[ value ];
+                    (int total, Dictionary<string, int> parentToChildMapping) curr = retVal[ value ];
                     curr.total += movies ? 1 : num; // if there are multiple copies of the same movie, only count it once
                     curr.parentToChildMapping[ name ] = movies ? 1 : num;
                     retVal[ value ] = curr;
                 }
 
-                return true;
+                return Task.FromResult( true );
             } );
 
             return retVal;
         }
 
         // genre to series/moviename -> number of episodes/movies
-        private Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> GenreCountValues( User? user, bool movies, bool playedOnly, bool? series=null )
+        private Task<Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)>> GenreCountValues( User? user, bool movies, bool playedOnly, bool? series = null )
         {
             return GroupedMediaKeyCountValues( "Genres", true, user, movies, playedOnly );
         }
 
-        public StatCard FavoriteGenre( User? user, bool movies )
+        public async Task<StatCard> FavoriteGenre( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -667,29 +667,29 @@ namespace Statistics2026.Data
             var retVal = new TableBasedStatCard( title, "Genre", [ $"# of {videoType} Watched" ] );
             retVal.SetDataColumnAlignment( 0, StatCard.EAlignment.eCenter );
 
-            var genreMap = GenreCountValues( user, movies, true, true );
+            Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> genreMap = await GenreCountValues( user, movies, true, true );
             var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value.total ).ToList();
 
             for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numGenresToReport ); ++ii )
             {
-                var curr = sortedGenre[ ii ];
+                KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedGenre[ ii ];
                 retVal.addRow( curr.Key, [ curr.Value.total ] );
             }
 
             return retVal;
         }
 
-        public (int current, int inDB) totalMediaCount()
+        public async Task<(int current, int inDB)> totalMediaCount()
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
+            List<Video> videoList = EmbyHelperFuncs.GetAllEpisodesAndMovies( null, LibraryManager() );
 
-            var currentCount = 0;
+            int currentCount = 0;
             if( videoList != null )
             {
                 var existing = new Dictionary<string, bool>();
-                foreach( var video in videoList )
+                foreach( Video video in videoList )
                 {
                     if( video == null )
                         continue;
@@ -700,26 +700,26 @@ namespace Statistics2026.Data
                 currentCount = existing.Count();
             }
 
-            var sql = "SELECT COUNT(*) FROM Media";
-            var inDBCount = 0;
-            ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            string sql = "SELECT COUNT(*) FROM Media";
+            int inDBCount = 0;
+            await ExecuteCommand( new SQLCmdDef( sql ), statement =>
             {
-                var row = statement.Current;
+                IResultSet row = statement.Current;
                 inDBCount = row.GetInt( 0 );
-                return true;
+                return Task.FromResult( true );
             } );
 
             return (currentCount, inDBCount);
         }
 
-        public StatCard GenreList( bool movies, bool? series=null )
+        public async Task<StatCard> GenreList( bool movies, bool? series = null )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var genreMap = GenreCountValues( null, movies, false, series );
+            Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> genreMap = await GenreCountValues( null, movies, false, series );
 
-            var title = movies ? Constants.MovieGenres : ( ( series == null || series! == true ) ? Constants.TVSeriesGenres : Constants.TVEpisodeGenres );
-            var help = movies ? Constants.MovieGenresHelp : ( ( series == null || series! == true ) ? Constants.TVSeriesGenresHelp : Constants.TVEpisodeGenresHelp );
+            string title = movies ? Constants.MovieGenres : ( ( series == null || series! == true ) ? Constants.TVSeriesGenres : Constants.TVEpisodeGenres );
+            string help = movies ? Constants.MovieGenresHelp : ( ( series == null || series! == true ) ? Constants.TVSeriesGenresHelp : Constants.TVEpisodeGenresHelp );
 
             var retVal = new GroupedTextBasedStatCard( title, help, EStatCardStyle.eDetailed )
             {
@@ -736,11 +736,11 @@ namespace Statistics2026.Data
             ).ToList();
             for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numGenresToReport ); ++ii )
             {
-                var curr = sortedGenre[ ii ];
+                KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedGenre[ ii ];
 
-                var genre = EmbyHelperFuncs.GetGenreByName( curr.Key, _embyInterfaces );
+                Genre? genre = EmbyHelperFuncs.GetGenreByName( curr.Key, _embyInterfaces );
 
-                var text = string.Empty;
+                string text = string.Empty;
 
                 if( movies )
                     text = $"{curr.Key}: {curr.Value.total} Movie{( ( curr.Value.total == 1 ) ? "" : "s" )}";
@@ -749,11 +749,11 @@ namespace Statistics2026.Data
                 else
                     text = $"{curr.Key}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}";
 
-                var imageUrl = ItemImageUrl._ItemImageUrl( genre );
+                string imageUrl = ItemImageUrl._ItemImageUrl( genre );
                 if( !imageUrl.IsNullOrEmpty() )
                 {
                     text = ItemImageUrl.ItemUrlFromItemId( genre!.Id.ToString(), imageUrl, text );
-               }
+                }
 
                 retVal.AddLine( curr.Key, text, false );
             }
@@ -762,11 +762,11 @@ namespace Statistics2026.Data
         }
 
         // range 0->.5, .5->1, 1->1.5
-        private List<((double start, double end) range, int count)> RatingsCountValues( bool movies, bool playedOnly )
+        private async Task<List<((double start, double end) range, int count)>> RatingsCountValues( bool movies, bool playedOnly )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var sql =
+            string sql =
                 $"SELECT \n" +
                 $"   FLOOR(Rating/.5)*.5 as RangeStart,\n" +
                 $"   (FLOOR(Rating/.5)+1)*.5 as RangeEnd,\n" +
@@ -798,26 +798,26 @@ namespace Statistics2026.Data
             var sqlCmd = new SQLCmdDef( sql );
 
             Dictionary<(double start, double end), int> map = [];
-            ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommand( sqlCmd, statement =>
             {
-                var row = statement.Current;
-                var pos = 0;
+                IResultSet row = statement.Current;
+                int pos = 0;
 
-                var rangeStart = row.GetDouble( pos++ );
-                var rangeEnd = row.GetDouble( pos++ );
-                var count = row.GetInt( pos++ );
+                double rangeStart = row.GetDouble( pos++ );
+                double rangeEnd = row.GetDouble( pos++ );
+                int count = row.GetInt( pos++ );
 
                 map[ (rangeStart, rangeEnd) ] = count;
-                return true;
+                return Task.FromResult( true );
             } );
 
             for( int ii = 0; ii < 10; ++ii )
             {
-                if( ( ii > 0 ) && !map.TryGetValue( (ii - .5, ii), out var _ ) )
+                if( ( ii > 0 ) && !map.TryGetValue( (ii - .5, ii), out int _ ) )
                 {
                     map[ (ii - .5, ii) ] = 0;
                 }
-                if( !map.TryGetValue( (ii, ii + 0.5), out var _ ) )
+                if( !map.TryGetValue( (ii, ii + 0.5), out int _ ) )
                 {
                     map[ (ii, ii + .5) ] = 0;
                 }
@@ -827,26 +827,26 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public StatCard RatingsList( bool movies )
+        public async Task<StatCard> RatingsList( bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var title = movies ? Constants.MovieRatings : Constants.TVRatings;
-            var help = movies ? Constants.MovieRatingsHelp : Constants.TVRatingsHelp;
+            string title = movies ? Constants.MovieRatings : Constants.TVRatings;
+            string help = movies ? Constants.MovieRatingsHelp : Constants.TVRatingsHelp;
 
             var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eDetailed )
             {
                 ListType = EListType.eRangeOrdered
             };
-            var star = "<i class=\"md-icon md-icon-fill starIcon\">&#xE838;</i>";
+            string star = "<i class=\"md-icon md-icon-fill starIcon\">&#xE838;</i>";
             retVal.SubTitle = $"Ratings from 0.0 to 10.0{star}";
 
-            var ratings = RatingsCountValues( movies, false );
-            foreach( var curr in ratings )
+            List<((double start, double end) range, int count)> ratings = await RatingsCountValues( movies, false );
+            foreach( ((double start, double end) range, int count) curr in ratings )
             {
-                var range = curr.range;
-                var count = curr.count;
-                var value = $"{count} {( movies ? "Movies" : "Episodes" )}";
+                (double start, double end) range = curr.range;
+                int count = curr.count;
+                string value = $"{count} {( movies ? "Movies" : "Episodes" )}";
                 if( count == 1 )
                     value = value[ ..^1 ];
 

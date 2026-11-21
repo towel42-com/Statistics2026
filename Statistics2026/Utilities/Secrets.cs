@@ -27,7 +27,7 @@ namespace Statistics2026.Secrets
     {
         private static string GetSecret( string keyName )
         {
-            var attribute = typeof( DBLocation ).Assembly
+            AssemblyMetadataAttribute? attribute = typeof( DBLocation ).Assembly
                 .GetCustomAttributes<AssemblyMetadataAttribute>()
                 .FirstOrDefault( a => a.Key == keyName );
 
@@ -150,7 +150,7 @@ namespace Statistics2026.Secrets
     {
         private static string GetSecret( string keyName )
         {
-            var attribute = typeof( DBLocation ).Assembly
+            AssemblyMetadataAttribute? attribute = typeof( DBLocation ).Assembly
                 .GetCustomAttributes<AssemblyMetadataAttribute>()
                 .FirstOrDefault( a => a.Key == keyName );
 
@@ -163,7 +163,7 @@ namespace Statistics2026.Secrets
         {
             if( sLimitUsersTo == null )
             {
-                var value = GetSecret( "LIMIT_DB_USERS_TO" );
+                string value = GetSecret( "LIMIT_DB_USERS_TO" );
                 sLimitUsersTo = HelperFuncs.JsonToStringArray( value ).ToHashSet();
             }
             return sLimitUsersTo!;
@@ -174,7 +174,7 @@ namespace Statistics2026.Secrets
     {
         private static string GetSecret( string keyName )
         {
-            var attribute = typeof( TheMovieDB ).Assembly
+            AssemblyMetadataAttribute? attribute = typeof( TheMovieDB ).Assembly
                 .GetCustomAttributes<AssemblyMetadataAttribute>()
                 .FirstOrDefault( a => a.Key == keyName );
 

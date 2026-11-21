@@ -11,32 +11,18 @@ using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Controller.Library;
-using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.MediaInfo;
-using MediaBrowser.Model.Providers;
 using MediaBrowser.Model.Serialization;
-using RestSharp;
 using ServiceStack;
-using ServiceStack.Text.Common;
-using Statistics2026.Data;
 using Statistics2026.Secrets;
-using Statistics2026.Utilities;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Text.Json.Nodes;
 using System.Web;
-using System.Xml.Linq;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Statistics2026.Utilities
 {
@@ -52,21 +38,20 @@ namespace Statistics2026.Utilities
             _embyInterfaces = Plugin.Instance._embyInterfaces;
         }
 
-        public TmdbInterface( EmbyInterfaces? embyInterfaces, CancellationToken? cancellationToken = null )
+        public static async Task<TmdbInterface> CreateAsync( EmbyInterfaces? embyInterfaces, CancellationToken? cancellationToken = null )
+        {
+            var retVal = new TmdbInterface( embyInterfaces, cancellationToken );
+            retVal.CheckIsValidWithThrow();
+
+            await retVal.loginAsync();
+
+            return retVal;
+        }
+
+        private TmdbInterface( EmbyInterfaces? embyInterfaces, CancellationToken? cancellationToken = null )
         {
             _embyInterfaces = embyInterfaces;
             _cancellationToken = cancellationToken;
-
-            CheckIsValidWithThrow();
-
-            try
-            {
-                loginAsync().GetAwaiter().GetResult();
-            }
-            catch( Exception ex )
-            {
-                throw ex;
-            }
         }
 
         [MemberNotNullWhen( true, nameof( _embyInterfaces ) )]
@@ -95,7 +80,7 @@ namespace Statistics2026.Utilities
             List<string> msgs = [];
             if( !_CheckIsValid( ref msgs ) )
             {
-                foreach( var msg in msgs )
+                foreach( string msg in msgs )
                 {
                     _embyInterfaces?.Logger().Error( msg );
                 }
@@ -128,17 +113,10 @@ namespace Statistics2026.Utilities
                 Query = $"api_key={TheMovieDB.getApiKeyV3()}"
             };
 
-            var url = builder.Uri.ToString();
-            var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
+            string url = builder.Uri.ToString();
+            HttpRequestOptions options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
-            try
-            {
-                _ = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false );
-            }
-            catch( Exception ex )
-            {
-                throw ex;
-            }
+            _ = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false );
             _cancellationToken?.ThrowIfCancellationRequested();
         }
 
@@ -158,25 +136,25 @@ namespace Statistics2026.Utilities
                 Path = $"/3/collection/{tmdbId}"
             };
 
-            var query = HttpUtility.ParseQueryString( builder.Query );
+            NameValueCollection query = HttpUtility.ParseQueryString( builder.Query );
             query[ "api_key" ] = TheMovieDB.getApiKeyV3();
             query[ "language" ] = language;
             builder.Query = query.ToString();
 
-            var url = builder.Uri.ToString();
-            var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
+            string url = builder.Uri.ToString();
+            HttpRequestOptions options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
-            using( var response = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false ) )
+            using( HttpResponseInfo response = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false ) )
             {
-                var text = HelperFuncs.StreamToString( response.Content );
+                string text = HelperFuncs.StreamToString( response.Content );
 
-                var collection = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbCollection>( text );
+                TmdbCollection? collection = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbCollection>( text );
                 if( collection == null )
                     return collection;
 
                 for( int ii = 0; ii < collection.Movies.Count; ++ii )
                 {
-                    var movie = collection.Movies[ ii ];
+                    TmdbMovie movie = collection.Movies[ ii ];
                     if( movie == null )
                         continue;
 
@@ -200,20 +178,20 @@ namespace Statistics2026.Utilities
                 Path = $"/3/movie/{movie.Id}"
             };
 
-            var query = HttpUtility.ParseQueryString( builder.Query );
+            NameValueCollection query = HttpUtility.ParseQueryString( builder.Query );
             query[ "api_key" ] = TheMovieDB.getApiKeyV3();
             query[ "language" ] = language;
             query[ "append_to_response" ] = "watch/providers,release_dates";
             builder.Query = query.ToString();
 
-            var url = builder.Uri.ToString();
-            var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
+            string url = builder.Uri.ToString();
+            HttpRequestOptions options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
-            using( var response = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false ) )
+            using( HttpResponseInfo response = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false ) )
             {
-                var text = HelperFuncs.StreamToString( response.Content );
+                string text = HelperFuncs.StreamToString( response.Content );
 
-                var retVal = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbMovie>( text );
+                TmdbMovie retVal = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbMovie>( text );
                 _cancellationToken?.ThrowIfCancellationRequested();
                 if( retVal == null )
                     return movie;
@@ -239,24 +217,24 @@ namespace Statistics2026.Utilities
                 Path = $"/3/tv/{tmdbId}"
             };
 
-            var query = HttpUtility.ParseQueryString( builder.Query );
+            NameValueCollection query = HttpUtility.ParseQueryString( builder.Query );
             query[ "api_key" ] = TheMovieDB.getApiKeyV3();
             query[ "language" ] = language;
             builder.Query = query.ToString();
 
-            var url = builder.Uri.ToString();
-            var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
+            string url = builder.Uri.ToString();
+            HttpRequestOptions options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
-            using( var response = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false ) )
+            using( HttpResponseInfo response = await _embyInterfaces.HttpClient().GetResponse( options ).ConfigureAwait( false ) )
             {
-                var text = HelperFuncs.StreamToString( response.Content );
-                var series = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbSeries>( text );
+                string text = HelperFuncs.StreamToString( response.Content );
+                TmdbSeries series = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbSeries>( text );
                 if( series == null )
                     return retVal;
                 if( series.Seasons != null && series.Seasons.Count > 0 )
                 {
                     List<TmdbSeason> seasons = [];
-                    foreach( var season in series.Seasons )
+                    foreach( TmdbSeason season in series.Seasons )
                     {
                         _cancellationToken?.ThrowIfCancellationRequested();
                         if( season == null )
@@ -302,11 +280,11 @@ namespace Statistics2026.Utilities
                 Path = $"/3/tv/{tmdbId}"
             };
 
-            var query = HttpUtility.ParseQueryString( builder.Query );
+            NameValueCollection query = HttpUtility.ParseQueryString( builder.Query );
             query[ "api_key" ] = TheMovieDB.getApiKeyV3();
             query[ "language" ] = language;
             List<string> seasonStrings = [];
-            foreach( var season in seasons )
+            foreach( TmdbSeason season in seasons )
             {
                 _cancellationToken?.ThrowIfCancellationRequested();
                 seasonStrings.Add( $"season/{season.SeasonNumber}" );
@@ -315,13 +293,13 @@ namespace Statistics2026.Utilities
             query[ "append_to_response" ] = string.Join( ",", seasonStrings );
             builder.Query = query.ToString();
 
-            var url = builder.Uri.ToString();
-            var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
+            string url = builder.Uri.ToString();
+            HttpRequestOptions options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
-            using( var response = await _embyInterfaces.HttpClient().Get( options ).ConfigureAwait( false ) )
+            using( Stream response = await _embyInterfaces.HttpClient().Get( options ).ConfigureAwait( false ) )
             {
                 _cancellationToken?.ThrowIfCancellationRequested();
-                var text = HelperFuncs.StreamToString( response );
+                string text = HelperFuncs.StreamToString( response );
                 retVal = TmdbSeries.FromJson( retVal, text, _embyInterfaces.JsonSerializer() );
                 return retVal;
             }
@@ -353,8 +331,8 @@ namespace Statistics2026.Utilities
             if( movie == null )
                 return new AddStreamingProvidersInfo();
 
-            var dispName = MediaInfo.GetDisplayName( movie );
-            var tmdbId = movie.GetProviderId( MetadataProviders.Tmdb );
+            string dispName = MediaInfo.GetDisplayName( movie );
+            string tmdbId = movie.GetProviderId( MetadataProviders.Tmdb );
 
             return await GetStreamingProvidersAsync( logger, tmdbId, false, dispName, language ).ConfigureAwait( false );
         }
@@ -378,8 +356,8 @@ namespace Statistics2026.Utilities
             if( series == null )
                 return new AddStreamingProvidersInfo();
 
-            var dispName = series.Name;
-            var tmdbId = series.GetProviderId( MetadataProviders.Tmdb );
+            string dispName = series.Name;
+            string tmdbId = series.GetProviderId( MetadataProviders.Tmdb );
 
             return await GetStreamingProvidersAsync( logger, tmdbId, true, dispName, language ).ConfigureAwait( false );
         }
@@ -394,10 +372,10 @@ namespace Statistics2026.Utilities
                 return new AddStreamingProvidersInfo();
             }
 
-            if( !_ProviderCache.TryGetValue( tmdbId, out var providerResponseText ) )
+            if( !_ProviderCache.TryGetValue( tmdbId, out string? providerResponseText ) )
             {
                 //string url = https://themoviedb.org/3/movie|tv|series/{tmdbid}/watch/providers?api_key={kApiKeyV3}&language={language}";
-                var videoType = isEpisode ? "tv" : "movie";
+                string videoType = isEpisode ? "tv" : "movie";
                 var builder = new UriBuilder
                 {
                     Scheme = "https",
@@ -405,20 +383,20 @@ namespace Statistics2026.Utilities
                     Path = $"/3/{videoType}/{tmdbId}/watch/providers"
                 };
 
-                var query = HttpUtility.ParseQueryString( builder.Query );
+                NameValueCollection query = HttpUtility.ParseQueryString( builder.Query );
                 query[ "api_key" ] = TheMovieDB.getApiKeyV3();
                 query[ "language" ] = language;
                 builder.Query = query.ToString();
 
-                var url = builder.Uri.ToString();
-                var options = HelperFuncs.getRequestOptions( url, _cancellationToken );
+                string url = builder.Uri.ToString();
+                HttpRequestOptions options = HelperFuncs.getRequestOptions( url, _cancellationToken );
 
                 try
                 {
-                    using( var response = await _embyInterfaces.HttpClient().Get( options ).ConfigureAwait( false ) )
+                    using( Stream response = await _embyInterfaces.HttpClient().Get( options ).ConfigureAwait( false ) )
                     {
                         _cancellationToken?.ThrowIfCancellationRequested();
-                        var text = HelperFuncs.StreamToString( response );
+                        string text = HelperFuncs.StreamToString( response );
 
                         providerResponseText = text;
                         _ProviderCache[ tmdbId ] = providerResponseText;
@@ -434,11 +412,11 @@ namespace Statistics2026.Utilities
             if( providerResponseText == null )
                 return new AddStreamingProvidersInfo();
 
-            var providerResponse = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbStreamingProviders>( providerResponseText );
+            TmdbStreamingProviders providerResponse = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbStreamingProviders>( providerResponseText );
             if( providerResponse == null )
                 return new AddStreamingProvidersInfo();
 
-            var retVal = providerResponse.GetProvidersAndSqlForProviders();
+            (Dictionary<string, HashSet<int>> allProviders, List<SQLCmdDef> addProviderCmds) retVal = providerResponse.GetProvidersAndSqlForProviders();
             return retVal;
         }
     }
@@ -471,12 +449,12 @@ namespace Statistics2026.Utilities
             Dictionary<string, HashSet<int>> currServiceMap = [];
             List<SQLCmdDef> cmds = [];
 
-            foreach( var regionKeyValuePair in Results )
+            foreach( KeyValuePair<string, TmdbStreamingProviderRegion> regionKeyValuePair in Results )
             {
                 if( regionKeyValuePair.Value != null )
                 {
-                    var key = regionKeyValuePair.Key;
-                    var value = regionKeyValuePair.Value.GetProvidersAndSqlForProviders( key );
+                    string key = regionKeyValuePair.Key;
+                    (HashSet<int> providerIds, List<SQLCmdDef> sqlCmds) value = regionKeyValuePair.Value.GetProvidersAndSqlForProviders( key );
                     currServiceMap.Add( key, value.providerIds );
                     cmds.AddRange( value.sqlCmds );
                 }
@@ -549,10 +527,10 @@ namespace Statistics2026.Utilities
             HashSet<int> providerIds = [];
             List<SQLCmdDef> sqlCmds = [];
 
-            var allProviders = GetAllProviders();
-            foreach( var tmdbProvider in allProviders )
+            List<TmdbStreamingProvider> allProviders = GetAllProviders();
+            foreach( TmdbStreamingProvider tmdbProvider in allProviders )
             {
-                var current = tmdbProvider.GetProvidersAndSqlForProviders( region );
+                (int providerId, List<SQLCmdDef> sqlCmds) current = tmdbProvider.GetProvidersAndSqlForProviders( region );
                 if( current.providerId != -1 )
                 {
                     providerIds.Add( current.providerId );
@@ -627,11 +605,11 @@ namespace Statistics2026.Utilities
 
         public (string imageUrl, string itemText) ImageUrl()
         {
-            var retVal = HelperFuncs.GetTMDBLink( LogoPath, ProviderName );
+            (string imageUrl, string itemText, string itemUrl) retVal = HelperFuncs.GetTMDBLink( LogoPath, ProviderName );
             return (retVal.imageUrl, retVal.itemText);
         }
 
-        public (string imageUrl, string itemText, string itemUrl) ImageUrl(string targetUrl, string targetHtml, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null ) //html uses <TARGET_URL> and <TARGET_TEXT> as placeholders
+        public (string imageUrl, string itemText, string itemUrl) ImageUrl( string targetUrl, string targetHtml, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null ) //html uses <TARGET_URL> and <TARGET_TEXT> as placeholders
         {
             return HelperFuncs.GetTMDBLink( LogoPath, ProviderName, (targetUrl, targetHtml), posterSize, imageHeight, imageWidth );
         }
@@ -681,13 +659,13 @@ namespace Statistics2026.Utilities
                 return (-1, []);
             }
 
-            var key = this.key();
-            if( sProviderCache.TryGetValue( key, out var retVal ) )
+            string key = this.key();
+            if( sProviderCache.TryGetValue( key, out (int providerId, List<SQLCmdDef> sqlCmds) retVal ) )
             {
                 return (retVal.providerId, []);
             }
 
-            var templateUrl = HelperFuncs.GetProviderTemplateUrl( ProviderId );
+            string templateUrl = HelperFuncs.GetProviderTemplateUrl( ProviderId );
 
             List<(string name, object? value)> parameters =
                 [
@@ -699,14 +677,14 @@ namespace Statistics2026.Utilities
                 ];
 
 
-            var cmds = GetAddProviderCmds();
+            List<SQLCmdDef> cmds = GetAddProviderCmds();
             sProviderCache[ key ] = (ProviderId, cmds);
             return (ProviderId, cmds);
         }
 
         public List<SQLCmdDef> GetAddProviderCmds()
         {
-            var templateUrl = HelperFuncs.GetProviderTemplateUrl( ProviderId );
+            string templateUrl = HelperFuncs.GetProviderTemplateUrl( ProviderId );
 
             List<(string name, object? value)> parameters =
                 [
@@ -717,13 +695,13 @@ namespace Statistics2026.Utilities
                     ("@UrlTemplate", templateUrl)
                 ];
 
-            var tableDef = Plugin.Instance?._tableDefs.getTableDef( "StreamingProviders" ) ?? null;
+            TableDef? tableDef = Plugin.Instance?._tableDefs.getTableDef( "StreamingProviders" ) ?? null;
             if( tableDef == null )
             {
                 throw new Exception( "Could not find table defintion for StreamingProviders" );
             }
 
-            var addProviderCmds = tableDef.GetSQLCommands( TableDef.EAction.eInsertUpdateOnConflict, parameters );
+            List<SQLCmdDef> addProviderCmds = tableDef.GetSQLCommands( TableDef.EAction.eInsertUpdateOnConflict, parameters );
             if( addProviderCmds == null )
             {
                 throw new Exception( "Could not insert into table StreamingProviders" );
@@ -816,7 +794,7 @@ namespace Statistics2026.Utilities
             if( WatchProviders?.Results == null )
                 return false;
 
-            if( WatchProviders.Results.TryGetValue( countryCode, out var country ) )
+            if( WatchProviders.Results.TryGetValue( countryCode, out TmdbCountryProviders? country ) )
                 return country.HasAnyProvider();
 
             return false;
@@ -827,7 +805,7 @@ namespace Statistics2026.Utilities
             if( WatchProviders?.Results == null )
                 return false;
 
-            foreach( var country in WatchProviders.Results.Values )
+            foreach( TmdbCountryProviders country in WatchProviders.Results.Values )
             {
                 if( country.HasAnyProvider() )
                     return true;
@@ -847,7 +825,7 @@ namespace Statistics2026.Utilities
         public string StudioNames()
         {
             List<string> names = [];
-            foreach( var studio in Studios )
+            foreach( TmdbStudio studio in Studios )
             {
                 names.Add( studio.Name );
             }
@@ -882,7 +860,7 @@ namespace Statistics2026.Utilities
         public List<int> listOfSeasons()
         {
             List<int> retVal = [];
-            foreach( var season in Seasons )
+            foreach( TmdbSeason season in Seasons )
             {
                 if( season == null )
                     continue;
@@ -902,31 +880,31 @@ namespace Statistics2026.Utilities
             if( retVal == null )
                 return null;
 
-            var seasons = retVal.listOfSeasons();
-            var jsonNode = System.Text.Json.Nodes.JsonObject.Parse( jsonString );
+            List<int> seasons = retVal.listOfSeasons();
+            JsonNode? jsonNode = System.Text.Json.Nodes.JsonObject.Parse( jsonString );
             if( jsonNode == null )
                 return null;
 
-            var jsonObject = jsonNode.AsObject();
+            JsonObject jsonObject = jsonNode.AsObject();
 
-            foreach( var seasonNum in seasons )
+            foreach( int seasonNum in seasons )
             {
-                var keyName = $"season/{seasonNum}";
+                string keyName = $"season/{seasonNum}";
                 if( !jsonObject.ContainsKey( keyName ) )
                 {
                     continue;
                 }
 
-                var detailedSeasonObj = jsonObject[ keyName ]!.AsObject();
+                JsonObject detailedSeasonObj = jsonObject[ keyName ]!.AsObject();
                 if( detailedSeasonObj == null )
                     continue;
 
-                var detailedSeasonString = detailedSeasonObj.ToJsonString();
-                var detailedSeason = jsonSerializer.DeserializeFromString<TmdbSeason>( detailedSeasonString );
+                string detailedSeasonString = detailedSeasonObj.ToJsonString();
+                TmdbSeason detailedSeason = jsonSerializer.DeserializeFromString<TmdbSeason>( detailedSeasonString );
                 if( detailedSeason == null )
                     continue;
 
-                var existingSeason = retVal.Seasons.FirstOrDefault( s => ( s != null ) && ( s.SeasonNumber == detailedSeason.SeasonNumber ) );
+                TmdbSeason existingSeason = retVal.Seasons.FirstOrDefault( s => ( s != null ) && ( s.SeasonNumber == detailedSeason.SeasonNumber ) );
                 if( existingSeason != null )
                 {
                     // Merge the full episode array into your main dataset

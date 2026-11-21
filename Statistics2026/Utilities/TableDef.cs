@@ -33,8 +33,8 @@ namespace Statistics2026.Utilities
 
         public string createIndex( string tableName )
         {
-            var idxName = getIndexName( tableName );
-            var sql = $"CREATE INDEX IF NOT EXISTS {idxName} on {tableName} ({Name});";
+            string idxName = getIndexName( tableName );
+            string sql = $"CREATE INDEX IF NOT EXISTS {idxName} on {tableName} ({Name});";
             return sql;
         }
 
@@ -43,7 +43,7 @@ namespace Statistics2026.Utilities
             var retVal = new List<SQLCmdDef>();
             if( DeprecatedColumn )
             {
-                var idxName = getIndexName( tableName );
+                string idxName = getIndexName( tableName );
                 retVal.Add( new SQLCmdDef( $"DROP INDEX IF EXISTS {idxName}", true ) );
                 retVal.Add( new SQLCmdDef( $"ALTER TABLE {tableName} DROP COLUMN {Name}", true ) );
             }
@@ -61,7 +61,7 @@ namespace Statistics2026.Utilities
 
         public string ToString( bool alter )
         {
-            var retVal = $"{Name} {Type}";
+            string retVal = $"{Name} {Type}";
             if( DefaultValue != null && DefaultValue != string.Empty )
                 retVal += $" DEFAULT '{DefaultValue}'";
             if( !alter && !AllowNull )
@@ -135,10 +135,10 @@ namespace Statistics2026.Utilities
 
         private List<SQLCmdDef> createTable()
         {
-            var tableName = Name;
-            var sql = $"CREATE TABLE IF NOT EXISTS {tableName} (\n";
-            var first = true;
-            foreach( var col in Columns )
+            string tableName = Name;
+            string sql = $"CREATE TABLE IF NOT EXISTS {tableName} (\n";
+            bool first = true;
+            foreach( TableColDef col in Columns )
             {
                 if( col.DeprecatedColumn )
                     continue;
@@ -170,7 +170,7 @@ namespace Statistics2026.Utilities
                         return;
 
                     TableColDef? column = null;
-                    foreach( var col in Columns )
+                    foreach( TableColDef col in Columns )
                     {
                         if( col.Name == columnName )
                         {
@@ -207,7 +207,7 @@ namespace Statistics2026.Utilities
 
         public static string clearTable( string tableName )
         {
-            var sql = $"DELETE FROM {tableName}";
+            string sql = $"DELETE FROM {tableName}";
             return sql;
         }
 
@@ -220,7 +220,7 @@ namespace Statistics2026.Utilities
         {
             List<string> colNames = [];
             string primaryIndexColumnName = String.Empty;
-            foreach( var col in Columns )
+            foreach( TableColDef col in Columns )
             {
                 if( col.DeprecatedColumn )
                     continue;
@@ -229,7 +229,7 @@ namespace Statistics2026.Utilities
                 colNames.Add( col.Name );
             }
 
-            var sql =
+            string sql =
                 $"INSERT INTO \n" +
                 $"    {Name}\n" +
                 $"(\n     ";
@@ -240,7 +240,7 @@ namespace Statistics2026.Utilities
                  ;
 
             bool first = true;
-            foreach( var colName in colNames )
+            foreach( string colName in colNames )
             {
                 sql += "    ";
                 if( first )
@@ -263,7 +263,7 @@ namespace Statistics2026.Utilities
                     sql += " UPDATE\n" +
                         "SET\n";
                     first = true;
-                    foreach( var colName in colNames )
+                    foreach( string colName in colNames )
                     {
                         if( colName == primaryIndexColumnName )
                             continue;
@@ -283,7 +283,7 @@ namespace Statistics2026.Utilities
 
         public static string dropTable( string tableName )
         {
-            var sql = $"DROP TABLE IF EXISTS {tableName}";
+            string sql = $"DROP TABLE IF EXISTS {tableName}";
             return sql;
         }
 
@@ -332,7 +332,7 @@ namespace Statistics2026.Utilities
         public List<string> ColumnNames()
         {
             var retVal = new List<string>();
-            foreach( var col in Columns )
+            foreach( TableColDef col in Columns )
             {
                 if( col.DeprecatedColumn )
                     continue;
@@ -347,7 +347,7 @@ namespace Statistics2026.Utilities
             Name = other.Name;
             Indexes = new List<string>( other.Indexes );
             Columns = [];
-            foreach( var col in other.Columns )
+            foreach( TableColDef col in other.Columns )
             {
                 Columns.Add( new TableColDef( col ) );
             }

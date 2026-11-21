@@ -65,11 +65,11 @@ namespace Statistics2026.Utilities
         {
             if( currValue.data.IsNullOrEmpty() )
                 return string.Empty;
-            var value = currValue.data;
+            string value = currValue.data;
             if( ValueLines.Count() > 1 )
                 value = CheckMaxLength( currValue.data );
 
-            var dataHtml = string.Empty;
+            string dataHtml = string.Empty;
             if( ListType == EListType.eRangeOrdered )
             {
                 if( currValue.range == null )
@@ -86,7 +86,7 @@ namespace Statistics2026.Utilities
                 dataHtml = $"<div class=\"{statCardClass( currValue.asTitle )}\" {style}>{value}</div>";
             }
 
-            var showImage = !currValue.url.IsNullOrEmpty() && !currValue.itemId.IsNullOrEmpty();
+            bool showImage = !currValue.url.IsNullOrEmpty() && !currValue.itemId.IsNullOrEmpty();
             if( showImage )
             {
                 dataHtml = ItemImageUrl.ItemUrlFromItemId( currValue.itemId, currValue.url, dataHtml, "50px" );
@@ -102,7 +102,7 @@ namespace Statistics2026.Utilities
                 throw new Exception( $"GetDataString called for non text only list type - ${ListType}" );
             }
 
-            var retVal = string.Empty;
+            string retVal = string.Empty;
             if( ListType == EListType.eNumbered )
             {
                 retVal += HelperFuncs.addToHtml( depth++, "<ol>" );
@@ -112,9 +112,9 @@ namespace Statistics2026.Utilities
                 retVal += HelperFuncs.addToHtml( depth++, "<ol class=\"range-list\">" );
             }
 
-            for( var ii = 0; ii < ValueLines.Count; ++ii )
+            for( int ii = 0; ii < ValueLines.Count; ++ii )
             {
-                var html = getDataHtmlForItem( ValueLines[ ii ], string.Empty );
+                string html = getDataHtmlForItem( ValueLines[ ii ], string.Empty );
                 if( ListType == EListType.eNumbered )
                 {
                     html = $"<li>{html}</li>";

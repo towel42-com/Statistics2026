@@ -1,5 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities;
 using ServiceStack;
+using SQLitePCL.pretty;
 using Statistics2026.Utilities;
 
 namespace Statistics2026.Data
@@ -12,7 +13,7 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting User Analysis" );
             SetProgress( 0 );
-            var userList = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
+            List<User> userList = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
             if( userList == null )
                 return;
 
@@ -21,13 +22,13 @@ namespace Statistics2026.Data
 
             SetProgress( 0 );
             var sqlCmds = new List<SQLCmdDef>();
-            DeleteAllInvalid( userList.ConvertAll( item => (BaseItem)item ), "Users", "UserId" );
+            await DeleteAllInvalid( userList.ConvertAll( item => (BaseItem)item ), "Users", "UserId" );
 
             using( var timer = new AutoTimer( $"    Analyze Users - Getting Commands", Logger() ) )
             {
-                var pool = userList.Select( ( user, index ) => Task.Run( async () =>
+                IEnumerable<Task<(int index, User item, List<SQLCmdDef?> cmds)>> pool = userList.Select( ( user, index ) => Task.Run( async () =>
                 {
-                    var retVal = (index: index, item: user, cmds: new List<SQLCmdDef?>());
+                    (int index, User item, List<SQLCmdDef?> cmds) retVal = (index: index, item: user, cmds: new List<SQLCmdDef?>());
                     if( user == null )
                         return retVal;
 
@@ -40,7 +41,7 @@ namespace Statistics2026.Data
                 } ) );
 
                 CancellationToken?.ThrowIfCancellationRequested();
-                var unsortedResults = await Task.WhenAll( pool );
+                (int index, User item, List<SQLCmdDef?> cmds)[] unsortedResults = await Task.WhenAll( pool );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -55,7 +56,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Users - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                ExecuteCommands( sqlCmds );
+                await ExecuteCommands( sqlCmds );
                 SetProgress( 100 );
             }
 
@@ -69,7 +70,7 @@ namespace Statistics2026.Data
             if( user == null && userList == null )
                 throw new ArgumentException( "Either user or allUsers must be provided." );
 
-            var (allVideosForUser, allVideos) = EmbyHelperFuncs.GetAllEpisodesAndMovies( user, LibraryManager(), true );
+            (List<Video>? allVideosForUser, List<Video>? allVideos) = EmbyHelperFuncs.GetAllEpisodesAndMovies( user, LibraryManager(), true );
 
             long watchable = 0;
             long watched = 0;
@@ -105,8 +106,8 @@ namespace Statistics2026.Data
                 return null;
             }
 
-            var isAdmin = user.Policy.IsAdministrator;
-            var sql =
+            bool isAdmin = user.Policy.IsAdministrator;
+            string sql =
                 "INSERT INTO Users " +
                 "(" +
                     "  UserId" +
@@ -141,11 +142,11 @@ namespace Statistics2026.Data
             ] );
         }
 
-        private long NumUsers( bool hasConnectUserId, bool excludeAdmin )
+        private async Task<long> NumUsers( bool hasConnectUserId, bool excludeAdmin )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var sql = "SELECT COUNT(UserName) FROM Users ";
+            string sql = "SELECT COUNT(UserName) FROM Users ";
 
             List<string> conditions = [];
 
@@ -157,29 +158,29 @@ namespace Statistics2026.Data
 
             sql += HelperFuncs.JoinWhereClauses( conditions );
 
-            return GetSingleValueFromSQL( sql ).ToInt64();
+            return ( await GetSingleValueFromSQL( sql ) ).ToInt64();
         }
 
-        private long NumUsers()
+        private Task<long> NumUsers()
         {
             CheckIsValid( ECheckLevel.eReport );
 
             return NumUsers( Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID, Statistics2026.Plugin.Instance!.Configuration.excludeAdmin );
         }
 
-        public StatCard UserCount()
+        public async Task<StatCard> UserCount()
         {
-            var numUsers = NumUsers();
+            long numUsers = await NumUsers();
             return ValueGroupForSingleValue( Constants.TotalUsers, null, numUsers );
         }
 
-        public StatCard MostActiveUsers()
+        public async Task<StatCard> MostActiveUsers()
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var tables = TableDefs().allUserMediaTables();
+            List<string> tables = await TableDefs().allUserMediaTables();
 
-            var sqlBase =
+            string sqlBase =
                 $"SELECT " +
                 $"  Users.UserId" +
                 $", Users.UserName" +
@@ -198,47 +199,47 @@ namespace Statistics2026.Data
             sqlBase += HelperFuncs.JoinWhereClauses( conditions );
 
             var playTimeMap = new SortedDictionary<long, List<(string userId, string userName, long ticksPlayed)>>();
-            foreach( var tableName in tables )
+            foreach( string tableName in tables )
             {
-                var sql = sqlBase;
+                string sql = sqlBase;
                 sql = sql.Replace( "<TABLE_NAME>", tableName );
 
-                ExecuteCommand( new SQLCmdDef( sql ), statement =>
+                await ExecuteCommand( new SQLCmdDef( sql ), statement =>
                 {
-                    var row = statement.Current;
+                    IResultSet row = statement.Current;
 
-                    var col = 0;
-                    var userId = row.GetString( col++ );
-                    var userName = row.GetString( col++ );
+                    int col = 0;
+                    string userId = row.GetString( col++ );
+                    string userName = row.GetString( col++ );
                     if( userId == null || userName == null )
-                        return true;
-                    var ticksPlayed = row.GetInt64( col++ );
-                    if( !playTimeMap.TryGetValue( ticksPlayed, out var currItem ) )
+                        return Task.FromResult( true );
+                    long ticksPlayed = row.GetInt64( col++ );
+                    if( !playTimeMap.TryGetValue( ticksPlayed, out List<(string userId, string userName, long ticksPlayed)>? currItem ) )
                     {
                         playTimeMap[ ticksPlayed ] = [];
                     }
 
                     playTimeMap[ ticksPlayed ].Add( (userId, userName, ticksPlayed) );
-                    return true;
+                    return Task.FromResult( true );
                 } );
             }
 
-            var numUsers = Plugin.Instance!.Configuration.numMostActiveUsers;
-            var help = Constants.HelpMostActiveUsers;
+            int numUsers = Plugin.Instance!.Configuration.numMostActiveUsers;
+            string help = Constants.HelpMostActiveUsers;
             help = help.Replace( "<numUsers>", numUsers.ToString() );
             var groupData = new TableBasedStatCard( Constants.MostActiveUsers, help, [ "Days", "Hours", "Minutes" ] )
             {
                 SubTitle = "By Play Time"
             };
 
-            var cnt = 0;
-            foreach( var currKVP in playTimeMap.Reverse() )
+            int cnt = 0;
+            foreach( KeyValuePair<long, List<(string userId, string userName, long ticksPlayed)>> currKVP in playTimeMap.Reverse() )
             {
-                foreach( var curr in currKVP.Value )
+                foreach( (string userId, string userName, long ticksPlayed) curr in currKVP.Value )
                 {
-                    var userName = curr.userName;
-                    var userId = curr.userId;
-                    var ticks = curr.ticksPlayed;
+                    string userName = curr.userName;
+                    string userId = curr.userId;
+                    long ticks = curr.ticksPlayed;
                     var runtime = new RunTime( ticks );
                     groupData.addRow( userName, [ runtime.Days, runtime.Hours, runtime.Minutes ] );
                 }

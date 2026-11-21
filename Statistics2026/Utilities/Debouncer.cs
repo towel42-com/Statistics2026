@@ -17,7 +17,7 @@ namespace Statistics2026.Utilities
 
                 // Create a new token for the current execution
                 CancellationToken = new CancellationTokenSource();
-                var token = CancellationToken.Token;
+                CancellationToken token = CancellationToken.Token;
 
                 // Start the delay and execution task
                 Task.Run( async () =>
@@ -30,7 +30,7 @@ namespace Statistics2026.Utilities
                             await Task.Delay( ms, token ).ConfigureAwait( false );
 
                             // Execute the action if not canceled
-                            var runAgain = await func( token ).ConfigureAwait( false );
+                            bool runAgain = await func( token ).ConfigureAwait( false );
                             if( !runAgain )
                                 break;
                         }

@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Model.Entities;
 using ServiceStack;
+using SQLitePCL.pretty;
 using Statistics2026.Utilities;
 
 namespace Statistics2026.Data
@@ -13,16 +14,16 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting Collection Analysis" );
             SetProgress( 0 );
-            var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
+            List<BoxSet> collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
             SetProgress( 100 );
 
             double count = collections.Count();
-            var completedCount = 0;
+            int completedCount = 0;
 
 
             SetProgress( 0 );
 
-            DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "Collections", "ItemId" );
+            await DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "Collections", "ItemId" );
 
             var sqlCmds = new List<SQLCmdDef>();
             using( var listTimer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
@@ -48,7 +49,7 @@ namespace Statistics2026.Data
                     return (index: index, item: collection, cmds: currCmds);
                 } ) ).ToList();
 
-                var unsortedResults = await Task.WhenAll( pool );
+                (int index, BoxSet item, List<SQLCmdDef> cmds)[] unsortedResults = await Task.WhenAll( pool );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -63,7 +64,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Collection - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                ExecuteCommands( sqlCmds );
+                await ExecuteCommands( sqlCmds );
                 SetProgress( 100 );
             }
             Logger().Debug( $"Finished Collection Analysis" );
@@ -81,7 +82,7 @@ namespace Statistics2026.Data
                 return sqlCmds;
             }
 
-            var sql =
+            string sql =
                 "INSERT INTO CollectionMembership " +
                 "(" +
                     "  CollectionId" +
@@ -117,20 +118,21 @@ namespace Statistics2026.Data
                 Recursive = true
             };
 
-            var baseItems = LibraryManager().GetItemList( query );
+            BaseItem[] baseItems = LibraryManager().GetItemList( query );
             var videos = baseItems.OfType<Video>().ToList();
 
             double count = videos.Count;
-            var curr = 0.0;
+            double curr = 0.0;
 
             var sqlCmds = new List<SQLCmdDef>();
 
-            videos.ForEach( async video =>
-            {
+            foreach( Video video in videos )
+            { 
                 SetProgress( 100.0 * ( ++curr ) / count );
-                sqlCmds.AddRange( await AddChildToCollectionAsync( video, collection ).ConfigureAwait( false ) );
+                List<SQLCmdDef> childCmds = await AddChildToCollectionAsync( video, collection ).ConfigureAwait( false );
+                sqlCmds.AddRange( childCmds );
                 CancellationToken?.ThrowIfCancellationRequested();
-            } );
+            }
             Logger().Debug( $"AddCollectionMembers -     Finished Adding {videos.Count} members of Collection {collection.Name} " );
             return sqlCmds;
         }
@@ -148,7 +150,7 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"AddCollection - Adding Collection {collection.Name}" );
 
-            var sql =
+            string sql =
                 "INSERT INTO Collections " +
                 "(" +
                     "  ItemId" +
@@ -174,7 +176,7 @@ namespace Statistics2026.Data
                     ", ImageUrl=@ImageUrl"
                     ;
 
-            var tmdbId = collection.GetProviderId( MetadataProviders.Tmdb );
+            string? tmdbId = collection.GetProviderId( MetadataProviders.Tmdb );
             if( ( tmdbId != null ) && !long.TryParse( tmdbId, out _ ) )
             {
                 tmdbId = null;
@@ -194,19 +196,19 @@ namespace Statistics2026.Data
             return sqlCmds;
         }
 
-        public StatCard TotalCollectionCount()
+        public async Task<StatCard> TotalCollectionCount()
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            var sql = "SELECT COUNT( ItemId ) FROM Collections";
+            string sql = "SELECT COUNT( ItemId ) FROM Collections";
 
-            return ValueGroupForSingleItem( Constants.TotalCollections, Constants.HelpTotalCollections, sql );
+            return await ValueGroupForSingleItem( Constants.TotalCollections, Constants.HelpTotalCollections, sql );
         }
 
-        public StatCard MultiCollectionMovies()
+        public async Task<StatCard> MultiCollectionMovies()
         {
             CheckIsValid( ECheckLevel.eReport );
-            var sql = "SELECT  "
+            string sql = "SELECT  "
                 + "  Media.SortName "
                 + ", Media.ItemId "
                 + ", Media.ImageUrl "
@@ -234,31 +236,31 @@ namespace Statistics2026.Data
             };
 
             var sqlCmd = new SQLCmdDef( sql );
-            ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommand( sqlCmd, statement =>
             {
-                var row = statement.Current;
-                var col = 0;
+                IResultSet row = statement.Current;
+                int col = 0;
 
-                var itemSortName = row.GetString( col++ );
-                var itemId = row.GetString( col++ );
-                var itemImageUrl = row.GetString( col++ );
-                var collectionName = row.GetString( col++ );
-                var collectionSortName = row.GetString( col++ );
-                var collectionImageUrl = row.GetString( col++ );
+                string itemSortName = row.GetString( col++ );
+                string itemId = row.GetString( col++ );
+                string itemImageUrl = row.GetString( col++ );
+                string collectionName = row.GetString( col++ );
+                string collectionSortName = row.GetString( col++ );
+                string collectionImageUrl = row.GetString( col++ );
                 ;
-                var collectionId = row.GetString( col++ );
+                string collectionId = row.GetString( col++ );
 
                 retVal.AddLine( (itemSortName, itemId, itemImageUrl, false), (collectionSortName, collectionId, collectionImageUrl, false) );
 
-                return true;
+                return Task.FromResult( true );
             } );
 
             return retVal;
         }
 
-        private SortByText? GetCollectionName( string collectionId )
+        private async Task<SortByText?> GetCollectionName( string collectionId )
         {
-            var sql = "SELECT " +
+            string sql = "SELECT " +
                 "  Collections.Name" +
                 ", Collections.SortName" +
                 " FROM Collections" +
@@ -274,12 +276,12 @@ namespace Statistics2026.Data
             List<string> names = [];
             List<string> sortByNames = [];
 
-            ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommand( sqlCmd, statement =>
             {
-                var row = statement.Current;
+                IResultSet row = statement.Current;
                 names.Add( row.GetString( 0 ) );
                 sortByNames.Add( row.GetString( 1 ) );
-                return true;
+                return Task.FromResult( true );
             }, false );
 
             if( names.Count == 0 || sortByNames.Count == 0 )
@@ -289,10 +291,10 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private SortByText? GetCollectionsForMovie( string movieId, bool includeImage )
+        private async Task<SortByText?> GetCollectionsForMovie( string movieId, bool includeImage )
         {
             CheckIsValid( ECheckLevel.eReport );
-            var sql = "SELECT " +
+            string sql = "SELECT " +
                 "  Collections.Name" +
                 ", Collections.SortName" +
                 ", Collections.ItemId" +
@@ -314,21 +316,21 @@ namespace Statistics2026.Data
             List<string> sortByNames = [];
             List<string> images = [];
 
-            ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommand( sqlCmd, statement =>
             {
-                var row = statement.Current;
-                var col = 0;
-                var name = row.GetString( col++ );
-                var sortBy = row.GetString( col++ );
+                IResultSet row = statement.Current;
+                int col = 0;
+                string name = row.GetString( col++ );
+                string sortBy = row.GetString( col++ );
                 names.Add( name );
                 sortByNames.Add( sortBy );
                 if( includeImage )
                 {
-                    var collectionId = row.GetString( col++ );
-                    var collectionUrl = row.GetString( col++ );
+                    string collectionId = row.GetString( col++ );
+                    string collectionUrl = row.GetString( col++ );
                     images.Add( ItemImageUrl.ItemUrlFromItemId( collectionId, collectionUrl, name ) );
                 }
-                return true;
+                return Task.FromResult( true );
             }, false );
 
             if( names.Count == 0 || sortByNames.Count == 0 )

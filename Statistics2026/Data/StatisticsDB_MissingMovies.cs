@@ -15,6 +15,7 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json;
+using MediaBrowser.Controller.Entities.Movies;
 
 namespace Statistics2026.Data
 {
@@ -26,30 +27,30 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"Starting Analysis" );
             SetProgress( 0 );
-            var collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
+            List<BoxSet> collections = EmbyHelperFuncs.GetAllBoxSets( null, LibraryManager() );
             collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             SetProgress( 100 );
 
-            var reader = new TmdbInterface( _embyInterfaces, CancellationToken );
+            TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken );
 
             double count = collections.Count();
-            var completedCount = 0;
+            int completedCount = 0;
 
             List<SQLCmdDef> sqlCmds = [];
 
             SetProgress( 0 );
-            DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "Missing", "ParentId", whereClauses: [ "NOT IsEpisode" ] );
+            await DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "Missing", "ParentId", whereClauses: [ "NOT IsEpisode" ] );
 
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Getting Commands", Logger() ) )
             {
-                using var gatekeeper = HelperFuncs.CreateSemaphoreSlim();
+                using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim();
 
                 var pool = collections.Select( ( collection, index ) => Task.Run( async () =>
                 {
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        var retVal = (index: index, collection: collection, cmds: new List<SQLCmdDef>());
+                        (int index, BoxSet collection, List<SQLCmdDef> cmds) retVal = (index: index, collection: collection, cmds: new List<SQLCmdDef>());
                         if( collection == null )
                             return retVal;
 
@@ -57,7 +58,7 @@ namespace Statistics2026.Data
 
                         CancellationToken?.ThrowIfCancellationRequested();
 
-                        var currProgress = Interlocked.Increment( ref completedCount );
+                        int currProgress = Interlocked.Increment( ref completedCount );
                         SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
 
                         Logger().Info( $"    Processed Collection ({currProgress} of {count}) - {collection.Name}" );
@@ -69,7 +70,7 @@ namespace Statistics2026.Data
                     }
                 } ) ).ToList();
 
-                var unsortedResults = await Task.WhenAll( pool );
+                (int index, BoxSet collection, List<SQLCmdDef> cmds)[] unsortedResults = await Task.WhenAll( pool );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -82,7 +83,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                ExecuteCommands( sqlCmds );
+                await ExecuteCommands( sqlCmds );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Missing Movies Analysis" );
             }
@@ -92,11 +93,11 @@ namespace Statistics2026.Data
         {
             Logger().Info( $"    Analyzing Collection '{collection.Name}' - checking for missing movies" );
 
-            var collectionTmbdId = collection.GetProviderId( MetadataProviders.Tmdb );
+            string collectionTmbdId = collection.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( collectionTmbdId ) )
                 return [];
 
-            var isoCode = await HelperFuncs.GetCountryCodeAsync( _embyInterfaces!.HttpClient(), _cancellationToken: CancellationToken );
+            string isoCode = await HelperFuncs.GetCountryCodeAsync( _embyInterfaces!.HttpClient(), _cancellationToken: CancellationToken );
 
             TmdbCollection? tmdbCollection = null;
             try
@@ -117,7 +118,7 @@ namespace Statistics2026.Data
 
             List<SQLCmdDef> retVal = [];
             DateTimeOffset daysAgo = DateTimeOffset.UtcNow.AddDays( -1*Plugin.Instance!.Configuration.numDaysForMovieStreaming );
-            foreach( var tmdbMovie in tmdbCollection.Movies )
+            foreach( TmdbMovie tmdbMovie in tmdbCollection.Movies )
             {
                 if( HelperFuncs.InvalidDateForMissingAnalysis( tmdbMovie.ReleaseDate() ) )
                     continue;
@@ -125,14 +126,14 @@ namespace Statistics2026.Data
                 if( ( tmdbMovie.ReleaseDate() != null ) && ( tmdbMovie.ReleaseDate() >= daysAgo ) && !tmdbMovie.HasWatchProvider( isoCode ) )
                     continue;
 
-                var movieTmdbId = tmdbMovie.Id;
+                string movieTmdbId = tmdbMovie.Id;
 
                 Logger().Debug( $"        Checking for movie {tmdbMovie.Title} for {collection.Name} on server" );
-                var embyMovie = EmbyHelperFuncs.GetMovieByTmdbId( LibraryManager(), movieTmdbId );
+                Movie? embyMovie = EmbyHelperFuncs.GetMovieByTmdbId( LibraryManager(), movieTmdbId );
 
                 if( embyMovie == null )
                 {
-                    Logger().Info( $"            {tmdbMovie.Title} is missing" );
+                    Logger().Info( $"            {tmdbMovie.Title} is missing from collection {collection.Name}" );
                     AddStreamingProvidersInfo? addStreamingProviderInfo = null;
                     try
                     {
@@ -144,7 +145,7 @@ namespace Statistics2026.Data
                         Logger().Error( ex.ToString() );
                     }
 
-                    var key = $"{tmdbCollection.Id}-{tmdbMovie.Id}";
+                    string key = $"{tmdbCollection.Id}-{tmdbMovie.Id}";
                     retVal.Add( new SQLCmdDef( kSQLAddToMissing,
                     [
                         ("@Key", key ),

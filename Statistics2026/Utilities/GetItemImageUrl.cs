@@ -21,7 +21,7 @@ namespace Statistics2026.Utilities
             if( libManager == null )
                 return string.Empty;
 
-            var item = libManager.GetItemById( itemId );
+            BaseItem item = libManager.GetItemById( itemId );
             return item == null ? string.Empty : _ItemImageUrl( item, logger, imageType, maxWidth, quality, imageIndex );
         }
 
@@ -30,7 +30,7 @@ namespace Statistics2026.Utilities
             if( libManager == null )
                 return string.Empty;
 
-            var item = libManager.GetItemById( itemId );
+            BaseItem item = libManager.GetItemById( itemId );
             return item == null ? string.Empty : _ItemImageUrl( item, logger, imageType, maxWidth, quality, imageIndex );
         }
 
@@ -46,8 +46,8 @@ namespace Statistics2026.Utilities
             if( item == null || item.Id.ToString().IsNullOrEmpty() )
                 return string.Empty;
 
-            var key = (item.Id.ToString(), imageType, maxWidth, quality, imageIndex);
-            if( sIdToUrlMap.TryGetValue( key, out var url ) )
+            (string, ImageType imageType, int maxWidth, int quality, int imageIndex) key = (item.Id.ToString(), imageType, maxWidth, quality, imageIndex);
+            if( sIdToUrlMap.TryGetValue( key, out string? url ) )
             {
                 logger?.Debug( $"Key {key} exists url {url}" );
                 return url;
@@ -59,7 +59,7 @@ namespace Statistics2026.Utilities
                 sIdToUrlMap.Add( key, string.Empty );
                 return string.Empty;
             }
-            var imageInfo = item.GetImageInfo( imageType, imageIndex );
+            ItemImageInfo imageInfo = item.GetImageInfo( imageType, imageIndex );
             if( imageInfo == null )
             {
                 logger?.Debug( $"Key {key} does not have an image info" );
@@ -67,8 +67,8 @@ namespace Statistics2026.Utilities
                 return string.Empty;
             }
 
-            var imageTag = imageInfo?.DateModified.Ticks.ToString();
-            var retVal = $"/emby/Items/{item.Id}/Images/{imageType}?maxWidth={maxWidth}&quality={quality}&tag={imageTag}";
+            string? imageTag = imageInfo?.DateModified.Ticks.ToString();
+            string retVal = $"/emby/Items/{item.Id}/Images/{imageType}?maxWidth={maxWidth}&quality={quality}&tag={imageTag}";
             logger?.Debug( $"AddingKey {key} to url {retVal}" );
             sIdToUrlMap.Add( key, retVal );
             return retVal;
@@ -83,9 +83,9 @@ namespace Statistics2026.Utilities
             if( itemId == null || itemId.IsEmpty() )
                 return "";
 
-            var serverId = Plugin.Instance.ServerId;
-            var imageUrl = $"/item?id={itemId}&serverId={serverId}";
-            var retVal = ItemUrlFromImageUrl( itemUrl, imageUrl, text, height );
+            string serverId = Plugin.Instance.ServerId;
+            string imageUrl = $"/item?id={itemId}&serverId={serverId}";
+            string retVal = ItemUrlFromImageUrl( itemUrl, imageUrl, text, height );
 
             return retVal;
         }

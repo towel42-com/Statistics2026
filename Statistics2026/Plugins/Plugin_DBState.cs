@@ -31,7 +31,7 @@ namespace Statistics2026
             }
             else
             {
-                foreach( var curr in new[] { EDBState.eSystemTablesCreated, EDBState.eUserTablesCreated, EDBState.eSystemDataInitialized, EDBState.eUserDataInitialized } )
+                foreach( EDBState curr in new[] { EDBState.eSystemTablesCreated, EDBState.eUserTablesCreated, EDBState.eSystemDataInitialized, EDBState.eUserDataInitialized } )
                 {
                     if( ( curr & status ) != 0 )
                         items.Add( curr.ToString() );
@@ -47,7 +47,7 @@ namespace Statistics2026
 
     public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
-        public string DBStateMessage()
+        public async Task<string> DBStateMessage()
         {
             if( ( DBState == null ) || ( DBState == EDBState.eEmpty ) )
             {
@@ -59,7 +59,7 @@ namespace Statistics2026
                 return string.Empty;
             }
 
-            using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+            await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, GetType().Name );
 
             List<string> msgs = [];
 
@@ -72,8 +72,8 @@ namespace Statistics2026
                 msgs.Add( "The User watch tables have not been fully created. Please run the 'Statistics 2026 - Analyze User Watch Data'." );
             }
 
-            var tasksRunning = db.TasksRunning( "All" );
-            foreach( var task in tasksRunning )
+            List<string> tasksRunning = db.TasksRunning( "All" );
+            foreach( string task in tasksRunning )
             {
                 msgs.Add( $"The '{task}' task is running.  Results may be inaccurate or incomplete." );
             }
@@ -88,7 +88,7 @@ namespace Statistics2026
 
         public EDBState CurrDBState()
         {
-            var value = EDBState.eEmpty;
+            EDBState value = EDBState.eEmpty;
 
             if( Plugin.Instance != null && Plugin.Instance.DBState != null )
                 value = Plugin.Instance?.DBState ?? EDBState.eEmpty;
@@ -103,7 +103,7 @@ namespace Statistics2026
 
         public void SetDBState( EDBState dbState, bool enabled )
         {
-            var value = CurrDBState();
+            EDBState value = CurrDBState();
 
             if( Plugin.Instance != null && Plugin.Instance.DBState != null )
                 value = Plugin.Instance?.DBState ?? EDBState.eEmpty;
@@ -118,7 +118,7 @@ namespace Statistics2026
 
         public bool IsDBStateSet( EDBState dbState )
         {
-            var value = CurrDBState();
+            EDBState value = CurrDBState();
 
             return ( value & dbState ) == dbState;
         }
@@ -148,7 +148,7 @@ namespace Statistics2026
 
             _embyInterfaces.Logger().Debug( $"Setting DBState to {state.ToPrettyString()}" );
             Plugin.Instance.DBState = state;
-            var config = Plugin.Instance.Configuration;
+            PluginConfiguration config = Plugin.Instance.Configuration;
             Plugin.Instance.UpdateConfiguration( config );
         }
 

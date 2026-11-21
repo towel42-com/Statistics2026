@@ -3,7 +3,6 @@ using MediaBrowser.Common;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using MediaBrowser.Controller.Notifications;
@@ -16,14 +15,8 @@ using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Data;
-using Statistics2026.Utilities;
 using Statistics2026.Responses;
-using System;
-using System.Diagnostics;
-using System.Net.NetworkInformation;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using static Statistics2026.Data.Statistics2026DB;
+using Statistics2026.Utilities;
 
 namespace Statistics2026.Services
 {
@@ -94,52 +87,50 @@ namespace Statistics2026.Services
         {
         }
 
-        public object Get( GetTotalMissingMovies request )
+        public Task<object> Get( GetTotalMissingMovies request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                var groupData = db.TotalMissingMovies();
+                StatCard groupData = await db.TotalMissingMovies();
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
 
-        public object Get( GetTotalMissingEpisodes request )
+        public Task<object> Get( GetTotalMissingEpisodes request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
-                var groupData = db.TotalMissingEpisodes();
+                StatCard groupData = await db.TotalMissingEpisodes();
                 if( groupData == null )
                     return new StatCardResponse();
 
-                var vgReponse = groupData.createStat();
+                object vgReponse = groupData.createStat();
                 return vgReponse;
             } );
         }
 
-        public object Get( GetSeriesFilter request )
+        public Task<object> Get( GetSeriesFilter request )
         {
-            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
-
-                return db.GetSeriesFilter( true );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                return await db.GetSeriesFilter( true );
             } );
-            return retVal;
         }
 
-        public object Post( SetSeriesFilter request )
+        public async Task<object> Post( SetSeriesFilter request )
         {
-            var retVal = HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, timer =>
+            object retVal = await HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                using var db = Statistics2026DB.GetInstance( _embyInterfaces );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
 
                 var seriesFilter = new SeriesFilterResponse()
                 {
@@ -153,7 +144,7 @@ namespace Statistics2026.Services
                 if( seriesFilter.SeriesId.IsNullOrEmpty() )
                     return new object();
 
-                return db.SaveSeriesFilter( seriesFilter, true );
+                return await db.SaveSeriesFilter( seriesFilter, true );
             } );
             return retVal;
         }

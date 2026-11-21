@@ -30,7 +30,7 @@ namespace Statistics2026.Utilities
 
         public string ToString( int depth = 0, int numColumns = 0, StatCard.EAlignment keyColAlignment = StatCard.EAlignment.eLeft, Dictionary<int, StatCard.EAlignment>? columnAlignment = null, bool showCategory = true, Func<int, string, List<string>>? classesForValueFunc = null )
         {
-            var rowText = "<tr ";
+            string rowText = "<tr ";
             List<string> classArray = [];
             classArray.Add( "statCard-stats-number" ); 
             if( isClickable )
@@ -41,10 +41,10 @@ namespace Statistics2026.Utilities
             rowText += $"class=\"{string.Join( " ", classArray )}\" ";
             rowText += $"{StatCard.GetStyleString()}>";
 
-            var retVal = HelperFuncs.addToHtml( depth++, rowText );
+            string retVal = HelperFuncs.addToHtml( depth++, rowText );
             if( showCategory )
             {
-                var td = Name;
+                string td = Name;
                 if( isClickable )
                 {
                     td = $"<span class=\"row-toggle\">▶</span> {Name}";
@@ -58,25 +58,25 @@ namespace Statistics2026.Utilities
 
             if( Values != null )
             {
-                for( var ii = 0; ii < Values.Count(); ++ii )
+                for( int ii = 0; ii < Values.Count(); ++ii )
                 {
-                    var valueString = Values[ ii ]?.ToString() ?? string.Empty;
+                    string valueString = Values[ ii ]?.ToString() ?? string.Empty;
                     string td = valueString;
 
-                    var style = GetStyleString( ii, columnAlignment );
+                    string style = GetStyleString( ii, columnAlignment );
                     if( !showCategory && ( Values.Count == 1 ) && ( ii == 0 ) && isClickable )
                     {
                         td = $"<span class=\"row-toggle\">▶</span>{td}";
                         style = StatCard.GetStyleString( StatCard.EAlignment.eLeft );
                     }
 
-                    var colSpan = "colSpan=\"1\"";
+                    string colSpan = "colSpan=\"1\"";
                     if( Values.Count() != numColumns )
                     {
                         colSpan = $"colSpan=\"{numColumns}\"";
                     }
 
-                    var classes = string.Empty;
+                    string classes = string.Empty;
                     if( classesForValueFunc != null )
                     {
                         classArray = classesForValueFunc( ii, valueString );
@@ -147,7 +147,7 @@ namespace Statistics2026.Utilities
         {
             Rows = [];
             List<HeaderDef> tmp = [];
-            foreach( var curr in headers )
+            foreach( string curr in headers )
                 tmp.Add( new HeaderDef( curr ) );
             Headers = [ tmp ];
         }
@@ -158,10 +158,10 @@ namespace Statistics2026.Utilities
             Rows = [];
 
             Headers = [];
-            foreach( var currRow in headers )
+            foreach( List<string> currRow in headers )
             {
                 List<HeaderDef> tmp = [];
-                foreach( var curr in currRow )
+                foreach( string curr in currRow )
                     tmp.Add( new HeaderDef( curr ) );
                 Headers.Add( tmp );
             }
@@ -189,7 +189,7 @@ namespace Statistics2026.Utilities
 
         private int findRow( string name )
         {
-            for( var i = 0; i < Rows.Count; i++ )
+            for( int i = 0; i < Rows.Count; i++ )
             {
                 if( Rows[ i ].Name == name )
                     return i;
@@ -200,7 +200,7 @@ namespace Statistics2026.Utilities
 
         public void addRow( string category, List<object> values, bool clickable = false )
         {
-            var currRow = findRow( category );
+            int currRow = findRow( category );
             TableBasedStatCardRow row;
             if( currRow == -1 )
             {
@@ -222,7 +222,7 @@ namespace Statistics2026.Utilities
 
         private void UpdateColumnCount()
         {
-            for( var ii = 0; ii < Rows.Count; ++ii )
+            for( int ii = 0; ii < Rows.Count; ++ii )
             {
                 if( Rows[ ii ].isClickable )
                     continue;
@@ -248,7 +248,7 @@ namespace Statistics2026.Utilities
 
         public override bool IsClickableTable()
         {
-            foreach( var row in Rows )
+            foreach( TableBasedStatCardRow row in Rows )
             {
                 if( row.isClickable )
                     return true;
@@ -260,16 +260,16 @@ namespace Statistics2026.Utilities
         public override bool DataIsTable() { return true; }
         public override string GetDataString( int depth = 0 )
         {
-            var valuesToUse = Rows;
+            List<TableBasedStatCardRow> valuesToUse = Rows;
             if( SortByKey )
             {
                 valuesToUse = valuesToUse.OrderBy( row => row.Name ).ToList();
             }
 
-            var retVal = string.Empty;
-            var inClickableGroup = false;
+            string retVal = string.Empty;
+            bool inClickableGroup = false;
 
-            foreach( var row in valuesToUse )
+            foreach( TableBasedStatCardRow row in valuesToUse )
             {
                 if( row.isClickable && inClickableGroup )
                 {

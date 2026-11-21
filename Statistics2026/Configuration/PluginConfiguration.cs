@@ -59,8 +59,8 @@ namespace Statistics2026.Configuration
     {
         public static bool HasCustomSearches( this IDataForConfig target )
         {
-            var retVal = false;
-            for( var ii = 0; !retVal && ( ii < target.searchLocations.Count ); ++ii )
+            bool retVal = false;
+            for( int ii = 0; !retVal && ( ii < target.searchLocations.Count ); ++ii )
             {
                 retVal = !string.IsNullOrWhiteSpace( target.searchLocations[ ii ] );
             }
@@ -69,8 +69,8 @@ namespace Statistics2026.Configuration
 
         public static bool CanSearch( this IDataForConfig target )
         {
-            var retVal = target.showSearchTheMovieDB;
-            for( var ii = 0; !retVal && ( ii < target.searchLocations.Count ); ++ii )
+            bool retVal = target.showSearchTheMovieDB;
+            for( int ii = 0; !retVal && ( ii < target.searchLocations.Count ); ++ii )
             {
                 retVal = !string.IsNullOrWhiteSpace( target.searchLocations[ ii ] );
             }
@@ -133,7 +133,7 @@ namespace Statistics2026.Configuration
 
         public void UpdateBuildDateAndVersionInfo()
         {
-            var gitHash = Assembly.GetExecutingAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split( '+' ).LastOrDefault() ?? String.Empty;
+            string gitHash = Assembly.GetExecutingAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split( '+' ).LastOrDefault() ?? String.Empty;
             gitHash = gitHash.Length >= 8 ? gitHash[ ..8 ] : gitHash;
             if( !gitHash.IsEmpty() )
                 gitHash = "+" + gitHash;
@@ -186,7 +186,7 @@ namespace Statistics2026.Configuration
             if( user == null )
                 throw new UnauthorizedAccessException( "User likely is not authenticated." );
 
-            var retVal = UserConfigs.FirstOrDefault( u => u.UserId == user.Id.ToString() );
+            UserConfig retVal = UserConfigs.FirstOrDefault( u => u.UserId == user.Id.ToString() );
             if( retVal == null )
             {
                 retVal = new UserConfig { UserId = user.Id.ToString() };
