@@ -73,7 +73,7 @@
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                Helpers.initMultiRowTabs(this, 'Stats2026_SeriesSummary', AdminHelpers);
+                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
             });
 

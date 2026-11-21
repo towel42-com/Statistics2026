@@ -1,0 +1,206 @@
+﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/Stats2026_SystemSettings.js">
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <h2 style="margin-top: 0px;margin-bottom: 0px;">Analysis Settings</h2>
+
+            <h3 style="margin-top: 10px;">System Settings</h3>
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showDebugInfo" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show debug info?</span>
+                    <i class="md-icon" id="showDebugInfoHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showDiagnosticInfo" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show diagnostic info?</span>
+                    <i class="md-icon" id="showDiagnosticInfoHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showLastRunInfo" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show last run info?</span>
+                    <i class="md-icon" id="showLastRunInfoHelp">info</i>
+                </label>
+            </div>
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="resetPlayCount" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Reset play count/time?</span>
+                    <i class="md-icon" id="resetPlayCountHelp">info</i>
+                </label>
+            </div>
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="resetDBState" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Reset database state?</span>
+                    <i class="md-icon" id="resetDBStateHelp">info</i>
+                </label>
+            </div>
+
+            <h3 style="margin-top: 10px;">Search for Missing Settings</h3>
+            <div class="inputContainer">
+                How many days in the future to look for missing media?:
+                <i class="md-icon" id="numDaysFutureForMissingHelp">info</i>
+                <input type="number" id="numDaysFutureForMissing" min="0" max="30" placeholder="# of Days in the Future" title="Number of Days in the Future" />
+            </div>
+
+            <div class="inputContainer">
+                How many days after the premiere date before a Movie should be shown as missing?:
+                <i class="md-icon" id="numDaysForMovieStreamingHelp">info</i>
+                <input type="number" id="numDaysForMovieStreaming" min="0" max="30" placeholder="# of Days after the permiere date" title="Number of Days after the premiere date" />
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showSearchTheMovieDB" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show Search https://www.themoviedb.org</span>
+                    <i class="md-icon" id="showSearchTheMovieDBHelp">info</i>
+                </label>
+            </div>
+
+            <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
+                <label for="searchLocations" style="margin-bottom: 8px; text-align: center; width: 100%;">
+                    URLS to search for missing Media (One per line):
+                    <i class="md-icon" id="searchLocationsHelp" style="vertical-align: middle;">info</i>
+                </label>
+
+                <textarea is="emby-textarea" id="searchLocations" rows="6" style="width: 100%; min-width: 380px; box-sizing: border-box;"></textarea>
+
+                <div class="fieldDescription" style="display: flex; justify-content: center; gap: 15px; margin-top: 5px; width: 100%; text-align: center;">
+                    <span>Enter each url on a line, end with an = as the search key will be added.</span>
+                    <span id="searchLocationsAutosaveStatus" style="font-weight: bold; color: #52b788; opacity: 0; transition: opacity 0.3s;">Saved</span>
+                </div>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showFilteredMissingSummaries" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show Filtered Missing Summaries?</span>
+                    <i class="md-icon" id="showFilteredMissingSummariesHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="reportOnMissingSpecials" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Report on Missing Specials?</span>
+                    <i class="md-icon" id="reportOnMissingSpecialsHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="alwaysShowJustWatch" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Always show JustWatch as a Streaming Provider?</span>
+                    <i class="md-icon" id="alwaysShowJustWatchHelp">info</i>
+                </label>
+
+            </div>
+            <div class="inputContainer">
+                How many Streaming Providers to Show (-1 for all):
+                <i class="md-icon" id="maxNumStreamingProvidersHelp">info</i>
+                <input type="number" id="maxNumStreamingProviders" min="-1" max="10" placeholder="# of Streaming Providers" title="Number of Streaming Providers" />
+            </div>
+
+            <div class="sectionTitle" style="margin-top: 2em; margin-bottom: 0.5em;">Missing Series Filter</div>
+            <p class="fieldDescription" style="margin-top: 0; margin-bottom: 1.5em;">
+                Set the seasons to track missing episodes.  Uncheck to no longer track.  Set the minimum and/or maximum season to track.
+            </p>
+
+            <div id="seriesFilter_status">Loading Filters...</div>
+            <div class="sortable-table-styled-scrollbox">
+                <table class="sortable-table-styled" id="seriesFilter_table">
+                    <thead id="seriesFilter_head"></thead>
+                    <tbody id="seriesFilter_body"></tbody>
+                </table>
+            </div>
+
+            <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
+                <label for="collectionFilterList" style="margin-bottom: 8px; text-align: center; width: 100%;">
+                    Missing Movies and Collection Filter (Regular Expressions, one per line):
+                    <i class="md-icon" id="collectionFilterHelp" style="vertical-align: middle;">info</i>
+                </label>
+
+                <textarea is="emby-textarea" id="collectionFilterList" rows="6" style="width: 100%; min-width: 380px; box-sizing: border-box;"></textarea>
+
+                <div class="fieldDescription" style="display: flex; justify-content: center; gap: 15px; margin-top: 5px; width: 100%; text-align: center;">
+                    <span>Enter each regex on a new line.</span>
+                    <span id="collectionAutosaveStatus" style="font-weight: bold; color: #52b788; opacity: 0; transition: opacity 0.3s;">Saved</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 10px;">User Report Settings</h3>
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="excludeAdmin" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Exclude Administrator users from reports?</span>
+                    <i class="md-icon" id="excludeAdminHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="hasConnectUserID" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Only Show Users with Connect User ID?</span>
+                    <i class="md-icon" id="hasConnectUserIDHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                Number of Most Active Users to Show:
+                <i class="md-icon" id="numMostActiveHelp">info</i>
+                <input type="number" id="numMostActive" min="1" max="1000" placeholder="# of Most Active" title="Number of Most Active" />
+            </div>
+
+            <h3 style="margin-top: 10px;">Media Report Settings</h3>
+            <div class="inputContainer">
+                Number of Watched Videos to List:
+                <i class="md-icon" id="numWatchedToReportHelp">info</i>
+                <input type="number" id="numWatchedToReport" min="1" max="1000" placeholder="# of Watched Videos" title="Number of Watched Videos" />
+            </div>
+
+            <div class="inputContainer">
+                Number of "Tied" Media to List:
+                <i class="md-icon" id="numTiedToReportHelp">info</i>
+                <input type="number" id="numTiedToReport" min="1" max="1000" placeholder="# of Tied Videos" title="Number of Tied Media To List" />
+            </div>
+
+            <div class="inputContainer">
+                Number of Genres to report on:
+                <i class="md-icon" id="numGenresToReportHelp">info</i>
+                <input type="number" id="numGenresToReport" min="1" max="1000" placeholder="# of Genres" title="Number of Genres" />
+            </div>
+
+            <div class="inputContainer">
+                Number of Actors to report on:
+                <i class="md-icon" id="numActorsToReportHelp">info</i>
+                <input type="number" id="numActorsToReport" min="1" max="1000" placeholder="# of Actors" title="Number of Actors" />
+            </div>
+
+            <h3 style="margin-top: 10px;">Dolby Vision Profile Report Settings</h3>
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showUnknownDVProfiles" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show non-HEVC/Unknown Dolby Vision profiles?</span>
+                    <i class="md-icon" id="showUnknownDVProfilesHelp">info</i>
+                </label>
+            </div>
+
+            <h3 style="margin-top: 10px;">Resolution Report Settings</h3>
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showAllResolutions" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show all Resolutions?</span>
+                    <i class="md-icon" id="showAllResolutionsHelp">info</i>
+                </label>
+            </div>
+        </div>
+    </div>
+</div>

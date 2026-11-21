@@ -898,7 +898,7 @@ define([
             });
         }
 
-        function getCurrentConfigurationPageName() {
+        function getRequestedConfigurationPageName() {
             // 1. Check hash query string first (standard Emby SPA route: #!/configurationpage?name=Stats2026_Movies)
             const hash = window.location.hash || '';
             const hashQueryIndex = hash.indexOf('?');
@@ -915,16 +915,12 @@ define([
             return searchParams.get('name') || '';
         }
 
-        function initMultiRowTabs(view, currentPageName, AdminHelpers) {
-            const hierarchy = AdminHelpers.getTabHierarchy();
+        function initTabSystem(view, hierarchyFn, tabsFn) {
+            const hierarchy = hierarchyFn()
             let activeGroupIndex = 0;
             let activeGroup = hierarchy;
 
-            const computedCurrentPageName = getCurrentConfigurationPageName();
-            if (currentPageName !== computedCurrentPageName) {
-                const errMsg = `Page name mismatch! Expected: "${currentPageName}", but getCurrentConfigurationPageName() returned: "${computedCurrentPageName}"`;
-                showInfo("Tab Page Name Mismatch", errMsg, false);
-            }
+            const currentPageName = getRequestedConfigurationPageName();
 
             for (let ii = 0; ii < hierarchy.length; ii++) {
                 const subTabs = hierarchy[ii].subTabs || [];
@@ -937,10 +933,8 @@ define([
                 }
             }
 
-            // 1. Set Row 1 (Emby Header Tabs)
-            mainTabsManager.setTabs(view, activeGroupIndex, AdminHelpers.getTabs);
+            mainTabsManager.setTabs(view, activeGroupIndex, tabsFn);
 
-            // 2. Build Row 2 inside .content-primary (isolated from .tabs-viewmenubar)
             const contentPrimary = view.querySelector('.content-primary');
             if (!contentPrimary) {
                 return;
@@ -1005,6 +999,7 @@ define([
 
                 btn.addEventListener('click', function () {
                     if (!isCurrent) {
+                        console.log(`Page requested: ${ii} - '${subTab.page}' - '${subTab.name}'`);
                         Dashboard.navigate(Dashboard.getConfigurationPageUrl(subTab.page));
                     }
                 });
@@ -1076,7 +1071,7 @@ define([
             updateUserPluginConfiguration,
             isDebugLoggingEnabled,
             showDiagnosticInfo,
-            initMultiRowTabs
+            initTabSystem
         };
     }
 )

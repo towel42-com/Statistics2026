@@ -1,0 +1,65 @@
+﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/Stats2026_MovieSettings.js">
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <h2 style="margin-top: 0px;margin-bottom: 0px;">Analysis Settings</h2>
+
+            <h3 style="margin-top: 10px;">Search for Missing Settings</h3>
+            <div class="inputContainer">
+                How many days after the premiere date before a Movie should be shown as missing?:
+                <i class="md-icon" id="numDaysForMovieStreamingHelp">info</i>
+                <input type="number" id="numDaysForMovieStreaming" min="0" max="30" placeholder="# of Days after the permiere date" title="Number of Days after the premiere date" />
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showSearchTheMovieDB" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show Search https://www.themoviedb.org</span>
+                    <i class="md-icon" id="showSearchTheMovieDBHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showFilteredMissingSummaries" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show Filtered Missing Summaries?</span>
+                    <i class="md-icon" id="showFilteredMissingSummariesHelp">info</i>
+                </label>
+            </div>
+
+            <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
+                <label for="collectionFilterList" style="margin-bottom: 8px; text-align: center; width: 100%;">
+                    Missing Movies and Collection Filter (Regular Expressions, one per line):
+                    <i class="md-icon" id="collectionFilterHelp" style="vertical-align: middle;">info</i>
+                </label>
+
+                <textarea is="emby-textarea" id="collectionFilterList" rows="6" style="width: 100%; min-width: 380px; box-sizing: border-box;"></textarea>
+
+                <div class="fieldDescription" style="display: flex; justify-content: center; gap: 15px; margin-top: 5px; width: 100%; text-align: center;">
+                    <span>Enter each regex on a new line.</span>
+                    <span id="collectionAutosaveStatus" style="font-weight: bold; color: #52b788; opacity: 0; transition: opacity 0.3s;">Saved</span>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 10px;">Media Report Settings</h3>
+            <div class="inputContainer">
+                Number of Watched Videos to List:
+                <i class="md-icon" id="numWatchedToReportHelp">info</i>
+                <input type="number" id="numWatchedToReport" min="1" max="1000" placeholder="# of Watched Videos" title="Number of Watched Videos" />
+            </div>
+
+            <div class="inputContainer">
+                Number of Genres to report on:
+                <i class="md-icon" id="numGenresToReportHelp">info</i>
+                <input type="number" id="numGenresToReport" min="1" max="1000" placeholder="# of Genres" title="Number of Genres" />
+            </div>
+
+            <div class="inputContainer">
+                Number of Actors to report on:
+                <i class="md-icon" id="numActorsToReportHelp">info</i>
+                <input type="number" id="numActorsToReport" min="1" max="1000" placeholder="# of Actors" title="Number of Actors" />
+            </div>
+        </div>
+    </div>
+</div>

@@ -8,16 +8,17 @@
     function (mainTabsManager, appRouter, AdminHelpers, Helpers) {
         'use strict';
 
-        const baseId = 'episode_results';
-        const filterId = 'episodeDisplay';
-        const baseUrl = "Statistics2026/episode_list";
-        const tabName = "Stats2026_Episodes";
-        const lastRunArray = ["MediaAnalysis", "MissingEpisodesAnalysis", "NotifyAvailableToday"];
+        const baseId = 'movie_results';
+        const filterId = 'movieDisplay';
+        const baseUrl = "Statistics2026/movie_list";
+        const tabName = "Stats2026_Movies";
+        const lastRunArray = ["MediaAnalysis", "MissingMoviesAnalysis"];
         let showStreaming = true;
+
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                Helpers.initMultiRowTabs(this, tabName, AdminHelpers);
+                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
 
                 if (view.getAttribute('data-initialized') === 'true') {
@@ -56,7 +57,7 @@
                 var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
                 var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
 
-                return Helpers.getMediaHeader("Series", showOnServer, showMissing, showStreaming);
+                return Helpers.getMediaHeader("Collection", showOnServer, showMissing, showStreaming);
             }
 
             function getMediaRowData(info) {
@@ -64,7 +65,7 @@
                 var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
                 var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
 
-                return Helpers.getMediaRowData(info, showOnServer, showMissing, showStreaming, showStreaming);
+                return Helpers.getMediaRowData(info, showOnServer, showMissing, showStreaming);
             }
 
             async function loadTableDataAsync() {
@@ -103,12 +104,14 @@
 
                     Helpers.getUserPluginConfig().then(function (config) {
                         let found = false;
+
                         config.TableSortEntries.forEach(entry => {
                             if (entry.TableId == baseId) {
                                 entry.ExtraFilter = radio.value;
                                 found = true;
                             }
                         });
+
                         if (!found) {
                             config.TableSortEntries.push({
                                 TableId: baseId,

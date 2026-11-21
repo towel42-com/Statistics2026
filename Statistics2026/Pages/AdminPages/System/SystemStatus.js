@@ -22,26 +22,26 @@
 
             Helpers.insertSystemStatus(view, "lastRunInfo");
 
-            if (Helpers.showDiagnosticInfo(pluginConfig)) {
-                var playedUserMedia = Helpers.getSummaryInfo(view, "played_user_media", { promises: pendingPromises });
-                view.querySelector(`#playedUserMedia`).style.display = '';
-                view.querySelector("#playedUserMedia").innerHTML = (playedUserMedia);
+            // if (Helpers.showDiagnosticInfo(pluginConfig)) {
+            //     var playedUserMedia = Helpers.getSummaryInfo(view, "played_user_media", { promises: pendingPromises });
+            //     view.querySelector(`#playedUserMedia`).style.display = '';
+            //     view.querySelector("#playedUserMedia").innerHTML = (playedUserMedia);
 
-                var userWatchMediaIssues = Helpers.getSummaryInfo(view, "user_watch_media_issues", { promises: pendingPromises });
-                view.querySelector(`#userWatchMediaIssues`).style.display = '';
-                view.querySelector("#userWatchMediaIssues").innerHTML = (userWatchMediaIssues);
+            //     var userWatchMediaIssues = Helpers.getSummaryInfo(view, "user_watch_media_issues", { promises: pendingPromises });
+            //     view.querySelector(`#userWatchMediaIssues`).style.display = '';
+            //     view.querySelector("#userWatchMediaIssues").innerHTML = (userWatchMediaIssues);
 
-                var multiCollectionMovies = "";
-                multiCollectionMovies += Helpers.getSummaryInfo(view, "multi_collection_movies", { promises: pendingPromises });
-                view.querySelector(`#multiCollectionMovies`).style.display = '';
-                view.querySelector("#multiCollectionMovies").innerHTML = multiCollectionMovies;
-            }
-            else {
-                view.querySelector(`#playedUserMedia`).style.display = 'none';
-                view.querySelector(`#userWatchMediaIssues`).style.display = 'none';
-                view.querySelector(`#multiCollectionMovies`).style.display = 'none';
+            //     var multiCollectionMovies = "";
+            //     multiCollectionMovies += Helpers.getSummaryInfo(view, "multi_collection_movies", { promises: pendingPromises });
+            //     view.querySelector(`#multiCollectionMovies`).style.display = '';
+            //     view.querySelector("#multiCollectionMovies").innerHTML = multiCollectionMovies;
+            // }
+            // else {
+            //     view.querySelector(`#playedUserMedia`).style.display = 'none';
+            //     view.querySelector(`#userWatchMediaIssues`).style.display = 'none';
+            //     view.querySelector(`#multiCollectionMovies`).style.display = 'none';
 
-            }
+            // }
 
             Promise.allSettled(pendingPromises).finally(() => {
                 Dashboard.hideLoadingMsg();
@@ -74,7 +74,7 @@
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                Helpers.initMultiRowTabs(this, 'Stats2026_SystemStatus', AdminHelpers);
+                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
             });
 

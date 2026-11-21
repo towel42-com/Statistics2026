@@ -17,7 +17,7 @@
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                Helpers.initMultiRowTabs(this, tabName, AdminHelpers);
+                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
 
                 if (view.getAttribute('data-initialized') === 'true') {

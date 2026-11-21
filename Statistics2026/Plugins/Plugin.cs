@@ -8,7 +8,6 @@ using MediaBrowser.Common.Net;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Notifications;
 using MediaBrowser.Controller.Providers;
@@ -25,6 +24,7 @@ using Statistics2026.Data;
 using Statistics2026.Features;
 using Statistics2026.ScheduledTasks;
 using Statistics2026.Utilities;
+using System.Text;
 
 namespace Statistics2026
 {
@@ -119,101 +119,129 @@ namespace Statistics2026
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.Helpers.js"
                 },
                 new() {
-                    Name = "Stats2026_Summary",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Summary.html",
-                    EnableInMainMenu = true
-                },
-                new() {
-                    Name = "Stats2026_Summary.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Summary.js"
-                },
-                new() {
-                    Name = "Stats2026_SeriesSummary",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.SeriesSummary.html",
-                },
-                new() {
-                    Name = "Stats2026_SeriesSummary.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.SeriesSummary.js"
-                },
-                new() {
-                    Name = "Stats2026_EpisodeSummary",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.EpisodeSummary.html",
-                },
-                new() {
-                    Name = "Stats2026_EpisodeSummary.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.EpisodeSummary.js"
-                },
-                new() {
-                    Name = "Stats2026_MovieSummary",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.MovieSummary.html",
-                },
-                new() {
-                    Name = "Stats2026_MovieSummary.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.MovieSummary.js"
-                },
-                new() {
-                    Name = "Stats2026_UserStats",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.UserStats.html"
-                },
-                new() {
-                    Name = "Stats2026_UserStats.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.UserStats.js"
-                },
-                new() {
-                    Name = "Stats2026_TVSeriesProgress",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TVSeriesProgress.html",
-                },
-                new() {
-                    Name = "Stats2026_TVSeriesProgress.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TVSeriesProgress.js"
-                },
-                new() {
-                    Name = "Stats2026_Series",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Series.html",
-                },
-                new() {
-                    Name = "Stats2026_Series.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Series.js"
-                },
-                new() {
-                    Name = "Stats2026_Episodes",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Episodes.html",
-                },
-                new() {
-                    Name = "Stats2026_Episodes.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Episodes.js"
-                },
-                new() {
-                    Name = "Stats2026_Movies",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.html",
-                },
-                new() {
-                    Name = "Stats2026_Movies.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.js"
-                },
-                new() {
-                    Name = "Stats2026_Settings",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Settings.html",
-                },
-                new() {
-                    Name = "Stats2026_Settings.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Settings.js"
-                },
-                new() {
-                    Name = "Stats2026_SystemStatus",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.SystemStatus.html",
-                },
-                new() {
-                    Name = "Stats2026_SystemStatus.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.SystemStatus.js"
-                },
-                new() {
                     Name = "Stats2026_AdminHelpers.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.AdminHelpers.js"
                 },
                 new() {
+                    Name = "Stats2026_SystemSummary",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.System.SystemSummary.html",
+                    EnableInMainMenu = true
+                },
+                new() {
+                    Name = "Stats2026_SystemSummary.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.System.SystemSummary.js"
+                },
+                new() {
+                    Name = "Stats2026_SystemStatus",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.System.SystemStatus.html",
+                },
+                new() {
+                    Name = "Stats2026_SystemStatus.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.System.SystemStatus.js"
+                },
+                new() {
+                    Name = "Stats2026_SystemSettings",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.System.SystemSettings.html",
+                },
+                new() {
+                    Name = "Stats2026_SystemSettings.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.System.SystemSettings.js"
+                },
+                new() {
+                    Name = "Stats2026_MovieSummary",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.MovieSummary.html",
+                },
+                new() {
+                    Name = "Stats2026_MovieSummary.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.MovieSummary.js"
+                },
+                new() {
+                    Name = "Stats2026_MovieTable",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.MovieTable.html",
+                },
+                new() {
+                    Name = "Stats2026_MovieTable.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.MovieTable.js"
+                },
+                new() {
+                    Name = "Stats2026_MovieSettings",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.MovieSettings.html",
+                },
+                new() {
+                    Name = "Stats2026_MovieSettings.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.MovieSettings.js"
+                },
+                new() {
+                    Name = "Stats2026_SeriesSummary",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TV.SeriesSummary.html",
+                },
+                new() {
+                    Name = "Stats2026_SeriesSummary.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TV.SeriesSummary.js"
+                },
+                new() {
+                    Name = "Stats2026_EpisodeSummary",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TV.EpisodeSummary.html",
+                },
+                new() {
+                    Name = "Stats2026_EpisodeSummary.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TV.EpisodeSummary.js"
+                },
+                new() {
+                    Name = "Stats2026_SeriesTable",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TV.SeriesTable.html",
+                },
+                new() {
+                    Name = "Stats2026_SeriesTable.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TV.SeriesTable.js"
+                },
+                new() {
+                    Name = "Stats2026_EpisodeTable",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TV.EpisodeTable.html",
+                },
+                new() {
+                    Name = "Stats2026_EpisodeTable.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TV.EpisodeTable.js"
+                },
+                new() {
+                    Name = "Stats2026_TVSettings",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TV.TVSettings.html",
+                },
+                new() {
+                    Name = "Stats2026_TVSettings.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.TV.TVSettings.js"
+                },
+                new() {
+                    Name = "Stats2026_UserStats",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.UserStats.html"
+                },
+                new() {
+                    Name = "Stats2026_UserStats.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.UserStats.js"
+                },
+                new() {
+                    Name = "Stats2026_TVSeriesProgress",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.TVSeriesProgress.html",
+                },
+                new() {
+                    Name = "Stats2026_TVSeriesProgress.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.TVSeriesProgress.js"
+                },
+                new() {
+                    Name = "Stats2026_UserSettings",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.UserSettings.html",
+                },
+                new() {
+                    Name = "Stats2026_UserSettings.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.UserSettings.js"
+                },
+                new() {
+                    Name = "Stats2026_UserPageHelpers.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.UserHelpers.js"
+                },
+                new() {
                     Name = "Stats2026_UserStats_UserPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.UserStats.html",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.User.UserStats.html",
                     EnableInUserMenu = true,
                     MenuSection = "User Statistics",
                     DisplayName = "User Statistics",
@@ -221,41 +249,34 @@ namespace Statistics2026
                 },
                 new() {
                     Name = "Stats2026_UserStats_UserPage.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.UserStats.js"
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.User.UserStats.js"
                 },
                 new() {
                     Name = "Stats2026_TVSeriesProgress_UserPage",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.TVSeriesProgress.html",
-                    //EnableInUserMenu = true,
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.User.TVSeriesProgress.html",
                     MenuSection = "User Statistics",
                     DisplayName = "TV Progress",
                     FeatureId = Feature.StaticId
                 },
                 new() {
                     Name = "Stats2026_TVSeriesProgress_UserPage.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.TVSeriesProgress.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.User.TVSeriesProgress.js",
                     FeatureId = Feature.StaticId
                 },
-                new() {
-                    Name = "Stats2026_UserPageHelpers.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.UserPages.UserHelpers.js"
-                },
-
             };
 
-            foreach( var page in retVal )
+            if( !_beenValidated )
             {
-                var path = page.EmbeddedResourcePath;
-                if( GetType().Assembly.GetManifestResourceInfo( path ) == null )
-                {
-                    throw new Exception( "Could not find embedded resource: " + path );
-                }
+                EmbyHelperFuncs.validatePluginResourcePages( retVal, this, _embyInterfaces );
+                _beenValidated = true;
             }
+
             return retVal;
         }
 
         public override Guid Id => new( "23ADB024-F759-438F-B9A7-D5912A75596C" );
 
+        private static bool _beenValidated{ get; set; } = false;
         public static Plugin? Instance { get; private set; } = null;
         public static string StaticName = "Statistics 2026";
 
@@ -280,7 +301,7 @@ namespace Statistics2026
 
         public Stream GetThumbImage()
         {
-            var type = GetType();
+            Type type = GetType();
             return type.Assembly.GetManifestResourceStream( type.Namespace + ".Resources.thumb.png" );
         }
 
@@ -288,16 +309,16 @@ namespace Statistics2026
 
         public override void UpdateConfiguration( BasePluginConfiguration configuration )
         {
-            var prevNumFutureDays = Configuration.numDaysFutureForMissing;
-            var prevReportOnMissing = Configuration.reportOnMissingSpecials;
-            var prevNumDaysStreaming = Configuration.numDaysForMovieStreaming;
+            int prevNumFutureDays = Configuration.numDaysFutureForMissing;
+            bool prevReportOnMissing = Configuration.reportOnMissingSpecials;
+            int prevNumDaysStreaming = Configuration.numDaysForMovieStreaming;
 
             base.UpdateConfiguration( configuration );
-            var numFutureDaysChanged = ( Configuration.numDaysFutureForMissing != prevNumFutureDays );
-            var reportMissingChanged = ( Configuration.reportOnMissingSpecials != prevReportOnMissing );
-            var numDaysStreamingChanged = ( Configuration.numDaysForMovieStreaming != prevNumDaysStreaming );
+            bool numFutureDaysChanged = ( Configuration.numDaysFutureForMissing != prevNumFutureDays );
+            bool reportMissingChanged = ( Configuration.reportOnMissingSpecials != prevReportOnMissing );
+            bool numDaysStreamingChanged = ( Configuration.numDaysForMovieStreaming != prevNumDaysStreaming );
 
-            var needsRun = numFutureDaysChanged || reportMissingChanged || numDaysStreamingChanged;
+            bool needsRun = numFutureDaysChanged || reportMissingChanged || numDaysStreamingChanged;
             if( configuration != null && needsRun )
             {
                 if( _embyInterfaces == null )

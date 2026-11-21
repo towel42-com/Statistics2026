@@ -127,7 +127,7 @@
 
             // init code here
             view.addEventListener('viewshow', async function (e) {
-                Helpers.initMultiRowTabs(this, 'Stats2026_Settings', AdminHelpers);
+                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
                 Helpers.injectStyleSheet();
 
                 loadPage(view, params);
