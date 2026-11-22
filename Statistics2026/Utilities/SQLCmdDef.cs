@@ -224,15 +224,18 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        static public SQLCmdDef CreateSQLCmdDef( string sql, string paramListName, List<object> paramList )
+        static public SQLCmdDef CreateSQLCmdDef( string sql, string paramListName, List<object> paramList, List<(string name, object? value)>? parameters = null )
         {
             string subTable = "SELECT value FROM json_each(@JsonParamList)";
             sql = sql.Replace( paramListName, subTable );
 
-            var sqlDefParams = new List<(string name, object? value)>
+            List<(string name, object? value)>? sqlDefParams = parameters;
+            if ( sqlDefParams == null )
             {
-                ("@JsonParamList", JsonSerializer.Serialize( paramList ) )
-            };
+                sqlDefParams = [];
+            }
+
+            sqlDefParams.Add( ("@JsonParamList", JsonSerializer.Serialize( paramList ) ) );
 
             var retVal = new SQLCmdDef( sql, sqlDefParams );
             return retVal;
