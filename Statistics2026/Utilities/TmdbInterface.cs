@@ -15,6 +15,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Serialization;
 using ServiceStack;
+using ServiceStack.Text.Common;
 using Statistics2026.Secrets;
 using System.Collections.Concurrent;
 using System.Collections.Specialized;
@@ -151,15 +152,31 @@ namespace Statistics2026.Utilities
                 TmdbCollection? collection = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbCollection>( text );
                 if( collection == null )
                     return collection;
+                collection.RemoveTBAMovies();
+
+                DateTimeOffset lastDayToCountTowardsCollection = DateTimeOffset.UtcNow.AddDays( Plugin.Instance!.Configuration.numDaysForMovieStreaming );
 
                 for( int ii = 0; ii < collection.Movies.Count; ++ii )
                 {
+                    _cancellationToken?.ThrowIfCancellationRequested();
                     TmdbMovie movie = collection.Movies[ ii ];
                     if( movie == null )
                         continue;
 
-                    collection.Movies[ ii ] = await GetMovieStudiosAsync( movie ).ConfigureAwait( false );
-                    _cancellationToken?.ThrowIfCancellationRequested();
+                    if( movie.ReleaseDate() == null )
+                        continue;
+
+                    if( movie.ReleaseDate() > lastDayToCountTowardsCollection )
+                        continue;
+
+                    try
+                    {
+                        collection.Movies[ ii ] = await GetMovieStudiosAsync( movie ).ConfigureAwait( false );
+                    }
+                    catch( Exception )
+                    {
+                        continue;
+                    }
                 }
                 _cancellationToken?.ThrowIfCancellationRequested();
                 return collection ?? null;

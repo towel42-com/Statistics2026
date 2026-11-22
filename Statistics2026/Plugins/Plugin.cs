@@ -156,6 +156,14 @@ namespace Statistics2026
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.MovieSummary.js"
                 },
                 new() {
+                    Name = "Stats2026_CollectionsTable",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.CollectionsTable.html",
+                },
+                new() {
+                    Name = "Stats2026_CollectionsTable.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.CollectionsTable.js"
+                },
+                new() {
                     Name = "Stats2026_MovieTable",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.Movies.MovieTable.html",
                 },

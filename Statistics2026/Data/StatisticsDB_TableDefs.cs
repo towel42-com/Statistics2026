@@ -158,6 +158,7 @@ namespace Statistics2026.Data
                             new TableColDef( "Name", "TEXT", false ),
                             new TableColDef( "SortName", "TEXT", false ),
                             new TableColDef( "ImageUrl", "TEXT", false ),
+                            new TableColDef( "NumMovies", "INT", true ),
                     ]
                 ),
                 new TableDef("CollectionMembership",

@@ -51,10 +51,6 @@
                     retVal += `<th data-column="StreamingServies" data-type="string" class="info_cell_heading">Streaming Services(s)<span class="sort-icon"></span></th>`;
                 }
 
-                // if (showMissing) {
-                //     retVal += `<th data-column="Search" data-type="string" class="info_cell_heading">Click to Search<span class="sort-icon"></span></th>`;
-                // }
-
                 retVal += "</tr>";
                 return retVal;
             }

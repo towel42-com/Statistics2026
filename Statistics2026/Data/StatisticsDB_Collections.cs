@@ -1,8 +1,10 @@
 ﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Model.Entities;
 using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Utilities;
+using System.Collections.ObjectModel;
 
 namespace Statistics2026.Data
 {
@@ -24,29 +26,48 @@ namespace Statistics2026.Data
             SetProgress( 0 );
 
             await DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "Collections", "ItemId" );
+            await DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "CollectionMembership", "CollectionId" );
+
+            //collections = collections.Where( collection => collection.Id.ToString() == "aa79325d-13ee-4cdc-bae8-7503a82a7215" ).ToList();
+
+            TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken );
 
             var sqlCmds = new List<SQLCmdDef>();
+            var emptyCollections = new HashSet<string>();
             using( var listTimer = new AutoTimer( $"    Analyze Collection - Getting Commands", Logger() ) )
             {
+                using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim( true );
                 var pool = collections.Select( ( collection, index ) => Task.Run( async () =>
                 {
-                    List<SQLCmdDef> currCmds = [];
-                    long runTimeMS = 0;
+                    await gatekeeper.WaitAsync();
 
-                    await Task.Yield();
-                    using( var currTimer = new AutoTimer( $"    Processed Collection {collection.Name}", Logger() ) )
+                    try
                     {
-                        currTimer.Restart();
-                        currCmds = await AddCollectionAsync( collection ).ConfigureAwait( false );
-                        runTimeMS = currTimer.ElapsedMilliseconds();
+                        List<SQLCmdDef> currCmds = [];
+                        long runTimeMS = 0;
+
+                        await Task.Yield();
+                        using( var currTimer = new AutoTimer( $"    Processed Collection {collection.Name}", Logger() ) )
+                        {
+                            currTimer.Restart();
+                            bool isEmptyCollection = false;
+                            ( currCmds, isEmptyCollection ) = await AddCollectionAsync( collection, reader).ConfigureAwait( false );
+                            if( isEmptyCollection )
+                                emptyCollections.Add( collection.Id.ToString() );
+                            runTimeMS = currTimer.ElapsedMilliseconds();
+                        }
+
+                        CancellationToken?.ThrowIfCancellationRequested();
+                        int currProgress = Interlocked.Increment( ref completedCount );
+                        SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
+                        Logger().Info( $"Processed Collection {collection.Name} - {runTimeMS} ms" );
+
+                        return (index: index, item: collection, cmds: currCmds);
                     }
-
-                    CancellationToken?.ThrowIfCancellationRequested();
-                    int currProgress = Interlocked.Increment( ref completedCount );
-                    SetProgress( 80.0 * ( 1.0 * currProgress ) / count );
-                    Logger().Info( $"Processed Collection {collection.Name} - {runTimeMS} ms" );
-
-                    return (index: index, item: collection, cmds: currCmds);
+                    finally
+                    {
+                        gatekeeper.Release();
+                    }
                 } ) ).ToList();
 
                 (int index, BoxSet item, List<SQLCmdDef> cmds)[] unsortedResults = await Task.WhenAll( pool );
@@ -61,16 +82,24 @@ namespace Statistics2026.Data
 
             CancellationToken?.ThrowIfCancellationRequested();
 
+            if( emptyCollections.Count != 0 )
+            {
+                var idList = emptyCollections.ToList<object>();
+                sqlCmds.Insert( 0, SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM Collections WHERE ItemId IN (<KEYLIST>)", "<KEYLIST>", idList ) );
+                sqlCmds.Insert( 1, SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM CollectionMembership WHERE CollectionId IN (<KEYLIST>)", "<KEYLIST>", idList ) );
+            }
+
             using( var timer = new AutoTimer( $"    Analyze Collection - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
                 await ExecuteCommands( sqlCmds );
                 SetProgress( 100 );
             }
+
             Logger().Debug( $"Finished Collection Analysis" );
         }
 
-        private async Task<List<SQLCmdDef>> AddChildToCollectionAsync( Video video, BoxSet collection )
+        private List<SQLCmdDef> AddChildToCollectionAsync( Video video, BoxSet collection )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -112,24 +141,18 @@ namespace Statistics2026.Data
 
             Logger().Debug( $"AddCollectionMembers -     Adding members of Collection - {collection.Name}" );
 
-            var query = new InternalItemsQuery
-            {
-                CollectionIds = new[] { collection.InternalId },
-                Recursive = true
-            };
+            List<Movie> videos = EmbyHelperFuncs.GetMoviesInCollection( collection, LibraryManager() ).ToList();
 
-            BaseItem[] baseItems = LibraryManager().GetItemList( query );
-            var videos = baseItems.OfType<Video>().ToList();
-
-            double count = videos.Count;
-            double curr = 0.0;
+            await DeleteAllInvalid( videos.ConvertAll( item => (BaseItem)item ), "CollectionMembership", "ItemId",
+                whereClauses: [ "CollectionId=@CollectionId" ],
+                parameters: new List<(string, object?)>() { ("@CollectionId", collection.Id.ToString() ) } 
+            );
 
             var sqlCmds = new List<SQLCmdDef>();
 
             foreach( Video video in videos )
-            { 
-                SetProgress( 100.0 * ( ++curr ) / count );
-                List<SQLCmdDef> childCmds = await AddChildToCollectionAsync( video, collection ).ConfigureAwait( false );
+            {
+                List<SQLCmdDef> childCmds = AddChildToCollectionAsync( video, collection );
                 sqlCmds.AddRange( childCmds );
                 CancellationToken?.ThrowIfCancellationRequested();
             }
@@ -137,15 +160,14 @@ namespace Statistics2026.Data
             return sqlCmds;
         }
 
-        public async Task<List<SQLCmdDef>> AddCollectionAsync( BoxSet collection )
+        public async Task<(List<SQLCmdDef> cmds, bool emptyCollection)> AddCollectionAsync( BoxSet collection, TmdbInterface reader )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
-            var sqlCmds = new List<SQLCmdDef>();
             if( collection.Id == null )
             {
                 Logger().Error( $"AddCollection {collection.SortName}: is missing ItemId" );
-                return sqlCmds;
+                return ([], true);
             }
 
             Logger().Debug( $"AddCollection - Adding Collection {collection.Name}" );
@@ -158,6 +180,7 @@ namespace Statistics2026.Data
                     ", Name" +
                     ", SortName" +
                     ", ImageUrl" +
+                    ", NumMovies" +
                 ")" +
                 " VALUES " +
                 "(" +
@@ -166,6 +189,7 @@ namespace Statistics2026.Data
                 ", @Name" +
                 ", @SortName" +
                 ", @ImageUrl" +
+                ", @NumMovies" +
                 ")" +
                 " ON CONFLICT(ItemId) " +
                 " DO UPDATE " +
@@ -173,7 +197,8 @@ namespace Statistics2026.Data
                     "  Name=@Name" +
                     ", SortName=@SortName" +
                     ", TmdbId=@TmdbId" +
-                    ", ImageUrl=@ImageUrl"
+                    ", ImageUrl=@ImageUrl" +
+                    ", NumMovies=@NumMovies"
                     ;
 
             string? tmdbId = collection.GetProviderId( MetadataProviders.Tmdb );
@@ -182,6 +207,27 @@ namespace Statistics2026.Data
                 tmdbId = null;
             }
 
+            int? numMovies = null;
+            if( tmdbId != null )
+            {
+                try
+                {
+                    TmdbCollection? tmdbCollection = await reader.GetRemoteCollectionMembersAsync( tmdbId ).ConfigureAwait( false );
+                    IEnumerable<Video> libMembers = EmbyHelperFuncs.GetMoviesInCollection( collection, LibraryManager() );
+                    numMovies = Math.Max( tmdbCollection?.Movies.Count() ?? 0, libMembers.Count() );
+                }
+                catch( Exception )
+                {
+                    return ([], true);
+                }
+            }
+
+            if( numMovies == 0 )
+            {
+                return ([], true);
+            }
+
+            var sqlCmds = new List<SQLCmdDef>();
             sqlCmds.Add( new SQLCmdDef( sql,
                 [
                     ("@ItemId", collection.Id.ToString()),
@@ -189,11 +235,12 @@ namespace Statistics2026.Data
                     ("@Name", collection.Name),
                     ("@SortName", collection.SortName),
                     ("@ImageUrl", ItemImageUrl._ItemImageUrl(collection)),
+                    ("@NumMovies", numMovies),
                 ] ) );
             Logger().Debug( $"    AddCollection - Successfully Added Collection" );
 
             sqlCmds.AddRange( await AddCollectionMembersAsync( collection ).ConfigureAwait( false ) );
-            return sqlCmds;
+            return (sqlCmds, false);
         }
 
         public async Task<StatCard> TotalCollectionCount()

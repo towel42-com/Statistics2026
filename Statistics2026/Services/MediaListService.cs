@@ -49,6 +49,12 @@ namespace Statistics2026.Services
     {
     }
 
+    [Route( "/Statistics2026/collection_list", "GET", Summary = "Gets Collections" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetCollectionList : IReturn<List<MediaItemResponse>>
+    {
+    }
+
     public class MediaListService : BaseService
     {
         public MediaListService(
@@ -96,6 +102,18 @@ namespace Statistics2026.Services
                 List<MediaItemResponse> series = await db.getSeriesListResponseAsync();
 
                 return series;
+            } );
+        }
+
+        public Task<object> Get( GetCollectionList request )
+        {
+            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            {
+                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+
+                List<MediaItemResponse> collections = await db.getCollectionListResponseAsync();
+
+                return collections;
             } );
         }
 

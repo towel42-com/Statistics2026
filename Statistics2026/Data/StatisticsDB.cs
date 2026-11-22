@@ -650,20 +650,20 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public Task DeleteAllInvalid( List<string> ids, string tableName, string idColName, List<string>? whereClauses = null )
+        public Task DeleteAllInvalid( List<string> ids, string tableName, string idColName, List<string>? whereClauses = null, List<(string name, object? value)>? parameters = null )
         {
             whereClauses = whereClauses ?? [];
             whereClauses.Add( $"{idColName} NOT IN (<KEYLIST>)" );
             string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
 
-            SQLCmdDef cmd = SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM {tableName} {whereClause}", "<KEYLIST>", ids.ConvertAll( item => (object)item ) );
+            SQLCmdDef cmd = SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM {tableName} {whereClause}", "<KEYLIST>", ids.ConvertAll( item => (object)item ), parameters );
             return ExecuteCommand( cmd );
         }
 
-        public Task DeleteAllInvalid( List<BaseItem> items, string tableName, string idColName, List<string>? whereClauses = null )
+        public Task DeleteAllInvalid( List<BaseItem> items, string tableName, string idColName, List<string>? whereClauses = null, List<(string name, object? value)>? parameters = null )
         {
             List<string> ids = EmbyHelperFuncs.GetAllIds( items );
-            return DeleteAllInvalid( ids, tableName, idColName, whereClauses );
+            return DeleteAllInvalid( ids, tableName, idColName, whereClauses, parameters );
         }
 
         //public async Task AnalyzeData<T>( string dataType, List<T> items, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, string> itemNameFunc, List<SQLCmdDef?> initCmds )

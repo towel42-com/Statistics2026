@@ -19,13 +19,14 @@ define(function () {
                 href: Dashboard.getConfigurationPageUrl('Stats2026_MovieSummary'),
                 subTabs: [
                     { page: 'Stats2026_MovieSummary', name: 'Movie Summary' },
+                    { page: 'Stats2026_CollectionsTable', name: 'Collections' },
                     { page: 'Stats2026_MovieTable', name: 'Movies' },
                     { page: 'Stats2026_MovieSettings', name: 'Settings' }
                 ]
             },
             {
                 id: 'tv',
-                name: 'TV Series & Episodes',
+                name: 'TV Shows',
                 href: Dashboard.getConfigurationPageUrl('Stats2026_SeriesSummary'),
                 subTabs: [
                     { page: 'Stats2026_SeriesSummary', name: 'Series Summary' },

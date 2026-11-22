@@ -167,6 +167,39 @@ namespace Statistics2026.Data
             return SQLCmdDef.CreateCmd( from, columns, joins, whereClauses, groupByClauses, orderBy );
         }
 
+        private string getCollectionListResponseOnServerCmd()
+        {
+            List<string> columns = [];
+            columns.Add( "0 AS IsMissing" );
+            columns.Add( "Collections.Name AS Title" );
+            columns.Add( "Collections.SortName as SortName" );
+            columns.Add( "'''' AS PremiereDate" );
+            columns.Add( "'' AS StudioNames" );
+            columns.Add( "'' AS StreamingProviders" );
+            columns.Add( "'' AS ResolutionDetail" );
+            columns.Add( "'' AS Codec" );
+            columns.Add( "'' AS DolbyVisionProfile" );
+            columns.Add( "'' AS ServerLocation" );
+            columns.Add( "Collections.ItemId AS ItemId" );
+            columns.Add( "Collections.ImageUrl AS ImageUrl" );
+            columns.Add( "'' AS ParentInfo" );
+
+            columns.Add( "'' AS PosterPath" );
+            columns.Add( "'' AS SeasonNum" );
+            columns.Add( "'' AS EpisodeNum" );
+            columns.Add( "'' AS ParentId" );
+            columns.Add( "NumMovies as NumMovies" );
+            columns.Add( "(SELECT COUNT(*) FROM CollectionMembership WHERE Collections.ItemId=CollectionMembership.CollectionId ) AS collectedMovies" );
+
+            string from = "Collections";
+            List<string> joins = [];
+            List<string> whereClauses = [];
+            List<string> groupByClauses = [];
+            List<string> orderBy = new() { "SortName ASC" };
+
+            return SQLCmdDef.CreateCmd( from, columns, joins, whereClauses, groupByClauses, orderBy );
+        }
+
         private string getMediaListResponseOnServerCmd( EWhichMediaList whichMedia, ref List<string> orderBy )
         {
             bool episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
@@ -241,6 +274,56 @@ namespace Statistics2026.Data
             return retVal;
         }
 
+        public async Task<List<MediaItemResponse>> getCollectionListResponseAsync()
+        {
+            if( _embyInterfaces == null )
+                return [];
+
+            string sqlCmd = getCollectionListResponseOnServerCmd();
+
+            string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
+
+            List<MediaItemResponse> retVal = [];
+            await ExecuteCommand( new SQLCmdDef( sqlCmd ), async ( statement ) =>
+            {
+                IResultSet row = statement.Current;
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRow( row, null, isoCode, null, null, null, _embyInterfaces, this );
+                if( mediaInfoResponse != null )
+                {
+                    int pos = ( (int)EMediaListResponseColumns.eParentId ) + 1;
+                    int numMovies = row.GetInt( pos++ );
+                    int moviesCollected = row.GetInt( pos++ );
+
+                    if( numMovies == 0 && moviesCollected == 0 )
+                    {
+                        return true;
+                    }
+
+                    if( numMovies == 0 )
+                        numMovies = moviesCollected;
+
+                    double moviesPercent = (numMovies == 0) ? 100.0 : ( 100.0 * moviesCollected / ( 1.0 * numMovies ) );
+
+                    string collectionStatus = $"{moviesCollected}/{numMovies} ({moviesPercent:F0}%)";
+                    mediaInfoResponse.Extra = collectionStatus;
+
+                    retVal.Add( mediaInfoResponse );
+                }
+
+                return true;
+            } );
+
+
+            retVal.Sort(
+                ( x, y ) =>
+                {
+                    string lhs = x.DisplayName.SortBy;
+                    string rhs = y.DisplayName.SortBy;
+                    return lhs.CompareTo( rhs );
+                } );
+            return retVal;
+        }
+
         public async Task<List<MediaItemResponse>> getSeriesListResponseAsync()
         {
             if( _embyInterfaces == null )
@@ -312,7 +395,7 @@ namespace Statistics2026.Data
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommand( new SQLCmdDef( sqlCmd ), async( statement ) =>
+            await ExecuteCommand( new SQLCmdDef( sqlCmd ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
                 MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRow( row, episodes, isoCode, IsFilteredSeries, IsFilteredCollection, GetCollectionName, _embyInterfaces, this );

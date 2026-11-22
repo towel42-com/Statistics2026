@@ -247,6 +247,21 @@ namespace Statistics2026.Utilities
             return boxSets;
         }
 
+        public static IEnumerable<Movie> GetMoviesInCollection( BoxSet collection, ILibraryManager libManager )
+        {
+            var query = new InternalItemsQuery
+            {
+                CollectionIds = new[] { collection.InternalId },
+                Recursive = true,
+                IncludeItemTypes = new[] { nameof( Movie ) },
+                GroupByPresentationUniqueKey = true
+            };
+            BaseItem[] baseItems = libManager.GetItemList( query );
+
+            IEnumerable<Movie> videos = baseItems.OfType<Movie>();
+            return videos;
+        }
+
         public static List<Episode> GetAllEpisodesForSeries( User? user, ILibraryManager libManager, Series series )
         {
             var query = new InternalItemsQuery( user )
