@@ -322,7 +322,7 @@ namespace Statistics2026.Utilities
             return null;
         }
 
-        public static List<string> GetAllIds( List<BaseItem> items )
+        public static List<string> GetAllIds( IEnumerable<BaseItem> items )
         {
             HashSet<string> ids = [];
             foreach( BaseItem item in items )
