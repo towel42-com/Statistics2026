@@ -152,9 +152,9 @@ namespace Statistics2026.Utilities
                 TmdbCollection? collection = _embyInterfaces.JsonSerializer().DeserializeFromString<TmdbCollection>( text );
                 if( collection == null )
                     return collection;
-                collection.RemoveTBAMovies();
 
                 DateTimeOffset lastDayToCountTowardsCollection = DateTimeOffset.UtcNow.AddDays( Plugin.Instance!.Configuration.numDaysForMovieStreaming );
+                collection.RemoveFutureMovies( lastDayToCountTowardsCollection );
 
                 for( int ii = 0; ii < collection.Movies.Count; ++ii )
                 {
@@ -742,6 +742,14 @@ namespace Statistics2026.Utilities
 
         [DataMember( Name = "parts" )]
         public List<TmdbMovie> Movies { get; set; } = [];
+
+        public void RemoveFutureMovies( DateTimeOffset lastValidDate )
+        {
+            Movies = Movies.Where( movie =>
+                   ( movie != null )
+                && ( movie.ReleaseDate() != null )
+                && ( movie.ReleaseDate() <= lastValidDate ) ).ToList();
+        }
     }
 
 

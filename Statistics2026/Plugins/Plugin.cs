@@ -98,8 +98,9 @@ namespace Statistics2026
             HelperFuncs.PreDebugRun( _embyInterfaces );
 #if !DEBUG_PLUGIN
             var debouncer = new Debouncer();
+
             debouncer.RunLaterAsync( 500, async ( cancellationToken ) => {
-                HelperFuncs.CheckForOOD( _embyInterfaces, true, ["Startup"], GetType(), true );
+                await HelperFuncs.CheckForOOD( _embyInterfaces, [ "Startup" ], GetType(), true );
                 return false;
             } );
 #endif
