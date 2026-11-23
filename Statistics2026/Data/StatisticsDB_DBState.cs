@@ -13,7 +13,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eInit );
 
-            if( !Plugin.Instance!.Configuration.resetDBState && Plugin.Instance!.DBStateInitialized() )
+            if( !Plugin.Instance!.Configuration.systemSettings.resetDBState && Plugin.Instance!.DBStateInitialized() )
                 return;
 
             Plugin.Instance.ResetDBState();
@@ -39,7 +39,7 @@ namespace Statistics2026.Data
 
             await ComputeUserDataDBState();
 
-            Plugin.Instance!.Configuration.resetDBState = false;
+            Plugin.Instance!.Configuration.systemSettings.resetDBState = false;
             Statistics2026.Plugin.Instance.UpdateConfiguration( Plugin.Instance!.Configuration );
         }
 

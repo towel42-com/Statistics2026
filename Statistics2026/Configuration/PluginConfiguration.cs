@@ -16,6 +16,24 @@ namespace Statistics2026.Configuration
         public string ExtraFilter { get; set; } = string.Empty;
     }
 
+    public class SystemSettings
+    {
+        public bool showDebugInfo { get; set; } = false;
+        public bool showDiagnosticInfo { get; set; } = false;
+        public bool showLastRunInfo { get; set; } = false;
+        public bool resetPlayCount { get; set; } = false;
+        public bool resetDBState { get; set; } = false;
+
+        public void CopyData( SystemSettings dataSource )
+        {
+            resetPlayCount = dataSource.resetPlayCount;
+            resetDBState = dataSource.resetDBState;
+            showDebugInfo = dataSource.showDebugInfo;
+            showDiagnosticInfo = dataSource.showDiagnosticInfo;
+            showLastRunInfo = dataSource.showLastRunInfo;
+        }
+    }
+
     public interface IDataForConfig
     {
         string BuildDate { get; set; }
@@ -48,11 +66,8 @@ namespace Statistics2026.Configuration
         // note, the db is complete just what is shown is changed
         List<string> CollectionFiltersForMissingMovies { get; set; }
 
-        bool resetPlayCount { get; set; }
-        bool resetDBState { get; set; }
-        bool showDebugInfo { get; set; }
-        bool showDiagnosticInfo { get; set; }
-        bool showLastRunInfo { get; set; }
+        // system settings
+        SystemSettings systemSettings { get; set; }
     }
 
     public static class DataForConfigExtensions
@@ -118,12 +133,7 @@ namespace Statistics2026.Configuration
             if( dataSource.CollectionFiltersForMissingMovies != null )
                 target.CollectionFiltersForMissingMovies.AddRange( dataSource.CollectionFiltersForMissingMovies );
 
-            target.resetPlayCount = dataSource.resetPlayCount;
-            target.resetDBState = dataSource.resetDBState;
-            target.showDebugInfo = dataSource.showDebugInfo;
-            target.showDiagnosticInfo = dataSource.showDiagnosticInfo;
-
-            target.showLastRunInfo = dataSource.showLastRunInfo;
+            target.systemSettings.CopyData( dataSource.systemSettings );
         }
     }
 
@@ -173,11 +183,7 @@ namespace Statistics2026.Configuration
         // note, the db is complete just what is shown is changed
         public List<string> CollectionFiltersForMissingMovies { get; set; } = [];
 
-        public bool resetPlayCount { get; set; } = false;
-        public bool resetDBState { get; set; } = false;
-        public bool showDebugInfo { get; set; } = false;
-        public bool showDiagnosticInfo { get; set; } = false;
-        public bool showLastRunInfo { get; set; } = false;
+        public SystemSettings systemSettings { get; set; } = new();
 
         public List<UserConfig> UserConfigs { get; set; } = [];
 
@@ -199,12 +205,12 @@ namespace Statistics2026.Configuration
 
         public bool ShowDebugInfo( EmbyInterfaces embyInterfaces )
         {
-            return showDebugInfo && ( embyInterfaces.ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false );
+            return systemSettings.showDebugInfo && ( embyInterfaces.ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false );
         }
 
         public bool ShowDiagnosticInfo( EmbyInterfaces embyInterfaces )
         {
-            return showDiagnosticInfo && ShowDebugInfo( embyInterfaces ) && ( embyInterfaces.ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false );
+            return systemSettings.showDiagnosticInfo && ShowDebugInfo( embyInterfaces ) && ( embyInterfaces.ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false );
         }
     }
 
@@ -243,11 +249,7 @@ namespace Statistics2026.Configuration
         // note, the db is complete just what is shown is changed
         public List<string> CollectionFiltersForMissingMovies { get; set; } = [];
 
-        public bool resetPlayCount { get; set; } = false;
-        public bool resetDBState { get; set; } = false;
-        public bool showDebugInfo { get; set; } = false;
-        public bool showDiagnosticInfo { get; set; } = false;
-        public bool showLastRunInfo { get; set; } = false;
+        public SystemSettings systemSettings { get; set; } = new();
     }
 }
 

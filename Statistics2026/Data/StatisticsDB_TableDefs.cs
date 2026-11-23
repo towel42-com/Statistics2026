@@ -281,7 +281,7 @@ namespace Statistics2026.Data
                 }
 
                 PluginConfiguration config = Statistics2026.Plugin.Instance!.Configuration;
-                if( config.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null )
+                if( config.systemSettings.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null )
                 {
                     sqlCmds.AddRange( await DropAllUserMediaCmds() );
                     Plugin.Instance.RemoveDBState( EDBState.eUserTablesCreated | EDBState.eUserDataInitialized );

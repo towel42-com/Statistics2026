@@ -90,7 +90,7 @@ namespace Statistics2026.Data
             }
 
             PluginConfiguration config = Statistics2026.Plugin.Instance!.Configuration;
-            config.resetPlayCount = false;
+            config.systemSettings.resetPlayCount = false;
             Statistics2026.Plugin.Instance.UpdateConfiguration( config );
 
             await ComputeUserDataDBState();
@@ -153,7 +153,7 @@ namespace Statistics2026.Data
                     ", LastPlayedDate=@LastPlayedDate" +
                     ", TotalTicksPlayed=@TotalTicksPlayed ";
 
-            if( !config.resetPlayCount )
+            if( !config.systemSettings.resetPlayCount )
             {
                 sql +=
                       " WHERE " +
@@ -190,7 +190,7 @@ namespace Statistics2026.Data
                 int playCount = video.PlayCount;
                 bool isFavorite = video.IsFavorite;
 
-                if( config.resetPlayCount )
+                if( config.systemSettings.resetPlayCount )
                     ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
 
                 DateTimeOffset? lastPlayedDate = video.LastPlayedDate;
@@ -198,7 +198,7 @@ namespace Statistics2026.Data
                 if( !mediaInfo.aOK )
                     return;
 
-                if( !config.resetPlayCount )
+                if( !config.systemSettings.resetPlayCount )
                 {
                     isPlayed = mediaInfo.IsPlayed ?? false;
                     playCount = mediaInfo.PlayCount ?? 0;
@@ -235,7 +235,7 @@ namespace Statistics2026.Data
                 }
             }
 
-            if( config.resetPlayCount )
+            if( config.systemSettings.resetPlayCount )
             {
                 string sqlUpdateTicks =
                     $"UPDATE {userTableName} " +

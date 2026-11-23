@@ -86,7 +86,7 @@ namespace Statistics2026.ScheduledTasks
 
                 await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, GetType().Name );
 
-                await db.Initialize( this, cancellationToken, progress, PluginConfiguration.resetPlayCount );
+                await db.Initialize( this, cancellationToken, progress, PluginConfiguration.systemSettings.resetPlayCount );
                 cancellationToken.ThrowIfCancellationRequested();
 
                 string taskName = "Analyze All";
