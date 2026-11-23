@@ -20,8 +20,12 @@
                 function (config) {
                     view.querySelector("#excludeAdmin").checked = config.userReportSettings.excludeAdmin;
                     view.querySelector("#hasConnectUserID").checked = config.userReportSettings.hasConnectUserID;
-                    view.querySelector("#numMostActive").value = config.userReportSettings.numMostActiveUsers;
                     view.querySelector("#showImages").checked = config.userReportSettings.showImages;
+
+                    view.querySelector("#numFavoriteYears").value = config.userReportSettings.numFavoriteYears;
+                    view.querySelector("#numGenresToReport").value = config.userReportSettings.numGenresToReport;
+                    view.querySelector("#numLastSeenToReport").value = config.userReportSettings.numLastSeenToReport;
+                    view.querySelector("#numMostWatchedToReport").value = config.userReportSettings.numMostWatchedToReport;
                 }
             );
         }
@@ -69,21 +73,6 @@
                     Helpers.showInfo("Show Users with Connect User ID", "Normally all users are shown, checking this option will display only users with a Connect User ID.");
                 });
 
-            view.querySelector("#numMostActive").addEventListener("input",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        const parsed = parseInt(view.querySelector("#numMostActive").value);
-                        const value = Number.isNaN(parsed) ? 5 : parsed;
-
-                        config.userReportSettings.numMostActiveUsers = value;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
-            view.querySelector("#numMostActiveHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Number of Most Active Users", "The default is 5, but you can limit how many most active users that are reported");
-                });
             view.querySelector("#showImages").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -95,6 +84,70 @@
             view.querySelector("#showImagesHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Show Images", "In reports and summaries, show the images along with the titles");
+                });
+
+            view.querySelector("#numFavoriteYears").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        const parsed = parseInt(view.querySelector("#numFavoriteYears").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.userReportSettings.numFavoriteYears = value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            view.querySelector("#numFavoriteYearsHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Favorite Years", "The default is 5, but when reporting a list of favorite years, how many should be shown?");
+                });
+
+            view.querySelector("#numGenresToReport").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        const parsed = parseInt(view.querySelector("#numGenresToReport").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.userReportSettings.numGenresToReport = value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            view.querySelector("#numGenresToReportHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Genres", "The default is 5, but when reporting a list of genres, how many should be shown?");
+                });
+
+            view.querySelector("#numLastSeenToReport").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        const parsed = parseInt(view.querySelector("#numLastSeenToReport").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.userReportSettings.numLastSeenToReport = value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            view.querySelector("#numLastSeenToReportHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Last Seen", "The default is 5, but when reporting a list of last seen videos, how many should be shown?");
+                });
+
+            view.querySelector("#numMostWatchedToReport").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        const parsed = parseInt(view.querySelector("#numMostWatchedToReport").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.userReportSettings.numMostWatchedToReport = value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            view.querySelector("#numMostWatchedToReportHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Most Watched", "The default is 5, but when reporting a list of most watched videos, how many should be shown?");
                 });
         };
     }

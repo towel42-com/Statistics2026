@@ -865,7 +865,7 @@ namespace Statistics2026.Data
             return TotalTime( user, episodesOnly, false );
         }
 
-        private async Task<List<(string name, DateTimeOffset lastPlayed)>> LastSeenValues( User? user, bool movies )
+        private async Task<List<(string name, string itemId, string url, DateTimeOffset lastPlayed)>> LastSeenValues( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -880,6 +880,8 @@ namespace Statistics2026.Data
             else
                 sql += "PrimaryName || ' - S' || printf('%02d', Season ) || 'E' || printf('%02d', Episode) || ' - ' || SecondaryName ";
             sql += "AS Name " +
+                   ", Media.ItemId" +
+                   ", Media.ImageUrl " +
                    ", LastPlayedDate " +
                    $"FROM {tableName} " +
                    $"LEFT JOIN Media ON Media.ItemId={tableName}.ItemId " +
@@ -892,7 +894,7 @@ namespace Statistics2026.Data
                 sql += "NOT";
             sql += $" {tableName}.IsEpisode " +
                $"ORDER BY {tableName}.LastPlayedDate DESC " +
-               "LIMIT 10 "
+               $"LIMIT {Plugin.Instance!.Configuration.userReportSettings.numLastSeenToReport} "
                ;
 
             var sqlCmd = new SQLCmdDef( sql,
@@ -900,16 +902,19 @@ namespace Statistics2026.Data
                 ( "@UserId", user.Id.ToString())
             ] );
 
-            var retVal = new List<(string genre, DateTimeOffset lastPlayed)>();
+            var retVal = new List<(string name, string itemId, string url, DateTimeOffset lastPlayed)>();
             await ExecuteCommand( sqlCmd, statement =>
             {
                 IResultSet row = statement.Current;
-                string name = row.GetString( 0 );
-                string date = row.GetString( 1 );
+                int col = 0;
+                string name = row.GetString( col++ );
+                string itemId = row.GetString( col++ );
+                string url = row.GetString( col++ );
+                string date = row.GetString( col++ );
                 DateTimeOffset? lastPlayedDate = HelperFuncs.ReadDateTime( date );
                 if( lastPlayedDate == null )
                     lastPlayedDate = DateTimeOffset.MinValue;
-                retVal.Add( (name, lastPlayedDate.Value) );
+                retVal.Add( (name, itemId, url, lastPlayedDate.Value) );
                 return Task.FromResult( true );
             } );
 
@@ -942,11 +947,12 @@ namespace Statistics2026.Data
                 ListType = EListType.eNumbered,
                 IgnoreLength = true
             };
-            List<(string name, DateTimeOffset lastPlayed)> values = await LastSeenValues( user, movies );
+            List<(string name, string itemId, string url, DateTimeOffset lastPlayed)> values = await LastSeenValues( user, movies );
 
-            foreach( (string? name, DateTimeOffset lastPlayed) in values )
+            foreach( (string name, string itemId, string url, DateTimeOffset lastPlayed) in values )
             {
-                retVal.AddLine( $"{name} - {lastPlayed:d}", false );
+                string text = GetItemImageUrl.ItemHtmlFromItemId( itemId, url, $"{name} - {lastPlayed:d}", Plugin.Instance!.Configuration.ShowImages( EReportType.eUserReport ), "50px" );
+                retVal.AddLine( text, false );
             }
 
             if( values.Count == 0 )

@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Entities;
+﻿using Emby.Media.Common.Extensions;
+using MediaBrowser.Controller.Entities;
 using MediaBrowser.Model.Plugins;
 using ServiceStack;
 using Statistics2026.Utilities;
@@ -23,6 +24,7 @@ namespace Statistics2026.Configuration
         public bool resetDBState { get; set; } = false;
         public bool showUnknownDVProfiles { get; set; } = false;
         public bool showAllResolutions { get; set; } = false;
+        public int numMostActiveUsers { get; set; } = 5;
 
         public void CopyData( SystemSettings dataSource )
         {
@@ -33,6 +35,7 @@ namespace Statistics2026.Configuration
             showLastRunInfo = dataSource.showLastRunInfo;
             showUnknownDVProfiles = dataSource.showUnknownDVProfiles;
             showAllResolutions = dataSource.showAllResolutions;
+            numMostActiveUsers = dataSource.numMostActiveUsers;
         }
     }
 
@@ -284,15 +287,22 @@ namespace Statistics2026.Configuration
     {
         public bool excludeAdmin { get; set; } = true;
         public bool hasConnectUserID { get; set; } = false;
-        public int numMostActiveUsers { get; set; } = 5;
         public bool showImages { get; set; } = true;
+        public int numFavoriteYears { get; set; } = 5;
+        public int numGenresToReport { get; set; } = 5;
+        public int numLastSeenToReport { get; set; } = 5;
+        public int numMostWatchedToReport { get; set; } = 5;
+
 
         public void CopyData( UserReportSettings dataSource )
         {
             hasConnectUserID = dataSource.hasConnectUserID;
-            numMostActiveUsers = dataSource.numMostActiveUsers;
             excludeAdmin = dataSource.excludeAdmin;
             showImages = dataSource.showImages;
+            numFavoriteYears = dataSource.numFavoriteYears;
+            numGenresToReport = dataSource.numGenresToReport;
+            numLastSeenToReport = dataSource.numLastSeenToReport;
+            numMostWatchedToReport = dataSource.numMostWatchedToReport;
         }
     }
 
@@ -397,6 +407,8 @@ namespace Statistics2026.Configuration
                     return target.tvSettings.numGenresToReport;
                 case EReportType.eMovieReport:
                     return target.movieSettings.numGenresToReport;
+                case EReportType.eUserReport:
+                    return target.userReportSettings.numGenresToReport;
             }
             return 0;
         }

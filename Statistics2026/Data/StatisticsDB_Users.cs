@@ -224,7 +224,7 @@ namespace Statistics2026.Data
                 } );
             }
 
-            int numUsers = Plugin.Instance!.Configuration.userReportSettings.numMostActiveUsers;
+            int numUsers = Plugin.Instance!.Configuration.systemSettings.numMostActiveUsers;
             string help = Constants.HelpMostActiveUsers;
             help = help.Replace( "<numUsers>", numUsers.ToString() );
             var groupData = new TableBasedStatCard( Constants.MostActiveUsers, help, [ "Days", "Hours", "Minutes" ] )

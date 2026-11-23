@@ -531,7 +531,7 @@ namespace Statistics2026.Data
                 "AND UserId=@UserId AND IsPlayed "
               + "GROUP BY StartYear "
               + "ORDER BY NumVideos DESC, StartYear ASC "
-              + "LIMIT 5 "
+              + $"LIMIT {Plugin.Instance!.Configuration.userReportSettings.numFavoriteYears} "
               ;
 
             var sqlCmd = new SQLCmdDef( sql,
@@ -672,7 +672,8 @@ namespace Statistics2026.Data
             Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> genreMap = await GenreCountValues( user, movies, true, true );
             var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value.total ).ToList();
 
-            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( movies ? EReportType.eMovieReport : EReportType.eTVReport ) ); ++ii )
+            EReportType reportType = user != null ? EReportType.eUserReport : ( movies ? EReportType.eMovieReport : EReportType.eTVReport );
+            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( reportType ) ); ++ii )
             {
                 KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedGenre[ ii ];
                 retVal.addRow( curr.Key, [ curr.Value.total ] );
@@ -736,6 +737,7 @@ namespace Statistics2026.Data
                     return kvp.Value.total;
                 }
             ).ToList();
+
             for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( movies ? EReportType.eMovieReport : EReportType.eTVReport ) ); ++ii )
             {
                 KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedGenre[ ii ];

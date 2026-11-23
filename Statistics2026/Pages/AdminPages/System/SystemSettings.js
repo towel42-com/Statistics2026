@@ -23,6 +23,7 @@
                     view.querySelector("#showLastRunInfo").checked = config.systemSettings.showLastRunInfo;
                     view.querySelector("#resetPlayCount").checked = config.systemSettings.resetPlayCount;
                     view.querySelector("#resetDBState").checked = config.systemSettings.resetDBState;
+                    view.querySelector("#numMostActive").value = config.userReportSettings.numMostActiveUsers;
                     view.querySelector("#showUnknownDVProfiles").checked = config.systemSettings.showUnknownDVProfiles;
                     view.querySelector("#showAllResolutions").checked = config.systemSettings.showAllResolutions;
                 }
@@ -117,6 +118,21 @@
             view.querySelector("#resetDBStateHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Reset Database State", "Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured");
+                });
+            view.querySelector("#numMostActive").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        const parsed = parseInt(view.querySelector("#numMostActive").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.userReportSettings.numMostActiveUsers = value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            view.querySelector("#numMostActiveHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Most Active Users", "The default is 5, but you can limit how many most active users that are reported");
                 });
 
             view.querySelector("#showUnknownDVProfiles").addEventListener("click",
