@@ -725,7 +725,7 @@ namespace Statistics2026.Data
                 for( int ii = 0; ii < numToKeep; ++ii )
                 {
                     WatchedMediaValue item = subList[ ii ];
-                    item.ImageUrl = ItemImageUrl._ItemImageUrl( item.ItemId, LibraryManager() );
+                    item.ImageUrl = GetItemImageUrl._ItemImageUrl( item.ItemId, LibraryManager() );
                     subList[ ii ] = item;
                 }
 

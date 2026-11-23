@@ -85,7 +85,7 @@ namespace Statistics2026.Responses
                 string urlName = name;
                 if( ii != 0 )
                     urlName = $", {urlName}";
-                string currParentUrl = ItemImageUrl.ItemUrlFromItemId( id, url, urlName ) ?? string.Empty;
+                string currParentUrl = GetItemImageUrl.ItemUrlFromItemId( id, url, urlName ) ?? string.Empty;
 
                 if( currParentUrl.IsNullOrEmpty() )
                 {
@@ -362,7 +362,7 @@ namespace Statistics2026.Responses
             retVal.ServerLocation = new SortByText( serverLocation );
             retVal.ItemId = itemId;
             if( itemId != null && !itemId.IsEmpty() )
-                retVal.ItemUrl = ItemImageUrl.ItemUrlFromItemId( itemId, itemImageUrl, title );
+                retVal.ItemUrl = GetItemImageUrl.ItemUrlFromItemId( itemId, itemImageUrl, title );
 
 
             string parentInfoJSON = row.GetString( col++ );

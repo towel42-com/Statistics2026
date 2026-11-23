@@ -8,7 +8,7 @@ using System;
 
 namespace Statistics2026.Utilities
 {
-    public static class ItemImageUrl
+    public static class GetItemImageUrl
     {
         public static string _ItemImageUrl( string itemId, ILibraryManager? libManager, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {

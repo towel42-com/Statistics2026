@@ -146,7 +146,7 @@ namespace Statistics2026.Utilities
                 if( episode.Series != null )
                 {
                     retVal.SortName = episode.Series.SortName + " - " + episode.SortName;
-                    retVal.SeriesImageUrl = ItemImageUrl._ItemImageUrl( episode.Series, logger );
+                    retVal.SeriesImageUrl = GetItemImageUrl._ItemImageUrl( episode.Series, logger );
                     if( retVal.PremiereDate == null && episode.Series.PremiereDate.HasValue )
                     {
                         retVal.PremiereDate = episode.Series.PremiereDate.Value;
@@ -209,7 +209,7 @@ namespace Statistics2026.Utilities
             if( video.PremiereDate.HasValue )
                 retVal.PremiereDate = video.PremiereDate.Value;
 
-            retVal.ImageUrl = ItemImageUrl._ItemImageUrl( video );
+            retVal.ImageUrl = GetItemImageUrl._ItemImageUrl( video );
 
             if( retVal.PremiereDate == null )
             {

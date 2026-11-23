@@ -234,7 +234,7 @@ namespace Statistics2026.Data
                     ("@TmdbId", tmdbId),
                     ("@Name", collection.Name),
                     ("@SortName", collection.SortName),
-                    ("@ImageUrl", ItemImageUrl._ItemImageUrl(collection)),
+                    ("@ImageUrl", GetItemImageUrl._ItemImageUrl(collection)),
                     ("@NumMovies", numMovies),
                 ] ) );
             Logger().Debug( $"    AddCollection - Successfully Added Collection" );
@@ -375,7 +375,7 @@ namespace Statistics2026.Data
                 {
                     string collectionId = row.GetString( col++ );
                     string collectionUrl = row.GetString( col++ );
-                    images.Add( ItemImageUrl.ItemUrlFromItemId( collectionId, collectionUrl, name ) );
+                    images.Add( GetItemImageUrl.ItemUrlFromItemId( collectionId, collectionUrl, name ) );
                 }
                 return Task.FromResult( true );
             }, false );

@@ -56,7 +56,7 @@ namespace Statistics2026.Data
                 };
                 if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
                 {
-                    curr.ItemUrl = ItemImageUrl.ItemUrlFromItemId( seriesId, curr.ItemUrl, curr.Name );
+                    curr.ItemUrl = GetItemImageUrl.ItemUrlFromItemId( seriesId, curr.ItemUrl, curr.Name );
                     curr.Name = curr.ItemUrl;
                 }
 

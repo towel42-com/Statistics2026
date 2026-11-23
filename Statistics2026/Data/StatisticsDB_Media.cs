@@ -750,10 +750,10 @@ namespace Statistics2026.Data
                 else
                     text = $"{curr.Key}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}";
 
-                string imageUrl = ItemImageUrl._ItemImageUrl( genre );
+                string imageUrl = GetItemImageUrl._ItemImageUrl( genre );
                 if( !imageUrl.IsNullOrEmpty() )
                 {
-                    text = ItemImageUrl.ItemUrlFromItemId( genre!.Id.ToString(), imageUrl, text );
+                    text = GetItemImageUrl.ItemUrlFromItemId( genre!.Id.ToString(), imageUrl, text );
                 }
 
                 retVal.AddLine( curr.Key, text, false );

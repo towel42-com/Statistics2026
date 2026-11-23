@@ -172,10 +172,10 @@ namespace Statistics2026.Data
                     else
                         text = $"{person.Name}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}";
 
-                    string imageUrl = ItemImageUrl._ItemImageUrl( person );
+                    string imageUrl = GetItemImageUrl._ItemImageUrl( person );
                     if( !imageUrl.IsNullOrEmpty() )
                     {
-                        text = ItemImageUrl.ItemUrlFromItemId( person.Id.ToString(), imageUrl, text );
+                        text = GetItemImageUrl.ItemUrlFromItemId( person.Id.ToString(), imageUrl, text );
                     }
                     retVal.AddLine( person.Name, text, false );
                 }

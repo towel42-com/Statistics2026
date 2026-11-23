@@ -142,7 +142,7 @@ namespace Statistics2026.ScheduledTasks
                 Plugin.Instance?.SaveConfiguration();
                 db.ResetCancellationToken();
 
-                ItemImageUrl.ClearCache();
+                GetItemImageUrl.ClearCache();
                 HelperFuncs.ClearCache();
                 MediaInfo.ClearCache();
                 TmdbInterface.ClearCache();
