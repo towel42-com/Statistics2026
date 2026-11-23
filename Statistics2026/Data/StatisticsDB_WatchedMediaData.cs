@@ -581,7 +581,7 @@ namespace Statistics2026.Data
                 else
                     clauses.Add( $"NOT {tableName}.IsEpisode" );
 
-                bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
+                bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin;
                 if( ( user == null ) && excludeAdmin )
                 {
                     clauses.Add( "NOT Users.IsAdministrator" );
@@ -597,7 +597,7 @@ namespace Statistics2026.Data
 
             CheckIsValid( ECheckLevel.eReport );
 
-            bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
+            bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin;
             long numUsers = ( user == null ) ? (await NumUsers( false, excludeAdmin )) : 1;
 
             var tableNames = new List<string>();
@@ -686,8 +686,8 @@ namespace Statistics2026.Data
 
             var sortedMapping = new SortedDictionary<long, List<WatchedMediaValue>>();
 
-            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.numWatchedToReport;
-            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.numTiedToReport;
+            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.NumWatchedToReport( mediaType != EMediaType.eMovie );
+            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.NumTiedToReport( mediaType != EMediaType.eMovie );
 
             foreach( (string id, string name, long playCount, long denominator, double playCountPerUser) curr in playMap.Values )
             {

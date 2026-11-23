@@ -1,6 +1,7 @@
 ﻿using MediaBrowser.Controller.Entities;
 using ServiceStack;
 using SQLitePCL.pretty;
+using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -229,7 +230,7 @@ namespace Statistics2026.Data
 
             var retVal = new TableBasedStatCard( Constants.MediaResolutions, Constants.HelpMediaResolutions, [ "Movies", "Episodes" ] );
 
-            if( Plugin.Instance!.Configuration.showAllResolutions )
+            if( Plugin.Instance!.Configuration.systemSettings.showAllResolutions )
             {
                 retVal.addRow( Constants.HD, [ 0, 0 ] );
                 retVal.addRow( Constants._4k, [ 0, 0 ] );
@@ -299,7 +300,7 @@ namespace Statistics2026.Data
                 "sum(NOT IsEpisode) AS Movies \n" +
                 "FROM Media ";
 
-            if( !Plugin.Instance!.Configuration.showUnknownDVProfiles )
+            if( !Plugin.Instance!.Configuration.systemSettings.showUnknownDVProfiles )
                 sql += $"WHERE DolbyVisionProfile NOT IN ({string.Join( ",", Constants.UnknownDolbyProfiles.Select( p => $"'{p}'" ) )}) ";
 
             sql += "GROUP BY DolbyVisionProfile \n" +
@@ -307,7 +308,7 @@ namespace Statistics2026.Data
                    ;
 
             var retVal = new TableBasedStatCard( Constants.DolbyVisionProfiles, Constants.HelpDolbyVisionProfile, [ "Movies", "Episodes" ] );
-            if( Plugin.Instance!.Configuration.showUnknownDVProfiles )
+            if( Plugin.Instance!.Configuration.systemSettings.showUnknownDVProfiles )
                 retVal.addRow( "Unknown Dolby Profile", [ 0, 0 ] );
 
             await ExecuteCommand( new SQLCmdDef( sql ), statement =>
@@ -670,7 +671,7 @@ namespace Statistics2026.Data
             Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> genreMap = await GenreCountValues( user, movies, true, true );
             var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value.total ).ToList();
 
-            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numGenresToReport ); ++ii )
+            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( !movies) ); ++ii )
             {
                 KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedGenre[ ii ];
                 retVal.addRow( curr.Key, [ curr.Value.total ] );
@@ -734,7 +735,7 @@ namespace Statistics2026.Data
                     return kvp.Value.total;
                 }
             ).ToList();
-            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.numGenresToReport ); ++ii )
+            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport(!movies) ); ++ii )
             {
                 KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedGenre[ ii ];
 

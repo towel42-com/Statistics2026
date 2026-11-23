@@ -165,7 +165,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            return NumUsers( Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID, Statistics2026.Plugin.Instance!.Configuration.excludeAdmin );
+            return NumUsers( Statistics2026.Plugin.Instance!.Configuration.userReportSettings.hasConnectUserID, Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin );
         }
 
         public async Task<StatCard> UserCount()
@@ -190,10 +190,10 @@ namespace Statistics2026.Data
                 ;
             List<string> conditions = [];
 
-            if( Statistics2026.Plugin.Instance!.Configuration.hasConnectUserID )
+            if( Statistics2026.Plugin.Instance!.Configuration.userReportSettings.hasConnectUserID )
                 conditions.Add( "Users.ConnectUserId <> '' AND Users.ConnectUserId IS NOT NULL" );
 
-            if( Statistics2026.Plugin.Instance!.Configuration.excludeAdmin )
+            if( Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin )
                 conditions.Add( "NOT IsAdministrator" );
 
             sqlBase += HelperFuncs.JoinWhereClauses( conditions );
@@ -224,7 +224,7 @@ namespace Statistics2026.Data
                 } );
             }
 
-            int numUsers = Plugin.Instance!.Configuration.numMostActiveUsers;
+            int numUsers = Plugin.Instance!.Configuration.userReportSettings.numMostActiveUsers;
             string help = Constants.HelpMostActiveUsers;
             help = help.Replace( "<numUsers>", numUsers.ToString() );
             var groupData = new TableBasedStatCard( Constants.MostActiveUsers, help, [ "Days", "Hours", "Minutes" ] )

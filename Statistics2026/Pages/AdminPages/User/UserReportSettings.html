@@ -1,0 +1,30 @@
+﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/Stats2026_UserReportSettings.js">
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <h3 style="margin-top: 10px;">User Report Settings</h3>
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="excludeAdmin" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Exclude Administrator users from reports?</span>
+                    <i class="md-icon" id="excludeAdminHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="hasConnectUserID" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Only Show Users with Connect User ID?</span>
+                    <i class="md-icon" id="hasConnectUserIDHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                Number of Most Active Users to Show:
+                <i class="md-icon" id="numMostActiveHelp">info</i>
+                <input type="number" id="numMostActive" min="1" max="1000" placeholder="# of Most Active" title="Number of Most Active" />
+            </div>
+        </div>
+    </div>
+</div>

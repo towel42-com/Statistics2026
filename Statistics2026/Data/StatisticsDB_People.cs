@@ -1,5 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities;
 using ServiceStack;
+using Statistics2026.Configuration;
 using Statistics2026.Services;
 using Statistics2026.Utilities;
 using System.Collections.Concurrent;
@@ -154,7 +155,7 @@ namespace Statistics2026.Data
                     return kvp.Value.total;
                 }
             ).ToList();
-            for( int ii = 0; ( ii < sortedActors.Count() ) && ( ii < Plugin.Instance!.Configuration.numActorsToReport ); ++ii )
+            for( int ii = 0; ( ii < sortedActors.Count() ) && ( ii < Plugin.Instance!.Configuration.NumActorsToReport( !movies ) ); ++ii )
             {
                 KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedActors[ ii ];
                 try

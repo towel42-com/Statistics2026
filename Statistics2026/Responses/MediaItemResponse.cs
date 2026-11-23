@@ -175,7 +175,7 @@ namespace Statistics2026.Responses
             int episodeNum = row.GetInt( col++ );
             string parentId = row.GetString( col++ );  // blank for onServer
 
-            bool futureDate = HelperFuncs.InvalidDateForMissingAnalysis( premiereDate, true );
+            bool futureDate = HelperFuncs.InvalidDateForMissingAnalysis( premiereDate, null );
             if( !tmdbPosterPath.IsNullOrEmpty() )
             {
                 string tmp = string.Empty;
@@ -223,7 +223,7 @@ namespace Statistics2026.Responses
             }
             else
             {
-                bool canSearch = Plugin.Instance!.Configuration.CanSearch();
+                bool canSearch = Plugin.Instance!.Configuration.CanSearch( isEpisode );
                 if( canSearch )
                 {
                     if( premiereDate != null )
@@ -240,14 +240,14 @@ namespace Statistics2026.Responses
                 }
 
                 List<SortByText> searchData = [];
-                if( Plugin.Instance!.Configuration.showSearchTheMovieDB )
+                if( Plugin.Instance!.Configuration.ShowSearchTheMovieDB( isEpisode ) )
                 {
                     searchData.Add( getSearchData( "https://www.themoviedb.org/search?query=", "The MovieDB", searchKey, string.Empty ) );
                 }
 
-                if( Plugin.Instance!.Configuration.HasCustomSearches() )
+                if( Plugin.Instance!.Configuration.HasCustomSearches( isEpisode ) )
                 {
-                    foreach( string curr in Plugin.Instance!.Configuration.searchLocations )
+                    foreach( string curr in Plugin.Instance!.Configuration.CustomSearchLocations( isEpisode ) )
                     {
                         if( string.IsNullOrWhiteSpace( curr ) )
                         {
@@ -281,7 +281,7 @@ namespace Statistics2026.Responses
             return retVal;
         }
 
-        private static async Task<MediaItemResponse?> AddStreamingProviders( MediaItemResponse retVal, string isoCode, string streamingProvidersString, EmbyInterfaces embyInterfaces, Statistics2026DB db, bool locked )
+        private static async Task<MediaItemResponse?> AddStreamingProviders( MediaItemResponse retVal, bool? isEpisode, string isoCode, string streamingProvidersString, EmbyInterfaces embyInterfaces, Statistics2026DB db, bool locked )
         {
             List<int>? streamingProviders = null;
 
@@ -299,12 +299,12 @@ namespace Statistics2026.Responses
 
             PluginConfiguration? config = Plugin.Instance?.Configuration ?? null;
 
-            List<StreamingProvider> providerInfos = await db.GetStreamingProviders( streamingProviders, ( config?.alwaysShowJustWatch ?? true ), locked );
+            List<StreamingProvider> providerInfos = await db.GetStreamingProviders( streamingProviders, ( config?.AlwaysShowJustWatch( isEpisode ?? true ) ?? true ), locked );
 
             int depth = 0;
             string html = HelperFuncs.addToHtml( depth++, "<ul>" );
             List<string> providerNames = [];
-            int maxNumProviders = config?.maxNumStreamingProviders ?? 3;
+            int maxNumProviders = config?.MaxNumStreamingProviders( isEpisode ?? true ) ?? 3;
             for( int ii = 0; ( ( maxNumProviders == -1 ) || ( ii < maxNumProviders ) ) && ii < providerInfos.Count(); ++ii )
             {
                 StreamingProvider provider = providerInfos[ ii ];
@@ -400,7 +400,7 @@ namespace Statistics2026.Responses
                 if( retVal == null )
                     return null;
             }
-            retVal = await AddStreamingProviders( retVal, isoCode, streamingProvidersString, embyInterfaces, db, true );
+            retVal = await AddStreamingProviders( retVal, isEpisode, isoCode, streamingProvidersString, embyInterfaces, db, true );
 
             return retVal;
         }

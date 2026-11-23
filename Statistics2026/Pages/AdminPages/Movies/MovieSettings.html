@@ -3,9 +3,9 @@
      data-controller="__plugin/Stats2026_MovieSettings.js">
     <div data-role="content">
         <div class="content-primary" style="padding-top:2px;">
-            <h2 style="margin-top: 0px;margin-bottom: 0px;">Analysis Settings</h2>
+            <h2 style="margin-top: 0px;margin-bottom: 0px;">Movie Settings</h2>
 
-            <h3 style="margin-top: 10px;">Search for Missing Settings</h3>
+            <h3 style="margin-top: 10px;">Search for Missing</h3>
             <div class="inputContainer">
                 How many days after the premiere date before a Movie should be shown as missing?:
                 <i class="md-icon" id="numDaysForMovieStreamingHelp">info</i>
@@ -29,6 +29,34 @@
             </div>
 
             <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
+                <label for="searchLocations" style="margin-bottom: 8px; text-align: center; width: 100%;">
+                    URLS to search for missing Media (One per line):
+                    <i class="md-icon" id="searchLocationsHelp" style="vertical-align: middle;">info</i>
+                </label>
+
+                <textarea is="emby-textarea" id="searchLocations" rows="6" style="width: 100%; min-width: 380px; box-sizing: border-box;"></textarea>
+
+                <div class="fieldDescription" style="display: flex; justify-content: center; gap: 15px; margin-top: 5px; width: 100%; text-align: center;">
+                    <span>Enter each url on a line, end with an = as the search key will be added.</span>
+                    <span id="searchLocationsAutosaveStatus" style="font-weight: bold; color: #52b788; opacity: 0; transition: opacity 0.3s;">Saved</span>
+                </div>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="alwaysShowJustWatch" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Always show JustWatch as a Streaming Provider?</span>
+                    <i class="md-icon" id="alwaysShowJustWatchHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                How many Streaming Providers to Show (-1 for all):
+                <i class="md-icon" id="maxNumStreamingProvidersHelp">info</i>
+                <input type="number" id="maxNumStreamingProviders" min="-1" max="10" placeholder="# of Streaming Providers" title="Number of Streaming Providers" />
+            </div>
+
+            <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
                 <label for="collectionFilterList" style="margin-bottom: 8px; text-align: center; width: 100%;">
                     Missing Movies and Collection Filter (Regular Expressions, one per line):
                     <i class="md-icon" id="collectionFilterHelp" style="vertical-align: middle;">info</i>
@@ -42,11 +70,25 @@
                 </div>
             </div>
 
-            <h3 style="margin-top: 10px;">Media Report Settings</h3>
+            <h3 style="margin-top: 10px;">Media Reports</h3>
             <div class="inputContainer">
-                Number of Watched Videos to List:
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showImages" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show images in tables and reports?</span>
+                    <i class="md-icon" id="showImagesHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                Number of Watched Movies to List:
                 <i class="md-icon" id="numWatchedToReportHelp">info</i>
-                <input type="number" id="numWatchedToReport" min="1" max="1000" placeholder="# of Watched Videos" title="Number of Watched Videos" />
+                <input type="number" id="numWatchedToReport" min="1" max="1000" placeholder="# of Watched Movies" title="Number of Watched Movies" />
+            </div>
+
+            <div class="inputContainer">
+                Number of "Tied" Media to List:
+                <i class="md-icon" id="numTiedToReportHelp">info</i>
+                <input type="number" id="numTiedToReport" min="1" max="1000" placeholder="# of Tied Videos" title="Number of Tied Media To List" />
             </div>
 
             <div class="inputContainer">

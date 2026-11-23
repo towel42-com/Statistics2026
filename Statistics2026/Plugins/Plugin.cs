@@ -237,12 +237,12 @@ namespace Statistics2026
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.TVSeriesProgress.js"
                 },
                 new() {
-                    Name = "Stats2026_UserSettings",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.UserSettings.html",
+                    Name = "Stats2026_UserReportSettings",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.UserReportSettings.html",
                 },
                 new() {
-                    Name = "Stats2026_UserSettings.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.UserSettings.js"
+                    Name = "Stats2026_UserReportSettings.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.AdminPages.User.UserReportSettings.js"
                 },
                 new() {
                     Name = "Stats2026_UserPageHelpers.js",
@@ -318,16 +318,15 @@ namespace Statistics2026
 
         public override void UpdateConfiguration( BasePluginConfiguration configuration )
         {
-            int prevNumFutureDays = Configuration.numDaysFutureForMissing;
-            bool prevReportOnMissing = Configuration.reportOnMissingSpecials;
-            int prevNumDaysStreaming = Configuration.numDaysForMovieStreaming;
+            MovieSettings prevMovieSettings = Configuration.movieSettings;
+            TVSettings prevTVSettings = Configuration.tvSettings;
 
             base.UpdateConfiguration( configuration );
-            bool numFutureDaysChanged = ( Configuration.numDaysFutureForMissing != prevNumFutureDays );
-            bool reportMissingChanged = ( Configuration.reportOnMissingSpecials != prevReportOnMissing );
-            bool numDaysStreamingChanged = ( Configuration.numDaysForMovieStreaming != prevNumDaysStreaming );
 
-            bool needsRun = numFutureDaysChanged || reportMissingChanged || numDaysStreamingChanged;
+            bool movieSettingsChanged = ( !Configuration.movieSettings.AnalysisEquals( prevMovieSettings ) );
+            bool tvSettingsChanged = ( !Configuration.tvSettings.AnalysisEquals( prevTVSettings ) );
+
+            bool needsRun = tvSettingsChanged || movieSettingsChanged;
             if( configuration != null && needsRun )
             {
                 if( _embyInterfaces == null )
@@ -340,12 +339,12 @@ namespace Statistics2026
                         return true;
 
                     List<Type> taskTypes = [];
-                    if( numFutureDaysChanged || reportMissingChanged )
+                    if( tvSettingsChanged )
                     {
                         taskTypes.Add( typeof( AnalyzeMissingEpisodesTask ) );
                     }
 
-                    if( numDaysStreamingChanged || reportMissingChanged )
+                    if( movieSettingsChanged )
                     {
                         taskTypes.Add( typeof( AnalyzeMissingMoviesTask ) );
                     }

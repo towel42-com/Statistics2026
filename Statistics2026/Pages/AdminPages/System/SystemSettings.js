@@ -62,6 +62,10 @@
                     view.querySelector("#showDiagnosticInfo").disabled = !view.querySelector("#showDebugInfo").checked;
                 }
             );
+            view.querySelector("#showDebugInfoHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Show Debug Info", "More information is reported on the pages. Only available when debug logging is enabled.");
+                });
 
             view.querySelector("#showDiagnosticInfo").addEventListener("click",
                 function () {
@@ -71,6 +75,10 @@
                     });
                 }
             );
+            view.querySelector("#showDiagnosticInfoHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Show Diagnostic Info", "Diagnostic information is reported when debug info is enabled.. Only available when debug logging is enabled");
+                });
 
             view.querySelector("#resetPlayCount").addEventListener("click",
                 function () {
@@ -80,6 +88,10 @@
                     });
                 }
             );
+            view.querySelector("#resetPlayCountHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Reset Play Count", "When computing the user watch data, reset the playcount to the default value (typically 1), and show Administrators as watched for every video. This settings resets to false after the Reset has occured.");
+                });
 
             view.querySelector("#showLastRunInfo").addEventListener("click",
                 function () {
@@ -89,6 +101,10 @@
                     });
                 }
             );
+            view.querySelector("#showLastRunInfoHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Show Last Run Info", "Each page will show a summary of each analysis' last run");
+                });
 
             view.querySelector("#resetDBState").addEventListener("click",
                 function () {
@@ -98,6 +114,10 @@
                     });
                 }
             );
+            view.querySelector("#resetDBStateHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Reset Database State", "Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured");
+                });
 
             view.querySelector("#showUnknownDVProfiles").addEventListener("click",
                 function () {
@@ -107,6 +127,11 @@
                     });
                 }
             );
+            view.querySelector("#showUnknownDVProfilesHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Show Unknown Dolby Vision Profile Count", "Normally unknown Dolby Vision Profiles are hidden, checking this option will display the count of unknown Dolby Vision profiles.");
+                });
+
             view.querySelector("#showAllResolutions").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
@@ -115,42 +140,11 @@
                     });
                 }
             );
-
-            view.querySelector("#showDebugInfoHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Show Debug Info", "More information is reported on the pages. Only available when debug logging is enabled.");
-                });
-
-            view.querySelector("#showDiagnosticInfoHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Show Diagnostic Info", "Diagnostic information is reported when debug info is enabled.. Only available when debug logging is enabled");
-                });
-
-            view.querySelector("#showLastRunInfoHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Show Last Run Info", "Each page will show a summary of each analysis' last run");
-                });
-
-            view.querySelector("#resetPlayCountHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Reset Play Count", "When computing the user watch data, reset the playcount to the default value (typically 1), and show Administrators as watched for every video. This settings resets to false after the Reset has occured.");
-                });
-
-            view.querySelector("#resetDBStateHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Reset Database State", "Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured");
-                });
-
-            view.querySelector("#showUnknownDVProfilesHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Show Unknown Dolby Vision Profile Count", "Normally unknown Dolby Vision Profiles are hidden, checking this option will display the count of unknown Dolby Vision profiles.");
-                });
-
             view.querySelector("#showAllResolutionsHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Show All Resolutions", "Normally only resolutions in use are show, checking this option will display all resolutions.");
                 });
-        };
+         };
     }
 );
 
