@@ -172,7 +172,7 @@
             );
             view.querySelector("#showFilteredMissingSummariesHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Filtered Missing Summaries", "For summaries of episodes or movies missing, show the filtered results.");
+                    Helpers.showInfo("Filtered Missing Summaries", "For summaries of movies missing, show the filtered results.");
                 });
 
             view.querySelector("#alwaysShowJustWatch").addEventListener("click",

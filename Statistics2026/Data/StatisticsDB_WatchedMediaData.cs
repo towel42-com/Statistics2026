@@ -266,11 +266,11 @@ namespace Statistics2026.Data
 
             long? totalTicksPlayed = null;
 
-            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement => 
+            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
             {
                 IResultSet row = statement.Current;
                 totalTicksPlayed = row.GetInt64( 0 );
-                return Task.FromResult(true);
+                return Task.FromResult( true );
             } );
 
             return totalTicksPlayed;
@@ -558,7 +558,7 @@ namespace Statistics2026.Data
                 long numEpisodes = row.GetInt64( 3 );
                 if( numPlayed == numEpisodes )
                     seriesInfo[ seriesId ] = (seriesName, 0, numEpisodes);
-                return Task.FromResult(true);
+                return Task.FromResult( true );
             } );
 
             var retVal = new TextBasedStatCard( Constants.TotalSeriesFinished, Constants.HelpTotalSeriesFinished, EStatCardStyle.eCompact );
@@ -598,7 +598,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eReport );
 
             bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin;
-            long numUsers = ( user == null ) ? (await NumUsers( false, excludeAdmin )) : 1;
+            long numUsers = ( user == null ) ? ( await NumUsers( false, excludeAdmin ) ) : 1;
 
             var tableNames = new List<string>();
             if( user != null )
@@ -680,14 +680,14 @@ namespace Statistics2026.Data
                         playMap[ id ] = (id, name, playCount, numEpisodes, playCountPerUser);
                     }
 
-                    return Task.FromResult(true);
+                    return Task.FromResult( true );
                 } );
             }
 
             var sortedMapping = new SortedDictionary<long, List<WatchedMediaValue>>();
 
-            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.NumWatchedToReport( mediaType != EMediaType.eMovie );
-            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.NumTiedToReport( mediaType != EMediaType.eMovie );
+            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.NumWatchedToReport( ( mediaType == EMediaType.eMovie ) ? EReportType.eMovieReport : EReportType.eTVReport );
+            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.NumTiedToReport( ( mediaType == EMediaType.eMovie ) ? EReportType.eMovieReport : EReportType.eTVReport );
 
             foreach( (string id, string name, long playCount, long denominator, double playCountPerUser) curr in playMap.Values )
             {
@@ -725,7 +725,7 @@ namespace Statistics2026.Data
                 for( int ii = 0; ii < numToKeep; ++ii )
                 {
                     WatchedMediaValue item = subList[ ii ];
-                    item.ImageUrl = GetItemImageUrl._ItemImageUrl( item.ItemId, LibraryManager() );
+                    item.ImageUrl = GetItemImageUrl.ItemImageUrlFromItemId( item.ItemId, LibraryManager() );
                     subList[ ii ] = item;
                 }
 
@@ -762,12 +762,13 @@ namespace Statistics2026.Data
             string title = string.Empty;
             string help = string.Empty;
 
-            if( ( mediaType == EMediaType.eSeries ) || ( mediaType == EMediaType.eEpisode ) )
+            bool isForTV = ( ( mediaType == EMediaType.eSeries ) || ( mediaType == EMediaType.eEpisode ) );
+            if( isForTV )
             {
                 title = leastWatched ? Constants.LeastWatchedShows : Constants.MostWatchedShows;
                 help = leastWatched ? Constants.HelpLeastWatchedShows : Constants.HelpMostWatchedShows;
             }
-            else if( mediaType == EMediaType.eMovie )
+            else
             {
                 title = leastWatched ? Constants.LeastWatchedMovies : Constants.MostWatchedMovies;
                 help = leastWatched ? Constants.HelpLeastWatchedMovies : Constants.HelpMostWatchedMovies;
@@ -779,12 +780,14 @@ namespace Statistics2026.Data
                 ListType = EListType.eNumbered
             };
 
+            EReportType reportType = ( user != null ) ? EReportType.eUserReport : ( isForTV ? EReportType.eTVReport : EReportType.eMovieReport );
+            bool showImages = Plugin.Instance!.Configuration.ShowImages( reportType );
             foreach( List<WatchedMediaValue> currList in watchedMedia )
             {
                 foreach( WatchedMediaValue curr in currList )
                 {
                     long key = (long)( 100 * curr.PlayCountPerUser );
-                    retVal.AddLine( key.ToString(), ($"{curr.Title()}", curr.ItemId, curr.ImageUrl, false) );
+                    retVal.AddLine( key.ToString(), ($"{curr.Title()}", curr.ItemId, showImages ? curr.ImageUrl : string.Empty, false) );
                 }
             }
 
@@ -907,7 +910,7 @@ namespace Statistics2026.Data
                 if( lastPlayedDate == null )
                     lastPlayedDate = DateTimeOffset.MinValue;
                 retVal.Add( (name, lastPlayedDate.Value) );
-                return Task.FromResult(true);
+                return Task.FromResult( true );
             } );
 
             return retVal;

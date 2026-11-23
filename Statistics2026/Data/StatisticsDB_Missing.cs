@@ -189,7 +189,7 @@ namespace Statistics2026.Data
                     string parentInfoJSON = row.GetString( (int)EMediaListResponseColumns.eParentInfoJSON );
                     string title = row.GetString( (int)EMediaListResponseColumns.eTitle );
 
-                    List<(string id, string name, string sortName, string displayText, string url)>? parentInfos = await MediaItemResponse.getParentInfo( parentInfoJSON,
+                    List<(string id, string name, string sortName, string displayText, string url)>? parentInfos = await MediaItemResponse.getParentInfo( parentInfoJSON, episodes,
                         async ( string id, string name, string sortName ) =>
                         {
                             if( name.IsEmpty() )

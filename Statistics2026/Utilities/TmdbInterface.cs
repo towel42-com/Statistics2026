@@ -620,15 +620,15 @@ namespace Statistics2026.Utilities
             return UrlTemplate.Replace( "{searchInfo}", encodedTitle ).Replace( "{isoCode}", isoCode );
         }
 
-        public (string imageUrl, string itemText) ImageUrl()
+        public (string imageUrl, string itemText) ImageUrl( bool showImage=true )
         {
-            (string imageUrl, string itemText, string itemUrl) retVal = HelperFuncs.GetTMDBLink( LogoPath, ProviderName );
+            (string imageUrl, string itemText, string itemUrl) retVal = HelperFuncs.GetTMDBLink( LogoPath, ProviderName, showImage:showImage );
             return (retVal.imageUrl, retVal.itemText);
         }
 
-        public (string imageUrl, string itemText, string itemUrl) ImageUrl( string targetUrl, string targetHtml, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null ) //html uses <TARGET_URL> and <TARGET_TEXT> as placeholders
+        public (string imageUrl, string itemText, string itemUrl) ImageUrl( string targetUrl, string targetHtml, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null, bool showImage=true ) //html uses <TARGET_URL> and <TARGET_TEXT> as placeholders
         {
-            return HelperFuncs.GetTMDBLink( LogoPath, ProviderName, (targetUrl, targetHtml), posterSize, imageHeight, imageWidth );
+            return HelperFuncs.GetTMDBLink( LogoPath, ProviderName, (targetUrl, targetHtml), posterSize, imageHeight, imageWidth, showImage );
         }
     }
 

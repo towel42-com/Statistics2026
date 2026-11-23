@@ -1,47 +1,45 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
-using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
 using ServiceStack;
-using System;
 
 namespace Statistics2026.Utilities
 {
     public static class GetItemImageUrl
     {
-        public static string _ItemImageUrl( string itemId, ILibraryManager? libManager, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
+        public static string ItemImageUrlFromItemId( string itemId, ILibraryManager? libManager, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
             var guid = new Guid( itemId );
-            return _ItemImageUrl( guid, libManager, logger, imageType, maxWidth, quality, imageIndex );
+            return ItemImageUrlFromItemId( guid, libManager, logger, imageType, maxWidth, quality, imageIndex );
         }
 
-        public static string _ItemImageUrl( long itemId, ILibraryManager? libManager, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
+        public static string ItemImageUrlFromItemId( long itemId, ILibraryManager? libManager, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
             if( libManager == null )
                 return string.Empty;
 
             BaseItem item = libManager.GetItemById( itemId );
-            return item == null ? string.Empty : _ItemImageUrl( item, logger, imageType, maxWidth, quality, imageIndex );
+            return item == null ? string.Empty : ItemImageUrlFromItem( item, logger, imageType, maxWidth, quality, imageIndex );
         }
 
-        public static string _ItemImageUrl( Guid itemId, ILibraryManager? libManager, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
+        public static string ItemImageUrlFromItemId( Guid itemId, ILibraryManager? libManager, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
             if( libManager == null )
                 return string.Empty;
 
             BaseItem item = libManager.GetItemById( itemId );
-            return item == null ? string.Empty : _ItemImageUrl( item, logger, imageType, maxWidth, quality, imageIndex );
+            return item == null ? string.Empty : ItemImageUrlFromItem( item, logger, imageType, maxWidth, quality, imageIndex );
         }
 
-        private static ConcurrentCache<(string itemId, ImageType imageType, int maxWidth, int quality, int index), string> sIdToUrlMap = new(1000);
-        
+        private static ConcurrentCache<(string itemId, ImageType imageType, int maxWidth, int quality, int index), string> sIdToUrlMap = new( 1000 );
+
         public static void ClearCache()
         {
             sIdToUrlMap.Clear();
         }
 
-        public static string _ItemImageUrl( BaseItem? item, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
+        public static string ItemImageUrlFromItem( BaseItem? item, ILogger? logger = null, ImageType imageType = ImageType.Primary, int maxWidth = 400, int quality = 90, int imageIndex = 0 )
         {
             if( item == null || item.Id.ToString().IsNullOrEmpty() )
                 return string.Empty;
@@ -74,8 +72,22 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
+        public static string ItemHtmlFromItem( BaseItem? item, string text, bool showImage, string height = "105px", string target = "" )
+        {
+            if( item == null )
+                return text;
 
-        public static string ItemUrlFromItemId( string itemId, string itemUrl, string text = "", string height = "105px", string target = "" )
+            string imageUrl = ItemImageUrlFromItem( item );
+            if( imageUrl.IsNullOrEmpty() )
+            {
+                return text;
+            }
+
+            return ItemHtmlFromItemId( item.Id.ToString(), imageUrl, text, showImage, height, target );
+        }
+
+
+        public static string ItemHtmlFromItemId( string itemId, string itemUrl, string text, bool showImage, string height = "105px", string target = "" )
         {
             if( ( Plugin.Instance == null ) || ( Plugin.Instance.ServerId == null ) )
                 throw new ArgumentNullException( "Plugin.Instance or Plugin.Instance.ServerId is null." );
@@ -85,12 +97,12 @@ namespace Statistics2026.Utilities
 
             string serverId = Plugin.Instance.ServerId;
             string imageUrl = $"/item?id={itemId}&serverId={serverId}";
-            string retVal = ItemUrlFromImageUrl( itemUrl, imageUrl, text, height );
+            string retVal = ItemHtml( itemUrl, imageUrl, text, showImage, height, target );
 
             return retVal;
         }
 
-        public static string ItemUrlFromImageUrl( string imageUrl, string targetUrl, string text = "", string height = "105px", string target = "" )
+        private static string ItemHtml( string imageUrl, string targetUrl, string text, bool showImage, string height, string target )
         {
             string retVal = $"<a is=\"emby-linkbutton\" ";
             if( !target.IsEmpty() )
@@ -98,7 +110,7 @@ namespace Statistics2026.Utilities
                 retVal += "target=\"{target}\" ";
             }
             retVal += $"href=\"{targetUrl}\">";
-            if( !imageUrl.IsEmpty() )
+            if( !imageUrl.IsEmpty() && showImage )
             {
                 retVal += $"<img referrerpolicy=\"no-referrer\" loading=\"lazy\" src=\"{imageUrl}\" height=\"{height}\"/>";
             }

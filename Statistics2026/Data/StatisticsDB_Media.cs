@@ -1,4 +1,5 @@
 ﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Configuration;
@@ -671,7 +672,7 @@ namespace Statistics2026.Data
             Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> genreMap = await GenreCountValues( user, movies, true, true );
             var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value.total ).ToList();
 
-            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( !movies) ); ++ii )
+            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( movies ? EReportType.eMovieReport : EReportType.eTVReport ) ); ++ii )
             {
                 KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedGenre[ ii ];
                 retVal.addRow( curr.Key, [ curr.Value.total ] );
@@ -735,7 +736,7 @@ namespace Statistics2026.Data
                     return kvp.Value.total;
                 }
             ).ToList();
-            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport(!movies) ); ++ii )
+            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( movies ? EReportType.eMovieReport : EReportType.eTVReport ) ); ++ii )
             {
                 KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedGenre[ ii ];
 
@@ -750,11 +751,7 @@ namespace Statistics2026.Data
                 else
                     text = $"{curr.Key}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}";
 
-                string imageUrl = GetItemImageUrl._ItemImageUrl( genre );
-                if( !imageUrl.IsNullOrEmpty() )
-                {
-                    text = GetItemImageUrl.ItemUrlFromItemId( genre!.Id.ToString(), imageUrl, text );
-                }
+                text = GetItemImageUrl.ItemHtmlFromItem( genre, text, Plugin.Instance!.Configuration.ShowImages( movies ? EReportType.eMovieReport : EReportType.eTVReport ) );
 
                 retVal.AddLine( curr.Key, text, false );
             }

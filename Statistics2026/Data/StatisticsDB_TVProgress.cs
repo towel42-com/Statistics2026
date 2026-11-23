@@ -1,8 +1,10 @@
 ﻿using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using ServiceStack;
 using SQLitePCL.pretty;
+using Statistics2026.Configuration;
 using Statistics2026.Responses;
 using Statistics2026.Utilities;
 using System.Collections.Concurrent;
@@ -56,7 +58,7 @@ namespace Statistics2026.Data
                 };
                 if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
                 {
-                    curr.ItemUrl = GetItemImageUrl.ItemUrlFromItemId( seriesId, curr.ItemUrl, curr.Name );
+                    curr.ItemUrl = GetItemImageUrl.ItemHtmlFromItemId( seriesId, curr.ItemUrl, text:curr.Name, Plugin.Instance!.Configuration.ShowImages( EReportType.eUserReport ) );
                     curr.Name = curr.ItemUrl;
                 }
 

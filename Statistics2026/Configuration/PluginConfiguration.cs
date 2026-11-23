@@ -285,12 +285,14 @@ namespace Statistics2026.Configuration
         public bool excludeAdmin { get; set; } = true;
         public bool hasConnectUserID { get; set; } = false;
         public int numMostActiveUsers { get; set; } = 5;
+        public bool showImages { get; set; } = true;
 
         public void CopyData( UserReportSettings dataSource )
         {
             hasConnectUserID = dataSource.hasConnectUserID;
             numMostActiveUsers = dataSource.numMostActiveUsers;
             excludeAdmin = dataSource.excludeAdmin;
+            showImages = dataSource.showImages;
         }
     }
 
@@ -305,17 +307,45 @@ namespace Statistics2026.Configuration
         UserReportSettings userReportSettings { get; set; }
     }
 
+    public enum EReportType
+    {
+        eTVReport,
+        eMovieReport,
+        eUserReport
+    };
+
     public static class DataForConfigExtensions
     {
-        public static List<string> CustomSearchLocations( this IDataForConfig target, bool forTV )
+        public static bool ShowImages( this IDataForConfig target, EReportType reportType )
         {
-            return forTV ? target.tvSettings.searchLocations : target.movieSettings.searchLocations;
+            switch( reportType )
+            {
+                case EReportType.eTVReport:
+                    return target.tvSettings.showImages;
+                case EReportType.eMovieReport:
+                    return target.movieSettings.showImages;
+                case EReportType.eUserReport:
+                    return target.userReportSettings.showImages;
+            }
+            return true;
         }
 
-        public static bool HasCustomSearches( this IDataForConfig target, bool forTV )
+        public static List<string> CustomSearchLocations( this IDataForConfig target, EReportType reportType )
+        {
+            switch( reportType )
+            {
+                case EReportType.eTVReport:
+                    return target.tvSettings.searchLocations;
+                case EReportType.eMovieReport:
+                    return target.movieSettings.searchLocations;
+            }
+            return [];
+        }
+
+        public static bool HasCustomSearches( this IDataForConfig target, EReportType reportType )
         {
             bool retVal = false;
-            List<string> searchLocations = target.CustomSearchLocations( forTV );
+            List<string> searchLocations = target.CustomSearchLocations( reportType );
             for( int ii = 0; !retVal && ( ii < searchLocations.Count ); ++ii )
             {
                 retVal = !string.IsNullOrWhiteSpace( searchLocations[ ii ] );
@@ -323,52 +353,111 @@ namespace Statistics2026.Configuration
             return retVal;
         }
 
-        public static bool ShowSearchTheMovieDB( this IDataForConfig target, bool forTV )
+        public static bool ShowSearchTheMovieDB( this IDataForConfig target, EReportType reportType )
         {
-            return forTV ? target.tvSettings.showSearchTheMovieDB : target.movieSettings.showSearchTheMovieDB;
+            switch( reportType )
+            {
+                case EReportType.eTVReport:
+                    return target.tvSettings.showSearchTheMovieDB;
+                case EReportType.eMovieReport:
+                    return target.movieSettings.showSearchTheMovieDB;
+            }
+            return true;
         }
 
-        public static bool AlwaysShowJustWatch( this IDataForConfig target, bool forTV )
+        public static bool AlwaysShowJustWatch( this IDataForConfig target, EReportType reportType )
         {
-            return forTV ? target.tvSettings.alwaysShowJustWatch : target.movieSettings.alwaysShowJustWatch;
+            switch( reportType )
+            {
+                case EReportType.eTVReport:
+                    return target.tvSettings.alwaysShowJustWatch;
+                case EReportType.eMovieReport:
+                    return target.movieSettings.alwaysShowJustWatch;
+            }
+            return true;
         }
 
-        public static int MaxNumStreamingProviders( this IDataForConfig target, bool forTV )
+        public static int MaxNumStreamingProviders( this IDataForConfig target, EReportType reportType )
         {
-            return forTV ? target.tvSettings.maxNumStreamingProviders : target.movieSettings.maxNumStreamingProviders;
+            switch( reportType )
+            {
+                case EReportType.eTVReport:
+                    return target.tvSettings.maxNumStreamingProviders;
+                case EReportType.eMovieReport:
+                    return target.movieSettings.maxNumStreamingProviders;
+            }
+            return 0;
         }
 
-        public static int NumGenresToReport( this IDataForConfig target, bool forTV )
+        public static int NumGenresToReport( this IDataForConfig target, EReportType reportType )
         {
-            return forTV ? target.tvSettings.numGenresToReport : target.movieSettings.numGenresToReport;
+            switch( reportType )
+            {
+                case EReportType.eTVReport:
+                    return target.tvSettings.numGenresToReport;
+                case EReportType.eMovieReport:
+                    return target.movieSettings.numGenresToReport;
+            }
+            return 0;
         }
 
-        public static int NumActorsToReport( this IDataForConfig target, bool forTV )
+        public static int NumActorsToReport( this IDataForConfig target, EReportType reportType )
         {
-            return forTV ? target.tvSettings.numActorsToReport : target.movieSettings.numActorsToReport;
+            switch( reportType )
+            {
+                case EReportType.eTVReport:
+                    return target.tvSettings.numActorsToReport;
+                case EReportType.eMovieReport:
+                    return target.movieSettings.numActorsToReport;
+            }
+            return 0;
         }
 
-        public static int NumWatchedToReport( this IDataForConfig target, bool forTV )
+        public static int NumWatchedToReport( this IDataForConfig target, EReportType reportType )
         {
-            return forTV ? target.tvSettings.numWatchedToReport : target.movieSettings.numWatchedToReport;
+            switch( reportType )
+            {
+                case EReportType.eTVReport:
+                    return target.tvSettings.numWatchedToReport;
+                case EReportType.eMovieReport:
+                    return target.movieSettings.numWatchedToReport;
+            }
+            return 0;
         }
 
-        public static int NumTiedToReport( this IDataForConfig target, bool forTV )
+        public static int NumTiedToReport( this IDataForConfig target, EReportType reportType )
         {
-            return forTV ? target.tvSettings.numTiedToReport : target.movieSettings.numTiedToReport;
+            switch( reportType )
+            {
+                case EReportType.eTVReport:
+                    return target.tvSettings.numTiedToReport;
+                case EReportType.eMovieReport:
+                    return target.movieSettings.numTiedToReport;
+            }
+            return 0;
         }
 
-        public static bool CanSearch( this IDataForConfig target, bool forTV )
+        public static bool CanSearch( this IDataForConfig target, EReportType reportType )
         {
-            bool retVal = forTV ? target.tvSettings.showSearchTheMovieDB : target.movieSettings.showSearchTheMovieDB;
-            List<string> searchLocations = forTV ? target.tvSettings.searchLocations : target.movieSettings.searchLocations;
+            bool retVal = false;
+            switch( reportType )
+            {
+                case EReportType.eTVReport:
+                    retVal = target.tvSettings.showSearchTheMovieDB;
+                    break;
+                case EReportType.eMovieReport:
+                    retVal = target.movieSettings.showSearchTheMovieDB;
+                    break;
+            }
+
+            List<string> searchLocations = CustomSearchLocations( target, reportType );
             for( int ii = 0; !retVal && ( ii < searchLocations.Count ); ++ii )
             {
                 retVal = !string.IsNullOrWhiteSpace( searchLocations[ ii ] );
             }
             return retVal;
         }
-
+        
         public static void CopyData( this IDataForConfig target, IDataForConfig dataSource )
         {
             if( target == null || dataSource == null )

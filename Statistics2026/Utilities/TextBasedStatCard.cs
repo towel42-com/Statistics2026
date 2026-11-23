@@ -89,7 +89,7 @@ namespace Statistics2026.Utilities
             bool showImage = !currValue.url.IsNullOrEmpty() && !currValue.itemId.IsNullOrEmpty();
             if( showImage )
             {
-                dataHtml = GetItemImageUrl.ItemUrlFromItemId( currValue.itemId, currValue.url, dataHtml, "50px" );
+                dataHtml = GetItemImageUrl.ItemHtmlFromItemId( currValue.itemId, currValue.url, text:dataHtml, showImage:true, height:"50px" );
             }
 
             return dataHtml;

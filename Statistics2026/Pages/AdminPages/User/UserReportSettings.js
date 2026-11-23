@@ -21,6 +21,7 @@
                     view.querySelector("#excludeAdmin").checked = config.userReportSettings.excludeAdmin;
                     view.querySelector("#hasConnectUserID").checked = config.userReportSettings.hasConnectUserID;
                     view.querySelector("#numMostActive").value = config.userReportSettings.numMostActiveUsers;
+                    view.querySelector("#showImages").checked = config.userReportSettings.showImages;
                 }
             );
         }
@@ -82,6 +83,18 @@
             view.querySelector("#numMostActiveHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Number of Most Active Users", "The default is 5, but you can limit how many most active users that are reported");
+                });
+            view.querySelector("#showImages").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.userReportSettings.showImages = view.querySelector("#showImages").checked;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            view.querySelector("#showImagesHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Show Images", "In reports and summaries, show the images along with the titles");
                 });
         };
     }

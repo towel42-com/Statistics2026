@@ -1,7 +1,6 @@
 ﻿using MediaBrowser.Controller.Entities;
 using ServiceStack;
 using Statistics2026.Configuration;
-using Statistics2026.Services;
 using Statistics2026.Utilities;
 using System.Collections.Concurrent;
 
@@ -148,14 +147,14 @@ namespace Statistics2026.Data
                 ListType = EListType.eNumbered
             };
 
-            var sortedActors = actorsMap.OrderByDescending( kvp => 
+            var sortedActors = actorsMap.OrderByDescending( kvp =>
                 {
                     if( !movies && ( series == null || series! == true ) )
                         return kvp.Value.parentToChildMapping.Count();
                     return kvp.Value.total;
                 }
             ).ToList();
-            for( int ii = 0; ( ii < sortedActors.Count() ) && ( ii < Plugin.Instance!.Configuration.NumActorsToReport( !movies ) ); ++ii )
+            for( int ii = 0; ( ii < sortedActors.Count() ) && ( ii < Plugin.Instance!.Configuration.NumActorsToReport( movies ? EReportType.eMovieReport : EReportType.eTVReport ) ); ++ii )
             {
                 KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedActors[ ii ];
                 try
@@ -172,11 +171,7 @@ namespace Statistics2026.Data
                     else
                         text = $"{person.Name}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}";
 
-                    string imageUrl = GetItemImageUrl._ItemImageUrl( person );
-                    if( !imageUrl.IsNullOrEmpty() )
-                    {
-                        text = GetItemImageUrl.ItemUrlFromItemId( person.Id.ToString(), imageUrl, text );
-                    }
+                    text = GetItemImageUrl.ItemHtmlFromItem( person, text: text, Plugin.Instance!.Configuration.ShowImages( movies ? EReportType.eMovieReport : EReportType.eTVReport ) );
                     retVal.AddLine( person.Name, text, false );
                 }
                 catch( Exception )

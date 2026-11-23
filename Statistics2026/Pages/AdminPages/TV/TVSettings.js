@@ -286,7 +286,7 @@
             );
             view.querySelector("#showFilteredMissingSummariesHelp").addEventListener("click",
                 function () {
-                    Helpers.showInfo("Filtered Missing Summaries", "For summaries of episodes or movies missing, show the filtered results.");
+                    Helpers.showInfo("Filtered Missing Summaries", "For summaries of episodes missing, show the filtered results.");
                 });
 
             view.querySelector("#reportOnMissingSpecials").addEventListener("click",
@@ -345,6 +345,19 @@
             view.querySelector("#numWatchedToReportHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Number of Watched Videos", "The default is 5, but you can limit how many Watched Videos to report on");
+                });
+
+            view.querySelector("#showImages").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.tvSettings.showImages = view.querySelector("#showImages").checked;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            view.querySelector("#showImagesHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Show Images", "In reports and summaries, show the images along with the titles");
                 });
 
             view.querySelector("#numTiedToReport").addEventListener("input",
