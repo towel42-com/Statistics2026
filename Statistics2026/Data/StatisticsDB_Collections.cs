@@ -212,7 +212,7 @@ namespace Statistics2026.Data
             {
                 try
                 {
-                    TmdbCollection? tmdbCollection = await reader.GetRemoteCollectionMembersAsync( tmdbId ).ConfigureAwait( false );
+                    TmdbCollection? tmdbCollection = await reader.GetRemoteCollectionMembersAsync( tmdbId, Plugin.Instance!.Configuration.movieSettings.numDaysForMovieStreaming ).ConfigureAwait( false );
                     IEnumerable<Video> libMembers = EmbyHelperFuncs.GetMoviesInCollection( collection, LibraryManager() );
                     numMovies = Math.Max( tmdbCollection?.Movies.Count() ?? 0, libMembers.Count() );
                 }

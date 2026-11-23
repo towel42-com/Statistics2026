@@ -121,7 +121,7 @@ namespace Statistics2026.Utilities
             _cancellationToken?.ThrowIfCancellationRequested();
         }
 
-        public async Task<TmdbCollection?> GetRemoteCollectionMembersAsync( string tmdbId, string language = "en-US" )
+        public async Task<TmdbCollection?> GetRemoteCollectionMembersAsync( string tmdbId, int numDaysToAdd, string language = "en-US" )
         {
             if( string.IsNullOrEmpty( tmdbId ) )
                 return null;
@@ -153,7 +153,7 @@ namespace Statistics2026.Utilities
                 if( collection == null )
                     return collection;
 
-                DateTimeOffset lastDayToCountTowardsCollection = DateTimeOffset.UtcNow.AddDays( Plugin.Instance!.Configuration.numDaysForMovieStreaming );
+                DateTimeOffset lastDayToCountTowardsCollection = DateTimeOffset.UtcNow.AddDays( numDaysToAdd );
                 collection.RemoveFutureMovies( lastDayToCountTowardsCollection );
 
                 for( int ii = 0; ii < collection.Movies.Count; ++ii )

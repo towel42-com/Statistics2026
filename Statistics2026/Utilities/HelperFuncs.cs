@@ -713,13 +713,12 @@ namespace Statistics2026.Utilities
         //    }
         //}
 
-        public static bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
+        public static bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, int? numDaysFutureForMissing )
         {
             if( dto == null )
                 return true;
 
-            int numDaysToAdd = ignoreConfig ? 0 : Plugin.Instance!.Configuration.numDaysFutureForMissing;
-            DateTime maxDate = DateTimeOffset.Now.Date.AddDays( numDaysToAdd );
+            DateTime maxDate = DateTimeOffset.Now.Date.AddDays( numDaysFutureForMissing ?? 0 );
             if( dto.Value.Date > maxDate )
                 return true;
 
