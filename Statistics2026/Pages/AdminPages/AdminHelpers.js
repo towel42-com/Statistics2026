@@ -43,7 +43,7 @@ define(function () {
                 subTabs: [
                     { page: 'Stats2026_UserStats', name: 'User Stats' },
                     { page: 'Stats2026_TVSeriesProgress', name: 'TV Series Progress' },
-                    { page: 'Stats2026_UserSettings', name: 'Settings' }
+                    { page: 'Stats2026_UserReportSettings', name: 'Settings' }
                 ]
             },
         ];

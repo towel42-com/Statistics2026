@@ -1,0 +1,56 @@
+﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/Stats2026_UserReportSettings.js">
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <h3 style="margin-top: 10px;">User Report Settings</h3>
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="excludeAdmin" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Exclude Administrator users from reports?</span>
+                    <i class="md-icon" id="excludeAdminHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="hasConnectUserID" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Only Show Users with Connect User ID?</span>
+                    <i class="md-icon" id="hasConnectUserIDHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                <label class="emby-checkbox-label">
+                    <input style="margin-top: 10px;" id="showImages" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show images in tables and reports?</span>
+                    <i class="md-icon" id="showImagesHelp">info</i>
+                </label>
+            </div>
+
+            <div class="inputContainer">
+                How many Favorite Years to Show:
+                <i class="md-icon" id="numFavoriteYearsHelp">info</i>
+                <input type="number" id="numFavoriteYears" min="1" max="10" placeholder="# of Favorite Years" title="Number of Favorite Years" />
+            </div>
+
+            <div class="inputContainer">
+                Number of Genres to report on:
+                <i class="md-icon" id="numGenresToReportHelp">info</i>
+                <input type="number" id="numGenresToReport" min="1" max="1000" placeholder="# of Genres" title="Number of Genres" />
+            </div>
+
+            <div class="inputContainer">
+                How many Last Seen Shows/Episodes to Show:
+                <i class="md-icon" id="numLastSeenToReportHelp">info</i>
+                <input type="number" id="numLastSeenToReport" min="1" max="10" placeholder="# of Last Seen" title="Number of Last Seen" />
+            </div>
+
+            <div class="inputContainer">
+                How many Most Watched Shows/Episodes to Show:
+                <i class="md-icon" id="numMostWatchedToReportHelp">info</i>
+                <input type="number" id="numMostWatchedToReport" min="1" max="10" placeholder="# of Most Watched" title="Number of Most Watched" />
+            </div>
+        </div>
+    </div>
+</div>

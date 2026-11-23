@@ -90,7 +90,7 @@ namespace Statistics2026.Data
             }
 
             PluginConfiguration config = Statistics2026.Plugin.Instance!.Configuration;
-            config.resetPlayCount = false;
+            config.systemSettings.resetPlayCount = false;
             Statistics2026.Plugin.Instance.UpdateConfiguration( config );
 
             await ComputeUserDataDBState();
@@ -153,7 +153,7 @@ namespace Statistics2026.Data
                     ", LastPlayedDate=@LastPlayedDate" +
                     ", TotalTicksPlayed=@TotalTicksPlayed ";
 
-            if( !config.resetPlayCount )
+            if( !config.systemSettings.resetPlayCount )
             {
                 sql +=
                       " WHERE " +
@@ -190,7 +190,7 @@ namespace Statistics2026.Data
                 int playCount = video.PlayCount;
                 bool isFavorite = video.IsFavorite;
 
-                if( config.resetPlayCount )
+                if( config.systemSettings.resetPlayCount )
                     ResetPlayCount( user, video, ref isPlayed, ref playCount, ref isFavorite );
 
                 DateTimeOffset? lastPlayedDate = video.LastPlayedDate;
@@ -198,7 +198,7 @@ namespace Statistics2026.Data
                 if( !mediaInfo.aOK )
                     return;
 
-                if( !config.resetPlayCount )
+                if( !config.systemSettings.resetPlayCount )
                 {
                     isPlayed = mediaInfo.IsPlayed ?? false;
                     playCount = mediaInfo.PlayCount ?? 0;
@@ -235,7 +235,7 @@ namespace Statistics2026.Data
                 }
             }
 
-            if( config.resetPlayCount )
+            if( config.systemSettings.resetPlayCount )
             {
                 string sqlUpdateTicks =
                     $"UPDATE {userTableName} " +
@@ -266,11 +266,11 @@ namespace Statistics2026.Data
 
             long? totalTicksPlayed = null;
 
-            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement => 
+            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
             {
                 IResultSet row = statement.Current;
                 totalTicksPlayed = row.GetInt64( 0 );
-                return Task.FromResult(true);
+                return Task.FromResult( true );
             } );
 
             return totalTicksPlayed;
@@ -558,7 +558,7 @@ namespace Statistics2026.Data
                 long numEpisodes = row.GetInt64( 3 );
                 if( numPlayed == numEpisodes )
                     seriesInfo[ seriesId ] = (seriesName, 0, numEpisodes);
-                return Task.FromResult(true);
+                return Task.FromResult( true );
             } );
 
             var retVal = new TextBasedStatCard( Constants.TotalSeriesFinished, Constants.HelpTotalSeriesFinished, EStatCardStyle.eCompact );
@@ -581,7 +581,7 @@ namespace Statistics2026.Data
                 else
                     clauses.Add( $"NOT {tableName}.IsEpisode" );
 
-                bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
+                bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin;
                 if( ( user == null ) && excludeAdmin )
                 {
                     clauses.Add( "NOT Users.IsAdministrator" );
@@ -597,8 +597,8 @@ namespace Statistics2026.Data
 
             CheckIsValid( ECheckLevel.eReport );
 
-            bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.excludeAdmin;
-            long numUsers = ( user == null ) ? (await NumUsers( false, excludeAdmin )) : 1;
+            bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin;
+            long numUsers = ( user == null ) ? ( await NumUsers( false, excludeAdmin ) ) : 1;
 
             var tableNames = new List<string>();
             if( user != null )
@@ -680,14 +680,14 @@ namespace Statistics2026.Data
                         playMap[ id ] = (id, name, playCount, numEpisodes, playCountPerUser);
                     }
 
-                    return Task.FromResult(true);
+                    return Task.FromResult( true );
                 } );
             }
 
             var sortedMapping = new SortedDictionary<long, List<WatchedMediaValue>>();
 
-            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.numWatchedToReport;
-            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.numTiedToReport;
+            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.NumWatchedToReport( ( mediaType == EMediaType.eMovie ) ? EReportType.eMovieReport : EReportType.eTVReport );
+            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.NumTiedToReport( ( mediaType == EMediaType.eMovie ) ? EReportType.eMovieReport : EReportType.eTVReport );
 
             foreach( (string id, string name, long playCount, long denominator, double playCountPerUser) curr in playMap.Values )
             {
@@ -725,7 +725,7 @@ namespace Statistics2026.Data
                 for( int ii = 0; ii < numToKeep; ++ii )
                 {
                     WatchedMediaValue item = subList[ ii ];
-                    item.ImageUrl = ItemImageUrl._ItemImageUrl( item.ItemId, LibraryManager() );
+                    item.ImageUrl = GetItemImageUrl.ItemImageUrlFromItemId( item.ItemId, LibraryManager() );
                     subList[ ii ] = item;
                 }
 
@@ -762,12 +762,13 @@ namespace Statistics2026.Data
             string title = string.Empty;
             string help = string.Empty;
 
-            if( ( mediaType == EMediaType.eSeries ) || ( mediaType == EMediaType.eEpisode ) )
+            bool isForTV = ( ( mediaType == EMediaType.eSeries ) || ( mediaType == EMediaType.eEpisode ) );
+            if( isForTV )
             {
                 title = leastWatched ? Constants.LeastWatchedShows : Constants.MostWatchedShows;
                 help = leastWatched ? Constants.HelpLeastWatchedShows : Constants.HelpMostWatchedShows;
             }
-            else if( mediaType == EMediaType.eMovie )
+            else
             {
                 title = leastWatched ? Constants.LeastWatchedMovies : Constants.MostWatchedMovies;
                 help = leastWatched ? Constants.HelpLeastWatchedMovies : Constants.HelpMostWatchedMovies;
@@ -779,12 +780,14 @@ namespace Statistics2026.Data
                 ListType = EListType.eNumbered
             };
 
+            EReportType reportType = ( user != null ) ? EReportType.eUserReport : ( isForTV ? EReportType.eTVReport : EReportType.eMovieReport );
+            bool showImages = Plugin.Instance!.Configuration.ShowImages( reportType );
             foreach( List<WatchedMediaValue> currList in watchedMedia )
             {
                 foreach( WatchedMediaValue curr in currList )
                 {
                     long key = (long)( 100 * curr.PlayCountPerUser );
-                    retVal.AddLine( key.ToString(), ($"{curr.Title()}", curr.ItemId, curr.ImageUrl, false) );
+                    retVal.AddLine( key.ToString(), ($"{curr.Title()}", curr.ItemId, showImages ? curr.ImageUrl : string.Empty, false) );
                 }
             }
 
@@ -862,7 +865,7 @@ namespace Statistics2026.Data
             return TotalTime( user, episodesOnly, false );
         }
 
-        private async Task<List<(string name, DateTimeOffset lastPlayed)>> LastSeenValues( User? user, bool movies )
+        private async Task<List<(string name, string itemId, string url, DateTimeOffset lastPlayed)>> LastSeenValues( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -877,6 +880,8 @@ namespace Statistics2026.Data
             else
                 sql += "PrimaryName || ' - S' || printf('%02d', Season ) || 'E' || printf('%02d', Episode) || ' - ' || SecondaryName ";
             sql += "AS Name " +
+                   ", Media.ItemId" +
+                   ", Media.ImageUrl " +
                    ", LastPlayedDate " +
                    $"FROM {tableName} " +
                    $"LEFT JOIN Media ON Media.ItemId={tableName}.ItemId " +
@@ -889,7 +894,7 @@ namespace Statistics2026.Data
                 sql += "NOT";
             sql += $" {tableName}.IsEpisode " +
                $"ORDER BY {tableName}.LastPlayedDate DESC " +
-               "LIMIT 10 "
+               $"LIMIT {Plugin.Instance!.Configuration.userReportSettings.numLastSeenToReport} "
                ;
 
             var sqlCmd = new SQLCmdDef( sql,
@@ -897,17 +902,20 @@ namespace Statistics2026.Data
                 ( "@UserId", user.Id.ToString())
             ] );
 
-            var retVal = new List<(string genre, DateTimeOffset lastPlayed)>();
+            var retVal = new List<(string name, string itemId, string url, DateTimeOffset lastPlayed)>();
             await ExecuteCommand( sqlCmd, statement =>
             {
                 IResultSet row = statement.Current;
-                string name = row.GetString( 0 );
-                string date = row.GetString( 1 );
+                int col = 0;
+                string name = row.GetString( col++ );
+                string itemId = row.GetString( col++ );
+                string url = row.GetString( col++ );
+                string date = row.GetString( col++ );
                 DateTimeOffset? lastPlayedDate = HelperFuncs.ReadDateTime( date );
                 if( lastPlayedDate == null )
                     lastPlayedDate = DateTimeOffset.MinValue;
-                retVal.Add( (name, lastPlayedDate.Value) );
-                return Task.FromResult(true);
+                retVal.Add( (name, itemId, url, lastPlayedDate.Value) );
+                return Task.FromResult( true );
             } );
 
             return retVal;
@@ -939,11 +947,12 @@ namespace Statistics2026.Data
                 ListType = EListType.eNumbered,
                 IgnoreLength = true
             };
-            List<(string name, DateTimeOffset lastPlayed)> values = await LastSeenValues( user, movies );
+            List<(string name, string itemId, string url, DateTimeOffset lastPlayed)> values = await LastSeenValues( user, movies );
 
-            foreach( (string? name, DateTimeOffset lastPlayed) in values )
+            foreach( (string name, string itemId, string url, DateTimeOffset lastPlayed) in values )
             {
-                retVal.AddLine( $"{name} - {lastPlayed:d}", false );
+                string text = GetItemImageUrl.ItemHtmlFromItemId( itemId, url, $"{name} - {lastPlayed:d}", Plugin.Instance!.Configuration.ShowImages( EReportType.eUserReport ), "50px" );
+                retVal.AddLine( text, false );
             }
 
             if( values.Count == 0 )

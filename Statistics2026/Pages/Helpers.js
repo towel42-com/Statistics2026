@@ -230,7 +230,7 @@ define([
             view.querySelector("#seriesMostWatchedStats").innerHTML = seriesMostWatchedStats;
 
             Promise.allSettled(pendingPromises).finally(() => {
-                Dashboard.hideLoadingMsg();
+                hideLoadingFunc();
             });
         }
 

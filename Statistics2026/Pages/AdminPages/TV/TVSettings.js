@@ -18,38 +18,23 @@
         function loadPage(view, params) {
             ApiClient.getPluginConfiguration(Helpers.pluginId).then(
                 function (config) {
-                    view.querySelector("#hasConnectUserID").checked = config.hasConnectUserID;
-                    view.querySelector("#showUnknownDVProfiles").checked = config.showUnknownDVProfiles;
-                    view.querySelector("#showAllResolutions").checked = config.showAllResolutions;
-                    view.querySelector("#numMostActive").value = config.numMostActiveUsers;
+                    view.querySelector("#numDaysFutureForMissing").value = config.tvSettings.numDaysFutureForMissing;
+                    view.querySelector("#showSearchTheMovieDB").checked = config.tvSettings.showSearchTheMovieDB;
 
-                    const searchLocations = config.searchLocations || [];
+                    const searchLocations = config.tvSettings.searchLocations || [];
                     view.querySelector("#searchLocations").value = searchLocations.join('\n');;
-                    view.querySelector("#showSearchTheMovieDB").checked = config.showSearchTheMovieDB;
 
-                    view.querySelector("#numDaysFutureForMissing").value = config.numDaysFutureForMissing;
-                    view.querySelector("#numDaysForMovieStreaming").value = config.numDaysForMovieStreaming;
+                    view.querySelector("#showFilteredMissingSummaries").checked = config.tvSettings.showFilteredMissingSummaries;
+                    view.querySelector("#reportOnMissingSpecials").checked = config.tvSettings.reportOnMissingSpecials;
                 
-                    view.querySelector("#numWatchedToReport").value = config.numWatchedToReport;
-                    view.querySelector("#numTiedToReport").value = config.numTiedToReport;
-                    view.querySelector("#numGenresToReport").value = config.numGenresToReport;
-                    view.querySelector("#numActorsToReport").value = config.numActorsToReport;
-                
-                    view.querySelector("#excludeAdmin").checked = config.excludeAdmin;
-                    view.querySelector("#resetPlayCount").checked = config.resetPlayCount;
-                    view.querySelector("#resetDBState").checked = config.resetDBState;
-                    view.querySelector("#showDebugInfo").checked = config.showDebugInfo;
-                    view.querySelector("#showDiagnosticInfo").checked = config.showDiagnosticInfo;
-                
-                    view.querySelector("#showLastRunInfo").checked = config.showLastRunInfo;
+                    view.querySelector("#alwaysShowJustWatch").checked = config.tvSettings.alwaysShowJustWatch;
+                    view.querySelector("#maxNumStreamingProviders").value = config.tvSettings.maxNumStreamingProviders;
 
-                    view.querySelector("#reportOnMissingSpecials").checked = config.reportOnMissingSpecials;
-                    view.querySelector("#showFilteredMissingSummaries").checked = config.showFilteredMissingSummaries;
-                    view.querySelector("#alwaysShowJustWatch").checked = config.alwaysShowJustWatch;
-                    view.querySelector("#maxNumStreamingProviders").value = config.maxNumStreamingProviders;
-
-                    const collectionFilters = config.CollectionFiltersForMissingMovies || [];
-                    view.querySelector("#collectionFilterList").value = collectionFilters.join('\n');
+                    view.querySelector("#showImages").checked = config.tvSettings.showImages;
+                    view.querySelector("#numWatchedToReport").value = config.tvSettings.numWatchedToReport;
+                    view.querySelector("#numTiedToReport").value = config.tvSettings.numTiedToReport;
+                    view.querySelector("#numGenresToReport").value = config.tvSettings.numGenresToReport;
+                    view.querySelector("#numActorsToReport").value = config.tvSettings.numActorsToReport;
                 }
             );
         }
@@ -132,11 +117,6 @@
 
                 loadPage(view, params);
                 loadSeriesFilterTable();
-
-                var isDebugLoggingEnabled = await Helpers.isDebugLoggingEnabled();
-                view.querySelector("#showDebugInfo").disabled = !isDebugLoggingEnabled;
-                view.querySelector("#showDiagnosticInfo").disabled = !isDebugLoggingEnabled;
-                
             });
 
             function saveSeriesFilterItem(filterItem) {
@@ -184,16 +164,8 @@
                     .map(line => line.trim())
                     .filter(line => line.length > 0);
 
-                const filterList = view.querySelector('#collectionFilterList');
-
-                const missingMovieFilters = filterList.value
-                    .split('\n')
-                    .map(line => line.trim())
-                    .filter(line => line.length > 0);
-
                 ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                    config.CollectionFiltersForMissingMovies = missingMovieFilters;
-                    config.searchLocations = searchUrls;
+                    config.tvSettings.searchLocations = searchUrls;
 
                     ApiClient.updatePluginConfiguration(Helpers.pluginId, config).then(function (result) {
                         // Visual indicator: show green confirmation text
@@ -216,19 +188,6 @@
 
             const debouncedSave = debounce(saveConfigData, 1000);
 
-            view.querySelector('#collectionFilterList').addEventListener('input', function () {
-                const autosaveStatus = view.querySelector('#collectionAutosaveStatus');
-                autosaveStatus.textContent = "Unsaved Changes...";
-                autosaveStatus.style.color = "#e63946";
-                autosaveStatus.style.opacity = "1";
-
-                debouncedSave();
-            });
-
-            view.querySelector('#collectionFilterList').addEventListener('blur', function () {
-                saveConfigData();
-            });
-
             view.querySelector('#searchLocations').addEventListener('input', function () {
                 const autosaveStatus = view.querySelector('#searchLocationsAutosaveStatus');
                 autosaveStatus.textContent = "Unsaved Changes...";
@@ -241,6 +200,10 @@
             view.querySelector('#searchLocations').addEventListener('blur', function () {
                 saveConfigData();
             });
+            view.querySelector("#searchLocationsHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Search Locations for Missing Videos", "URLs to the search location for missing videos ie \"https://www.google.com/search?q=\"");
+                });
 
             // Handle saving instantly when a checkbox column is clicked or checked
             view.querySelector('#seriesFilter_body').addEventListener('change', function (e) {
@@ -286,59 +249,71 @@
 
             });
 
-            view.querySelector("#hasConnectUserID").addEventListener("click",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.hasConnectUserID = view.querySelector("#hasConnectUserID").checked;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
 
-            view.querySelector("#excludeAdmin").addEventListener("click",
+            view.querySelector("#numDaysFutureForMissing").addEventListener("input",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.excludeAdmin = view.querySelector("#excludeAdmin").checked;
+                        config.tvSettings.numDaysFutureForMissing = view.querySelector("#numDaysFutureForMissing").value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
+            view.querySelector("#numDaysFutureForMissingHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Days in the Future to list Upcoming Videos", "How many days in the future should upcoming episodes and movies be searched for (limited by published schedules).");
+                });
 
-            view.querySelector("#resetPlayCount").addEventListener("click",
+            view.querySelector("#showSearchTheMovieDB").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.resetPlayCount = view.querySelector("#resetPlayCount").checked;
+                        config.tvSettings.showSearchTheMovieDB = view.querySelector("#showSearchTheMovieDB").checked;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
-
-            view.querySelector("#reportOnMissingSpecials").addEventListener("click",
+            view.querySelector("#showSearchTheMovieDBHelp").addEventListener("click",
                 function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.reportOnMissingSpecials = view.querySelector("#reportOnMissingSpecials").checked;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
+                    Helpers.showInfo("Search The Movie DB", "Enable searching for the media on The MovieDB");
+                });
 
             view.querySelector("#showFilteredMissingSummaries").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.showFilteredMissingSummaries = view.querySelector("#showFilteredMissingSummaries").checked;
+                        config.tvSettings.showFilteredMissingSummaries = view.querySelector("#showFilteredMissingSummaries").checked;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
+            view.querySelector("#showFilteredMissingSummariesHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Filtered Missing Summaries", "For summaries of episodes missing, show the filtered results.");
+                });
+
+            view.querySelector("#reportOnMissingSpecials").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.tvSettings.reportOnMissingSpecials = view.querySelector("#reportOnMissingSpecials").checked;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            view.querySelector("#reportOnMissingSpecialsHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Report on Missing Specials", "When analyzing missing episodes, check for episodes that are considered special (Season 0)");
+                });
 
             view.querySelector("#alwaysShowJustWatch").addEventListener("click",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.alwaysShowJustWatch = view.querySelector("#alwaysShowJustWatch").checked;
+                        config.tvSettings.alwaysShowJustWatch = view.querySelector("#alwaysShowJustWatch").checked;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
+            view.querySelector("#alwaysShowJustWatchHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Always Show Just Watch", "When listing media streaming services always show a link for the Just Watch website");
+                });
 
             view.querySelector("#maxNumStreamingProviders").addEventListener("input",
                 function () {
@@ -346,90 +321,15 @@
                         const parsed = parseInt(view.querySelector("#maxNumStreamingProviders").value);
                         const value = Number.isNaN(parsed) ? 3 : parsed;
 
-                        config.maxNumStreamingProviders = value;
+                        config.tvSettings.maxNumStreamingProviders = value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
-
-            view.querySelector("#showDebugInfo").addEventListener("click",
+            view.querySelector("#maxNumStreamingProvidersHelp").addEventListener("click",
                 function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(
-                        async function (config) {
-                            config.showDebugInfo = view.querySelector("#showDebugInfo").checked;
-                            ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                        }
-                    );
-                    view.querySelector("#showDiagnosticInfo").disabled = !view.querySelector("#showDebugInfo").checked;
-                }
-            );
-
-            view.querySelector("#showDiagnosticInfo").addEventListener("click",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.showDiagnosticInfo = view.querySelector("#showDiagnosticInfo").checked;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
-            
-
-            view.querySelector("#showLastRunInfo").addEventListener("click",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.showLastRunInfo = view.querySelector("#showLastRunInfo").checked;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
-
-            view.querySelector("#resetDBState").addEventListener("click",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.resetDBState = view.querySelector("#resetDBState").checked;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
-
-            view.querySelector("#numMostActive").addEventListener("input",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        const parsed = parseInt(view.querySelector("#numMostActive").value);
-                        const value = Number.isNaN(parsed) ? 5 : parsed;
-
-                        config.numMostActiveUsers = value;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
-
-            view.querySelector("#numDaysFutureForMissing").addEventListener("input",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.numDaysFutureForMissing = view.querySelector("#numDaysFutureForMissing").value;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
-
-            view.querySelector("#numDaysForMovieStreaming").addEventListener("input",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.numDaysForMovieStreaming = view.querySelector("#numDaysForMovieStreaming").value;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
-
-            view.querySelector("#showSearchTheMovieDB").addEventListener("click",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.showSearchTheMovieDB = view.querySelector("#showSearchTheMovieDB").checked;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
+                    Helpers.showInfo("Number of Streaming Providers", "How many Streaming Providers to show when listing media");
+                });
 
             view.querySelector("#numWatchedToReport").addEventListener("input",
                 function () {
@@ -437,11 +337,28 @@
                         const parsed = parseInt(view.querySelector("#numWatchedToReport").value);
                         const value = Number.isNaN(parsed) ? 5 : parsed;
 
-                        config.numWatchedToReport = value;
+                        config.tvSettings.numWatchedToReport = value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
+            view.querySelector("#numWatchedToReportHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Watched Videos", "The default is 5, but you can limit how many Watched Videos to report on");
+                });
+
+            view.querySelector("#showImages").addEventListener("click",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        config.tvSettings.showImages = view.querySelector("#showImages").checked;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            view.querySelector("#showImagesHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Show Images", "In reports and summaries, show the images along with the titles");
+                });
 
             view.querySelector("#numTiedToReport").addEventListener("input",
                 function () {
@@ -449,11 +366,15 @@
                         const parsed = parseInt(view.querySelector("#numTiedToReport").value);
                         const value = Number.isNaN(parsed) ? 5 : parsed;
 
-                        config.numTiedToReport = value;
+                        config.tvSettings.numTiedToReport = value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
+            view.querySelector("#numTiedToReportHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Tied Videos", "The default is 5, but when reporting a list of media, and the value is tied how many do you want to show?");
+                });
 
             view.querySelector("#numGenresToReport").addEventListener("input",
                 function () {
@@ -461,11 +382,15 @@
                         const parsed = parseInt(view.querySelector("#numGenresToReport").value);
                         const value = Number.isNaN(parsed) ? 5 : parsed;
 
-                        config.numGenresToReport = value;
+                        config.tvSettings.numGenresToReport = value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
+            view.querySelector("#numGenresToReportHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Genres", "The default is 5, but when reporting a list of genres, how many should be shown?");
+                });
 
             view.querySelector("#numActorsToReport").addEventListener("input",
                 function () {
@@ -473,138 +398,15 @@
                         const parsed = parseInt(view.querySelector("#numActorsToReport").value);
                         const value = Number.isNaN(parsed) ? 5 : parsed;
 
-                        config.numActorsToReport = value;
+                        config.tvSettings.numActorsToReport = value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
-
-            view.querySelector("#showUnknownDVProfiles").addEventListener("click",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.showUnknownDVProfiles = view.querySelector("#showUnknownDVProfiles").checked;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
-            view.querySelector("#showAllResolutions").addEventListener("click",
-                function () {
-                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        config.showAllResolutions = view.querySelector("#showAllResolutions").checked;
-                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
-                    });
-                }
-            );
-
-            view.querySelector("#numDaysFutureForMissingHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Number of Days in the Future to list Upcoming Videos", "How many days in the future should upcoming episodes and movies be searched for (limited by published schedules).");
-                });
-
-            view.querySelector("#numDaysForMovieStreamingHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Number of Days after the Premiere", "Since digital availability is usually some time after the known release date, how many days to wait before showing a movie as missing? If the movie is available for streaming, this number is ignored.");
-                });
-            
-            view.querySelector("#searchLocationsHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Search Locations for Missing Videos", "URLs to the search location for missing videos ie \"https://www.google.com/search?q=\"");
-                });
-
-            view.querySelector("#showSearchTheMovieDBHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Search The Movie DB", "Enable searching for the media on The MovieDB");
-                });
-
-            view.querySelector("#numMostActiveHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Number of Most Active Users", "The default is 5, but you can limit how many most active users that are reported");
-                });
-
-            view.querySelector("#numWatchedToReportHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Number of Watched Videos", "The default is 5, but you can limit how many Watched Videos to report on");
-                });
-
-            view.querySelector("#numTiedToReportHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Number of Tied Videos", "The default is 5, but when reporting a list of media, and the value is tied how many do you want to show?");
-                });
-
-            view.querySelector("#numGenresToReportHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Number of Genres", "The default is 5, but when reporting a list of genres, how many should be shown?");
-                });
-
             view.querySelector("#numActorsToReportHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Number of Actors", "The default is 5, but when reporting a list of actors, how many should be shown?");
                 });
-
-            view.querySelector("#excludeAdminHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Exclude Administrators", "For security reasons, Administrators are not typically viewers of media and likely should be excluded from analysis.");
-                });
-
-            view.querySelector("#resetPlayCountHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Reset Play Count", "When computing the user watch data, reset the playcount to the default value (typically 1), and show Administrators as watched for every video. This settings resets to false after the Reset has occured.");
-                });
-
-            view.querySelector("#resetDBStateHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Reset Database State", "Next time any analysis or reporting is done, recompute the database state. This settings resets to false after the Reset has occured");
-                });
-
-
-            view.querySelector("#showFilteredMissingSummariesHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Filtered Missing Summaries", "For summaries of episodes or movies missing, show the filtered results.");
-                });
-
-            view.querySelector("#reportOnMissingSpecialsHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Report on Missing Specials", "When analyzing missing episodes, check for episodes that are considered special (Season 0)");
-                });
-
-            view.querySelector("#alwaysShowJustWatchHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Always Show Just Watch", "When listing media streaming services always show a link for the Just Watch website");
-                });
-
-            view.querySelector("#maxNumStreamingProvidersHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Number of Streaming Providers", "How many Streaming Providers to show when listing media");
-                });
-
-            view.querySelector("#showDebugInfoHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Show Debug Info", "More information is reported on the pages. Only available when debug logging is enabled.");
-                });
-
-            view.querySelector("#showDiagnosticInfoHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Show Diagnostic Info", "Diagnostic information is reported when debug info is enabled.. Only available when debug logging is enabled");
-                });
-
-            view.querySelector("#showLastRunInfoHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Show Last Run Info", "Each page will show a summary of each analysis' last run");
-                });
-
-            view.querySelector("#hasConnectUserIDHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Show Users with Connect User ID", "Normally all users are shown, checking this option will display only users with a Connect User ID.");
-                });
-            view.querySelector("#showUnknownDVProfilesHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Show Unknown Dolby Vision Profile Count", "Normally unknown Dolby Vision Profiles are hidden, checking this option will display the count of unknown Dolby Vision profiles.");
-                });
-            view.querySelector("#showAllResolutionsHelp").addEventListener("click",
-                function () {
-                    Helpers.showInfo("Show All Resolutions", "Normally only resolutions in use are show, checking this option will display all resolutions.");
-                });
-
         };
     }
 );

@@ -338,7 +338,7 @@ namespace Statistics2026.Data
                         ("@NumSeasons", numSeasons),
                         ("@HasSpecials", hasSpecials),
                         ("@DateAdded", HelperFuncs.ToDateTimeParamValue( series.DateCreated )),
-                        ("@ImageUrl", ItemImageUrl._ItemImageUrl(series)),
+                        ("@ImageUrl", GetItemImageUrl.ItemImageUrlFromItem(series)),
                         ("@FileSize", seriesInfo.totalFileSize),
                         ("@RunTimeTicks", seriesInfo.totalRuntime),
                         ("@Rating", seriesInfo.averageRating),

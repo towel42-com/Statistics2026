@@ -90,7 +90,7 @@ namespace Statistics2026.Data
             if( collectionName.IsNullOrEmpty() )
                 return false;
 
-            List<string> regexes = Plugin.Instance.Configuration.CollectionFiltersForMissingMovies;
+            List<string> regexes = Plugin.Instance.Configuration.movieSettings.CollectionFiltersForMissingMovies;
 
             foreach( string regexPattern in regexes )
             {
@@ -189,7 +189,7 @@ namespace Statistics2026.Data
                     string parentInfoJSON = row.GetString( (int)EMediaListResponseColumns.eParentInfoJSON );
                     string title = row.GetString( (int)EMediaListResponseColumns.eTitle );
 
-                    List<(string id, string name, string sortName, string displayText, string url)>? parentInfos = await MediaItemResponse.getParentInfo( parentInfoJSON,
+                    List<(string id, string name, string sortName, string displayText, string url)>? parentInfos = await MediaItemResponse.getParentInfo( parentInfoJSON, episodes,
                         async ( string id, string name, string sortName ) =>
                         {
                             if( name.IsEmpty() )
@@ -263,7 +263,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            (int numItems, int numParents) info = await MediaMissingInfo( episodes, Plugin.Instance!.Configuration.showFilteredMissingSummaries );
+            (int numItems, int numParents) info = await MediaMissingInfo( episodes, Plugin.Instance!.Configuration.tvSettings.showFilteredMissingSummaries );
 
             string title = episodes ? Constants.MissingEpisodes : Constants.MissingMovies;
             string infoFormat = episodes ? "{0} Episodes from {1} Series" : "{0} Movies from {1} Collections";

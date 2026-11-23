@@ -23,7 +23,6 @@ namespace Statistics2026.Responses
         public SortByText ServerLocation { get; set; } = new();
         public SortByText SearchLocation { get; set; } = new();
         public SortByText ParentName { get; set; } = new();
-        public string ParentUrl { get; set; } = string.Empty;
         public List<string> ParentIds { get; set; } = [];
         public string Extra { get; set; } = string.Empty;
         public string Extra2 { get; set; } = string.Empty;
@@ -42,7 +41,7 @@ namespace Statistics2026.Responses
         } = string.Empty;
         public string ItemId { get; set; } = string.Empty;
 
-        public static async Task<List<(string id, string name, string sortName, string displayText, string url)>?> getParentInfo( string parentJson, Func<string, string, string, Task<bool>> isFiltered )
+        public static async Task<List<(string id, string name, string sortName, string displayText, string url)>?> getParentInfo( string parentJson, bool? isEpisode, Func<string, string, string, Task<bool>> isFiltered )
         {
             List<(string id, string name, string sortName, string displayText, string url)> retVal = [];
 
@@ -83,17 +82,11 @@ namespace Statistics2026.Responses
                 string displayText = name;
 
                 string urlName = name;
-                if( ii != 0 )
-                    urlName = $", {urlName}";
-                string currParentUrl = ItemImageUrl.ItemUrlFromItemId( id, url, urlName ) ?? string.Empty;
+                string currParentUrl = GetItemImageUrl.ItemHtmlFromItemId( id, url, text: urlName, showImage: Plugin.Instance!.Configuration.ShowImages( ( isEpisode ?? true ) ? EReportType.eTVReport : EReportType.eMovieReport ) ) ?? string.Empty;
 
                 if( currParentUrl.IsNullOrEmpty() )
                 {
                     currParentUrl = string.Empty;
-                }
-                else
-                {
-                    displayText = currParentUrl;
                 }
 
                 retVal.Add( (id, name, sortName, displayText, currParentUrl) );
@@ -106,22 +99,32 @@ namespace Statistics2026.Responses
         {
             ParentIds = [];
 
-            var parentNamesText = new List<string>();
-            var parentNamesSortBy = new List<string>();
-            var parentUrls = new List<string>();
 
+            bool useList = parentInfo.Count > 1;
+
+            string sortBy = string.Empty;
+            string html = string.Empty;
             foreach( (string id, string name, string sortName, string displayText, string url) currParentInfo in parentInfo )
             {
                 ParentIds.Add( currParentInfo.id );
-                parentNamesText.Add( currParentInfo.displayText );
-                parentNamesSortBy.Add( currParentInfo.sortName );
+                sortBy += "_" + currParentInfo.sortName;
 
-                if( !currParentInfo.url.IsEmpty() )
-                    parentUrls.Add( currParentInfo.url );
+                string currUrl = currParentInfo.url;
+                string currText = currParentInfo.displayText;
+                string text = ( currUrl.IsNullOrEmpty() ? currText : currUrl );
+                if( useList )
+                {
+                    html += $"    <li>{text}</li>\n";
+                }
+                else
+                    html = text;
             }
 
-            ParentName = new() { SortBy = parentNamesSortBy.Join( ", " ), Text = parentNamesText.Join( ", " ) };
-            ParentUrl = parentUrls.Join( "\n" );
+            if( useList )
+            {
+                html = $"<ul>{html}</ul>";
+            }
+            ParentName = new() { SortBy = sortBy, Text = html };
         }
 
         private static string CleanSortName( string sortName )
@@ -175,7 +178,7 @@ namespace Statistics2026.Responses
             int episodeNum = row.GetInt( col++ );
             string parentId = row.GetString( col++ );  // blank for onServer
 
-            bool futureDate = HelperFuncs.InvalidDateForMissingAnalysis( premiereDate, true );
+            bool futureDate = HelperFuncs.InvalidDateForMissingAnalysis( premiereDate, null );
             if( !tmdbPosterPath.IsNullOrEmpty() )
             {
                 string tmp = string.Empty;
@@ -223,7 +226,7 @@ namespace Statistics2026.Responses
             }
             else
             {
-                bool canSearch = Plugin.Instance!.Configuration.CanSearch();
+                bool canSearch = Plugin.Instance!.Configuration.CanSearch( isEpisode ? EReportType.eTVReport : EReportType.eMovieReport );
                 if( canSearch )
                 {
                     if( premiereDate != null )
@@ -240,14 +243,14 @@ namespace Statistics2026.Responses
                 }
 
                 List<SortByText> searchData = [];
-                if( Plugin.Instance!.Configuration.showSearchTheMovieDB )
+                if( Plugin.Instance!.Configuration.ShowSearchTheMovieDB( isEpisode ? EReportType.eTVReport : EReportType.eMovieReport ) )
                 {
                     searchData.Add( getSearchData( "https://www.themoviedb.org/search?query=", "The MovieDB", searchKey, string.Empty ) );
                 }
 
-                if( Plugin.Instance!.Configuration.HasCustomSearches() )
+                if( Plugin.Instance!.Configuration.HasCustomSearches( isEpisode ? EReportType.eTVReport : EReportType.eMovieReport ) )
                 {
-                    foreach( string curr in Plugin.Instance!.Configuration.searchLocations )
+                    foreach( string curr in Plugin.Instance!.Configuration.CustomSearchLocations( isEpisode ? EReportType.eTVReport : EReportType.eMovieReport ) )
                     {
                         if( string.IsNullOrWhiteSpace( curr ) )
                         {
@@ -281,7 +284,7 @@ namespace Statistics2026.Responses
             return retVal;
         }
 
-        private static async Task<MediaItemResponse?> AddStreamingProviders( MediaItemResponse retVal, string isoCode, string streamingProvidersString, EmbyInterfaces embyInterfaces, Statistics2026DB db, bool locked )
+        private static async Task<MediaItemResponse?> AddStreamingProviders( MediaItemResponse retVal, bool? isEpisode, string isoCode, string streamingProvidersString, EmbyInterfaces embyInterfaces, Statistics2026DB db, bool locked )
         {
             List<int>? streamingProviders = null;
 
@@ -299,12 +302,12 @@ namespace Statistics2026.Responses
 
             PluginConfiguration? config = Plugin.Instance?.Configuration ?? null;
 
-            List<StreamingProvider> providerInfos = await db.GetStreamingProviders( streamingProviders, ( config?.alwaysShowJustWatch ?? true ), locked );
+            List<StreamingProvider> providerInfos = await db.GetStreamingProviders( streamingProviders, ( config?.AlwaysShowJustWatch( ( isEpisode ?? true ) ? EReportType.eTVReport : EReportType.eMovieReport ) ?? true ), locked );
 
             int depth = 0;
             string html = HelperFuncs.addToHtml( depth++, "<ul>" );
             List<string> providerNames = [];
-            int maxNumProviders = config?.maxNumStreamingProviders ?? 3;
+            int maxNumProviders = config?.MaxNumStreamingProviders( ( isEpisode ?? true ) ? EReportType.eTVReport : EReportType.eMovieReport ) ?? 3;
             for( int ii = 0; ( ( maxNumProviders == -1 ) || ( ii < maxNumProviders ) ) && ii < providerInfos.Count(); ++ii )
             {
                 StreamingProvider provider = providerInfos[ ii ];
@@ -316,7 +319,7 @@ namespace Statistics2026.Responses
                     "<a is=\"emby-linkbutton\" target=\"_blank\" referrerpolicy=\"no-referrer\" rel=\"noopener noreferrer\" href=\"<TARGET_URL>\" class=\"emby-button emby-button-focusscale\">" +
                     "   <TARGET_TEXT>" +
                     "</a>";
-                (string? imageUrl, string? itemText, string? itemUrl) = provider.ImageUrl( targetUrl: providerUrl, targetHtml: htmlTemplate, imageHeight: "45px" );
+                (string? imageUrl, string? itemText, string? itemUrl) = provider.ImageUrl( targetUrl: providerUrl, targetHtml: htmlTemplate, imageHeight: "45px", showImage: Plugin.Instance!.Configuration.ShowImages( ( isEpisode ?? true ) ? EReportType.eTVReport : EReportType.eMovieReport ) );
                 html += HelperFuncs.addToHtml( depth++, "<li>" );
                 html += HelperFuncs.addToHtml( depth, itemUrl );
                 html += HelperFuncs.addToHtml( --depth, "</li>" );
@@ -362,13 +365,13 @@ namespace Statistics2026.Responses
             retVal.ServerLocation = new SortByText( serverLocation );
             retVal.ItemId = itemId;
             if( itemId != null && !itemId.IsEmpty() )
-                retVal.ItemUrl = ItemImageUrl.ItemUrlFromItemId( itemId, itemImageUrl, title );
+                retVal.ItemUrl = GetItemImageUrl.ItemHtmlFromItemId( itemId, itemImageUrl, text: title, showImage: Plugin.Instance!.Configuration.ShowImages( ( isEpisode ?? true ) ? EReportType.eTVReport : EReportType.eMovieReport ) );
 
 
             string parentInfoJSON = row.GetString( col++ );
             int seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
 
-            List<(string id, string name, string sortName, string displayText, string url)>? parentInfo = await getParentInfo( parentInfoJSON,
+            List<(string id, string name, string sortName, string displayText, string url)>? parentInfo = await getParentInfo( parentInfoJSON, isEpisode,
                 async ( string id, string name, string sortName ) =>
                 {
                     if( isMissing && ( isEpisode != null ) )
@@ -400,7 +403,7 @@ namespace Statistics2026.Responses
                 if( retVal == null )
                     return null;
             }
-            retVal = await AddStreamingProviders( retVal, isoCode, streamingProvidersString, embyInterfaces, db, true );
+            retVal = await AddStreamingProviders( retVal, isEpisode, isoCode, streamingProvidersString, embyInterfaces, db, true );
 
             return retVal;
         }

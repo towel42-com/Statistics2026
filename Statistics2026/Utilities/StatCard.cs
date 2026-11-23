@@ -316,7 +316,7 @@ namespace Statistics2026.Utilities
             string? titleClass;
             if( showImage )
             {
-                string itemUrl = ItemImageUrl.ItemUrlFromItemId( MediaItemId, ImageUrl );
+                string itemUrl = GetItemImageUrl.ItemHtmlFromItemId( MediaItemId, ImageUrl, text: String.Empty, showImage: true );
                 retVal.html += HelperFuncs.addToHtml( depth, itemUrl );
                 retVal.html += HelperFuncs.addToHtml( depth++, "<div>" );
                 titleClass = "statCard-stats-title-left";

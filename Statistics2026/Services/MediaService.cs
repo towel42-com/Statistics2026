@@ -275,7 +275,7 @@ namespace Statistics2026.Services
             {
                 string userName = request.user;
                 User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
-                return user == null ? new object() : TotalMovieCount( user, request );
+                return user == null ? new object() : await TotalMovieCount( user, request );
             } );
         }
 
@@ -447,7 +447,7 @@ namespace Statistics2026.Services
             {
                 string userName = request.user;
                 User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
-                return user == null ? new object() : TotalTVCount( user, false, false, request );
+                return user == null ? new object() : await TotalTVCount( user, false, false, request );
             } );
         }
 

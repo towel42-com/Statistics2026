@@ -3,58 +3,13 @@
      data-controller="__plugin/Stats2026_TVSettings.js">
     <div data-role="content">
         <div class="content-primary" style="padding-top:2px;">
-            <h2 style="margin-top: 0px;margin-bottom: 0px;">Analysis Settings</h2>
-
-            <h3 style="margin-top: 10px;">System Settings</h3>
-            <div class="inputContainer">
-                <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="showDebugInfo" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Show debug info?</span>
-                    <i class="md-icon" id="showDebugInfoHelp">info</i>
-                </label>
-            </div>
-
-            <div class="inputContainer">
-                <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="showDiagnosticInfo" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Show diagnostic info?</span>
-                    <i class="md-icon" id="showDiagnosticInfoHelp">info</i>
-                </label>
-            </div>
-
-            <div class="inputContainer">
-                <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="showLastRunInfo" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Show last run info?</span>
-                    <i class="md-icon" id="showLastRunInfoHelp">info</i>
-                </label>
-            </div>
-            <div class="inputContainer">
-                <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="resetPlayCount" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Reset play count/time?</span>
-                    <i class="md-icon" id="resetPlayCountHelp">info</i>
-                </label>
-            </div>
-            <div class="inputContainer">
-                <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="resetDBState" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Reset database state?</span>
-                    <i class="md-icon" id="resetDBStateHelp">info</i>
-                </label>
-            </div>
+            <h2 style="margin-top: 0px;margin-bottom: 0px;">TV Settings</h2>
 
             <h3 style="margin-top: 10px;">Search for Missing Settings</h3>
             <div class="inputContainer">
-                How many days in the future to look for missing media?:
+                How many days in the future to look for missing episodes?:
                 <i class="md-icon" id="numDaysFutureForMissingHelp">info</i>
                 <input type="number" id="numDaysFutureForMissing" min="0" max="30" placeholder="# of Days in the Future" title="Number of Days in the Future" />
-            </div>
-
-            <div class="inputContainer">
-                How many days after the premiere date before a Movie should be shown as missing?:
-                <i class="md-icon" id="numDaysForMovieStreamingHelp">info</i>
-                <input type="number" id="numDaysForMovieStreaming" min="0" max="30" placeholder="# of Days after the permiere date" title="Number of Days after the premiere date" />
             </div>
 
             <div class="inputContainer">
@@ -101,8 +56,8 @@
                     <span class="checkboxLabel">Always show JustWatch as a Streaming Provider?</span>
                     <i class="md-icon" id="alwaysShowJustWatchHelp">info</i>
                 </label>
-
             </div>
+
             <div class="inputContainer">
                 How many Streaming Providers to Show (-1 for all):
                 <i class="md-icon" id="maxNumStreamingProvidersHelp">info</i>
@@ -122,48 +77,19 @@
                 </table>
             </div>
 
-            <div class="textareaContainer filterContainer" style="margin-top: 2em; display: inline-flex; flex-direction: column; align-items: center;">
-                <label for="collectionFilterList" style="margin-bottom: 8px; text-align: center; width: 100%;">
-                    Missing Movies and Collection Filter (Regular Expressions, one per line):
-                    <i class="md-icon" id="collectionFilterHelp" style="vertical-align: middle;">info</i>
-                </label>
-
-                <textarea is="emby-textarea" id="collectionFilterList" rows="6" style="width: 100%; min-width: 380px; box-sizing: border-box;"></textarea>
-
-                <div class="fieldDescription" style="display: flex; justify-content: center; gap: 15px; margin-top: 5px; width: 100%; text-align: center;">
-                    <span>Enter each regex on a new line.</span>
-                    <span id="collectionAutosaveStatus" style="font-weight: bold; color: #52b788; opacity: 0; transition: opacity 0.3s;">Saved</span>
-                </div>
-            </div>
-
-            <h3 style="margin-top: 10px;">User Report Settings</h3>
+            <h3 style="margin-top: 10px;">Media Reports</h3>
             <div class="inputContainer">
                 <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="excludeAdmin" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Exclude Administrator users from reports?</span>
-                    <i class="md-icon" id="excludeAdminHelp">info</i>
+                    <input style="margin-top: 10px;" id="showImages" is="emby-checkbox" class="emby-checkbox" type="checkbox">
+                    <span class="checkboxLabel">Show images in tables and reports?</span>
+                    <i class="md-icon" id="showImagesHelp">info</i>
                 </label>
             </div>
 
             <div class="inputContainer">
-                <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="hasConnectUserID" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Only Show Users with Connect User ID?</span>
-                    <i class="md-icon" id="hasConnectUserIDHelp">info</i>
-                </label>
-            </div>
-
-            <div class="inputContainer">
-                Number of Most Active Users to Show:
-                <i class="md-icon" id="numMostActiveHelp">info</i>
-                <input type="number" id="numMostActive" min="1" max="1000" placeholder="# of Most Active" title="Number of Most Active" />
-            </div>
-
-            <h3 style="margin-top: 10px;">Media Report Settings</h3>
-            <div class="inputContainer">
-                Number of Watched Videos to List:
+                Number of Watched Shows/Episodes to List:
                 <i class="md-icon" id="numWatchedToReportHelp">info</i>
-                <input type="number" id="numWatchedToReport" min="1" max="1000" placeholder="# of Watched Videos" title="Number of Watched Videos" />
+                <input type="number" id="numWatchedToReport" min="1" max="1000" placeholder="# of Watched Shows/Episodes" title="Number of Watched Shows/Episodes" />
             </div>
 
             <div class="inputContainer">
@@ -182,24 +108,6 @@
                 Number of Actors to report on:
                 <i class="md-icon" id="numActorsToReportHelp">info</i>
                 <input type="number" id="numActorsToReport" min="1" max="1000" placeholder="# of Actors" title="Number of Actors" />
-            </div>
-
-            <h3 style="margin-top: 10px;">Dolby Vision Profile Report Settings</h3>
-            <div class="inputContainer">
-                <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="showUnknownDVProfiles" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Show non-HEVC/Unknown Dolby Vision profiles?</span>
-                    <i class="md-icon" id="showUnknownDVProfilesHelp">info</i>
-                </label>
-            </div>
-
-            <h3 style="margin-top: 10px;">Resolution Report Settings</h3>
-            <div class="inputContainer">
-                <label class="emby-checkbox-label">
-                    <input style="margin-top: 10px;" id="showAllResolutions" is="emby-checkbox" class="emby-checkbox" type="checkbox">
-                    <span class="checkboxLabel">Show all Resolutions?</span>
-                    <i class="md-icon" id="showAllResolutionsHelp">info</i>
-                </label>
             </div>
         </div>
     </div>

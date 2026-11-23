@@ -133,14 +133,14 @@ namespace Statistics2026.Data
 
             foreach( TmdbSeason tmdbSeason in tmdbSeries.Seasons )
             {
-                if( tmdbSeason.SeasonNumber == 0 && !Plugin.Instance!.Configuration.reportOnMissingSpecials )
+                if( tmdbSeason.SeasonNumber == 0 && !Plugin.Instance!.Configuration.tvSettings.reportOnMissingSpecials )
                     continue;
 
                 Season? embySeason = EmbyHelperFuncs.GetSeasonFromSeries( series, tmdbSeason.SeasonNumber );
 
                 foreach( TmdbEpisode tmdbEpisode in tmdbSeason.Episodes )
                 {
-                    if( HelperFuncs.InvalidDateForMissingAnalysis( tmdbEpisode.AirDate() ) )
+                    if( HelperFuncs.InvalidDateForMissingAnalysis( tmdbEpisode.AirDate(), Plugin.Instance!.Configuration.tvSettings.numDaysFutureForMissing ) )
                         continue;
 
                     string episodeTmdbId = tmdbEpisode.Id;

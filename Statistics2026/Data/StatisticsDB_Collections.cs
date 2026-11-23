@@ -1,8 +1,10 @@
 ﻿using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
 using ServiceStack;
 using SQLitePCL.pretty;
+using Statistics2026.Configuration;
 using Statistics2026.Utilities;
 using System.Collections.ObjectModel;
 
@@ -212,7 +214,7 @@ namespace Statistics2026.Data
             {
                 try
                 {
-                    TmdbCollection? tmdbCollection = await reader.GetRemoteCollectionMembersAsync( tmdbId ).ConfigureAwait( false );
+                    TmdbCollection? tmdbCollection = await reader.GetRemoteCollectionMembersAsync( tmdbId, Plugin.Instance!.Configuration.movieSettings.numDaysForMovieStreaming ).ConfigureAwait( false );
                     IEnumerable<Video> libMembers = EmbyHelperFuncs.GetMoviesInCollection( collection, LibraryManager() );
                     numMovies = Math.Max( tmdbCollection?.Movies.Count() ?? 0, libMembers.Count() );
                 }
@@ -234,7 +236,7 @@ namespace Statistics2026.Data
                     ("@TmdbId", tmdbId),
                     ("@Name", collection.Name),
                     ("@SortName", collection.SortName),
-                    ("@ImageUrl", ItemImageUrl._ItemImageUrl(collection)),
+                    ("@ImageUrl", GetItemImageUrl.ItemImageUrlFromItem(collection)),
                     ("@NumMovies", numMovies),
                 ] ) );
             Logger().Debug( $"    AddCollection - Successfully Added Collection" );
@@ -375,7 +377,7 @@ namespace Statistics2026.Data
                 {
                     string collectionId = row.GetString( col++ );
                     string collectionUrl = row.GetString( col++ );
-                    images.Add( ItemImageUrl.ItemUrlFromItemId( collectionId, collectionUrl, name ) );
+                    images.Add( GetItemImageUrl.ItemHtmlFromItemId( collectionId, collectionUrl, text: name, Plugin.Instance!.Configuration.ShowImages( EReportType.eMovieReport ) ) );
                 }
                 return Task.FromResult( true );
             }, false );

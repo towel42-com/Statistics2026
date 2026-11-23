@@ -102,7 +102,7 @@ namespace Statistics2026.Data
             TmdbCollection? tmdbCollection = null;
             try
             {
-                tmdbCollection = await reader.GetRemoteCollectionMembersAsync( collectionTmbdId ).ConfigureAwait( false );
+                tmdbCollection = await reader.GetRemoteCollectionMembersAsync( collectionTmbdId, Plugin.Instance!.Configuration.movieSettings.numDaysForMovieStreaming ).ConfigureAwait( false );
             }
             catch( Exception ex )
             {
@@ -117,10 +117,10 @@ namespace Statistics2026.Data
             }
 
             List<SQLCmdDef> retVal = [];
-            DateTimeOffset daysAgo = DateTimeOffset.UtcNow.AddDays( -1*Plugin.Instance!.Configuration.numDaysForMovieStreaming );
+            DateTimeOffset daysAgo = DateTimeOffset.UtcNow.AddDays( -1*Plugin.Instance!.Configuration.movieSettings.numDaysForMovieStreaming );
             foreach( TmdbMovie tmdbMovie in tmdbCollection.Movies )
             {
-                if( HelperFuncs.InvalidDateForMissingAnalysis( tmdbMovie.ReleaseDate() ) )
+                if( HelperFuncs.InvalidDateForMissingAnalysis( tmdbMovie.ReleaseDate(), Plugin.Instance!.Configuration.tvSettings.numDaysFutureForMissing ) )
                     continue;
 
                 if( ( tmdbMovie.ReleaseDate() != null ) && ( tmdbMovie.ReleaseDate() >= daysAgo ) && !tmdbMovie.HasWatchProvider( isoCode ) )

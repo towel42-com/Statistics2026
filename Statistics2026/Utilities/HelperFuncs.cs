@@ -595,11 +595,11 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static (string imageUrl, string itemText, string itemUrl) GetTMDBLink( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null )
+        public static (string imageUrl, string itemText, string itemUrl) GetTMDBLink( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null, bool showImage=true )
         {
             string imageUrl = GetTMDBUrl( posterPath, posterSize, true );
             string itemText = string.Empty;
-            if( !imageUrl.IsNullOrEmpty() )
+            if( !imageUrl.IsNullOrEmpty() && showImage )
             {
                 itemText = $"<img loading=\"lazy\" class=\"image-proxy\" data-src=\"{imageUrl}\" ";
                 if( imageHeight != null )
@@ -713,13 +713,12 @@ namespace Statistics2026.Utilities
         //    }
         //}
 
-        public static bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, bool ignoreConfig = false )
+        public static bool InvalidDateForMissingAnalysis( DateTimeOffset? dto, int? numDaysFutureForMissing )
         {
             if( dto == null )
                 return true;
 
-            int numDaysToAdd = ignoreConfig ? 0 : Plugin.Instance!.Configuration.numDaysFutureForMissing;
-            DateTime maxDate = DateTimeOffset.Now.Date.AddDays( numDaysToAdd );
+            DateTime maxDate = DateTimeOffset.Now.Date.AddDays( numDaysFutureForMissing ?? 0 );
             if( dto.Value.Date > maxDate )
                 return true;
 

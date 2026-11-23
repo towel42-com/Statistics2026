@@ -287,7 +287,7 @@ namespace Statistics2026.Data
             await ExecuteCommand( new SQLCmdDef( sqlCmd ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRow( row, null, isoCode, null, null, null, _embyInterfaces, this );
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRow( row, false, isoCode, null, null, null, _embyInterfaces, this );
                 if( mediaInfoResponse != null )
                 {
                     int pos = ( (int)EMediaListResponseColumns.eParentId ) + 1;
