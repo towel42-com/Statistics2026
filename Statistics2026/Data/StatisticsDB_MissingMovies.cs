@@ -1,21 +1,9 @@
 ﻿using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.TV;
+using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Model.Entities;
-using MediaBrowser.Model.Logging;
-using MediaBrowser.Model.MediaInfo;
 using ServiceStack;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Text.Json;
-using MediaBrowser.Controller.Entities.Movies;
 
 namespace Statistics2026.Data
 {
@@ -37,7 +25,6 @@ namespace Statistics2026.Data
             int completedCount = 0;
 
             List<SQLCmdDef> sqlCmds = [];
-
             SetProgress( 0 );
 
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Getting Commands", Logger() ) )
@@ -49,11 +36,11 @@ namespace Statistics2026.Data
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        (int index, BoxSet collection, List<SQLCmdDef> cmds) retVal = (index: index, collection: collection, cmds: new List<SQLCmdDef>());
+                        (int index, BoxSet collection, List<SQLCmdDef> cmds, List<string> missingTMDBids) retVal = (index: index, collection: collection, cmds: new List<SQLCmdDef>(), missingTMDBids: new List<string>());
                         if( collection == null )
                             return retVal;
 
-                        retVal.cmds = await AnalyzeMissingMoviesInCollectionAsync( reader, collection ).ConfigureAwait( false );
+                        (retVal.cmds, retVal.missingTMDBids) = await AnalyzeMissingMoviesInCollectionAsync( reader, collection ).ConfigureAwait( false );
 
                         CancellationToken?.ThrowIfCancellationRequested();
 
@@ -69,14 +56,29 @@ namespace Statistics2026.Data
                     }
                 } ) ).ToList();
 
-                (int index, BoxSet collection, List<SQLCmdDef> cmds)[] unsortedResults = await Task.WhenAll( pool );
-                sqlCmds = unsortedResults
+                (int index, BoxSet collection, List<SQLCmdDef> cmds, List<string> missingTMDBids)[] sortedResults =
+                    ( await Task.WhenAll( pool ) )
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
+                            .ToArray();
+
+                List<object> missingTMDBids =
+                            sortedResults
+                                .SelectMany( item => item.missingTMDBids! )
+                                .Where( cmd => cmd != null )
+                                .Cast<object>()
+                                .ToList();
+                SQLCmdDef cmd = SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM Missing WHERE NOT IsEpisode AND TmdbId NOT IN (<KEYLIST>)", "<KEYLIST>", missingTMDBids );
+                sqlCmds.Add( cmd );
+
+                sqlCmds.AddRange( 
+                    sortedResults
                             .SelectMany( item => item.cmds! )
                             .Where( cmd => cmd != null )
                             .Select( cmd => cmd! )
-                            .ToList();
+                            .ToList()
+                            );
+
             }
 
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Executing Commands", Logger() ) )
@@ -88,13 +90,13 @@ namespace Statistics2026.Data
             }
         }
 
-        private async Task<List<SQLCmdDef>> AnalyzeMissingMoviesInCollectionAsync( TmdbInterface reader, BoxSet collection )
+        private async Task<(List<SQLCmdDef> cmds, List<string> missingTMDBids)> AnalyzeMissingMoviesInCollectionAsync( TmdbInterface reader, BoxSet collection )
         {
             Logger().Info( $"    Analyzing Collection '{collection.Name}' - checking for missing movies" );
 
             string collectionTmbdId = collection.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( collectionTmbdId ) )
-                return [];
+                return ([],[]);
 
             string isoCode = await HelperFuncs.GetCountryCodeAsync( _embyInterfaces!.HttpClient(), _cancellationToken: CancellationToken );
 
@@ -112,11 +114,12 @@ namespace Statistics2026.Data
             if( tmdbCollection == null )
             {
                 Logger().Warn( $"Could not find TMDB collection for {collection.Name} - {collectionTmbdId}" );
-                return [];
+                return ([], []);
             }
 
-            List<SQLCmdDef> retVal = [];
-            DateTimeOffset daysAgo = DateTimeOffset.UtcNow.AddDays( -1*Plugin.Instance!.Configuration.movieSettings.numDaysForMovieStreaming );
+            List<SQLCmdDef> cmds = [];
+            List<string> missingTMDBids = [];
+            DateTimeOffset daysAgo = DateTimeOffset.UtcNow.AddDays( -1 * Plugin.Instance!.Configuration.movieSettings.numDaysForMovieStreaming );
             foreach( TmdbMovie tmdbMovie in tmdbCollection.Movies )
             {
                 if( HelperFuncs.InvalidDateForMissingAnalysis( tmdbMovie.ReleaseDate(), Plugin.Instance!.Configuration.tvSettings.numDaysFutureForMissing ) )
@@ -137,7 +140,7 @@ namespace Statistics2026.Data
                     try
                     {
                         addStreamingProviderInfo = await reader.GetStreamingProvidersAsync( Logger(), movieTmdbId, false, tmdbMovie.Title ).ConfigureAwait( false );
-                        retVal.AddRange( addStreamingProviderInfo?.addProviderCmds ?? [] );
+                        cmds.AddRange( addStreamingProviderInfo?.addProviderCmds ?? [] );
                     }
                     catch( Exception ex )
                     {
@@ -145,7 +148,7 @@ namespace Statistics2026.Data
                     }
 
                     string key = $"{tmdbCollection.Id}-{tmdbMovie.Id}";
-                    retVal.Add( new SQLCmdDef( kSQLAddToMissing,
+                    cmds.Add( new SQLCmdDef( kSQLAddToMissing,
                     [
                         ("@Key", key ),
                         ("@TmdbId", tmdbMovie.Id ),
@@ -160,10 +163,11 @@ namespace Statistics2026.Data
                         ("@StreamingProviders", JsonSerializer.Serialize(addStreamingProviderInfo?.allProviders ?? new object()))
 
                     ] ) );
+                    missingTMDBids.Add( tmdbMovie.Id );
                 }
             }
 
-            return retVal;
+            return (cmds, missingTMDBids);
         }
     }
 }

@@ -29,8 +29,6 @@ namespace Statistics2026.Data
             List<string> nowAvailable = [];
 
             SetProgress( 0 );
-            await DeleteAllInvalidAsync( seriesList.ConvertAll( item => (BaseItem)item ), "Missing", "ParentId", whereClauses: [ "IsEpisode" ] );
-
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Getting Commands", Logger() ) )
             {
                 using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim();
@@ -40,11 +38,11 @@ namespace Statistics2026.Data
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        (int index, Series item, List<SQLCmdDef> sqlCmds, List<string> nowAvailable) retVal = (index: index, item: series, sqlCmds: new List<SQLCmdDef>(), nowAvailable: new List<string>());
+                        (int index, Series item, List<SQLCmdDef> sqlCmds, List<string> missingTMDBids, List<string> nowAvailable) retVal = (index: index, item: series, sqlCmds: new List<SQLCmdDef>(), missingTMDBids: new List<string>(), nowAvailable: new List<string>());
                         if( series == null )
                             return retVal;
 
-                        (retVal.sqlCmds, retVal.nowAvailable) = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
+                        (retVal.sqlCmds, retVal.missingTMDBids, retVal.nowAvailable) = await AnalyzeMissingEpisodesAsync( reader, series ).ConfigureAwait( false );
 
                         CancellationToken?.ThrowIfCancellationRequested();
 
@@ -61,21 +59,32 @@ namespace Statistics2026.Data
                     }
                 } ) ).ToList();
 
-                (int index, Series item, List<SQLCmdDef> sqlCmds, List<string> nowAvailable)[] unsortedResults = await Task.WhenAll( pool );
-                sqlCmds = unsortedResults
+                (int index, Series item, List<SQLCmdDef> sqlCmds, List<string> missingTMDBids, List<string> nowAvailable)[] sortedResults = 
+                    (await Task.WhenAll( pool ))
                             .Where( item => item.sqlCmds != null )
                             .OrderBy( item => item.index )
-                            .SelectMany( item => item.sqlCmds! )
-                            .Where( cmd => cmd != null )
-                            .Select( cmd => cmd! )
-                            .ToList();
+                            .ToArray();
 
-                nowAvailable = unsortedResults
-                                .Where( item => item.nowAvailable != null )
-                                .OrderBy( item => item.index )
+                List<object> missingTMDBids = sortedResults
+                                .SelectMany( item => item.missingTMDBids! )
+                                .Where( cmd => cmd != null )
+                                .Cast<object>()
+                                .ToList();
+
+                // delete all not in tmdbidis
+                SQLCmdDef cmd = SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM Missing WHERE IsEpisode AND TmdbId NOT IN (<KEYLIST>)", "<KEYLIST>", missingTMDBids );
+                sqlCmds.Add( cmd );
+
+                sqlCmds.AddRange(
+                    sortedResults
+                        .SelectMany( item => item.sqlCmds! )
+                        .Where( cmd => cmd != null )
+                        .ToList()
+                    );
+
+                nowAvailable = sortedResults
                                 .SelectMany( item => item.nowAvailable! )
                                 .Where( cmd => cmd != null )
-                                .Select( cmd => cmd! )
                                 .ToList();
 
                 CancellationToken?.ThrowIfCancellationRequested();
@@ -100,15 +109,16 @@ namespace Statistics2026.Data
             await SetLastUpdatedAsync( EAction.NotifyAvailableToday, [ "Task" ], 0 );
         }
 
-        private async Task<(List<SQLCmdDef> cmds, List<string> episodesNowAvailable)> AnalyzeMissingEpisodesAsync( TmdbInterface reader, Series series )
+        private async Task<(List<SQLCmdDef> cmds, List<string> missingTMDBids, List<string> episodesNowAvailable)> AnalyzeMissingEpisodesAsync( TmdbInterface reader, Series series )
         {
             Logger().Info( $"     Analyzing Series '{series.Name}' - checking for missing episodes" );
 
             string seriesTmbdId = series.GetProviderId( MetadataProviders.Tmdb );
             if( string.IsNullOrEmpty( seriesTmbdId ) )
-                return ([], []);
+                return ([], [], []);
 
             List<SQLCmdDef> sqlCmds = [];
+            List<string> missingTMDBids = [];
             List<string> episodesNowAvailable = [];
 
             TmdbSeries? tmdbSeries = null;
@@ -128,7 +138,7 @@ namespace Statistics2026.Data
             if( tmdbSeries == null )
             {
                 Logger().Warn( $"Could not find TMDB series for {series.Name} - {seriesTmbdId}" );
-                return ([], []);
+                return ([], [], []);
             }
 
             foreach( TmdbSeason tmdbSeason in tmdbSeries.Seasons )
@@ -175,13 +185,14 @@ namespace Statistics2026.Data
                             ("@StudioNames", JsonSerializer.Serialize(series.Studios)),
                             ("@StreamingProviders", JsonSerializer.Serialize(streamingProviders?.allProviders ?? new object()))
                         ] ) );
+                        missingTMDBids.Add( tmdbEpisode.Id );
                     }
 
                     CancellationToken?.ThrowIfCancellationRequested();
                 }
             }
 
-            return (sqlCmds, episodesNowAvailable);
+            return (sqlCmds, missingTMDBids, episodesNowAvailable);
         }
     }
 }
