@@ -27,14 +27,14 @@ namespace Statistics2026
             var items = new List<string>();
             if( status == EDBState.eFullyInitialized )
             {
-                items.Add( status.ToString() );
+                items.Add( status.ToString().TrimStart( 'e' ) );
             }
             else
             {
                 foreach( EDBState curr in new[] { EDBState.eSystemTablesCreated, EDBState.eUserTablesCreated, EDBState.eSystemDataInitialized, EDBState.eUserDataInitialized } )
                 {
                     if( ( curr & status ) != 0 )
-                        items.Add( curr.ToString() );
+                        items.Add( curr.ToString().TrimStart( 'e' ) );
                 }
             }
 
