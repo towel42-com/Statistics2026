@@ -74,15 +74,15 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetTVSeriesProgress request )
         {
-            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
                 string userName = request.user;
                 User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
                 if( user == null )
                     return new List<GetTVSeriesProgressResponse>();
 
-                return await db.GetTVSeriesProgress( user );
+                return await db.GetTVSeriesProgressAsync( user );
             } );
         }
     }

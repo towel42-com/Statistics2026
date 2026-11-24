@@ -10,7 +10,7 @@ namespace Statistics2026.Utilities
 {
     public class PlaybackInfo
     {
-        public static async Task<PlaybackInfo> Create( SessionInfo session, EmbyInterfaces embyInterfaces )
+        public static async Task<PlaybackInfo> CreateAsync( SessionInfo session, EmbyInterfaces embyInterfaces )
         {
             _PlaybackTracker ??= [];
 
@@ -34,7 +34,7 @@ namespace Statistics2026.Utilities
 
                 _PlaybackTracker[ key ] = retVal;
 
-                await retVal.LoadPlaybackState( embyInterfaces );
+                await retVal.LoadPlaybackStateAsync( embyInterfaces );
             }
 
             if( session.PlayState.PositionTicks != null )
@@ -59,7 +59,7 @@ namespace Statistics2026.Utilities
                 {
                     embyInterfaces.Logger().Info( "Saving final duration for Item : " + key );
 
-                    playbackInfo.UpdatePlaybackState( embyInterfaces ).GetAwaiter().GetResult();
+                    playbackInfo.UpdatePlaybackStateAsync( embyInterfaces ).GetAwaiter().GetResult();
 
                     embyInterfaces.Logger().Info( "Removing Old Key from playback_trackers : " + key );
                     _ = _PlaybackTracker.Remove( key );
@@ -160,11 +160,11 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public async Task LoadPlaybackState( EmbyInterfaces embyInterfaces )
+        public async Task LoadPlaybackStateAsync( EmbyInterfaces embyInterfaces )
         {
-            await using Statistics2026DB db = await Statistics2026DB.GetInstance( embyInterfaces, GetType().Name );
+            await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( embyInterfaces, GetType().Name );
 
-            long? totalTicksPlayed = await db.GetTotalTicksPlayed( UserId, ItemId );
+            long? totalTicksPlayed = await db.GetTotalTicksPlayedAsync( UserId, ItemId );
 
             TotalTicksPlayed = totalTicksPlayed ?? 0;
         }
@@ -180,14 +180,14 @@ namespace Statistics2026.Utilities
                 SessionCurrTickPos = ticks;
         }
 
-        public async Task UpdatePlaybackState( EmbyInterfaces embyInterfaces )
+        public async Task UpdatePlaybackStateAsync( EmbyInterfaces embyInterfaces )
         {
             if( SessionStartTickPos == null || SessionCurrTickPos == null )
                 return;
 
             TotalTicksPlayed += SessionCurrTickPos.Value - SessionStartTickPos.Value;
-            await using Statistics2026DB db = await Statistics2026DB.GetInstance( embyInterfaces, GetType().Name );
-            await db.UpdateTotalTicksPlayed( UserId, ItemId, TotalTicksPlayed );
+            await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( embyInterfaces, GetType().Name );
+            await db.UpdateTotalTicksPlayedAsync( UserId, ItemId, TotalTicksPlayed );
 
             SessionStartTickPos = SessionCurrTickPos;
             SessionCurrTickPos = null;

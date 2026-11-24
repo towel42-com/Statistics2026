@@ -17,7 +17,7 @@ namespace Statistics2026.Notifications
             _notificationManager = notificationManager;
         }
 
-        private async Task SendEpisodesAvailableNotification( List<string> episodesAvailable )
+        private async Task SendEpisodesAvailableNotificationAsync( List<string> episodesAvailable )
         {
             if( episodesAvailable.Count() == 0 )
             {
@@ -41,7 +41,7 @@ namespace Statistics2026.Notifications
         public static void SendEpisodesAvailableNotification( List<string> episodesAvailable, EmbyInterfaces embyInterfaces )
         {
             var notificationSender = new NotificationSender( embyInterfaces.NotificationManager() );
-            _ = notificationSender.SendEpisodesAvailableNotification( episodesAvailable );
+            _ = notificationSender.SendEpisodesAvailableNotificationAsync( episodesAvailable );
         }
     }
 }

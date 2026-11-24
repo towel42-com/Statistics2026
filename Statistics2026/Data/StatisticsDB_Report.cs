@@ -10,28 +10,28 @@ namespace Statistics2026.Data
 {
     public sealed partial class Statistics2026DB
     {
-        private Task RunSQLOnRow( string sql, Func<IResultSet, Task<bool>> onRow, List<(string name, object? value)>? parameters = null )
+        private Task RunSQLOnRowAsync( string sql, Func<IResultSet, Task<bool>> onRow, List<(string name, object? value)>? parameters = null )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             var cmd = new SQLCmdDef( sql, parameters );
 
             string retVal = string.Empty;
-            return ExecuteCommand( cmd, async (statement) =>
+            return ExecuteCommandAsync( cmd, async (statement) =>
             {
                 IResultSet row = statement.Current;
                 return await onRow( row );
             } );
         }
 
-        private async Task<string> GetSingleValueFromSQL( string sql, List<(string name, object? value)>? parameters = null, Func<long, string>? formatter = null )
+        private async Task<string> GetSingleValueFromSQLAsync( string sql, List<(string name, object? value)>? parameters = null, Func<long, string>? formatter = null )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             var cmd = new SQLCmdDef( sql, parameters );
 
             string retVal = string.Empty;
-            await ExecuteCommand( cmd, statement =>
+            await ExecuteCommandAsync( cmd, statement =>
                 {
                     IResultSet row = statement.Current;
                     long count = row.GetInt64( 0 );
@@ -41,12 +41,12 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private async Task<TextBasedStatCard> ValueGroupForSingleItem( string title, string? help, string sql, List<(string name, object? value)>? parameters = null, Func<long, string>? formatter = null )
+        private async Task<TextBasedStatCard> ValueGroupForSingleItemAsync( string title, string? help, string sql, List<(string name, object? value)>? parameters = null, Func<long, string>? formatter = null )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eCompact );
-            string value = await GetSingleValueFromSQL( sql, parameters, formatter );
+            string value = await GetSingleValueFromSQLAsync( sql, parameters, formatter );
             retVal.AddLine( value, false );
             return retVal;
         }
@@ -60,20 +60,20 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private Task<StatGen.StatCardValues> StatCardValuesFor( User? user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType )
+        private Task<StatGen.StatCardValues> StatCardValuesForAsync( User? user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             var statGen = new StatGen( whichStatistic, videoType, this );
-            return statGen.GetStatCardValues();
+            return statGen.GetStatCardValuesAsync();
         }
 
-        public Task<StatCard> StatisticFor( User? user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType )
+        public Task<StatCard> StatisticForAsync( User? user, StatGen.EStatisticType whichStatistic, StatGen.EVideoType videoType )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             var statGen = new StatGen( whichStatistic, videoType, this );
-            return statGen.GetStatCard();
+            return statGen.GetStatCardAsync();
         }
     }
 }

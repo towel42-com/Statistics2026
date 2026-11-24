@@ -263,7 +263,7 @@ namespace Statistics2026.Data
             return _userMediaTemplate!.ColumnNames();
         }
 
-        public async Task CreateTables( TableDef.EAction action, CancellationToken? cancellationToken, Action<double> setProgress )
+        public async Task CreateTablesAsync( TableDef.EAction action, CancellationToken? cancellationToken, Action<double> setProgress )
         {
             CheckIsValid();
             if( action != TableDef.EAction.eRecreate && action != TableDef.EAction.eCreate )
@@ -283,16 +283,16 @@ namespace Statistics2026.Data
                 PluginConfiguration config = Statistics2026.Plugin.Instance!.Configuration;
                 if( config.systemSettings.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null )
                 {
-                    sqlCmds.AddRange( await DropAllUserMediaCmds() );
+                    sqlCmds.AddRange( await DropAllUserMediaCmdsAsync() );
                     Plugin.Instance.RemoveDBState( EDBState.eUserTablesCreated | EDBState.eUserDataInitialized );
                 }
 
-                await _db.ExecuteCommands( sqlCmds );
+                await _db.ExecuteCommandsAsync( sqlCmds );
 
                 Plugin.Instance.AddDBState( EDBState.eSystemTablesCreated );
             }
 
-            await InitWatchedMediaTables( cancellationToken, setProgress );
+            await InitWatchedMediaTablesAsync( cancellationToken, setProgress );
         }
 
         public TableDef? getTableDef( string tableName, bool isUserMediaTable = false, User? user = null )
@@ -321,7 +321,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public Task ClearTable( string tableName )
+        public Task ClearTableAsync( string tableName )
         {
             CheckIsValid();
 
@@ -336,7 +336,7 @@ namespace Statistics2026.Data
                 sqlCmds.Add( new SQLCmdDef( TableDef.clearTable( tableName ) ) );
             }
 
-            return _db.ExecuteCommands( sqlCmds );
+            return _db.ExecuteCommandsAsync( sqlCmds );
         }
 
         public List<SQLCmdDef> DropTableCmds( string tableName )
@@ -351,15 +351,15 @@ namespace Statistics2026.Data
             return [ new SQLCmdDef( TableDef.dropTable( tableName ) ) ];
         }
 
-        public Task DropTable( string tableName )
+        public Task DropTableAsync( string tableName )
         {
             CheckIsValid();
 
             List<SQLCmdDef> cmds = DropTableCmds( tableName );
-            return _db.ExecuteCommands( cmds );
+            return _db.ExecuteCommandsAsync( cmds );
         }
 
-        public async Task<List<string>> allTables( (string regex, bool like)? regex = null )
+        public async Task<List<string>> AllTablesAsync( (string regex, bool like)? regex = null )
         {
             CheckIsValid();
 
@@ -373,7 +373,7 @@ namespace Statistics2026.Data
 
             string sql = "SELECT name FROM sqlite_master " + HelperFuncs.JoinWhereClauses( clauses );
 
-            await _db.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await _db.ExecuteCommandAsync( new SQLCmdDef( sql ), statement =>
             {
                 IResultSet row = statement.Current;
                 retVal.Add( row.GetString( 0 ) );
@@ -382,13 +382,13 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<List<SQLCmdDef>> DropAllUserMediaCmds()
+        public async Task<List<SQLCmdDef>> DropAllUserMediaCmdsAsync()
         {
             var retVal = new List<SQLCmdDef>();
             if( _userMediaTemplate == null )
                 return retVal;
 
-            List<string> tables = await allUserMediaTables( false );
+            List<string> tables = await AllUserMediaTablesAsync( false );
 
             foreach( string table in tables )
                 retVal.AddRange( DropTableCmds( table ) );
@@ -396,12 +396,12 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<List<string>> allUserMediaTables( bool existingOnly = true )
+        public async Task<List<string>> AllUserMediaTablesAsync( bool existingOnly = true )
         {
             CheckIsValid();
 
             if( existingOnly )
-                return await allTables( (regex: $"{sUserMediaTablePrefix}%", like: true) );
+                return await AllTablesAsync( (regex: $"{sUserMediaTablePrefix}%", like: true) );
             else
             {
                 List<User> users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
@@ -445,7 +445,7 @@ namespace Statistics2026.Data
             return $"{sUserMediaTablePrefix}{userId}";
         }
 
-        public async Task InitWatchedMediaTables( CancellationToken? cancellationToken, Action<double> setProgress )
+        public async Task InitWatchedMediaTablesAsync( CancellationToken? cancellationToken, Action<double> setProgress )
         {
             CheckIsValid();
 
@@ -487,7 +487,7 @@ namespace Statistics2026.Data
                 using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Init Table Commands", _embyInterfaces.Logger() ) )
                 {
                     setProgress( 80 );
-                    await _db.ExecuteCommands( sqlCmds );
+                    await _db.ExecuteCommandsAsync( sqlCmds );
                     setProgress( 100 );
                 }
 

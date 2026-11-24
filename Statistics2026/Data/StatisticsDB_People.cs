@@ -37,7 +37,7 @@ namespace Statistics2026.Data
                 }
             }
 
-            await DeleteAllInvalid( allActorIds.ToList(), "People", "ItemId" );
+            await DeleteAllInvalidAsync( allActorIds.ToList(), "People", "ItemId" );
 
             double count = allActors.Count;
             int completedCount = 0;
@@ -86,7 +86,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommands( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
             }
@@ -127,16 +127,16 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private Task<Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)>> ActorCountValues( User? user, bool movies, bool playedOnly )
+        private Task<Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)>> ActorCountValuesAsync( User? user, bool movies, bool playedOnly )
         {
-            return GroupedMediaKeyCountValues( "ActorIds", true, user, movies, playedOnly );
+            return GroupedMediaKeyCountValuesAsync( "ActorIds", true, user, movies, playedOnly );
         }
 
-        public async Task<StatCard> ActorsList( bool movies, bool? series )
+        public async Task<StatCard> ActorsListAsync( bool movies, bool? series )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> actorsMap = await ActorCountValues( null, movies, false );
+            Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> actorsMap = await ActorCountValuesAsync( null, movies, false );
 
             string title = movies ? Constants.MovieActors : ( ( series == null || series! == true ) ? Constants.TVSeriesActors : Constants.TVEpisodeActors );
             string help = movies ? Constants.MovieActorsHelp : ( ( series == null || series! == true ) ? Constants.TVSeriesActorsHelp : Constants.TVEpisodeActorsHelp );

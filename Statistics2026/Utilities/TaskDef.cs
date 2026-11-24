@@ -263,7 +263,7 @@ namespace Statistics2026.Utilities
             if( TaskDef.IsStatistics2026TaskRunning( embyInterfaces, runAllOkIfRunning ) )
             {
                 var debouncer = new Debouncer();
-                debouncer.RunLaterAsync( 5000, async ( cancellationToken ) =>
+                debouncer.RunLater( 5000, async ( cancellationToken ) =>
                 {
                     if( TaskDef.IsStatistics2026TaskRunning( embyInterfaces, runAllOkIfRunning ) )
                         return true;

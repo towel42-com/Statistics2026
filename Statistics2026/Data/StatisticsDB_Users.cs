@@ -22,7 +22,7 @@ namespace Statistics2026.Data
 
             SetProgress( 0 );
             var sqlCmds = new List<SQLCmdDef>();
-            await DeleteAllInvalid( userList.ConvertAll( item => (BaseItem)item ), "Users", "UserId" );
+            await DeleteAllInvalidAsync( userList.ConvertAll( item => (BaseItem)item ), "Users", "UserId" );
 
             using( var timer = new AutoTimer( $"    Analyze Users - Getting Commands", Logger() ) )
             {
@@ -56,7 +56,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Users - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommands( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds );
                 SetProgress( 100 );
             }
 
@@ -142,7 +142,7 @@ namespace Statistics2026.Data
             ] );
         }
 
-        private async Task<long> NumUsers( bool hasConnectUserId, bool excludeAdmin )
+        private async Task<long> NumUsersAsync( bool hasConnectUserId, bool excludeAdmin )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -158,27 +158,27 @@ namespace Statistics2026.Data
 
             sql += HelperFuncs.JoinWhereClauses( conditions );
 
-            return ( await GetSingleValueFromSQL( sql ) ).ToInt64();
+            return ( await GetSingleValueFromSQLAsync( sql ) ).ToInt64();
         }
 
-        private Task<long> NumUsers()
+        private Task<long> NumUsersAsync()
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            return NumUsers( Statistics2026.Plugin.Instance!.Configuration.userReportSettings.hasConnectUserID, Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin );
+            return NumUsersAsync( Statistics2026.Plugin.Instance!.Configuration.userReportSettings.hasConnectUserID, Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin );
         }
 
-        public async Task<StatCard> UserCount()
+        public async Task<StatCard> UserCountAsync()
         {
-            long numUsers = await NumUsers();
+            long numUsers = await NumUsersAsync();
             return ValueGroupForSingleValue( Constants.TotalUsers, null, numUsers );
         }
 
-        public async Task<StatCard> MostActiveUsers()
+        public async Task<StatCard> MostActiveUsersAsync()
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            List<string> tables = await TableDefs().allUserMediaTables();
+            List<string> tables = await TableDefs().AllUserMediaTablesAsync();
 
             string sqlBase =
                 $"SELECT " +
@@ -204,7 +204,7 @@ namespace Statistics2026.Data
                 string sql = sqlBase;
                 sql = sql.Replace( "<TABLE_NAME>", tableName );
 
-                await ExecuteCommand( new SQLCmdDef( sql ), statement =>
+                await ExecuteCommandAsync( new SQLCmdDef( sql ), statement =>
                 {
                     IResultSet row = statement.Current;
 

@@ -112,7 +112,7 @@ namespace Statistics2026.Utilities
             }
         }
 
-        public static async Task lockDB( Statistics2026DB? db, Func<Task> onAction )
+        public static async Task LockDBAsync( Statistics2026DB? db, Func<Task> onAction )
         {
             await _dbLock.WaitAsync().ConfigureAwait( false );
             try
@@ -125,9 +125,9 @@ namespace Statistics2026.Utilities
             }
         }
 
-        private Task _Execute( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, Task<bool>>? onStatement, bool locked )
+        private Task _ExecuteAsync( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, Task<bool>>? onStatement, bool locked )
         {
-            async Task runCommand( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, Task<bool>>? onStatement )
+            async Task runCommandAsync( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, Task<bool>>? onStatement )
             {
                 using( IStatement statement = connection.PrepareStatement( Statement ) )
                 {
@@ -172,21 +172,21 @@ namespace Statistics2026.Utilities
 
             if( locked )
             {
-                return runCommand( connection, db, onStatement );
+                return runCommandAsync( connection, db, onStatement );
             }
             else
             {
-                return lockDB( db, () => { return runCommand( connection, db, onStatement ); }  );
+                return LockDBAsync( db, () => { return runCommandAsync( connection, db, onStatement ); }  );
             }
         }
 
-        public async Task Execute( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, Task<bool>>? onStatement, bool locked )
+        public async Task ExecuteAsync( IDatabaseConnection connection, Statistics2026DB db, Func<IStatement, Task<bool>>? onStatement, bool locked )
         {
             if( FailureAllowed )
             {
                 try
                 {
-                    await _Execute( connection, db, onStatement, locked );
+                    await _ExecuteAsync( connection, db, onStatement, locked );
                 }
                 catch
                 {
@@ -194,7 +194,7 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                await _Execute( connection, db, onStatement, locked );
+                await _ExecuteAsync( connection, db, onStatement, locked );
             }
         }
 

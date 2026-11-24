@@ -21,7 +21,7 @@ namespace Statistics2026.Utilities
 {
     public static class EmbyHelperFuncs
     {
-        public static async Task MoveMediaLocations( EmbyInterfaces embyInterfaces )
+        public static async Task MoveMediaLocationsAsync( EmbyInterfaces embyInterfaces )
         {
 #if DEBUG_PLUGIN_IMAGES
             bool copyImages( BaseItem item )
@@ -495,7 +495,7 @@ namespace Statistics2026.Utilities
         }
 
 
-        public static async Task UpdateLastAdded( EmbyInterfaces? embyInterfaces, List<string> reason, Statistics2026DB db )
+        public static async Task UpdateLastAddedAsync( EmbyInterfaces? embyInterfaces, List<string> reason, Statistics2026DB db )
         {
             BaseItem? lastMediaAdded = EmbyHelperFuncs.GetLastMovieOrEpisodeAdded( embyInterfaces );
             DateTimeOffset? lastAdded = null;
@@ -513,7 +513,7 @@ namespace Statistics2026.Utilities
             }
             if( lastAdded != null && lastAdded != DateTimeOffset.MinValue )
             {
-                await db.SetLastUpdated( Statistics2026DB.EAction.LastMediaOrUserAdded, reason, 0, lastAdded.Value );
+                await db.SetLastUpdatedAsync( Statistics2026DB.EAction.LastMediaOrUserAdded, reason, 0, lastAdded.Value );
             }
         }
 
@@ -585,7 +585,7 @@ namespace Statistics2026.Utilities
             return (latestItem, msg);
         }
 
-        public static async Task<(bool runFullAnalysis, bool runMissingAnalysis, List<string> reasons)> AnalysisOutOfDate( EmbyInterfaces? embyInterfaces, Statistics2026DB db )
+        public static async Task<(bool runFullAnalysis, bool runMissingAnalysis, List<string> reasons)> AnalysisOutOfDateAsync( EmbyInterfaces? embyInterfaces, Statistics2026DB db )
         {
             if( embyInterfaces == null )
                 return (false, false, []);
@@ -597,7 +597,7 @@ namespace Statistics2026.Utilities
 
             List<string> reasons = [];
             bool runFullAnalysis = false;
-            DateTimeOffset? lastAnalysisAdded = ( await db.GetLastUpdated( EAction.LastMediaOrUserAdded ) ).when;
+            DateTimeOffset? lastAnalysisAdded = ( await db.GetLastUpdatedAsync( EAction.LastMediaOrUserAdded ) ).when;
             if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTimeOffset.MinValue )
             {
                 string msg = "Analysis has not been run yet";
@@ -612,7 +612,7 @@ namespace Statistics2026.Utilities
 
             if( !runFullAnalysis )
             {
-                (int curr, int inDB) = await db.totalMediaCount();
+                (int curr, int inDB) = await db.TotalMediaCountAsync();
                 if( curr != inDB )
                 {
                     string msg = $"Media count has changed since last run, re-running Complete Statistical Analysis";
@@ -645,7 +645,7 @@ namespace Statistics2026.Utilities
             }
 
             DateTimeOffset? lastMissingAnalysis = null;
-            DateTimeOffset? lastMissingEpisodeAnalysis = ( await db.GetLastUpdated( EAction.MissingEpisodesAnalysis ) ).when;
+            DateTimeOffset? lastMissingEpisodeAnalysis = ( await db.GetLastUpdatedAsync( EAction.MissingEpisodesAnalysis ) ).when;
             if( lastMissingEpisodeAnalysis == null || lastMissingEpisodeAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;
@@ -659,7 +659,7 @@ namespace Statistics2026.Utilities
                 logger?.Info( $"Last Missing Episode Analysis run: {lastMissingEpisodeAnalysis.Value.LocalDateTime}" );
             }
 
-            DateTimeOffset? lastMissingMovieAnalysis = (await db.GetLastUpdated( EAction.MissingMoviesAnalysis ) ).when;
+            DateTimeOffset? lastMissingMovieAnalysis = (await db.GetLastUpdatedAsync( EAction.MissingMoviesAnalysis ) ).when;
             if( lastMissingMovieAnalysis == null || lastMissingMovieAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;

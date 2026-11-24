@@ -23,7 +23,7 @@ namespace Statistics2026.Data
             public long averageBitrate = 0;
         }
 
-        private async Task<(ConcurrentDictionary<string, SeriesInfo> seriesInfoMap, List<object> validSeriesIds)> ComputeSeriesInfo( List<Series> seriesList )
+        private async Task<(ConcurrentDictionary<string, SeriesInfo> seriesInfoMap, List<object> validSeriesIds)> ComputeSeriesInfoAsync( List<Series> seriesList )
         {
             string sql = "SELECT " +
                 "  Media.SeriesId" +
@@ -41,7 +41,7 @@ namespace Statistics2026.Data
             ConcurrentDictionary<string, SeriesInfo> seriesInfoMap = [];
             var cmd = new SQLCmdDef( sql );
             List<object> validSeriesIds = [];
-            await ExecuteCommand( cmd,
+            await ExecuteCommandAsync( cmd,
                 statement =>
                 {
                     IResultSet row = statement.Current;
@@ -84,12 +84,12 @@ namespace Statistics2026.Data
                 return;
 
             SetProgress( 0 );
-            await DeleteAllInvalid( seriesList.ConvertAll( item => (BaseItem)item ), "Series", "ItemId" );
+            await DeleteAllInvalidAsync( seriesList.ConvertAll( item => (BaseItem)item ), "Series", "ItemId" );
 
-            (ConcurrentDictionary<string, SeriesInfo>? seriesInfoMap, List<object>? validSeriesIds) = await ComputeSeriesInfo( seriesList );
+            (ConcurrentDictionary<string, SeriesInfo>? seriesInfoMap, List<object>? validSeriesIds) = await ComputeSeriesInfoAsync( seriesList );
 
             var sqlCmds = new List<SQLCmdDef>();
-            sqlCmds.AddRange( await UpdateSeriesFilter() );
+            sqlCmds.AddRange( await UpdateSeriesFilterAsync() );
 
             int completedCount = 0;
 
@@ -133,7 +133,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Series - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommands( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds );
                 SetProgress( 100 );
                 CancellationToken?.ThrowIfCancellationRequested();
                 Logger().Debug( $"Finished Series Analysis" );
@@ -157,7 +157,7 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                await ExecuteCommand( cmd, statement =>
+                await ExecuteCommandAsync( cmd, statement =>
                 {
                     if( statement != null )
                     {
@@ -173,7 +173,7 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                await ExecuteCommand( cmd, statement =>
+                await ExecuteCommandAsync( cmd, statement =>
                 {
                     if( statement != null )
                     {
@@ -192,7 +192,7 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                await ExecuteCommand( cmd, statement =>
+                await ExecuteCommandAsync( cmd, statement =>
                 {
                     if( statement != null )
                     {
@@ -208,7 +208,7 @@ namespace Statistics2026.Data
                             ("@SeriesId", series.Id.ToString())
                             ] );
 
-                await ExecuteCommand( cmd, statement =>
+                await ExecuteCommandAsync( cmd, statement =>
                 {
                     if( statement != null )
                     {

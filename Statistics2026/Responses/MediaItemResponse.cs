@@ -41,7 +41,7 @@ namespace Statistics2026.Responses
         } = string.Empty;
         public string ItemId { get; set; } = string.Empty;
 
-        public static async Task<List<(string id, string name, string sortName, string displayText, string url)>?> getParentInfo( string parentJson, bool? isEpisode, Func<string, string, string, Task<bool>> isFiltered )
+        public static async Task<List<(string id, string name, string sortName, string displayText, string url)>?> GetParentInfoAsync( string parentJson, bool? isEpisode, Func<string, string, string, Task<bool>> isFiltered )
         {
             List<(string id, string name, string sortName, string displayText, string url)> retVal = [];
 
@@ -284,7 +284,7 @@ namespace Statistics2026.Responses
             return retVal;
         }
 
-        private static async Task<MediaItemResponse?> AddStreamingProviders( MediaItemResponse retVal, bool? isEpisode, string isoCode, string streamingProvidersString, EmbyInterfaces embyInterfaces, Statistics2026DB db, bool locked )
+        private static async Task<MediaItemResponse?> AddStreamingProvidersAsync( MediaItemResponse retVal, bool? isEpisode, string isoCode, string streamingProvidersString, EmbyInterfaces embyInterfaces, Statistics2026DB db, bool locked )
         {
             List<int>? streamingProviders = null;
 
@@ -302,7 +302,7 @@ namespace Statistics2026.Responses
 
             PluginConfiguration? config = Plugin.Instance?.Configuration ?? null;
 
-            List<StreamingProvider> providerInfos = await db.GetStreamingProviders( streamingProviders, ( config?.AlwaysShowJustWatch( ( isEpisode ?? true ) ? EReportType.eTVReport : EReportType.eMovieReport ) ?? true ), locked );
+            List<StreamingProvider> providerInfos = await db.GetStreamingProvidersAsync( streamingProviders, ( config?.AlwaysShowJustWatch( ( isEpisode ?? true ) ? EReportType.eTVReport : EReportType.eMovieReport ) ?? true ), locked );
 
             int depth = 0;
             string html = HelperFuncs.addToHtml( depth++, "<ul>" );
@@ -331,7 +331,7 @@ namespace Statistics2026.Responses
         }
 
         // if isEpisode is null its a series item, true its an episode item, false movie
-        public static async Task<MediaItemResponse?> CreateFromStatementRow( IResultSet row, bool? isEpisode, string isoCode, Func<string, int, Task<bool>>? isSeriesFiltered, Func<string, bool>? isCollectionFiltered, Func<string, Task<SortByText?>>? getCollectionName, EmbyInterfaces? embyInterfaces, Statistics2026DB db )
+        public static async Task<MediaItemResponse?> CreateFromStatementRowAsync( IResultSet row, bool? isEpisode, string isoCode, Func<string, int, Task<bool>>? isSeriesFiltered, Func<string, bool>? isCollectionFiltered, Func<string, Task<SortByText?>>? getCollectionName, EmbyInterfaces? embyInterfaces, Statistics2026DB db )
         {
             if( embyInterfaces == null )
                 return null;
@@ -371,7 +371,7 @@ namespace Statistics2026.Responses
             string parentInfoJSON = row.GetString( col++ );
             int seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
 
-            List<(string id, string name, string sortName, string displayText, string url)>? parentInfo = await getParentInfo( parentInfoJSON, isEpisode,
+            List<(string id, string name, string sortName, string displayText, string url)>? parentInfo = await GetParentInfoAsync( parentInfoJSON, isEpisode,
                 async ( string id, string name, string sortName ) =>
                 {
                     if( isMissing && ( isEpisode != null ) )
@@ -403,7 +403,7 @@ namespace Statistics2026.Responses
                 if( retVal == null )
                     return null;
             }
-            retVal = await AddStreamingProviders( retVal, isEpisode, isoCode, streamingProvidersString, embyInterfaces, db, true );
+            retVal = await AddStreamingProvidersAsync( retVal, isEpisode, isoCode, streamingProvidersString, embyInterfaces, db, true );
 
             return retVal;
         }

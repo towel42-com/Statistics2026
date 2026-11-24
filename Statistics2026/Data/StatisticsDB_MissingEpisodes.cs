@@ -29,7 +29,7 @@ namespace Statistics2026.Data
             List<string> nowAvailable = [];
 
             SetProgress( 0 );
-            await DeleteAllInvalid( seriesList.ConvertAll( item => (BaseItem)item ), "Missing", "ParentId", whereClauses: [ "IsEpisode" ] );
+            await DeleteAllInvalidAsync( seriesList.ConvertAll( item => (BaseItem)item ), "Missing", "ParentId", whereClauses: [ "IsEpisode" ] );
 
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Getting Commands", Logger() ) )
             {
@@ -84,20 +84,20 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommands( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Missing Episodes Analysis" );
             }
 
             if( nowAvailable.Count() != 0 )
             {
-                DateTimeOffset? lastUpdated = ( await GetLastUpdated( EAction.NotifyAvailableToday ) ).when;
+                DateTimeOffset? lastUpdated = ( await GetLastUpdatedAsync( EAction.NotifyAvailableToday ) ).when;
                 if( lastUpdated == null || lastUpdated.Value.LocalDateTime.Date != DateTimeOffset.Now.LocalDateTime.Date )
                 {
                     NotificationSender.SendEpisodesAvailableNotification( nowAvailable, _embyInterfaces );
                 }
             }
-            await SetLastUpdated( EAction.NotifyAvailableToday, [ "Task" ], 0 );
+            await SetLastUpdatedAsync( EAction.NotifyAvailableToday, [ "Task" ], 0 );
         }
 
         private async Task<(List<SQLCmdDef> cmds, List<string> episodesNowAvailable)> AnalyzeMissingEpisodesAsync( TmdbInterface reader, Series series )

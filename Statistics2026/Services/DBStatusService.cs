@@ -71,7 +71,7 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetDatabaseStatus request )
         {
-            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, ( timer ) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, ( timer ) =>
             {
                 GetDatabaseStatusReponse retVal = Plugin.Instance == null
                     ? new GetDatabaseStatusReponse()

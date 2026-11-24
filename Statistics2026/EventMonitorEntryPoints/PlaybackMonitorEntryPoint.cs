@@ -85,25 +85,41 @@ namespace Statistics2026.EventMonitorEntryPoints
 
             _embyInterfaces.Logger().Debug( "EventMonitorEntryPoint Running" );
 
-            _embyInterfaces.SessionManager().PlaybackStart += _sessionManager_PlaybackStart;
-            _embyInterfaces.SessionManager().PlaybackStopped += _sessionManager_PlaybackStop;
+            _embyInterfaces.SessionManager().PlaybackStart += SessionManager_PlaybackStart;
+            _embyInterfaces.SessionManager().PlaybackStopped += SessionManager_PlaybackStop;
 
             // start playback monitor
             _ = Task.Run( () => PlaybackMonitoringTaskAsync() );
         }
 
-        private async void _sessionManager_PlaybackStart( object sender, PlaybackProgressEventArgs e )
+        [SuppressMessage( "Style", "IDE1006:Naming Styles", Justification = "Event handler cannot return Task" )]
+        private async void SessionManager_PlaybackStart( object sender, PlaybackProgressEventArgs e )
         {
-            CheckIsValid();
-            _embyInterfaces.Logger().Info( "_sessionManager_PlaybackStart : Entered" );
-            await ProcessSessions();
+            try
+            {
+                CheckIsValid();
+                _embyInterfaces.Logger().Info( "_sessionManager_PlaybackStart : Entered" );
+                await ProcessSessionsAsync();
+            }
+            catch( Exception ex )
+            {
+                _embyInterfaces.Logger().ErrorException( "Error in SessionManager_PlaybackStart", ex );
+            }
         }
 
-        private async void _sessionManager_PlaybackStop( object sender, PlaybackStopEventArgs e )
+        [SuppressMessage( "Style", "IDE1006:Naming Styles", Justification = "Event handler cannot return Task" )]
+        private async void SessionManager_PlaybackStop( object sender, PlaybackStopEventArgs e )
         {
-            CheckIsValid();
-            _embyInterfaces.Logger().Info( "_sessionManager_PlaybackStop : Entered" );
-            await ProcessSessions();
+            try
+            {
+                CheckIsValid();
+                _embyInterfaces.Logger().Info( "_sessionManager_PlaybackStop : Entered" );
+                await ProcessSessionsAsync();
+            }
+            catch( Exception ex )
+            {
+                _embyInterfaces.Logger().ErrorException( "Error in SessionManager_PlaybackStart", ex );
+            }
         }
 
         public async Task PlaybackMonitoringTaskAsync()
@@ -117,7 +133,7 @@ namespace Statistics2026.EventMonitorEntryPoints
             {
                 try
                 {
-                    await ProcessSessions();
+                    await ProcessSessionsAsync();
 
                     currThreadSleep = 20;
                 }
@@ -140,7 +156,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
         private List<PlaybackInfo>? ActiveSessions = null;
 
-        private async Task ProcessSessions()
+        private async Task ProcessSessionsAsync()
         {
             await synclock.WaitAsync().ConfigureAwait( false );
             try
@@ -158,7 +174,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
                 if( !Plugin.Instance.DBStateInitialized() )
                 {
-                    _ = Statistics2026DB.GetInstance( _embyInterfaces, this.GetType().ToString() );
+                    _ = Statistics2026DB.GetInstanceAsync( _embyInterfaces, this.GetType().ToString() );
                     if( !Plugin.Instance.DBStateInitialized() )
                     {
                         _embyInterfaces.Logger().Warn( "Databases have not been initialized" );
@@ -184,10 +200,10 @@ namespace Statistics2026.EventMonitorEntryPoints
                         continue;
                     }
 
-                    PlaybackInfo playbackInfo = await PlaybackInfo.Create( session, _embyInterfaces );
+                    PlaybackInfo playbackInfo = await PlaybackInfo.CreateAsync( session, _embyInterfaces );
                     ActiveSessions.Add( playbackInfo );
 
-                    playbackInfo.UpdatePlaybackState( _embyInterfaces ).GetAwaiter().GetResult();
+                    playbackInfo.UpdatePlaybackStateAsync( _embyInterfaces ).GetAwaiter().GetResult();
                 }
 
                 PlaybackInfo.RemoveInactivePlayinfo( ActiveSessions, _embyInterfaces );

@@ -274,7 +274,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<List<MediaItemResponse>> getCollectionListResponseAsync()
+        public async Task<List<MediaItemResponse>> GetCollectionListResponseAsync()
         {
             if( _embyInterfaces == null )
                 return [];
@@ -284,10 +284,10 @@ namespace Statistics2026.Data
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommand( new SQLCmdDef( sqlCmd ), async ( statement ) =>
+            await ExecuteCommandAsync( new SQLCmdDef( sqlCmd ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRow( row, false, isoCode, null, null, null, _embyInterfaces, this );
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, false, isoCode, null, null, null, _embyInterfaces, this );
                 if( mediaInfoResponse != null )
                 {
                     int pos = ( (int)EMediaListResponseColumns.eParentId ) + 1;
@@ -324,7 +324,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<List<MediaItemResponse>> getSeriesListResponseAsync()
+        public async Task<List<MediaItemResponse>> GetSeriesListResponseAsync()
         {
             if( _embyInterfaces == null )
                 return [];
@@ -334,10 +334,10 @@ namespace Statistics2026.Data
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommand( new SQLCmdDef( sqlCmd ), async ( statement ) =>
+            await ExecuteCommandAsync( new SQLCmdDef( sqlCmd ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRow( row, null, isoCode, null, null, null, _embyInterfaces, this );
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, null, isoCode, null, null, null, _embyInterfaces, this );
                 if( mediaInfoResponse != null )
                 {
                     int pos = ( (int)EMediaListResponseColumns.eParentId ) + 1;
@@ -372,7 +372,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<List<MediaItemResponse>> getMediaListResponseAsync( EWhichMediaList whichMedia )
+        public async Task<List<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia )
         {
             if( _embyInterfaces == null )
                 return [];
@@ -395,10 +395,10 @@ namespace Statistics2026.Data
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommand( new SQLCmdDef( sqlCmd ), async ( statement ) =>
+            await ExecuteCommandAsync( new SQLCmdDef( sqlCmd ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRow( row, episodes, isoCode, IsFilteredSeries, IsFilteredCollection, GetCollectionName, _embyInterfaces, this );
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, episodes, isoCode, IsFilteredSeriesAsync, IsFilteredCollection, GetCollectionNameAsync, _embyInterfaces, this );
                 if( mediaInfoResponse != null )
                 {
                     retVal.Add( mediaInfoResponse );

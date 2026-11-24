@@ -74,7 +74,7 @@ namespace Statistics2026.ScheduledTasks
 
         async Task IScheduledTask.Execute( CancellationToken cancellationToken, IProgress<double> progress )
         {
-            HelperFuncs.MemoryUsage memoryReport = await HelperFuncs.RunAndReportMemory( true, async () =>
+            HelperFuncs.MemoryUsage memoryReport = await HelperFuncs.RunAndReportMemoryAsync( true, async () =>
             {
                 if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, GetType(), false ) )
                 {
@@ -84,15 +84,15 @@ namespace Statistics2026.ScheduledTasks
                 if( PluginConfiguration == null )
                     throw new ArgumentNullException( nameof( PluginConfiguration ) );
 
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, GetType().Name );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, GetType().Name );
 
-                await db.Initialize( this, cancellationToken, progress, PluginConfiguration.systemSettings.resetPlayCount );
+                await db.InitializeAsync( this, cancellationToken, progress, PluginConfiguration.systemSettings.resetPlayCount );
                 cancellationToken.ThrowIfCancellationRequested();
 
                 string taskName = "Analyze All";
                 _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
 
-                await db.ClearLastUpdated( Statistics2026DB.EAction.System );
+                await db.ClearLastUpdatedAsync( Statistics2026DB.EAction.System );
 
                 var overAllTimer = new AutoTimer( $"Adding All Data", _embyInterfaces.Logger(), false );
                 List<TaskDef>? tasks = TaskDef.GetKnownTasks( false );
@@ -109,8 +109,8 @@ namespace Statistics2026.ScheduledTasks
                 }
 
                 long overall = overAllTimer.ElapsedMilliseconds();
-                await db.SetLastUpdated( Statistics2026DB.EAction.System, ReasonsForExecute, overall );
-                await EmbyHelperFuncs.UpdateLastAdded( _embyInterfaces, ReasonsForExecute, db );
+                await db.SetLastUpdatedAsync( Statistics2026DB.EAction.System, ReasonsForExecute, overall );
+                await EmbyHelperFuncs.UpdateLastAddedAsync( _embyInterfaces, ReasonsForExecute, db );
 
                 overAllTimer.Dispose();
                 _embyInterfaces.Logger().Info( $"=======================================" );

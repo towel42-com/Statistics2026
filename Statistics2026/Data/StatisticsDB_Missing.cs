@@ -104,7 +104,7 @@ namespace Statistics2026.Data
             return false;
         }
 
-        private async Task<bool> IsFilteredSeries( string seriesId, int seasonNum )
+        private async Task<bool> IsFilteredSeriesAsync( string seriesId, int seasonNum )
         {
             if( Plugin.Instance == null )
                 return false;
@@ -130,7 +130,7 @@ namespace Statistics2026.Data
 
             bool isSpecial = ( seasonNum == 0 );
             bool filtered = false;
-            await ExecuteCommand( cmd, statement =>
+            await ExecuteCommandAsync( cmd, statement =>
             {
                 IResultSet row = statement.Current;
                 int col = 0;
@@ -168,7 +168,7 @@ namespace Statistics2026.Data
             return filtered;
         }
 
-        private async Task<( int numItems, int numParents)> MediaMissingInfo( bool episodes, bool filteredResults )
+        private async Task<( int numItems, int numParents)> MediaMissingInfoAsync( bool episodes, bool filteredResults )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -180,7 +180,7 @@ namespace Statistics2026.Data
                 HashSet<string> filteredParents = [];
                 string sql = getMediaListResponseMissingCmd( episodes ? EWhichMediaList.eEpisodesMissing : EWhichMediaList.eMoviesMissing, true );
 
-                await RunSQLOnRow( sql, async( row )  =>
+                await RunSQLOnRowAsync( sql, async( row )  =>
                 {
                     HashSet<string> currParentIds = [];
                     bool filtered = false;
@@ -189,7 +189,7 @@ namespace Statistics2026.Data
                     string parentInfoJSON = row.GetString( (int)EMediaListResponseColumns.eParentInfoJSON );
                     string title = row.GetString( (int)EMediaListResponseColumns.eTitle );
 
-                    List<(string id, string name, string sortName, string displayText, string url)>? parentInfos = await MediaItemResponse.getParentInfo( parentInfoJSON, episodes,
+                    List<(string id, string name, string sortName, string displayText, string url)>? parentInfos = await MediaItemResponse.GetParentInfoAsync( parentInfoJSON, episodes,
                         async ( string id, string name, string sortName ) =>
                         {
                             if( name.IsEmpty() )
@@ -221,7 +221,7 @@ namespace Statistics2026.Data
                         {
                             seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
                             string parentId = row.GetString( (int)EMediaListResponseColumns.eParentId );
-                            filtered = filtered || ( await IsFilteredSeries( parentId, seasonNum ) );
+                            filtered = filtered || ( await IsFilteredSeriesAsync( parentId, seasonNum ) );
                             currParentIds = filtered ? [] : [ parentId ];
                         }
                         else
@@ -248,7 +248,7 @@ namespace Statistics2026.Data
                     $"SELECT COUNT( * ),COUNT( DISTINCT ParentId ) FROM Missing WHERE {( episodes ? "" : "NOT" )} IsEpisode AND ( ReleaseDate < date('now', '+1 day') )";
                 var cmd = new SQLCmdDef( sql );
 
-                await ExecuteCommand( cmd, statement =>
+                await ExecuteCommandAsync( cmd, statement =>
                 {
                     IResultSet row = statement.Current;
                     numItems = row.GetInt( 0 );
@@ -259,11 +259,11 @@ namespace Statistics2026.Data
             return (numItems, numParents);
         }
 
-        private async Task<StatCard> TotalMissingMedia( bool episodes )
+        private async Task<StatCard> TotalMissingMediaAsync( bool episodes )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            (int numItems, int numParents) info = await MediaMissingInfo( episodes, Plugin.Instance!.Configuration.tvSettings.showFilteredMissingSummaries );
+            (int numItems, int numParents) info = await MediaMissingInfoAsync( episodes, Plugin.Instance!.Configuration.tvSettings.showFilteredMissingSummaries );
 
             string title = episodes ? Constants.MissingEpisodes : Constants.MissingMovies;
             string infoFormat = episodes ? "{0} Episodes from {1} Series" : "{0} Movies from {1} Collections";
@@ -275,17 +275,17 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public Task<StatCard> TotalMissingMovies()
+        public Task<StatCard> TotalMissingMoviesAsync()
         {
-            return TotalMissingMedia( false );
+            return TotalMissingMediaAsync( false );
         }
 
-        public Task<StatCard> TotalMissingEpisodes()
+        public Task<StatCard> TotalMissingEpisodesAsync()
         {
-            return TotalMissingMedia( true );
+            return TotalMissingMediaAsync( true );
         }
 
-        public async Task<List<SeriesFilterResponse>> GetSeriesFilter( bool updateIfEmpty )
+        public async Task<List<SeriesFilterResponse>> GetSeriesFilterAsync( bool updateIfEmpty )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -305,7 +305,7 @@ namespace Statistics2026.Data
 
             List<SeriesFilterResponse> retVal = [];
             bool found = false;
-            await ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sql ), statement =>
             {
                 found = true;
                 IResultSet row = statement.Current;
@@ -329,14 +329,14 @@ namespace Statistics2026.Data
             } );
             if( !found && updateIfEmpty )
             {
-                var cmds = ( await UpdateSeriesFilter( true ) ).Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
-                await ExecuteCommands( cmds );
-                return await GetSeriesFilter( false );
+                var cmds = ( await UpdateSeriesFilterAsync( true ) ).Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
+                await ExecuteCommandsAsync( cmds );
+                return await GetSeriesFilterAsync( false );
             }
             return retVal;
         }
 
-        public async Task<SQLCmdDef> SaveSeriesFilter( SeriesFilterResponse seriesFilter, bool andExecute )
+        public async Task<SQLCmdDef> SaveSeriesFilterAsync( SeriesFilterResponse seriesFilter, bool andExecute )
         {
             string sql = "INSERT INTO SeriesFilterList" +
                 "(" +
@@ -374,12 +374,12 @@ namespace Statistics2026.Data
 
             if( andExecute )
             {
-                await ExecuteCommand( cmd );
+                await ExecuteCommandAsync( cmd );
             }
             return cmd;
         }
 
-        private async Task<List<SQLCmdDef>> UpdateSeriesFilter( bool nested = false )
+        private async Task<List<SQLCmdDef>> UpdateSeriesFilterAsync( bool nested = false )
         {
             bool filterChanged( ref string msg, ref SeriesFilterResponse lhs, int numSeasons, bool hasSpecials )
             {
@@ -403,7 +403,7 @@ namespace Statistics2026.Data
             if( !nested )
                 CheckIsValid( ECheckLevel.eUpdate );
 
-            List<SeriesFilterResponse> seriesFilterList = await GetSeriesFilter( false );
+            List<SeriesFilterResponse> seriesFilterList = await GetSeriesFilterAsync( false );
             Dictionary<string, List<SeriesFilterResponse>> oldFilterMap = [];
             foreach( SeriesFilterResponse series in seriesFilterList )
             {
@@ -416,7 +416,7 @@ namespace Statistics2026.Data
                 list.Add( series );
             }
 
-            var currFilterMap = (await GetSeriesFilter( false ) ).ToDictionary( p => p.SeriesId );
+            var currFilterMap = (await GetSeriesFilterAsync( false ) ).ToDictionary( p => p.SeriesId );
 
             var changedFilterMap = new List<SeriesFilterResponse>();
 
@@ -517,7 +517,7 @@ namespace Statistics2026.Data
             List<SQLCmdDef> sqlCmds = [];
             foreach( SeriesFilterResponse entry in changedFilterMap )
             {
-                sqlCmds.Add( await SaveSeriesFilter( entry, false ) );
+                sqlCmds.Add( await SaveSeriesFilterAsync( entry, false ) );
             }
             return sqlCmds;
         }

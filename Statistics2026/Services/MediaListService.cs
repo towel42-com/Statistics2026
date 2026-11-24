@@ -95,11 +95,11 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetSeriesList request )
         {
-            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
 
-                List<MediaItemResponse> series = await db.getSeriesListResponseAsync();
+                List<MediaItemResponse> series = await db.GetSeriesListResponseAsync();
 
                 return series;
             } );
@@ -107,11 +107,11 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetCollectionList request )
         {
-            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
 
-                List<MediaItemResponse> collections = await db.getCollectionListResponseAsync();
+                List<MediaItemResponse> collections = await db.GetCollectionListResponseAsync();
 
                 return collections;
             } );
@@ -119,9 +119,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetEpisodeList request )
         {
-            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
                 bool showOnServer = request.showOnServer;
                 bool showMissing = request.showMissing;
 
@@ -137,7 +137,7 @@ namespace Statistics2026.Services
                 if( showMissing )
                     whichMedia = whichMedia | EWhichMediaList.eMissing;
 
-                List<MediaItemResponse> episodes = await db.getMediaListResponseAsync( whichMedia );
+                List<MediaItemResponse> episodes = await db.GetMediaListResponseAsync( whichMedia );
 
                 return episodes;
             } );
@@ -145,9 +145,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetMovieList request )
         {
-            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name ).ConfigureAwait( false );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name ).ConfigureAwait( false );
                 bool showOnServer = request.showOnServer;
                 bool showMissing = request.showMissing;
 
@@ -163,7 +163,7 @@ namespace Statistics2026.Services
                 if( showMissing )
                     whichMedia |= EWhichMediaList.eMissing;
 
-                return await db.getMediaListResponseAsync( whichMedia ).ConfigureAwait( false );
+                return await db.GetMediaListResponseAsync( whichMedia ).ConfigureAwait( false );
             } );
         }
 

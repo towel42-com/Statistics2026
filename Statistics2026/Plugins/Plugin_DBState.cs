@@ -47,7 +47,7 @@ namespace Statistics2026
 
     public partial class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages, IHasThumbImage
     {
-        public async Task<string> DBStateMessage()
+        public async Task<string> DBStateMessageAsync()
         {
             if( ( DBState == null ) || ( DBState == EDBState.eEmpty ) )
             {
@@ -59,7 +59,7 @@ namespace Statistics2026
                 return string.Empty;
             }
 
-            await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, GetType().Name );
+            await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, GetType().Name );
 
             List<string> msgs = [];
 

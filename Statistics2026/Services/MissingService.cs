@@ -89,11 +89,11 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetTotalMissingMovies request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
 
-                StatCard groupData = await db.TotalMissingMovies();
+                StatCard groupData = await db.TotalMissingMoviesAsync();
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -104,11 +104,11 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetTotalMissingEpisodes request )
         {
-            return HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
 
-                StatCard groupData = await db.TotalMissingEpisodes();
+                StatCard groupData = await db.TotalMissingEpisodesAsync();
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -119,18 +119,18 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetSeriesFilter request )
         {
-            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
-                return await db.GetSeriesFilter( true );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
+                return await db.GetSeriesFilterAsync( true );
             } );
         }
 
         public async Task<object> Post( SetSeriesFilter request )
         {
-            object retVal = await HelperFuncs.HandleRequest( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            object retVal = await HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
 
                 var seriesFilter = new SeriesFilterResponse()
                 {
@@ -144,7 +144,7 @@ namespace Statistics2026.Services
                 if( seriesFilter.SeriesId.IsNullOrEmpty() )
                     return new object();
 
-                return await db.SaveSeriesFilter( seriesFilter, true );
+                return await db.SaveSeriesFilterAsync( seriesFilter, true );
             } );
             return retVal;
         }

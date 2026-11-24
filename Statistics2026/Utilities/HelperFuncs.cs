@@ -99,7 +99,7 @@ namespace Statistics2026.Utilities
             }
 
 #if DEBUG_PLUGIN_IMAGES
-            EmbyHelperFuncs.MoveMediaLocations( embyInterfaces ).GetAwaiter().GetResult();
+            EmbyHelperFuncs.MoveMediaLocationsAsync( embyInterfaces ).GetAwaiter().GetResult();
 #endif
         }
 
@@ -649,7 +649,7 @@ namespace Statistics2026.Utilities
             embyInterfaces.Logger().Info( $"Finished Statistics 2026 {taskName} task" );
         }
 
-        static public async Task CheckForOOD( EmbyInterfaces embyInterfaces, List<string> reasons, System.Type okIfRunning, bool allowRunAll )
+        static public async Task CheckForOODAsync( EmbyInterfaces embyInterfaces, List<string> reasons, System.Type okIfRunning, bool allowRunAll )
         {
             try
             {
@@ -662,11 +662,11 @@ namespace Statistics2026.Utilities
                 }
 
                 embyInterfaces.Logger().Debug( $"System currently NOT running" );
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( embyInterfaces, "CheckForOOD" );
-                await db.Initialize( null, null, null, false );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( embyInterfaces, "CheckForOOD" );
+                await db.InitializeAsync( null, null, null, false );
 
                 ILogger currLogger = embyInterfaces.Logger();
-                (bool runFullAnalysis, bool runMissingAnalysis, List<string>? oodReasons) = await EmbyHelperFuncs.AnalysisOutOfDate( embyInterfaces, db );
+                (bool runFullAnalysis, bool runMissingAnalysis, List<string>? oodReasons) = await EmbyHelperFuncs.AnalysisOutOfDateAsync( embyInterfaces, db );
 
                 embyInterfaces._logger = currLogger;
                 reasons.AddRange( oodReasons );
@@ -690,7 +690,7 @@ namespace Statistics2026.Utilities
             }
         }
 
-        public static async Task<T> HandleRequest<T>( string requestName, EmbyInterfaces embyInterfaces, Func<AutoTimer, Task<T>> requestFunc )
+        public static async Task<T> HandleRequestAsync<T>( string requestName, EmbyInterfaces embyInterfaces, Func<AutoTimer, Task<T>> requestFunc )
         {
             using( var timer = new AutoTimer( $"Request: {requestName}", embyInterfaces.Logger() ) )
             {
@@ -752,7 +752,7 @@ namespace Statistics2026.Utilities
             }
         };
 
-        public static async Task<MemoryUsage> RunAndReportMemory( bool debugLoggingEnabled, Func<Task> workload )
+        public static async Task<MemoryUsage> RunAndReportMemoryAsync( bool debugLoggingEnabled, Func<Task> workload )
         {
             if( !debugLoggingEnabled )
             {

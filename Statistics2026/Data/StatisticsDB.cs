@@ -38,7 +38,7 @@ namespace Statistics2026.Data
 
         private class DBInitiator
         {
-            public async Task<Statistics2026DB> Init( EmbyInterfaces? embyInterfaces, string instanceLocation )
+            public async Task<Statistics2026DB> InitAsync( EmbyInterfaces? embyInterfaces, string instanceLocation )
             {
                 if( embyInterfaces == null )
                     throw new ArgumentNullException( "EmbyInterfaces is null." );
@@ -46,7 +46,7 @@ namespace Statistics2026.Data
                 Statistics2026DB? retVal = null;
                 SQLCmdDef.setWarningLogger( ( msg ) => { embyInterfaces.Logger().Warn( msg ); } );
 
-                await SQLCmdDef.lockDB( null, async () =>
+                await SQLCmdDef.LockDBAsync( null, async () =>
                 {
                     retVal = new Statistics2026DB( embyInterfaces, instanceLocation );
 
@@ -61,7 +61,7 @@ namespace Statistics2026.Data
                 if( retVal == null )
                     throw new Exception( "Problem getting db instance" );
 
-                await retVal.ComputeDBState();
+                await retVal.ComputeDBStateAsync();
 
                 return retVal;
             }
@@ -151,10 +151,10 @@ namespace Statistics2026.Data
             }
         };
 
-        public async static Task<Statistics2026DB> GetInstance( EmbyInterfaces? embyInterfaces, string instanceLocation )
+        public async static Task<Statistics2026DB> GetInstanceAsync( EmbyInterfaces? embyInterfaces, string instanceLocation )
         {
             DBInitiator dbInit = new();
-            Statistics2026DB retVal = await dbInit.Init( embyInterfaces, instanceLocation );
+            Statistics2026DB retVal = await dbInit.InitAsync( embyInterfaces, instanceLocation );
             return retVal;
         }
 
@@ -172,7 +172,7 @@ namespace Statistics2026.Data
             if( _disposed )
                 return;
 
-            await CloseConnection();
+            await CloseConnectionAsync();
 
             GC.SuppressFinalize( this );
         }
@@ -321,9 +321,9 @@ namespace Statistics2026.Data
             } );
         }
 
-        public Task CloseConnection()
+        public Task CloseConnectionAsync()
         {
-            return SQLCmdDef.lockDB( this, async () =>
+            return SQLCmdDef.LockDBAsync( this, async () =>
             {
                 try
                 {
@@ -341,11 +341,11 @@ namespace Statistics2026.Data
             } );
         }
 
-        public Task Initialize( MediaBrowser.Model.Tasks.IScheduledTask? runningTask, CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false )
+        public Task InitializeAsync( MediaBrowser.Model.Tasks.IScheduledTask? runningTask, CancellationToken? cancellationToken, IProgress<double>? progress, bool reset = false )
         {
             _currentTask = runningTask;
             SetCancellationToken( cancellationToken, progress );
-            return TableDefs().CreateTables( reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate, cancellationToken, value => { progress?.Report( value ); } );
+            return TableDefs().CreateTablesAsync( reset ? TableDef.EAction.eRecreate : TableDef.EAction.eCreate, cancellationToken, value => { progress?.Report( value ); } );
         }
 
         public void ResetCancellationToken()
@@ -416,10 +416,10 @@ namespace Statistics2026.Data
             return true;
         }
 
-        public Task ExecuteCommand( SQLCmdDef cmd, Func<IStatement, Task<bool>>? onStatement = null, bool useTransaction = true, bool locked = false )
+        public Task ExecuteCommandAsync( SQLCmdDef cmd, Func<IStatement, Task<bool>>? onStatement = null, bool useTransaction = true, bool locked = false )
         {
             List<SQLCmdDef> cmds = [ cmd ];
-            return ExecuteCommands( cmds, true, onStatement, useTransaction, locked );
+            return ExecuteCommandsAsync( cmds, true, onStatement, useTransaction, locked );
         }
 
         private void SetProgress( double value )
@@ -427,11 +427,11 @@ namespace Statistics2026.Data
             Progress?.Report( value );
         }
 
-        public async Task ExecuteCommands( List<SQLCmdDef> cmds, bool useProgress = true, Func<IStatement, Task<bool>>? onStatement = null, bool useTransaction = true, bool locked = false )
+        public async Task ExecuteCommandsAsync( List<SQLCmdDef> cmds, bool useProgress = true, Func<IStatement, Task<bool>>? onStatement = null, bool useTransaction = true, bool locked = false )
         {
             _ = CheckIsValid( ECheckLevel.eConnection | ECheckLevel.eThrowOnFailure );
 
-            async Task runCommands( IDatabaseConnection? connection, List<SQLCmdDef> cmds, Func<IStatement, Task<bool>>? onStatement, bool locked, bool withTransaction )
+            async Task runCommandsAsync( IDatabaseConnection? connection, List<SQLCmdDef> cmds, Func<IStatement, Task<bool>>? onStatement, bool locked, bool withTransaction )
             {
                 if( connection == null )
                     return;
@@ -448,7 +448,7 @@ namespace Statistics2026.Data
                         CancellationToken?.ThrowIfCancellationRequested();
 
                         SQLCmdDef cmd = cmds[ ii ];
-                        await cmd.Execute( connection, this, onStatement, locked ).ConfigureAwait( false );
+                        await cmd.ExecuteAsync( connection, this, onStatement, locked ).ConfigureAwait( false );
                         if( useProgress && ( cmds.Count > 1 ) )
                         {
                             double value = 80 + ( 20.0 * ii / cmds.Count );
@@ -481,11 +481,11 @@ namespace Statistics2026.Data
 
                 if( runInTx && !locked )
                 {
-                    await SQLCmdDef.lockDB( this, () => runCommands( Connection, cmds, onStatement, true, withTransaction: runInTx ) ).ConfigureAwait( false );
+                    await SQLCmdDef.LockDBAsync( this, () => runCommandsAsync( Connection, cmds, onStatement, true, withTransaction: runInTx ) ).ConfigureAwait( false );
                 }
                 else
                 {
-                    await runCommands( Connection, cmds, onStatement, locked, withTransaction: runInTx ).ConfigureAwait( false );
+                    await runCommandsAsync( Connection, cmds, onStatement, locked, withTransaction: runInTx ).ConfigureAwait( false );
                 }
             }
             catch( Exception )
@@ -494,7 +494,7 @@ namespace Statistics2026.Data
             }
         }
 
-        public Task ExecuteCommands( List<string> cmds, bool useTransaction = true )
+        public Task ExecuteCommandsAsync( List<string> cmds, bool useTransaction = true )
         {
             List<SQLCmdDef> cmdDefs = [];
             foreach( string cmd in cmds )
@@ -503,15 +503,15 @@ namespace Statistics2026.Data
                 cmdDefs.Add( new SQLCmdDef( cmd ) );
             }
 
-            return ExecuteCommands( cmdDefs, true, null, useTransaction );
+            return ExecuteCommandsAsync( cmdDefs, true, null, useTransaction );
         }
 
-        public Task ExecuteCommand( string cmd )
+        public Task ExecuteCommandAsync( string cmd )
         {
-            return ExecuteCommand( new SQLCmdDef( cmd ), null, false );
+            return ExecuteCommandAsync( new SQLCmdDef( cmd ), null, false );
         }
 
-        public async Task<bool> ColumnExists( string tableName, string columnName )
+        public async Task<bool> ColumnExistsAsync( string tableName, string columnName )
         {
             string sql = $"SELECT 1 FROM pragma_table_info(@TableName) WHERE name=@ColumnName";
             List<(string name, object? value)> parameters =
@@ -522,7 +522,7 @@ namespace Statistics2026.Data
 
             bool exists = false;
 
-            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sql, parameters ), statement =>
             {
                 IResultSet row = statement.Current;
                 long value = row.GetInt64( 0 );
@@ -533,14 +533,14 @@ namespace Statistics2026.Data
             return exists;
         }
 
-        public async Task<bool> TableExists( string tableName )
+        public async Task<bool> TableExistsAsync( string tableName )
         {
             string sql = $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=@TableName";
             List<(string name, object? value)> parameters = [ ("@TableName", tableName) ];
 
             bool exists = false;
 
-            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sql, parameters ), statement =>
             {
                 IResultSet row = statement.Current;
                 long value = row.GetInt64( 0 );
@@ -557,7 +557,7 @@ namespace Statistics2026.Data
             return runtime.ToLongString();
         }
 
-        public async Task ValidateTables( List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState )
+        public async Task ValidateTablesAsync( List<string> tables, Func<string, List<string>> getColumnsFunc, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc, Action<bool, bool> updateDBState )
         {
             if( tables.IsNullOrEmpty() )
             {
@@ -570,12 +570,12 @@ namespace Statistics2026.Data
             bool aTableNeedsData = false;
             foreach( string tableName in tables )
             {
-                bool tableMissing = !( await TableExists( tableName ) );
+                bool tableMissing = !( await TableExistsAsync( tableName ) );
                 bool columnMissing = false;
                 bool tableNeedsData = false;
                 if( !tableMissing )
                 {
-                    (columnMissing, tableNeedsData) = await ValidateTable( tableName, getColumnsFunc( tableName ), validationRequiresDataFunc, additionalNeedsDataFunc );
+                    (columnMissing, tableNeedsData) = await ValidateTableAsync( tableName, getColumnsFunc( tableName ), validationRequiresDataFunc, additionalNeedsDataFunc );
                 }
                 else
                 {
@@ -606,12 +606,12 @@ namespace Statistics2026.Data
             updateDBState( aTableMissing || aColumnMissing, aTableNeedsData );
         }
 
-        public async Task<(bool columnMissing, bool dataMissing)> ValidateTable( string tableName, List<string> columns, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc )
+        public async Task<(bool columnMissing, bool dataMissing)> ValidateTableAsync( string tableName, List<string> columns, Func<string, bool> validationRequiresDataFunc, Func<string, bool>? additionalNeedsDataFunc )
         {
             bool columnMissing = false;
             foreach( string columnName in columns )
             {
-                columnMissing = columnMissing || !( await ColumnExists( tableName, columnName ) );
+                columnMissing = columnMissing || !( await ColumnExistsAsync( tableName, columnName ) );
             }
 
             bool validationRequiresData = validationRequiresDataFunc( tableName );
@@ -621,7 +621,7 @@ namespace Statistics2026.Data
                 string sql = $"SELECT COUNT(*) FROM {tableName} LIMIT 1";
 
                 tableNeedsData = false;
-                await ExecuteCommand( new SQLCmdDef( sql ), statement =>
+                await ExecuteCommandAsync( new SQLCmdDef( sql ), statement =>
                 {
                     IResultSet row = statement.Current;
                     tableNeedsData = row.GetInt64( 0 ) == 0;
@@ -650,20 +650,20 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public Task DeleteAllInvalid( List<string> ids, string tableName, string idColName, List<string>? whereClauses = null, List<(string name, object? value)>? parameters = null )
+        public Task DeleteAllInvalidAsync( List<string> ids, string tableName, string idColName, List<string>? whereClauses = null, List<(string name, object? value)>? parameters = null )
         {
             whereClauses = whereClauses ?? [];
             whereClauses.Add( $"{idColName} NOT IN (<KEYLIST>)" );
             string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
 
             SQLCmdDef cmd = SQLCmdDef.CreateSQLCmdDef( $"DELETE FROM {tableName} {whereClause}", "<KEYLIST>", ids.ConvertAll( item => (object)item ), parameters );
-            return ExecuteCommand( cmd );
+            return ExecuteCommandAsync( cmd );
         }
 
-        public Task DeleteAllInvalid( List<BaseItem> items, string tableName, string idColName, List<string>? whereClauses = null, List<(string name, object? value)>? parameters = null )
+        public Task DeleteAllInvalidAsync( List<BaseItem> items, string tableName, string idColName, List<string>? whereClauses = null, List<(string name, object? value)>? parameters = null )
         {
             List<string> ids = EmbyHelperFuncs.GetAllIds( items );
-            return DeleteAllInvalid( ids, tableName, idColName, whereClauses, parameters );
+            return DeleteAllInvalidAsync( ids, tableName, idColName, whereClauses, parameters );
         }
 
         //public async Task AnalyzeData<T>( string dataType, List<T> items, Func<T, Task<List<SQLCmdDef>>> getSqlCmdsFunc, Func<T, string> itemNameFunc, List<SQLCmdDef?> initCmds )

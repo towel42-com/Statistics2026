@@ -49,7 +49,7 @@ namespace Statistics2026.Utilities
             public string ImageUrl = string.Empty;
         };
 
-        public async Task<StatCardValues> GetStatCardValues()
+        public async Task<StatCardValues> GetStatCardValuesAsync()
         {
             string sql = SQL();
 
@@ -58,7 +58,7 @@ namespace Statistics2026.Utilities
             var sqlCmd = new SQLCmdDef( sql );
 
             var cmd = new SQLCmdDef( sql );
-            await _Database.ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await _Database.ExecuteCommandAsync( new SQLCmdDef( sql ), statement =>
             {
                 IResultSet row = statement.Current;
                 retVal.ItemId = row.GetString( 0 );
@@ -71,13 +71,13 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public async Task<StatCard> GetStatCard()
+        public async Task<StatCard> GetStatCardAsync()
         {
             string title = Title();
             string help = Help();
             var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eDetailed );
 
-            StatCardValues statCardValues = await GetStatCardValues();
+            StatCardValues statCardValues = await GetStatCardValuesAsync();
 
             retVal.AddLine( statCardValues.Value, false );
             if( statCardValues.SecondValue.IsNullOrEmpty() )

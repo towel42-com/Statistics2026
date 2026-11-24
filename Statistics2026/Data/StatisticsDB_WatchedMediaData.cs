@@ -40,7 +40,7 @@ namespace Statistics2026.Data
                     await gatekeeper.WaitAsync();
                     try
                     {
-                        HelperFuncs.MemoryUsage memoryReport = await HelperFuncs.RunAndReportMemory( ( ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false ), async () =>
+                        HelperFuncs.MemoryUsage memoryReport = await HelperFuncs.RunAndReportMemoryAsync( ( ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false ), async () =>
                         {
                             await Task.Yield();
                             long runTimeMS = 0;
@@ -66,8 +66,8 @@ namespace Statistics2026.Data
 
                             using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Commands for user {user.Name}", Logger() ) )
                             {
-                                await DeleteAllInvalid( allVideosForUser.ConvertAll( item => (BaseItem)item ), userTableName, "ItemId" );
-                                await ExecuteCommands( currCmds, false );
+                                await DeleteAllInvalidAsync( allVideosForUser.ConvertAll( item => (BaseItem)item ), userTableName, "ItemId" );
+                                await ExecuteCommandsAsync( currCmds, false );
                             }
 
                             int currProgress = Interlocked.Increment( ref completedCount );
@@ -93,7 +93,7 @@ namespace Statistics2026.Data
             config.systemSettings.resetPlayCount = false;
             Statistics2026.Plugin.Instance.UpdateConfiguration( config );
 
-            await ComputeUserDataDBState();
+            await ComputeUserDataDBStateAsync();
             if( !Plugin.Instance.IsDBStateSet( EDBState.eUserDataInitialized ) )
             {
                 Logger().Error( "After initializing user watch data, user watch data still doesn't conform." );
@@ -252,7 +252,7 @@ namespace Statistics2026.Data
             return (sqlCmds, allVideosForUser);
         }
 
-        public async Task<long?> GetTotalTicksPlayed( string userId, string itemId )
+        public async Task<long?> GetTotalTicksPlayedAsync( string userId, string itemId )
         {
             string tableName = TableDefs().getUserTableName( userId );
 
@@ -266,7 +266,7 @@ namespace Statistics2026.Data
 
             long? totalTicksPlayed = null;
 
-            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sql, parameters ), statement =>
             {
                 IResultSet row = statement.Current;
                 totalTicksPlayed = row.GetInt64( 0 );
@@ -276,7 +276,7 @@ namespace Statistics2026.Data
             return totalTicksPlayed;
         }
 
-        public Task UpdateTotalTicksPlayed( string userId, string itemId, long totalTicksPlayed )
+        public Task UpdateTotalTicksPlayedAsync( string userId, string itemId, long totalTicksPlayed )
         {
             string tableName = TableDefs().getUserTableName( userId );
 
@@ -292,7 +292,7 @@ namespace Statistics2026.Data
                     ("@ItemId", itemId)
                 ];
 
-            return ExecuteCommand( new SQLCmdDef( sql, parameters ) );
+            return ExecuteCommandAsync( new SQLCmdDef( sql, parameters ) );
         }
 
 
@@ -524,7 +524,7 @@ namespace Statistics2026.Data
             UserDataManager().SaveUserData( user, video, userData, UserDataSaveReason.Import, token );
         }
 
-        public async Task<StatCard> TotalFinishedSeries( User? user )
+        public async Task<StatCard> TotalFinishedSeriesAsync( User? user )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -549,7 +549,7 @@ namespace Statistics2026.Data
             List<(string, object?)> parameters = [ ("@UserId", user.Id.ToString()) ];
             var seriesInfo = new Dictionary<string, (string name, long watched, long total)>();
 
-            await ExecuteCommand( new SQLCmdDef( sql, parameters ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sql, parameters ), statement =>
             {
                 IResultSet row = statement.Current;
                 string seriesName = row.GetString( 0 );
@@ -566,7 +566,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private async Task<List<List<WatchedMediaValue>>> WatchedMediaValues( User? user, bool leastWatched, EMediaType mediaType )
+        private async Task<List<List<WatchedMediaValue>>> WatchedMediaValuesAsync( User? user, bool leastWatched, EMediaType mediaType )
         {
             List<string> getClauses( string tableName, bool episodes, User? user )
             {
@@ -598,7 +598,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eReport );
 
             bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin;
-            long numUsers = ( user == null ) ? ( await NumUsers( false, excludeAdmin ) ) : 1;
+            long numUsers = ( user == null ) ? ( await NumUsersAsync( false, excludeAdmin ) ) : 1;
 
             var tableNames = new List<string>();
             if( user != null )
@@ -609,7 +609,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                tableNames = await TableDefs().allUserMediaTables();
+                tableNames = await TableDefs().AllUserMediaTablesAsync();
             }
 
             var playMap = new Dictionary<string, WatchedMediaValueItemData>();
@@ -661,7 +661,7 @@ namespace Statistics2026.Data
                         sql += "DESC ";
                 }
 
-                await ExecuteCommand( new SQLCmdDef( sql ), statement =>
+                await ExecuteCommandAsync( new SQLCmdDef( sql ), statement =>
                 {
                     IResultSet row = statement.Current;
                     int col = 0;
@@ -756,9 +756,9 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<StatCard> WatchedMedia( User? user, bool leastWatched, EMediaType mediaType )
+        public async Task<StatCard> WatchedMediaAsync( User? user, bool leastWatched, EMediaType mediaType )
         {
-            List<List<WatchedMediaValue>> watchedMedia = await WatchedMediaValues( user, leastWatched, mediaType );
+            List<List<WatchedMediaValue>> watchedMedia = await WatchedMediaValuesAsync( user, leastWatched, mediaType );
             string title = string.Empty;
             string help = string.Empty;
 
@@ -806,7 +806,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private async Task<StatCard> TotalTime( User? user, bool? episodesOnly, bool played )
+        private async Task<StatCard> TotalTimeAsync( User? user, bool? episodesOnly, bool played )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -852,20 +852,20 @@ namespace Statistics2026.Data
 
             sql += HelperFuncs.JoinWhereClauses( clauses );
 
-            return await ValueGroupForSingleItem( title, null, sql, [ ("@UserId", user.Id.ToString()) ], FormatTicks );
+            return await ValueGroupForSingleItemAsync( title, null, sql, [ ("@UserId", user.Id.ToString()) ], FormatTicks );
         }
 
-        public Task<StatCard> TotalTimeWatched( User? user, bool? episodesOnly )
+        public Task<StatCard> TotalTimeWatchedAsync( User? user, bool? episodesOnly )
         {
-            return TotalTime( user, episodesOnly, true );
+            return TotalTimeAsync( user, episodesOnly, true );
         }
 
-        public Task<StatCard> TotalWatchableTime( User? user, bool? episodesOnly )
+        public Task<StatCard> TotalWatchableTimeAsync( User? user, bool? episodesOnly )
         {
-            return TotalTime( user, episodesOnly, false );
+            return TotalTimeAsync( user, episodesOnly, false );
         }
 
-        private async Task<List<(string name, string itemId, string url, DateTimeOffset lastPlayed)>> LastSeenValues( User? user, bool movies )
+        private async Task<List<(string name, string itemId, string url, DateTimeOffset lastPlayed)>> LastSeenValuesAsync( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -903,7 +903,7 @@ namespace Statistics2026.Data
             ] );
 
             var retVal = new List<(string name, string itemId, string url, DateTimeOffset lastPlayed)>();
-            await ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommandAsync( sqlCmd, statement =>
             {
                 IResultSet row = statement.Current;
                 int col = 0;
@@ -921,7 +921,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<StatCard> LastSeen( User? user, bool movies )
+        public async Task<StatCard> LastSeenAsync( User? user, bool movies )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -947,7 +947,7 @@ namespace Statistics2026.Data
                 ListType = EListType.eNumbered,
                 IgnoreLength = true
             };
-            List<(string name, string itemId, string url, DateTimeOffset lastPlayed)> values = await LastSeenValues( user, movies );
+            List<(string name, string itemId, string url, DateTimeOffset lastPlayed)> values = await LastSeenValuesAsync( user, movies );
 
             foreach( (string name, string itemId, string url, DateTimeOffset lastPlayed) in values )
             {
@@ -964,7 +964,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private async Task<List<List<object>>?> CheckUserMediaTableHasData( string tableName )
+        private async Task<List<List<object>>?> CheckUserMediaTableHasDataAsync( string tableName )
         {
             string sqlTicks = $"SELECT COUNT(*) FROM {tableName} WHERE TotalTicksPlayed IS NOT NULL AND iif( {tableName}.IsPlayed AND ( {tableName}.PlayCount > 0 ), {tableName}.TotalTicksPlayed, 0 ) != 0";
             string sqlPlayed = $"SELECT COUNT(*) FROM {tableName} WHERE PlayCount>0 AND IsPlayed";
@@ -978,7 +978,7 @@ namespace Statistics2026.Data
                 new( sqlPlayed )
             ];
 
-            await ExecuteCommands( cmds, false, statement =>
+            await ExecuteCommandsAsync( cmds, false, statement =>
                 {
                     IResultSet row = statement.Current;
                     long value = row.GetInt64( 0 );
@@ -1027,7 +1027,7 @@ namespace Statistics2026.Data
                 playedNotTicks = playedNotTicks.Replace( "COUNT(*)", fields );
 
                 List<List<object>> ticksNotPlayedList = [];
-                await ExecuteCommand( new SQLCmdDef( ticksNotPlayed ), statement =>
+                await ExecuteCommandAsync( new SQLCmdDef( ticksNotPlayed ), statement =>
                 {
                     IResultSet row = statement.Current;
                     int col = 0;
@@ -1049,7 +1049,7 @@ namespace Statistics2026.Data
                 } );
 
                 List<List<object>> playedNotTicksList = [];
-                await ExecuteCommand( new SQLCmdDef( playedNotTicks ), statement =>
+                await ExecuteCommandAsync( new SQLCmdDef( playedNotTicks ), statement =>
                 {
                     IResultSet row = statement.Current;
                     int col = 0;
@@ -1078,7 +1078,7 @@ namespace Statistics2026.Data
             return ( ticksPlayed == systemPlayed ) ? null : missing;
         }
 
-        public async Task<StatCard?> UserWatchMediaIssues()
+        public async Task<StatCard?> UserWatchMediaIssuesAsync()
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -1118,7 +1118,7 @@ namespace Statistics2026.Data
             string sqlBtoA = sqlPlayed + " EXCEPT \n" + sqlTicks;
 
             List<SQLCmdDef> sqlCmds = [];
-            List<string> tables = await TableDefs().allUserMediaTables();
+            List<string> tables = await TableDefs().AllUserMediaTablesAsync();
             foreach( string tableName in tables )
             {
                 User? user = TableDefs().getUserForTableName( tableName );
@@ -1144,7 +1144,7 @@ namespace Statistics2026.Data
 
             SortedDictionary<string, List<object>> items = [];
 
-            await ExecuteCommands( sqlCmds, true, statement =>
+            await ExecuteCommandsAsync( sqlCmds, true, statement =>
             {
                 IResultSet row = statement.Current;
                 int col = 0;
@@ -1182,11 +1182,11 @@ namespace Statistics2026.Data
             return groupData;
         }
 
-        public async Task<StatCard> PlayedUserMedia()
+        public async Task<StatCard> PlayedUserMediaAsync()
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            List<string> tables = await TableDefs().allUserMediaTables();
+            List<string> tables = await TableDefs().AllUserMediaTablesAsync();
 
             string sqlBase =
                 $"SELECT \n" +
@@ -1236,7 +1236,7 @@ namespace Statistics2026.Data
 
             SortedDictionary<string, List<object>> items = [];
 
-            await ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sql ), statement =>
             {
                 IResultSet row = statement.Current;
 

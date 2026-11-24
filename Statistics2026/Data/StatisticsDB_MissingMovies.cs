@@ -39,7 +39,6 @@ namespace Statistics2026.Data
             List<SQLCmdDef> sqlCmds = [];
 
             SetProgress( 0 );
-            await DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "Missing", "ParentId", whereClauses: [ "NOT IsEpisode" ] );
 
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Getting Commands", Logger() ) )
             {
@@ -83,7 +82,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommands( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Missing Movies Analysis" );
             }

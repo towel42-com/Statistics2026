@@ -13,7 +13,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class Statistics2026DB
     {
-        public async Task<List<GetTVSeriesProgressResponse>> GetTVSeriesProgress( User? user )
+        public async Task<List<GetTVSeriesProgressResponse>> GetTVSeriesProgressAsync( User? user )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -34,7 +34,7 @@ namespace Statistics2026.Data
                 ;
 
             var series = new Dictionary<string, GetTVSeriesProgressResponse>();
-            await ExecuteCommand( new SQLCmdDef( getSeriesSQL ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( getSeriesSQL ), statement =>
             {
                 IResultSet row = statement.Current;
                 int col = 0;
@@ -88,7 +88,7 @@ namespace Statistics2026.Data
 
             List<(string name, object? value)> paramList = [ ("@UserId", user.Id.ToString()) ];
 
-            await ExecuteCommand( new SQLCmdDef( sqlEpisodes, paramList ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sqlEpisodes, paramList ), statement =>
             {
                 IResultSet row = statement.Current;
                 int col = 0;
@@ -104,7 +104,7 @@ namespace Statistics2026.Data
                 return Task.FromResult( true );
             } );
 
-            await ExecuteCommand( new SQLCmdDef( sqlSpecials, paramList ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sqlSpecials, paramList ), statement =>
             {
                 IResultSet row = statement.Current;
                 int col = 0;

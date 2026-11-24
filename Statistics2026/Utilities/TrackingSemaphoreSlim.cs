@@ -69,10 +69,10 @@ namespace Utilities
             ThrowIfDeadlock( waiterInfo );
 
             LockHolder holder = EnsureCurrentFlowHolder();
-            return WaitAsyncInternal( holder, waiterInfo, cancellationToken );
+            return WaitInternalAsync( holder, waiterInfo, cancellationToken );
         }
 
-        private async Task WaitAsyncInternal(
+        private async Task WaitInternalAsync(
             LockHolder holder,
             string waiterInfo,
             CancellationToken cancellationToken )
@@ -104,10 +104,10 @@ namespace Utilities
             ThrowIfDeadlock( waiterInfo );
 
             LockHolder holder = EnsureCurrentFlowHolder();
-            return WaitAsyncTimeoutInternal( holder, timeout, waiterInfo, cancellationToken );
+            return WaitTimeoutInternalAsync( holder, timeout, waiterInfo, cancellationToken );
         }
 
-        private async Task<bool> WaitAsyncTimeoutInternal(
+        private async Task<bool> WaitTimeoutInternalAsync(
             LockHolder holder,
             TimeSpan timeout,
             string waiterInfo,

@@ -71,7 +71,7 @@ namespace Statistics2026.Data
                         existing.TryAdd( baseItem.Id.ToString(), true );
 
                         string name = Utilities.MediaInfo.GetDescName( baseItem ).descName;
-                        retVal.cmds.AddRange( await FindAllStreamingProviders( reader, baseItem ) );
+                        retVal.cmds.AddRange( await FindAllStreamingProvidersAsync( reader, baseItem ) );
                         CancellationToken?.ThrowIfCancellationRequested();
                         int currProgress = Interlocked.Increment( ref completedCount );
 
@@ -99,13 +99,13 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Streaming Providers - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommands( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
             }
         }
 
-        private async Task<List<SQLCmdDef?>?> FindAllStreamingProviders( TmdbInterface reader, BaseItem baseItem )
+        private async Task<List<SQLCmdDef?>?> FindAllStreamingProvidersAsync( TmdbInterface reader, BaseItem baseItem )
         {
             List<SQLCmdDef?> retVal = [];
 
@@ -162,7 +162,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<List<StreamingProvider>> GetStreamingProviders( List<int> ids, bool forceIncludeJustWatch, bool locked )
+        public async Task<List<StreamingProvider>> GetStreamingProvidersAsync( List<int> ids, bool forceIncludeJustWatch, bool locked )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -175,7 +175,7 @@ namespace Statistics2026.Data
 
             var cmd = SQLCmdDef.CreateSQLCmdDef( "SELECT ProviderId, Name, LogoPath, DisplayPriority, UrlTemplate FROM StreamingProviders WHERE ProviderId IN (<KEYLIST>) ORDER BY DisplayPriority ASC", "<KEYLIST>", ids.ConvertAll( x => (object)x ) );
             List<StreamingProvider> retVal = [];
-            await ExecuteCommand( cmd, statement =>
+            await ExecuteCommandAsync( cmd, statement =>
             {
                 IResultSet row = statement.Current;
                 int curr = 0;

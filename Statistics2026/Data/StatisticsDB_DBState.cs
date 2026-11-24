@@ -9,7 +9,7 @@ namespace Statistics2026.Data
 {
     public sealed partial class Statistics2026DB
     {
-        private async Task ComputeDBState()
+        private async Task ComputeDBStateAsync()
         {
             CheckIsValid( ECheckLevel.eInit );
 
@@ -20,7 +20,7 @@ namespace Statistics2026.Data
 
             List<string> tableNames = TableDefs().tableNames();
 
-            await ValidateTables( tableNames,
+            await ValidateTablesAsync( tableNames,
                 tableName =>
                 {
                     return TableDefs().getTableDef( tableName )?.ColumnNames() ?? [];
@@ -37,13 +37,13 @@ namespace Statistics2026.Data
                 }
             );
 
-            await ComputeUserDataDBState();
+            await ComputeUserDataDBStateAsync();
 
             Plugin.Instance!.Configuration.systemSettings.resetDBState = false;
             Statistics2026.Plugin.Instance.UpdateConfiguration( Plugin.Instance!.Configuration );
         }
 
-        private async Task ComputeUserDataDBState()
+        private async Task ComputeUserDataDBStateAsync()
         {
             CheckIsValid( ECheckLevel.eInit );
 
@@ -59,9 +59,9 @@ namespace Statistics2026.Data
                 return;
             }
 
-            List<string> tableNames = await TableDefs().allUserMediaTables( false );
+            List<string> tableNames = await TableDefs().AllUserMediaTablesAsync( false );
             var missing = new List<List<object>>();
-            await ValidateTables( tableNames,
+            await ValidateTablesAsync( tableNames,
                 tableName =>
                 {
                     return TableDefs().UserMediaUsageColumnNames();
@@ -76,7 +76,7 @@ namespace Statistics2026.Data
                     if( ( user != null ) && ( user.Policy.IsAdministrator ) )
                         return false;
 
-                    List<List<object>>? missingRows = CheckUserMediaTableHasData( tableName ).GetAwaiter().GetResult();
+                    List<List<object>>? missingRows = CheckUserMediaTableHasDataAsync( tableName ).GetAwaiter().GetResult();
                     if( missingRows != null )
                         missing.AddRange( missingRows );
                     return missingRows != null;

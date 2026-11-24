@@ -29,7 +29,7 @@ namespace Statistics2026.Services
 {
     [Route( "/Statistics2026/get_system_status", "GET", Summary = "Returns the system status" )]
     [Authenticated( Roles = "admin" )]
-    public class GetSystemStatus : IReturn<object>
+    public class GetSystemStatusAsync : IReturn<object>
     {
     }
 
@@ -78,23 +78,23 @@ namespace Statistics2026.Services
         {
         }
 
-        public Task<object> Get( GetSystemStatus request )
+        public Task<object> Get( GetSystemStatusAsync request )
         {
-            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name ).ConfigureAwait( false );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name ).ConfigureAwait( false );
 
-                return await db.GetSystemStatus();
+                return await db.GetSystemStatusAsync();
             } );
         }
 
         public Task<object> Get( GetLastRunInfo request )
         {
-            return HelperFuncs.HandleRequest<object>( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstance( _embyInterfaces, request.GetType().Name );
+                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
 
-                return await db.GetLastRunHtml( request.whichRuns );
+                return await db.GetLastRunHtmlAsync( request.whichRuns );
             } );
         }
 

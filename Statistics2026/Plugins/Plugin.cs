@@ -100,7 +100,7 @@ namespace Statistics2026
             var debouncer = new Debouncer();
 
             debouncer.RunLaterAsync( 500, async ( cancellationToken ) => {
-                await HelperFuncs.CheckForOOD( _embyInterfaces, [ "Startup" ], GetType(), true );
+                await HelperFuncs.CheckForOODAsync( _embyInterfaces, [ "Startup" ], GetType(), true );
                 return false;
             } );
 #endif
@@ -333,7 +333,7 @@ namespace Statistics2026
                     return;
 
                 Debouncer debouncer = new Debouncer();
-                debouncer.RunLaterAsync( 5000, async ( cancellationToken ) =>
+                debouncer.RunLater( 5000, async ( cancellationToken ) =>
                 {
                     if( TaskDef.IsStatistics2026TaskRunning( _embyInterfaces, false ) )
                         return true;

@@ -6,7 +6,7 @@ namespace Statistics2026.Utilities
         public CancellationTokenSource? CancellationToken = null;
         private readonly object _lock = new object();
 
-        public void RunLaterAsync( int ms, Func<CancellationToken, Task<bool>> func )
+        public void RunLater( int ms, Func<CancellationToken, Task<bool>> func )
         {
             lock( _lock )
             {
@@ -20,7 +20,7 @@ namespace Statistics2026.Utilities
                 CancellationToken token = CancellationToken.Token;
 
                 // Start the delay and execution task
-                Task.Run( async () =>
+                _ = Task.Run( async () =>
                 {
                     try
                     {

@@ -22,6 +22,7 @@ using Statistics2026.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -117,10 +118,11 @@ namespace Statistics2026.EventMonitorEntryPoints
             _debounceTimer.Start();
         }
 
+        [SuppressMessage( "Style", "IDE1006:Naming Styles", Justification = "Event handler cannot return Task" )]
         private async void OnTimerElapsed( object sender, ElapsedEventArgs e )
         {
             _embyInterfaces.Logger().Debug( $"Timer Expired" );
-            await HelperFuncs.CheckForOOD( _embyInterfaces, Reasons, GetType(), false );
+            await HelperFuncs.CheckForOODAsync( _embyInterfaces, Reasons, GetType(), false );
             Reasons.Clear();
             _debounceTimer.Stop();
         }

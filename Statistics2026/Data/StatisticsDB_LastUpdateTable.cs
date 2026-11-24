@@ -26,7 +26,7 @@ namespace Statistics2026.Data
             PeopleAnalysis
         }
 
-        public async Task<(DateTimeOffset? when, long ms, List<string> reasons)> GetLastUpdated( EAction action )
+        public async Task<(DateTimeOffset? when, long ms, List<string> reasons)> GetLastUpdatedAsync( EAction action )
         {
             string sql = "SELECT LastUpdated, RunTimeMS, Reason FROM \n" +
                 "LastUpdateTable \n" +
@@ -35,7 +35,7 @@ namespace Statistics2026.Data
             DateTimeOffset? lastUpdated = DateTimeOffset.MinValue;
             long ms = 0;
             List<string> reasons = [];
-            await ExecuteCommand( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sql ), statement =>
             {
                 IResultSet row = statement.Current;
                 int count = 0;
@@ -49,7 +49,7 @@ namespace Statistics2026.Data
             return (lastUpdated, ms, reasons);
         }
 
-        public async Task<HtmlJsonResponse> GetSystemStatus()
+        public async Task<HtmlJsonResponse> GetSystemStatusAsync()
         {
             string version = Plugin.Instance?.Configuration.Version ?? String.Empty;
             string buildDate = Plugin.Instance?.Configuration.BuildDate ?? String.Empty;
@@ -63,7 +63,7 @@ namespace Statistics2026.Data
             systemHtml += HelperFuncs.addToHtml( depth, $"<li>Database Status: {dbState}</li>" );
             systemHtml += HelperFuncs.addToHtml( --depth, "</ul>" );
 
-            HtmlJsonResponse retVal = await GetLastRunHtml( "All" );
+            HtmlJsonResponse retVal = await GetLastRunHtmlAsync( "All" );
 
             retVal.html = systemHtml + retVal.html;
 
@@ -137,7 +137,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<HtmlJsonResponse> GetLastRunHtml( string whichRuns ) // whichRuns comma separated list
+        public async Task<HtmlJsonResponse> GetLastRunHtmlAsync( string whichRuns ) // whichRuns comma separated list
         {
             List<string> results = [];
             List<string> errors = [];
@@ -147,7 +147,7 @@ namespace Statistics2026.Data
                 List<EAction> actions = ActionsFromStringList( whichRuns );
                 foreach( EAction whichRun in actions )
                 {
-                    string curr = await GetLastRunInfo( whichRun );
+                    string curr = await GetLastRunInfoAsync( whichRun );
                     results.Add( curr );
                 }
             }
@@ -262,11 +262,11 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private async Task<string> GetLastRunInfo( EAction action )
+        private async Task<string> GetLastRunInfoAsync( EAction action )
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            (DateTimeOffset? lastUpdated, long runtimeMS, List<string>? reason) = await GetLastUpdated( action );
+            (DateTimeOffset? lastUpdated, long runtimeMS, List<string>? reason) = await GetLastUpdatedAsync( action );
             string updateText = string.Empty;
             bool run = ( lastUpdated != null && lastUpdated.HasValue && lastUpdated.Value != DateTimeOffset.MinValue );
             if( run )
@@ -311,7 +311,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public Task ClearLastUpdated( EAction action )
+        public Task ClearLastUpdatedAsync( EAction action )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -342,15 +342,15 @@ namespace Statistics2026.Data
                         ] )
             ];
 
-            return ExecuteCommands( sqlCmds );
+            return ExecuteCommandsAsync( sqlCmds );
         }
 
-        public Task SetLastUpdated( EAction action, List<string> reasons, long runtimeMS )
+        public Task SetLastUpdatedAsync( EAction action, List<string> reasons, long runtimeMS )
         {
-            return SetLastUpdated( action, reasons, runtimeMS, DateTimeOffset.UtcNow );
+            return SetLastUpdatedAsync( action, reasons, runtimeMS, DateTimeOffset.UtcNow );
         }
 
-        public Task SetLastUpdated( EAction action, List<string> reasons, long runtimeMS, DateTimeOffset updateTime )
+        public Task SetLastUpdatedAsync( EAction action, List<string> reasons, long runtimeMS, DateTimeOffset updateTime )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -399,7 +399,7 @@ namespace Statistics2026.Data
                         ] )
             ];
 
-            return ExecuteCommands( sqlCmds );
+            return ExecuteCommandsAsync( sqlCmds );
         }
     }
 }

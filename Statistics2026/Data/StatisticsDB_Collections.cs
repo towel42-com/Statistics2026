@@ -27,10 +27,8 @@ namespace Statistics2026.Data
 
             SetProgress( 0 );
 
-            await DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "Collections", "ItemId" );
-            await DeleteAllInvalid( collections.ConvertAll( item => (BaseItem)item ), "CollectionMembership", "CollectionId" );
-
-            //collections = collections.Where( collection => collection.Id.ToString() == "aa79325d-13ee-4cdc-bae8-7503a82a7215" ).ToList();
+            await DeleteAllInvalidAsync( collections.ConvertAll( item => (BaseItem)item ), "Collections", "ItemId" );
+            await DeleteAllInvalidAsync( collections.ConvertAll( item => (BaseItem)item ), "CollectionMembership", "CollectionId" );
 
             TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken );
 
@@ -94,14 +92,14 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Collection - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommands( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds );
                 SetProgress( 100 );
             }
 
             Logger().Debug( $"Finished Collection Analysis" );
         }
 
-        private List<SQLCmdDef> AddChildToCollectionAsync( Video video, BoxSet collection )
+        private List<SQLCmdDef> AddChildToCollection( Video video, BoxSet collection )
         {
             CheckIsValid( ECheckLevel.eUpdate );
 
@@ -145,7 +143,7 @@ namespace Statistics2026.Data
 
             List<Movie> videos = EmbyHelperFuncs.GetMoviesInCollection( collection, LibraryManager() ).ToList();
 
-            await DeleteAllInvalid( videos.ConvertAll( item => (BaseItem)item ), "CollectionMembership", "ItemId",
+            await DeleteAllInvalidAsync( videos.ConvertAll( item => (BaseItem)item ), "CollectionMembership", "ItemId",
                 whereClauses: [ "CollectionId=@CollectionId" ],
                 parameters: new List<(string, object?)>() { ("@CollectionId", collection.Id.ToString() ) } 
             );
@@ -154,7 +152,7 @@ namespace Statistics2026.Data
 
             foreach( Video video in videos )
             {
-                List<SQLCmdDef> childCmds = AddChildToCollectionAsync( video, collection );
+                List<SQLCmdDef> childCmds = AddChildToCollection( video, collection );
                 sqlCmds.AddRange( childCmds );
                 CancellationToken?.ThrowIfCancellationRequested();
             }
@@ -245,16 +243,16 @@ namespace Statistics2026.Data
             return (sqlCmds, false);
         }
 
-        public async Task<StatCard> TotalCollectionCount()
+        public async Task<StatCard> TotalCollectionCountAsync()
         {
             CheckIsValid( ECheckLevel.eReport );
 
             string sql = "SELECT COUNT( ItemId ) FROM Collections";
 
-            return await ValueGroupForSingleItem( Constants.TotalCollections, Constants.HelpTotalCollections, sql );
+            return await ValueGroupForSingleItemAsync( Constants.TotalCollections, Constants.HelpTotalCollections, sql );
         }
 
-        public async Task<StatCard> MultiCollectionMovies()
+        public async Task<StatCard> MultiCollectionMoviesAsync()
         {
             CheckIsValid( ECheckLevel.eReport );
             string sql = "SELECT  "
@@ -285,7 +283,7 @@ namespace Statistics2026.Data
             };
 
             var sqlCmd = new SQLCmdDef( sql );
-            await ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommandAsync( sqlCmd, statement =>
             {
                 IResultSet row = statement.Current;
                 int col = 0;
@@ -307,7 +305,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private async Task<SortByText?> GetCollectionName( string collectionId )
+        private async Task<SortByText?> GetCollectionNameAsync( string collectionId )
         {
             string sql = "SELECT " +
                 "  Collections.Name" +
@@ -325,7 +323,7 @@ namespace Statistics2026.Data
             List<string> names = [];
             List<string> sortByNames = [];
 
-            await ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommandAsync( sqlCmd, statement =>
             {
                 IResultSet row = statement.Current;
                 names.Add( row.GetString( 0 ) );
@@ -340,7 +338,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private async Task<SortByText?> GetCollectionsForMovie( string movieId, bool includeImage )
+        private async Task<SortByText?> GetCollectionsForMovieAsync( string movieId, bool includeImage )
         {
             CheckIsValid( ECheckLevel.eReport );
             string sql = "SELECT " +
@@ -365,7 +363,7 @@ namespace Statistics2026.Data
             List<string> sortByNames = [];
             List<string> images = [];
 
-            await ExecuteCommand( sqlCmd, statement =>
+            await ExecuteCommandAsync( sqlCmd, statement =>
             {
                 IResultSet row = statement.Current;
                 int col = 0;
