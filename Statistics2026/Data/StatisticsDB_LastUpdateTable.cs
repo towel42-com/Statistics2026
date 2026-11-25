@@ -45,7 +45,7 @@ namespace Statistics2026.Data
                 if( reasons.IsNullOrEmpty() )
                     reasons = [ row.GetString( count - 1 ) ];
                 return Task.FromResult( false );
-            } );
+            } ).ConfigureAwait( false );
             return (lastUpdated, ms, reasons);
         }
 
@@ -63,7 +63,7 @@ namespace Statistics2026.Data
             systemHtml += HelperFuncs.addToHtml( depth, $"<li>Database Status: {dbState}</li>" );
             systemHtml += HelperFuncs.addToHtml( --depth, "</ul>" );
 
-            HtmlJsonResponse retVal = await GetLastRunHtmlAsync( "All" );
+            HtmlJsonResponse retVal = await GetLastRunHtmlAsync( "All" ).ConfigureAwait( false );
 
             retVal.html = systemHtml + retVal.html;
 
@@ -147,7 +147,7 @@ namespace Statistics2026.Data
                 List<EAction> actions = ActionsFromStringList( whichRuns );
                 foreach( EAction whichRun in actions )
                 {
-                    string curr = await GetLastRunInfoAsync( whichRun );
+                    string curr = await GetLastRunInfoAsync( whichRun ).ConfigureAwait( false );
                     results.Add( curr );
                 }
             }
@@ -266,7 +266,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            (DateTimeOffset? lastUpdated, long runtimeMS, List<string>? reason) = await GetLastUpdatedAsync( action );
+            (DateTimeOffset? lastUpdated, long runtimeMS, List<string>? reason) = await GetLastUpdatedAsync( action ).ConfigureAwait( false );
             string updateText = string.Empty;
             bool run = ( lastUpdated != null && lastUpdated.HasValue && lastUpdated.Value != DateTimeOffset.MinValue );
             if( run )

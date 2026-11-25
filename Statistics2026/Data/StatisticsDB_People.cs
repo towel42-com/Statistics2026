@@ -37,7 +37,7 @@ namespace Statistics2026.Data
                 }
             }
 
-            await DeleteAllInvalidAsync( allActorIds.ToList(), "People", "ItemId" );
+            await DeleteAllInvalidAsync( allActorIds.ToList(), "People", "ItemId" ).ConfigureAwait( false );
 
             double count = allActors.Count;
             int completedCount = 0;
@@ -49,7 +49,7 @@ namespace Statistics2026.Data
 
                 IEnumerable<Task<(int index, Person item, List<SQLCmdDef?> cmds)>> pool = allActors.Select( ( kvp, index ) => Task.Run( async () =>
                 {
-                    await gatekeeper.WaitAsync();
+                    await gatekeeper.WaitAsync().ConfigureAwait( false );
                     try
                     {
                         Person actor = kvp.Key;
@@ -73,7 +73,7 @@ namespace Statistics2026.Data
                     }
                 } ) );
 
-                (int index, Person item, List<SQLCmdDef?> cmds)[] unsortedResults = await Task.WhenAll( pool );
+                (int index, Person item, List<SQLCmdDef?> cmds)[] unsortedResults = await Task.WhenAll( pool ).ConfigureAwait( false );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -86,7 +86,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Media - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommandsAsync( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds ).ConfigureAwait( false );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
             }
@@ -136,7 +136,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> actorsMap = await ActorCountValuesAsync( null, movies, false );
+            Dictionary<string, (int total, Dictionary<string, int> parentToChildMapping)> actorsMap = await ActorCountValuesAsync( null, movies, false ).ConfigureAwait( false );
 
             string title = movies ? Constants.MovieActors : ( ( series == null || series! == true ) ? Constants.TVSeriesActors : Constants.TVEpisodeActors );
             string help = movies ? Constants.MovieActorsHelp : ( ( series == null || series! == true ) ? Constants.TVSeriesActorsHelp : Constants.TVEpisodeActorsHelp );

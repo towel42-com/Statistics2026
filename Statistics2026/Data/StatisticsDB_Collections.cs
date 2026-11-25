@@ -27,10 +27,10 @@ namespace Statistics2026.Data
 
             SetProgress( 0 );
 
-            await DeleteAllInvalidAsync( collections.ConvertAll( item => (BaseItem)item ), "Collections", "ItemId" );
-            await DeleteAllInvalidAsync( collections.ConvertAll( item => (BaseItem)item ), "CollectionMembership", "CollectionId" );
+            await DeleteAllInvalidAsync( collections.ConvertAll( item => (BaseItem)item ), "Collections", "ItemId" ).ConfigureAwait( false );
+            await DeleteAllInvalidAsync( collections.ConvertAll( item => (BaseItem)item ), "CollectionMembership", "CollectionId" ).ConfigureAwait( false );
 
-            TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken );
+            TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken ).ConfigureAwait( false );
 
             var sqlCmds = new List<SQLCmdDef>();
             var emptyCollections = new HashSet<string>();
@@ -39,7 +39,7 @@ namespace Statistics2026.Data
                 using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim( true );
                 var pool = collections.Select( ( collection, index ) => Task.Run( async () =>
                 {
-                    await gatekeeper.WaitAsync();
+                    await gatekeeper.WaitAsync().ConfigureAwait( false );
 
                     try
                     {
@@ -70,7 +70,7 @@ namespace Statistics2026.Data
                     }
                 } ) ).ToList();
 
-                (int index, BoxSet item, List<SQLCmdDef> cmds)[] unsortedResults = await Task.WhenAll( pool );
+                (int index, BoxSet item, List<SQLCmdDef> cmds)[] unsortedResults = await Task.WhenAll( pool ).ConfigureAwait( false );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -92,7 +92,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Collection - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommandsAsync( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds ).ConfigureAwait( false );
                 SetProgress( 100 );
             }
 
@@ -146,7 +146,7 @@ namespace Statistics2026.Data
             await DeleteAllInvalidAsync( videos.ConvertAll( item => (BaseItem)item ), "CollectionMembership", "ItemId",
                 whereClauses: [ "CollectionId=@CollectionId" ],
                 parameters: new List<(string, object?)>() { ("@CollectionId", collection.Id.ToString() ) } 
-            );
+            ).ConfigureAwait( false );
 
             var sqlCmds = new List<SQLCmdDef>();
 
@@ -249,7 +249,7 @@ namespace Statistics2026.Data
 
             string sql = "SELECT COUNT( ItemId ) FROM Collections";
 
-            return await ValueGroupForSingleItemAsync( Constants.TotalCollections, Constants.HelpTotalCollections, sql );
+            return await ValueGroupForSingleItemAsync( Constants.TotalCollections, Constants.HelpTotalCollections, sql ).ConfigureAwait( false );
         }
 
         public async Task<StatCard> MultiCollectionMoviesAsync()
@@ -300,7 +300,7 @@ namespace Statistics2026.Data
                 retVal.AddLine( (itemSortName, itemId, itemImageUrl, false), (collectionSortName, collectionId, collectionImageUrl, false) );
 
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             return retVal;
         }
@@ -329,7 +329,7 @@ namespace Statistics2026.Data
                 names.Add( row.GetString( 0 ) );
                 sortByNames.Add( row.GetString( 1 ) );
                 return Task.FromResult( true );
-            }, false );
+            }, false ).ConfigureAwait( false );
 
             if( names.Count == 0 || sortByNames.Count == 0 )
                 return null;
@@ -378,7 +378,7 @@ namespace Statistics2026.Data
                     images.Add( GetItemImageUrl.ItemHtmlFromItemId( collectionId, collectionUrl, text: name, Plugin.Instance!.Configuration.ShowImages( EReportType.eMovieReport ) ) );
                 }
                 return Task.FromResult( true );
-            }, false );
+            }, false ).ConfigureAwait( false );
 
             if( names.Count == 0 || sortByNames.Count == 0 )
                 return null;

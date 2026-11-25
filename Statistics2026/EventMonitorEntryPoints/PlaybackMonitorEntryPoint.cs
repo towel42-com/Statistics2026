@@ -99,7 +99,7 @@ namespace Statistics2026.EventMonitorEntryPoints
             {
                 CheckIsValid();
                 _embyInterfaces.Logger().Info( "_sessionManager_PlaybackStart : Entered" );
-                await ProcessSessionsAsync();
+                await ProcessSessionsAsync().ConfigureAwait( false );
             }
             catch( Exception ex )
             {
@@ -114,7 +114,7 @@ namespace Statistics2026.EventMonitorEntryPoints
             {
                 CheckIsValid();
                 _embyInterfaces.Logger().Info( "_sessionManager_PlaybackStop : Entered" );
-                await ProcessSessionsAsync();
+                await ProcessSessionsAsync().ConfigureAwait( false );
             }
             catch( Exception ex )
             {
@@ -133,7 +133,7 @@ namespace Statistics2026.EventMonitorEntryPoints
             {
                 try
                 {
-                    await ProcessSessionsAsync();
+                    await ProcessSessionsAsync().ConfigureAwait( false );
 
                     currThreadSleep = 20;
                 }
@@ -174,7 +174,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
                 if( !Plugin.Instance.DBStateInitialized() )
                 {
-                    _ = Statistics2026DB.GetInstanceAsync( _embyInterfaces, this.GetType().ToString() );
+                    _ = Statistics2026DB.GetInstanceAsync( _embyInterfaces, this.GetType().ToString() ).ConfigureAwait( false );
                     if( !Plugin.Instance.DBStateInitialized() )
                     {
                         _embyInterfaces.Logger().Warn( "Databases have not been initialized" );
@@ -200,7 +200,7 @@ namespace Statistics2026.EventMonitorEntryPoints
                         continue;
                     }
 
-                    PlaybackInfo playbackInfo = await PlaybackInfo.CreateAsync( session, _embyInterfaces );
+                    PlaybackInfo playbackInfo = await PlaybackInfo.CreateAsync( session, _embyInterfaces ).ConfigureAwait( false );
                     ActiveSessions.Add( playbackInfo );
 
                     playbackInfo.UpdatePlaybackStateAsync( _embyInterfaces ).GetAwaiter().GetResult();

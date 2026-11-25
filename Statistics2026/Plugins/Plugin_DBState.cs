@@ -59,26 +59,28 @@ namespace Statistics2026
                 return string.Empty;
             }
 
-            await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, GetType().Name );
-
-            List<string> msgs = [];
-
-            if( ( ( DBState & EDBState.eSystemTablesCreated ) == 0 ) || ( ( DBState & EDBState.eSystemDataInitialized ) == 0 ) )
+            Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, GetType().Name ).ConfigureAwait( false );
+            await using( db.ConfigureAwait( false ) )
             {
-                msgs.Add( "The System tables have not been fully created. Please run the 'Statistics 2026 - Run All Tasks' task on the Scheduled Tasks page and come back for the results." );
-            }
-            if( ( ( DBState & EDBState.eUserTablesCreated ) == 0 ) || ( ( DBState & EDBState.eUserDataInitialized ) == 0 ) )
-            {
-                msgs.Add( "The User watch tables have not been fully created. Please run the 'Statistics 2026 - Analyze User Watch Data'." );
-            }
+                List<string> msgs = [];
 
-            List<string> tasksRunning = db.TasksRunning( "All" );
-            foreach( string task in tasksRunning )
-            {
-                msgs.Add( $"The '{task}' task is running.  Results may be inaccurate or incomplete." );
-            }
+                if( ( ( DBState & EDBState.eSystemTablesCreated ) == 0 ) || ( ( DBState & EDBState.eSystemDataInitialized ) == 0 ) )
+                {
+                    msgs.Add( "The System tables have not been fully created. Please run the 'Statistics 2026 - Run All Tasks' task on the Scheduled Tasks page and come back for the results." );
+                }
+                if( ( ( DBState & EDBState.eUserTablesCreated ) == 0 ) || ( ( DBState & EDBState.eUserDataInitialized ) == 0 ) )
+                {
+                    msgs.Add( "The User watch tables have not been fully created. Please run the 'Statistics 2026 - Analyze User Watch Data'." );
+                }
 
-            return msgs.Join( "<br>" );
+                List<string> tasksRunning = db.TasksRunning( "All" );
+                foreach( string task in tasksRunning )
+                {
+                    msgs.Add( $"The '{task}' task is running.  Results may be inaccurate or incomplete." );
+                }
+
+                return msgs.Join( "<br>" );
+            }
         }
 
         public string DBStateString()

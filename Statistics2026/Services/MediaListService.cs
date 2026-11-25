@@ -95,11 +95,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetSeriesList request )
         {
-            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer, db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
-
-                List<MediaItemResponse> series = await db.GetSeriesListResponseAsync();
+                List<MediaItemResponse> series = await db.GetSeriesListResponseAsync().ConfigureAwait( false );
 
                 return series;
             } );
@@ -107,11 +105,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetCollectionList request )
         {
-            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer, db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
-
-                List<MediaItemResponse> collections = await db.GetCollectionListResponseAsync();
+                List<MediaItemResponse> collections = await db.GetCollectionListResponseAsync().ConfigureAwait( false );
 
                 return collections;
             } );
@@ -119,9 +115,8 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetEpisodeList request )
         {
-            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer, db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
                 bool showOnServer = request.showOnServer;
                 bool showMissing = request.showMissing;
 
@@ -137,7 +132,7 @@ namespace Statistics2026.Services
                 if( showMissing )
                     whichMedia = whichMedia | EWhichMediaList.eMissing;
 
-                List<MediaItemResponse> episodes = await db.GetMediaListResponseAsync( whichMedia );
+                List<MediaItemResponse> episodes = await db.GetMediaListResponseAsync( whichMedia ).ConfigureAwait( false );
 
                 return episodes;
             } );
@@ -145,9 +140,8 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetMovieList request )
         {
-            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async ( timer ) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer, db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name ).ConfigureAwait( false );
                 bool showOnServer = request.showOnServer;
                 bool showMissing = request.showMissing;
 

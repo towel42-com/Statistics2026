@@ -87,13 +87,12 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetMovie request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
                 StatGen.EStatisticType whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
-                StatCard groupData = await db.StatisticForAsync( null, whichStatistic, StatGen.EVideoType.Movie );
+                StatCard groupData = await db.StatisticForAsync( null, whichStatistic, StatGen.EVideoType.Movie ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -103,13 +102,12 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetSeries request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
                 StatGen.EStatisticType whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
-                StatCard groupData = await db.StatisticForAsync( null, whichStatistic, StatGen.EVideoType.Series );
+                StatCard groupData = await db.StatisticForAsync( null, whichStatistic, StatGen.EVideoType.Series ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -119,13 +117,12 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetEpisode request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
                 StatGen.EStatisticType whichStatistic = request.whichStatistic;
                 timer.Text += $" - {whichStatistic}";
 
-                StatCard groupData = await db.StatisticForAsync( null, whichStatistic, StatGen.EVideoType.Episode );
+                StatCard groupData = await db.StatisticForAsync( null, whichStatistic, StatGen.EVideoType.Episode ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 

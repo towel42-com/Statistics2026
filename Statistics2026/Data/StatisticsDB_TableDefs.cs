@@ -283,16 +283,16 @@ namespace Statistics2026.Data
                 PluginConfiguration config = Statistics2026.Plugin.Instance!.Configuration;
                 if( config.systemSettings.resetPlayCount && action == TableDef.EAction.eRecreate && _userMediaTemplate != null )
                 {
-                    sqlCmds.AddRange( await DropAllUserMediaCmdsAsync() );
+                    sqlCmds.AddRange( await DropAllUserMediaCmdsAsync().ConfigureAwait( false ) );
                     Plugin.Instance.RemoveDBState( EDBState.eUserTablesCreated | EDBState.eUserDataInitialized );
                 }
 
-                await _db.ExecuteCommandsAsync( sqlCmds );
+                await _db.ExecuteCommandsAsync( sqlCmds ).ConfigureAwait( false );
 
                 Plugin.Instance.AddDBState( EDBState.eSystemTablesCreated );
             }
 
-            await InitWatchedMediaTablesAsync( cancellationToken, setProgress );
+            await InitWatchedMediaTablesAsync( cancellationToken, setProgress ).ConfigureAwait( false );
         }
 
         public TableDef? getTableDef( string tableName, bool isUserMediaTable = false, User? user = null )
@@ -378,7 +378,7 @@ namespace Statistics2026.Data
                 IResultSet row = statement.Current;
                 retVal.Add( row.GetString( 0 ) );
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
             return retVal;
         }
 
@@ -388,7 +388,7 @@ namespace Statistics2026.Data
             if( _userMediaTemplate == null )
                 return retVal;
 
-            List<string> tables = await AllUserMediaTablesAsync( false );
+            List<string> tables = await AllUserMediaTablesAsync( false ).ConfigureAwait( false );
 
             foreach( string table in tables )
                 retVal.AddRange( DropTableCmds( table ) );
@@ -401,7 +401,7 @@ namespace Statistics2026.Data
             CheckIsValid();
 
             if( existingOnly )
-                return await AllTablesAsync( (regex: $"{sUserMediaTablePrefix}%", like: true) );
+                return await AllTablesAsync( (regex: $"{sUserMediaTablePrefix}%", like: true) ).ConfigureAwait( false );
             else
             {
                 List<User> users = EmbyHelperFuncs.GetAllUsers( _embyInterfaces );
@@ -487,7 +487,7 @@ namespace Statistics2026.Data
                 using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Init Table Commands", _embyInterfaces.Logger() ) )
                 {
                     setProgress( 80 );
-                    await _db.ExecuteCommandsAsync( sqlCmds );
+                    await _db.ExecuteCommandsAsync( sqlCmds ).ConfigureAwait( false );
                     setProgress( 100 );
                 }
 

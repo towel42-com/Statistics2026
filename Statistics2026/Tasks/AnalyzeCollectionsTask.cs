@@ -86,31 +86,34 @@ namespace Statistics2026.ScheduledTasks
 
                 string taskName = "Analyze Collections";
                 _embyInterfaces.Logger().Info( $"Starting Statistics 2026 {taskName} task" );
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, GetType().Name );
-                await db.InitializeAsync( this, cancellationToken, progress );
-                await db.ClearLastUpdatedAsync( Statistics2026DB.EAction.CollectionsAnalysis );
-
-                long runtimeMS = 0;
-                using( var timer = new AutoTimer( $"Adding Collections", _embyInterfaces.Logger() ) )
+                Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, GetType().Name ).ConfigureAwait( false );
+                await using( db.ConfigureAwait( false ) )
                 {
-                    try
+                    await db.InitializeAsync( this, cancellationToken, progress ).ConfigureAwait( false );
+                    await db.ClearLastUpdatedAsync( Statistics2026DB.EAction.CollectionsAnalysis ).ConfigureAwait( false );
+
+                    long runtimeMS = 0;
+                    using( var timer = new AutoTimer( $"Adding Collections", _embyInterfaces.Logger() ) )
                     {
-                        await db.AddAllCollectionsTaskImplAsync().ConfigureAwait( false );
-                        runtimeMS = timer.ElapsedMilliseconds();
+                        try
+                        {
+                            await db.AddAllCollectionsTaskImplAsync().ConfigureAwait( false );
+                            runtimeMS = timer.ElapsedMilliseconds();
+                        }
+                        catch( Exception ex )
+                        {
+                            _embyInterfaces.Logger().ErrorException( $"Problem running '{( (IScheduledTask)this ).Name}", ex );
+                        }
                     }
-                    catch( Exception ex )
-                    {
-                        _embyInterfaces.Logger().ErrorException( $"Problem running '{((IScheduledTask)this).Name}", ex );
-                    }
+
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    HelperFuncs.RunTimeSummary( runtimeMS, taskName, _embyInterfaces );
+                    await db.SetLastUpdatedAsync( Statistics2026DB.EAction.CollectionsAnalysis, ReasonsForExecute, runtimeMS ).ConfigureAwait( false );
+
+                    db.ResetCancellationToken();
                 }
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                HelperFuncs.RunTimeSummary( runtimeMS, taskName, _embyInterfaces );
-                await db.SetLastUpdatedAsync( Statistics2026DB.EAction.CollectionsAnalysis, ReasonsForExecute, runtimeMS );
-
-                db.ResetCancellationToken();
-            } );
+            } ).ConfigureAwait( false );
             memoryReport.Report( _embyInterfaces.Logger(), GetType().Name, LogSeverity.Info );
         }
 

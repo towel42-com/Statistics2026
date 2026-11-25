@@ -56,12 +56,12 @@ namespace Statistics2026.Data
                     CreateConnection( retVal );
                     Plugin.Instance?._tableDefs.SetDatabase( retVal );
                     retVal.dbStatusMessage( "Finished Creating Database" );
-                } );
+                } ).ConfigureAwait( false );
 
                 if( retVal == null )
                     throw new Exception( "Problem getting db instance" );
 
-                await retVal.ComputeDBStateAsync();
+                await retVal.ComputeDBStateAsync().ConfigureAwait( false );
 
                 return retVal;
             }
@@ -154,7 +154,7 @@ namespace Statistics2026.Data
         public async static Task<Statistics2026DB> GetInstanceAsync( EmbyInterfaces? embyInterfaces, string instanceLocation )
         {
             DBInitiator dbInit = new();
-            Statistics2026DB retVal = await dbInit.InitAsync( embyInterfaces, instanceLocation );
+            Statistics2026DB retVal = await dbInit.InitAsync( embyInterfaces, instanceLocation ).ConfigureAwait( false );
             return retVal;
         }
 
@@ -172,7 +172,7 @@ namespace Statistics2026.Data
             if( _disposed )
                 return;
 
-            await CloseConnectionAsync();
+            await CloseConnectionAsync().ConfigureAwait( false );
 
             GC.SuppressFinalize( this );
         }
@@ -528,7 +528,7 @@ namespace Statistics2026.Data
                 long value = row.GetInt64( 0 );
                 exists = value != 0;
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             return exists;
         }
@@ -546,7 +546,7 @@ namespace Statistics2026.Data
                 long value = row.GetInt64( 0 );
                 exists = value != 0;
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             return exists;
         }
@@ -570,12 +570,12 @@ namespace Statistics2026.Data
             bool aTableNeedsData = false;
             foreach( string tableName in tables )
             {
-                bool tableMissing = !( await TableExistsAsync( tableName ) );
+                bool tableMissing = !( await TableExistsAsync( tableName ).ConfigureAwait( false ) );
                 bool columnMissing = false;
                 bool tableNeedsData = false;
                 if( !tableMissing )
                 {
-                    (columnMissing, tableNeedsData) = await ValidateTableAsync( tableName, getColumnsFunc( tableName ), validationRequiresDataFunc, additionalNeedsDataFunc );
+                    (columnMissing, tableNeedsData) = await ValidateTableAsync( tableName, getColumnsFunc( tableName ), validationRequiresDataFunc, additionalNeedsDataFunc ).ConfigureAwait( false );
                 }
                 else
                 {
@@ -611,7 +611,7 @@ namespace Statistics2026.Data
             bool columnMissing = false;
             foreach( string columnName in columns )
             {
-                columnMissing = columnMissing || !( await ColumnExistsAsync( tableName, columnName ) );
+                columnMissing = columnMissing || !( await ColumnExistsAsync( tableName, columnName ).ConfigureAwait( false ) );
             }
 
             bool validationRequiresData = validationRequiresDataFunc( tableName );
@@ -627,7 +627,7 @@ namespace Statistics2026.Data
                     tableNeedsData = row.GetInt64( 0 ) == 0;
                     return Task.FromResult( false );
                 }
-                );
+                ).ConfigureAwait( false );
 
                 tableNeedsData = tableNeedsData || ( ( additionalNeedsDataFunc != null ) && additionalNeedsDataFunc( tableName ) );
             }
@@ -692,7 +692,7 @@ namespace Statistics2026.Data
         //            return retVal;
         //        } ) );
 
-        //        var unsortedResults = await Task.WhenAll( pool );
+        //        var unsortedResults = await Task.WhenAll( pool ).ConfigureAwait( false );
         //        sqlCmds.AddRange( unsortedResults
         //                    .Where( item => item.cmds != null )
         //                    .OrderBy( item => item.index )

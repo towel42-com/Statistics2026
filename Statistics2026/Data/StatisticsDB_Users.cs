@@ -22,7 +22,7 @@ namespace Statistics2026.Data
 
             SetProgress( 0 );
             var sqlCmds = new List<SQLCmdDef>();
-            await DeleteAllInvalidAsync( userList.ConvertAll( item => (BaseItem)item ), "Users", "UserId" );
+            await DeleteAllInvalidAsync( userList.ConvertAll( item => (BaseItem)item ), "Users", "UserId" ).ConfigureAwait( false );
 
             using( var timer = new AutoTimer( $"    Analyze Users - Getting Commands", Logger() ) )
             {
@@ -41,7 +41,7 @@ namespace Statistics2026.Data
                 } ) );
 
                 CancellationToken?.ThrowIfCancellationRequested();
-                (int index, User item, List<SQLCmdDef?> cmds)[] unsortedResults = await Task.WhenAll( pool );
+                (int index, User item, List<SQLCmdDef?> cmds)[] unsortedResults = await Task.WhenAll( pool ).ConfigureAwait( false );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -56,7 +56,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Users - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommandsAsync( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds ).ConfigureAwait( false );
                 SetProgress( 100 );
             }
 
@@ -158,7 +158,7 @@ namespace Statistics2026.Data
 
             sql += HelperFuncs.JoinWhereClauses( conditions );
 
-            return ( await GetSingleValueFromSQLAsync( sql ) ).ToInt64();
+            return ( await GetSingleValueFromSQLAsync( sql ).ConfigureAwait( false ) ).ToInt64();
         }
 
         private Task<long> NumUsersAsync()
@@ -170,7 +170,7 @@ namespace Statistics2026.Data
 
         public async Task<StatCard> UserCountAsync()
         {
-            long numUsers = await NumUsersAsync();
+            long numUsers = await NumUsersAsync().ConfigureAwait( false );
             return ValueGroupForSingleValue( Constants.TotalUsers, null, numUsers );
         }
 
@@ -178,7 +178,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            List<string> tables = await TableDefs().AllUserMediaTablesAsync();
+            List<string> tables = await TableDefs().AllUserMediaTablesAsync().ConfigureAwait( false );
 
             string sqlBase =
                 $"SELECT " +
@@ -221,7 +221,7 @@ namespace Statistics2026.Data
 
                     playTimeMap[ ticksPlayed ].Add( (userId, userName, ticksPlayed) );
                     return Task.FromResult( true );
-                } );
+                } ).ConfigureAwait( false );
             }
 
             int numUsers = Plugin.Instance!.Configuration.systemSettings.numMostActiveUsers;

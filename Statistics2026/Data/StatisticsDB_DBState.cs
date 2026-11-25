@@ -35,9 +35,9 @@ namespace Statistics2026.Data
                     Plugin.Instance.SetDBState( EDBState.eSystemTablesCreated, !createTableNeeded );
                     Plugin.Instance.SetDBState( EDBState.eSystemDataInitialized, !initDataNeeded );
                 }
-            );
+            ).ConfigureAwait( false );
 
-            await ComputeUserDataDBStateAsync();
+            await ComputeUserDataDBStateAsync().ConfigureAwait( false );
 
             Plugin.Instance!.Configuration.systemSettings.resetDBState = false;
             Statistics2026.Plugin.Instance.UpdateConfiguration( Plugin.Instance!.Configuration );
@@ -59,7 +59,7 @@ namespace Statistics2026.Data
                 return;
             }
 
-            List<string> tableNames = await TableDefs().AllUserMediaTablesAsync( false );
+            List<string> tableNames = await TableDefs().AllUserMediaTablesAsync( false ).ConfigureAwait( false );
             var missing = new List<List<object>>();
             await ValidateTablesAsync( tableNames,
                 tableName =>
@@ -86,7 +86,7 @@ namespace Statistics2026.Data
                     Plugin.Instance.SetDBState( EDBState.eUserTablesCreated, !createTableNeeded );
                     Plugin.Instance.SetDBState( EDBState.eUserDataInitialized, !initDataNeeded );
                 }
-            );
+            ).ConfigureAwait( false );
 
             if( missing != null && missing.Count > 0 )
                 DumpTable.dumpTable( [ "User", "Item ID", "Name", "Runtime Ticks", "Is Played?", "Play Count", "Total Ticks Played", "Series Name", "Season#", "Episode#" ], missing, text => Logger().Warn( text ) );

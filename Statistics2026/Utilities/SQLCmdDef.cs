@@ -117,7 +117,7 @@ namespace Statistics2026.Utilities
             await _dbLock.WaitAsync().ConfigureAwait( false );
             try
             {
-                await onAction();
+                await onAction().ConfigureAwait( false );
             }
             finally
             {
@@ -156,7 +156,7 @@ namespace Statistics2026.Utilities
                         {
                             while( statement.MoveNext() )
                             {
-                                bool continueLoop = await onStatement( statement );
+                                bool continueLoop = await onStatement( statement ).ConfigureAwait( false );
                                 if( !continueLoop )
                                     break;
                                 db.CancellationToken?.ThrowIfCancellationRequested();
@@ -186,7 +186,7 @@ namespace Statistics2026.Utilities
             {
                 try
                 {
-                    await _ExecuteAsync( connection, db, onStatement, locked );
+                    await _ExecuteAsync( connection, db, onStatement, locked ).ConfigureAwait( false );
                 }
                 catch
                 {
@@ -194,7 +194,7 @@ namespace Statistics2026.Utilities
             }
             else
             {
-                await _ExecuteAsync( connection, db, onStatement, locked );
+                await _ExecuteAsync( connection, db, onStatement, locked ).ConfigureAwait( false );
             }
         }
 

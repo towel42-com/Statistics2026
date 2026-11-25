@@ -67,7 +67,7 @@ namespace Statistics2026.Data
 
                 series[ seriesId ] = curr;
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             string? tableName = TableDefs().getUserTableName( user );
             string sqlBase = "SELECT " +
@@ -102,7 +102,7 @@ namespace Statistics2026.Data
                 }
 
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             await ExecuteCommandAsync( new SQLCmdDef( sqlSpecials, paramList ), statement =>
             {
@@ -118,7 +118,7 @@ namespace Statistics2026.Data
                 }
 
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             var retVal = series.Values.ToList();
 

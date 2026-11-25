@@ -54,11 +54,11 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Streaming Providers - Getting Commands", Logger() ) )
             {
                 using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim( true );
-                TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken );
+                TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken ).ConfigureAwait( false );
 
                 IEnumerable<Task<(int index, BaseItem item, List<SQLCmdDef?>? cmds)>> pool = allItems.Select( ( baseItem, index ) => Task.Run( async () =>
                 {
-                    await gatekeeper.WaitAsync();
+                    await gatekeeper.WaitAsync().ConfigureAwait( false );
                     try
                     {
                         (int index, BaseItem item, List<SQLCmdDef?>? cmds) retVal = (index, baseItem, new List<SQLCmdDef?>());
@@ -71,7 +71,7 @@ namespace Statistics2026.Data
                         existing.TryAdd( baseItem.Id.ToString(), true );
 
                         string name = Utilities.MediaInfo.GetDescName( baseItem ).descName;
-                        retVal.cmds.AddRange( await FindAllStreamingProvidersAsync( reader, baseItem ) );
+                        retVal.cmds.AddRange( await FindAllStreamingProvidersAsync( reader, baseItem ).ConfigureAwait( false ) );
                         CancellationToken?.ThrowIfCancellationRequested();
                         int currProgress = Interlocked.Increment( ref completedCount );
 
@@ -86,7 +86,7 @@ namespace Statistics2026.Data
                     }
                 } ) );
 
-                (int index, BaseItem item, List<SQLCmdDef?>? cmds)[] unsortedResults = await Task.WhenAll( pool );
+                (int index, BaseItem item, List<SQLCmdDef?>? cmds)[] unsortedResults = await Task.WhenAll( pool ).ConfigureAwait( false );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -99,7 +99,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Streaming Providers - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommandsAsync( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds ).ConfigureAwait( false );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Media Analysis" );
             }
@@ -196,7 +196,7 @@ namespace Statistics2026.Data
                 };
                 retVal.Add( currProvider );
                 return Task.FromResult( true );
-            }, locked: locked );
+            }, locked: locked ).ConfigureAwait( false );
 
             retVal = retVal.OrderBy( provider => provider.DisplayPriority ).ToList();
             return retVal;

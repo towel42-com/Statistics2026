@@ -37,7 +37,7 @@ namespace Statistics2026.Data
                 using SemaphoreSlim gatekeeper = HelperFuncs.CreateSemaphoreSlim();
                 var pool = users.Select( ( user, index ) => Task.Run( async () =>
                 {
-                    await gatekeeper.WaitAsync();
+                    await gatekeeper.WaitAsync().ConfigureAwait( false );
                     try
                     {
                         HelperFuncs.MemoryUsage memoryReport = await HelperFuncs.RunAndReportMemoryAsync( ( ConfigManager().CommonConfiguration?.EnableDebugLevelLogging ?? false ), async () =>
@@ -66,8 +66,8 @@ namespace Statistics2026.Data
 
                             using( var timer = new AutoTimer( $"    Analyze User Watch Data - Executing Commands for user {user.Name}", Logger() ) )
                             {
-                                await DeleteAllInvalidAsync( allVideosForUser.ConvertAll( item => (BaseItem)item ), userTableName, "ItemId" );
-                                await ExecuteCommandsAsync( currCmds, false );
+                                await DeleteAllInvalidAsync( allVideosForUser.ConvertAll( item => (BaseItem)item ), userTableName, "ItemId" ).ConfigureAwait( false );
+                                await ExecuteCommandsAsync( currCmds, false ).ConfigureAwait( false );
                             }
 
                             int currProgress = Interlocked.Increment( ref completedCount );
@@ -84,7 +84,7 @@ namespace Statistics2026.Data
                     }
                 } ) ).ToList();
 
-                bool[] aOK = await Task.WhenAll( pool );
+                bool[] aOK = await Task.WhenAll( pool ).ConfigureAwait( false );
 
                 CancellationToken?.ThrowIfCancellationRequested();
             }
@@ -93,7 +93,7 @@ namespace Statistics2026.Data
             config.systemSettings.resetPlayCount = false;
             Statistics2026.Plugin.Instance.UpdateConfiguration( config );
 
-            await ComputeUserDataDBStateAsync();
+            await ComputeUserDataDBStateAsync().ConfigureAwait( false );
             if( !Plugin.Instance.IsDBStateSet( EDBState.eUserDataInitialized ) )
             {
                 Logger().Error( "After initializing user watch data, user watch data still doesn't conform." );
@@ -271,7 +271,7 @@ namespace Statistics2026.Data
                 IResultSet row = statement.Current;
                 totalTicksPlayed = row.GetInt64( 0 );
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             return totalTicksPlayed;
         }
@@ -559,7 +559,7 @@ namespace Statistics2026.Data
                 if( numPlayed == numEpisodes )
                     seriesInfo[ seriesId ] = (seriesName, 0, numEpisodes);
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             var retVal = new TextBasedStatCard( Constants.TotalSeriesFinished, Constants.HelpTotalSeriesFinished, EStatCardStyle.eCompact );
             retVal.AddLine( seriesInfo.Count().ToString(), false );
@@ -598,7 +598,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eReport );
 
             bool excludeAdmin = Statistics2026.Plugin.Instance!.Configuration.userReportSettings.excludeAdmin;
-            long numUsers = ( user == null ) ? ( await NumUsersAsync( false, excludeAdmin ) ) : 1;
+            long numUsers = ( user == null ) ? ( await NumUsersAsync( false, excludeAdmin ).ConfigureAwait( false ) ) : 1;
 
             var tableNames = new List<string>();
             if( user != null )
@@ -609,7 +609,7 @@ namespace Statistics2026.Data
             }
             else
             {
-                tableNames = await TableDefs().AllUserMediaTablesAsync();
+                tableNames = await TableDefs().AllUserMediaTablesAsync().ConfigureAwait( false );
             }
 
             var playMap = new Dictionary<string, WatchedMediaValueItemData>();
@@ -681,7 +681,7 @@ namespace Statistics2026.Data
                     }
 
                     return Task.FromResult( true );
-                } );
+                } ).ConfigureAwait( false );
             }
 
             var sortedMapping = new SortedDictionary<long, List<WatchedMediaValue>>();
@@ -758,7 +758,7 @@ namespace Statistics2026.Data
 
         public async Task<StatCard> WatchedMediaAsync( User? user, bool leastWatched, EMediaType mediaType )
         {
-            List<List<WatchedMediaValue>> watchedMedia = await WatchedMediaValuesAsync( user, leastWatched, mediaType );
+            List<List<WatchedMediaValue>> watchedMedia = await WatchedMediaValuesAsync( user, leastWatched, mediaType ).ConfigureAwait( false );
             string title = string.Empty;
             string help = string.Empty;
 
@@ -852,7 +852,7 @@ namespace Statistics2026.Data
 
             sql += HelperFuncs.JoinWhereClauses( clauses );
 
-            return await ValueGroupForSingleItemAsync( title, null, sql, [ ("@UserId", user.Id.ToString()) ], FormatTicks );
+            return await ValueGroupForSingleItemAsync( title, null, sql, [ ("@UserId", user.Id.ToString()) ], FormatTicks ).ConfigureAwait( false );
         }
 
         public Task<StatCard> TotalTimeWatchedAsync( User? user, bool? episodesOnly )
@@ -916,7 +916,7 @@ namespace Statistics2026.Data
                     lastPlayedDate = DateTimeOffset.MinValue;
                 retVal.Add( (name, itemId, url, lastPlayedDate.Value) );
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             return retVal;
         }
@@ -947,7 +947,7 @@ namespace Statistics2026.Data
                 ListType = EListType.eNumbered,
                 IgnoreLength = true
             };
-            List<(string name, string itemId, string url, DateTimeOffset lastPlayed)> values = await LastSeenValuesAsync( user, movies );
+            List<(string name, string itemId, string url, DateTimeOffset lastPlayed)> values = await LastSeenValuesAsync( user, movies ).ConfigureAwait( false );
 
             foreach( (string name, string itemId, string url, DateTimeOffset lastPlayed) in values )
             {
@@ -988,7 +988,7 @@ namespace Statistics2026.Data
                         systemPlayed = value;
                     return Task.FromResult( true );
                 }
-            );
+            ).ConfigureAwait( false );
 
             ticksPlayed ??= 0;
 
@@ -1046,7 +1046,7 @@ namespace Statistics2026.Data
                     ticksNotPlayedList.Add( [ userName, itemId, itemName, runtimeTicks, isPlayed, playCount, totalTicksPlayed, seriesName, season, episode ] );
 
                     return Task.FromResult( true );
-                } );
+                } ).ConfigureAwait( false );
 
                 List<List<object>> playedNotTicksList = [];
                 await ExecuteCommandAsync( new SQLCmdDef( playedNotTicks ), statement =>
@@ -1068,7 +1068,7 @@ namespace Statistics2026.Data
                     playedNotTicksList.Add( [ userName, itemId, itemName, runtimeTicks, isPlayed, playCount, totalTicksPlayed, seriesName, season, episode ] );
 
                     return Task.FromResult( true );
-                } );
+                } ).ConfigureAwait( false );
 
                 missing = [];
                 missing.AddRange( ticksNotPlayedList );
@@ -1118,7 +1118,7 @@ namespace Statistics2026.Data
             string sqlBtoA = sqlPlayed + " EXCEPT \n" + sqlTicks;
 
             List<SQLCmdDef> sqlCmds = [];
-            List<string> tables = await TableDefs().AllUserMediaTablesAsync();
+            List<string> tables = await TableDefs().AllUserMediaTablesAsync().ConfigureAwait( false );
             foreach( string tableName in tables )
             {
                 User? user = TableDefs().getUserForTableName( tableName );
@@ -1169,7 +1169,7 @@ namespace Statistics2026.Data
 
                 items[ userName + "-" + mediaName ] = [ userName, mediaName, isPlayed ? "Yes" : "No", playCount, rtTicks.ToShortString(), totalTicks.ToShortString() ];
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             foreach( KeyValuePair<string, List<object>> kvp in items )
             {
@@ -1186,7 +1186,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            List<string> tables = await TableDefs().AllUserMediaTablesAsync();
+            List<string> tables = await TableDefs().AllUserMediaTablesAsync().ConfigureAwait( false );
 
             string sqlBase =
                 $"SELECT \n" +
@@ -1256,7 +1256,7 @@ namespace Statistics2026.Data
 
                 items[ userName + "-" + mediaName ] = [ userName, mediaName, rtTotal.ToShortString(), playCountRT.ToShortString(), diffRT.ToShortString() ];
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
 
             string prevUser = string.Empty;
             foreach( KeyValuePair<string, List<object>> kvp in items )

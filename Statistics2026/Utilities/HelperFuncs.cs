@@ -13,7 +13,6 @@ using Statistics2026.ScheduledTasks;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Text;
@@ -246,7 +245,7 @@ namespace Statistics2026.Utilities
 
         public static async Task<string> GetCountryCodeAsync( IHttpClient httpClient, string defaultCountryCode = "US", CancellationToken? _cancellationToken = null )
         {
-            (string countryCode, string tzOffset) retVal = await GetIPInfoAsync( "", httpClient, defaultCountryCode, _cancellationToken );
+            (string countryCode, string tzOffset) retVal = await GetIPInfoAsync( "", httpClient, defaultCountryCode, _cancellationToken ).ConfigureAwait( false );
             return retVal.countryCode;
         }
 
@@ -261,7 +260,7 @@ namespace Statistics2026.Utilities
 
         private static async Task<(string countryCode, string tzOffset)> GetIPInfoAsync( string ipAddress, IHttpClient httpClient, string defaultCountryCode = "US", CancellationToken? _cancellationToken = null )
         {
-            await _semaphore.WaitAsync( _cancellationToken ?? CancellationToken.None );
+            await _semaphore.WaitAsync( _cancellationToken ?? CancellationToken.None ).ConfigureAwait( false );
             try
             {
                 if( sIpLookup.TryGetValue( ipAddress, out (string countryCode, string tzOffset) value ) )
@@ -595,7 +594,7 @@ namespace Statistics2026.Utilities
             return retVal;
         }
 
-        public static (string imageUrl, string itemText, string itemUrl) GetTMDBLink( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null, bool showImage=true )
+        public static (string imageUrl, string itemText, string itemUrl) GetTMDBLink( string posterPath, string text, (string targetUrl, string targetHtml)? targetInfo = null, string posterSize = "w300", string? imageHeight = "105px", string? imageWidth = null, bool showImage = true )
         {
             string imageUrl = GetTMDBUrl( posterPath, posterSize, true );
             string itemText = string.Empty;
@@ -634,7 +633,7 @@ namespace Statistics2026.Utilities
                 CacheMode = CacheMode.Unconditional,
                 UserAgent = "Mozilla/5.0"
             };
-            if ( timeoutMs != null )
+            if( timeoutMs != null )
             {
                 options.TimeoutMs = timeoutMs.Value;
             }
@@ -662,27 +661,30 @@ namespace Statistics2026.Utilities
                 }
 
                 embyInterfaces.Logger().Debug( $"System currently NOT running" );
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( embyInterfaces, "CheckForOOD" );
-                await db.InitializeAsync( null, null, null, false );
-
-                ILogger currLogger = embyInterfaces.Logger();
-                (bool runFullAnalysis, bool runMissingAnalysis, List<string>? oodReasons) = await EmbyHelperFuncs.AnalysisOutOfDateAsync( embyInterfaces, db );
-
-                embyInterfaces._logger = currLogger;
-                reasons.AddRange( oodReasons );
-                embyInterfaces.Logger().Debug( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis} reasons={string.Join( ", ", reasons )}" );
-
-                List<Type> tasks = [];
-                if( ( !runFullAnalysis || !allowRunAll ) && runMissingAnalysis )
+                Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( embyInterfaces, "CheckForOOD" ).ConfigureAwait( false );
+                await using( db.ConfigureAwait( false ) )
                 {
-                    tasks.AddRange( [ typeof( AnalyzeMediaTask ), typeof( AnalyzeSeriesTask ), typeof( AnalyzeCollectionsTask ), typeof( AnalyzeMissingEpisodesTask ), typeof( AnalyzeMissingMoviesTask ) ] );
-                }
-                else if( runFullAnalysis && allowRunAll )
-                {
-                    tasks.Add( typeof( RunAllTasksTask ) );
-                }
+                    await db.InitializeAsync( null, null, null, false ).ConfigureAwait( false );
 
-                _ = TaskDef.ExecuteSubTasksAsync( embyInterfaces, tasks, reasons, null, false );
+                    ILogger currLogger = embyInterfaces.Logger();
+                    (bool runFullAnalysis, bool runMissingAnalysis, List<string>? oodReasons) = await EmbyHelperFuncs.AnalysisOutOfDateAsync( embyInterfaces, db ).ConfigureAwait( false );
+
+                    embyInterfaces._logger = currLogger;
+                    reasons.AddRange( oodReasons );
+                    embyInterfaces.Logger().Debug( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis} reasons={string.Join( ", ", reasons )}" );
+
+                    List<Type> tasks = [];
+                    if( ( !runFullAnalysis || !allowRunAll ) && runMissingAnalysis )
+                    {
+                        tasks.AddRange( [ typeof( AnalyzeMediaTask ), typeof( AnalyzeSeriesTask ), typeof( AnalyzeCollectionsTask ), typeof( AnalyzeMissingEpisodesTask ), typeof( AnalyzeMissingMoviesTask ) ] );
+                    }
+                    else if( runFullAnalysis && allowRunAll )
+                    {
+                        tasks.Add( typeof( RunAllTasksTask ) );
+                    }
+
+                    _ = TaskDef.ExecuteSubTasksAsync( embyInterfaces, tasks, reasons, null, false );
+                }
             }
             catch( Exception )
             {
@@ -690,11 +692,15 @@ namespace Statistics2026.Utilities
             }
         }
 
-        public static async Task<T> HandleRequestAsync<T>( string requestName, EmbyInterfaces embyInterfaces, Func<AutoTimer, Task<T>> requestFunc )
+        public static async Task<T> HandleRequestAsync<T>( string requestName, EmbyInterfaces embyInterfaces, Func<AutoTimer, Statistics2026DB, Task<T>> requestFunc )
         {
             using( var timer = new AutoTimer( $"Request: {requestName}", embyInterfaces.Logger() ) )
             {
-                return await requestFunc( timer ).ConfigureAwait( false );
+                Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( embyInterfaces, requestName ).ConfigureAwait( false );
+                await using( db.ConfigureAwait( false ) )
+                {
+                    return await requestFunc( timer, db ).ConfigureAwait( false );
+                }
             }
         }
 
@@ -736,7 +742,7 @@ namespace Statistics2026.Utilities
             public long _processBefore { get; set; } = 0;
             public long _processAfter { get; set; } = 0;
 
-            public void Report( ILogger logger, string prefix, LogSeverity severity=LogSeverity.Debug )
+            public void Report( ILogger logger, string prefix, LogSeverity severity = LogSeverity.Debug )
             {
                 StringBuilder builder = new();
 
@@ -756,7 +762,7 @@ namespace Statistics2026.Utilities
         {
             if( !debugLoggingEnabled )
             {
-                await workload();
+                await workload().ConfigureAwait( false );
                 return new();
             }
             // Optional: Start with a clean baseline before measuring
@@ -771,7 +777,7 @@ namespace Statistics2026.Utilities
             retVal._processBefore = GetProcessMemory();
 
             // 2. Run the heavy function
-            await workload();
+            await workload().ConfigureAwait( false );
 
             // Measure PEAK (Optional: see how much it grew before cleanup)
             retVal._managedPeak = GC.GetTotalMemory( forceFullCollection: false );
@@ -805,7 +811,7 @@ namespace Statistics2026.Utilities
         public static StringBuilder getStackTrace( IEnumerable<string>? ignoreCallList = null )
         {
             StringBuilder retVal = new();
-    
+
             string currentStack = Environment.StackTrace;
 
             string[] list = currentStack.Split( new string[] { "\r\n" }, StringSplitOptions.None );

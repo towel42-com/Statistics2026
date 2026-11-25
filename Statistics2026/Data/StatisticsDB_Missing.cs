@@ -164,7 +164,7 @@ namespace Statistics2026.Data
 
                 filtered = false;
                 return Task.FromResult( true );
-            }, locked: true );
+            }, locked: true ).ConfigureAwait( false );
             return filtered;
         }
 
@@ -202,7 +202,7 @@ namespace Statistics2026.Data
                                 return IsFilteredCollection( name ) || ( ( sortName != name ) && IsFilteredCollection( sortName ) ) || IsFilteredCollection( title );
                             }
                             return false;
-                        } );
+                        } ).ConfigureAwait( false );
 
                     filtered = ( parentInfos == null ) || ( parentInfos.Count == 0 );
 
@@ -221,7 +221,7 @@ namespace Statistics2026.Data
                         {
                             seasonNum = row.GetInt( (int)EMediaListResponseColumns.eSeasonNum );
                             string parentId = row.GetString( (int)EMediaListResponseColumns.eParentId );
-                            filtered = filtered || ( await IsFilteredSeriesAsync( parentId, seasonNum ) );
+                            filtered = filtered || ( await IsFilteredSeriesAsync( parentId, seasonNum ).ConfigureAwait( false ) );
                             currParentIds = filtered ? [] : [ parentId ];
                         }
                         else
@@ -238,7 +238,7 @@ namespace Statistics2026.Data
                         filteredParents.UnionWith( currParentIds );
                     }
                     return true;
-                } );
+                } ).ConfigureAwait( false );
                 numParents = filteredParents.Count;
             }
             else
@@ -254,7 +254,7 @@ namespace Statistics2026.Data
                     numItems = row.GetInt( 0 );
                     numParents = row.GetInt( 1 );
                     return Task.FromResult( true );
-                } );
+                } ).ConfigureAwait( false );
             }
             return (numItems, numParents);
         }
@@ -263,7 +263,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            (int numItems, int numParents) info = await MediaMissingInfoAsync( episodes, Plugin.Instance!.Configuration.tvSettings.showFilteredMissingSummaries );
+            (int numItems, int numParents) info = await MediaMissingInfoAsync( episodes, Plugin.Instance!.Configuration.tvSettings.showFilteredMissingSummaries ).ConfigureAwait( false );
 
             string title = episodes ? Constants.MissingEpisodes : Constants.MissingMovies;
             string infoFormat = episodes ? "{0} Episodes from {1} Series" : "{0} Movies from {1} Collections";
@@ -326,12 +326,12 @@ namespace Statistics2026.Data
                 };
                 retVal.Add( currFilter );
                 return Task.FromResult( true );
-            } );
+            } ).ConfigureAwait( false );
             if( !found && updateIfEmpty )
             {
-                var cmds = ( await UpdateSeriesFilterAsync( true ) ).Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
-                await ExecuteCommandsAsync( cmds );
-                return await GetSeriesFilterAsync( false );
+                var cmds = ( await UpdateSeriesFilterAsync( true ).ConfigureAwait( false ) ).Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
+                await ExecuteCommandsAsync( cmds ).ConfigureAwait( false );
+                return await GetSeriesFilterAsync( false ).ConfigureAwait( false );
             }
             return retVal;
         }
@@ -374,7 +374,7 @@ namespace Statistics2026.Data
 
             if( andExecute )
             {
-                await ExecuteCommandAsync( cmd );
+                await ExecuteCommandAsync( cmd ).ConfigureAwait( false );
             }
             return cmd;
         }
@@ -403,7 +403,7 @@ namespace Statistics2026.Data
             if( !nested )
                 CheckIsValid( ECheckLevel.eUpdate );
 
-            List<SeriesFilterResponse> seriesFilterList = await GetSeriesFilterAsync( false );
+            List<SeriesFilterResponse> seriesFilterList = await GetSeriesFilterAsync( false ).ConfigureAwait( false );
             Dictionary<string, List<SeriesFilterResponse>> oldFilterMap = [];
             foreach( SeriesFilterResponse series in seriesFilterList )
             {
@@ -416,7 +416,7 @@ namespace Statistics2026.Data
                 list.Add( series );
             }
 
-            var currFilterMap = (await GetSeriesFilterAsync( false ) ).ToDictionary( p => p.SeriesId );
+            var currFilterMap = (await GetSeriesFilterAsync( false ).ConfigureAwait( false ) ).ToDictionary( p => p.SeriesId );
 
             var changedFilterMap = new List<SeriesFilterResponse>();
 
@@ -517,7 +517,7 @@ namespace Statistics2026.Data
             List<SQLCmdDef> sqlCmds = [];
             foreach( SeriesFilterResponse entry in changedFilterMap )
             {
-                sqlCmds.Add( await SaveSeriesFilterAsync( entry, false ) );
+                sqlCmds.Add( await SaveSeriesFilterAsync( entry, false ).ConfigureAwait( false ) );
             }
             return sqlCmds;
         }

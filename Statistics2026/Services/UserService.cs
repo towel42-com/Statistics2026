@@ -132,11 +132,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetUserCount request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
-
-                StatCard groupData = await db.UserCountAsync();
+                StatCard groupData = await db.UserCountAsync().ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -147,11 +145,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetMostActiveUsers request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
-
-                StatCard groupData = await db.MostActiveUsersAsync();
+                StatCard groupData = await db.MostActiveUsersAsync().ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
                 groupData.SortByKey = false;
@@ -164,10 +160,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetLeastWatchedMovies request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
-                StatCard groupData = await db.WatchedMediaAsync( null, true, EMediaType.eMovie );
+                StatCard groupData = await db.WatchedMediaAsync( null, true, EMediaType.eMovie ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -178,16 +173,14 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetMostWatchedMovies request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
-
                 string userName = request.user;
                 User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
                 if( user == null )
                     return new StatCardResponse();
 
-                StatCard groupData = await db.WatchedMediaAsync( user, false, EMediaType.eMovie );
+                StatCard groupData = await db.WatchedMediaAsync( user, false, EMediaType.eMovie ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -198,11 +191,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetMostWatchedMoviesNoUser request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
-
-                StatCard groupData = await db.WatchedMediaAsync( null, false, EMediaType.eMovie );
+                StatCard groupData = await db.WatchedMediaAsync( null, false, EMediaType.eMovie ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -213,11 +204,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetLeastWatchedShows request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
-
-                StatCard groupData = await db.WatchedMediaAsync( null, true, EMediaType.eSeries );
+                StatCard groupData = await db.WatchedMediaAsync( null, true, EMediaType.eSeries ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -228,9 +217,8 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetTotalTimeWatched request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
                 string userName = request.user;
                 User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
                 if( user == null )
@@ -244,7 +232,7 @@ namespace Statistics2026.Services
                 else
                     showEpisodes = false;
 
-                StatCard groupData = await db.TotalTimeWatchedAsync( user, showEpisodes );
+                StatCard groupData = await db.TotalTimeWatchedAsync( user, showEpisodes ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -255,9 +243,8 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetTotalWatchableTime request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
                 string userName = request.user;
                 User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
                 if( user == null )
@@ -271,7 +258,7 @@ namespace Statistics2026.Services
                 else
                     showEpisodes = false;
 
-                StatCard groupData = await db.TotalWatchableTimeAsync( user, showEpisodes );
+                StatCard groupData = await db.TotalWatchableTimeAsync( user, showEpisodes ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -282,9 +269,8 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetLastSeen request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
                 string userName = request.user;
                 User? user = EmbyHelperFuncs.GetUserByName( userName, _embyInterfaces );
                 if( user == null )
@@ -292,7 +278,7 @@ namespace Statistics2026.Services
 
                 bool episodes = request.episodes;
 
-                StatCard groupData = await db.LastSeenAsync( user, !episodes );
+                StatCard groupData = await db.LastSeenAsync( user, !episodes ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 

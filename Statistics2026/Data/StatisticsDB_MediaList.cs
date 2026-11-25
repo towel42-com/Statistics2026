@@ -287,7 +287,7 @@ namespace Statistics2026.Data
             await ExecuteCommandAsync( new SQLCmdDef( sqlCmd ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, false, isoCode, null, null, null, _embyInterfaces, this );
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, false, isoCode, null, null, null, _embyInterfaces, this ).ConfigureAwait( false );
                 if( mediaInfoResponse != null )
                 {
                     int pos = ( (int)EMediaListResponseColumns.eParentId ) + 1;
@@ -311,7 +311,7 @@ namespace Statistics2026.Data
                 }
 
                 return true;
-            } );
+            } ).ConfigureAwait( false );
 
 
             retVal.Sort(
@@ -337,7 +337,7 @@ namespace Statistics2026.Data
             await ExecuteCommandAsync( new SQLCmdDef( sqlCmd ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, null, isoCode, null, null, null, _embyInterfaces, this );
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, null, isoCode, null, null, null, _embyInterfaces, this ).ConfigureAwait( false );
                 if( mediaInfoResponse != null )
                 {
                     int pos = ( (int)EMediaListResponseColumns.eParentId ) + 1;
@@ -359,7 +359,7 @@ namespace Statistics2026.Data
                 }
 
                 return true;
-            } );
+            } ).ConfigureAwait( false );
 
 
             retVal.Sort(
@@ -398,14 +398,14 @@ namespace Statistics2026.Data
             await ExecuteCommandAsync( new SQLCmdDef( sqlCmd ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, episodes, isoCode, IsFilteredSeriesAsync, IsFilteredCollection, GetCollectionNameAsync, _embyInterfaces, this );
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, episodes, isoCode, IsFilteredSeriesAsync, IsFilteredCollection, GetCollectionNameAsync, _embyInterfaces, this ).ConfigureAwait( false );
                 if( mediaInfoResponse != null )
                 {
                     retVal.Add( mediaInfoResponse );
                 }
 
                 return true;
-            } );
+            } ).ConfigureAwait( false );
 
 
             retVal.Sort(

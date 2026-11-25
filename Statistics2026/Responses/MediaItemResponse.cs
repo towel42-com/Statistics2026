@@ -75,7 +75,7 @@ namespace Statistics2026.Responses
                 if( name.IsNullOrEmpty() || sortName.IsNullOrEmpty() )
                     continue;
 
-                if( await isFiltered( id, name, sortName ) )
+                if( await isFiltered( id, name, sortName ).ConfigureAwait( false ) )
                     return null;
 
                 string parentUrl = string.Empty;
@@ -302,7 +302,7 @@ namespace Statistics2026.Responses
 
             PluginConfiguration? config = Plugin.Instance?.Configuration ?? null;
 
-            List<StreamingProvider> providerInfos = await db.GetStreamingProvidersAsync( streamingProviders, ( config?.AlwaysShowJustWatch( ( isEpisode ?? true ) ? EReportType.eTVReport : EReportType.eMovieReport ) ?? true ), locked );
+            List<StreamingProvider> providerInfos = await db.GetStreamingProvidersAsync( streamingProviders, ( config?.AlwaysShowJustWatch( ( isEpisode ?? true ) ? EReportType.eTVReport : EReportType.eMovieReport ) ?? true ), locked ).ConfigureAwait( false );
 
             int depth = 0;
             string html = HelperFuncs.addToHtml( depth++, "<ul>" );
@@ -378,7 +378,7 @@ namespace Statistics2026.Responses
                     {
                         if( isEpisode.Value && ( isSeriesFiltered != null ) )
                         {
-                            return await isSeriesFiltered( id, seasonNum );
+                            return await isSeriesFiltered( id, seasonNum ).ConfigureAwait( false );
                         }
                         else if( isCollectionFiltered != null )
                         {
@@ -387,7 +387,7 @@ namespace Statistics2026.Responses
                     }
                     return false;
                 }
-            );
+            ).ConfigureAwait( false );
 
             if( parentInfo == null )
             {
@@ -403,7 +403,7 @@ namespace Statistics2026.Responses
                 if( retVal == null )
                     return null;
             }
-            retVal = await AddStreamingProvidersAsync( retVal, isEpisode, isoCode, streamingProvidersString, embyInterfaces, db, true );
+            retVal = await AddStreamingProvidersAsync( retVal, isEpisode, isoCode, streamingProvidersString, embyInterfaces, db, true ).ConfigureAwait( false );
 
             return retVal;
         }

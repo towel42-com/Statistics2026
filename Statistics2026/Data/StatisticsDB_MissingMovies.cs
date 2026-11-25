@@ -19,7 +19,7 @@ namespace Statistics2026.Data
             collections.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             SetProgress( 100 );
 
-            TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken );
+            TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken ).ConfigureAwait( false );
 
             double count = collections.Count();
             int completedCount = 0;
@@ -33,7 +33,7 @@ namespace Statistics2026.Data
 
                 var pool = collections.Select( ( collection, index ) => Task.Run( async () =>
                 {
-                    await gatekeeper.WaitAsync();
+                    await gatekeeper.WaitAsync().ConfigureAwait( false );
                     try
                     {
                         (int index, BoxSet collection, List<SQLCmdDef> cmds, List<string> missingTMDBids) retVal = (index: index, collection: collection, cmds: new List<SQLCmdDef>(), missingTMDBids: new List<string>());
@@ -57,7 +57,7 @@ namespace Statistics2026.Data
                 } ) ).ToList();
 
                 (int index, BoxSet collection, List<SQLCmdDef> cmds, List<string> missingTMDBids)[] sortedResults =
-                    ( await Task.WhenAll( pool ) )
+                    ( await Task.WhenAll( pool ).ConfigureAwait( false ) )
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
                             .ToArray();
@@ -84,7 +84,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Missing Movies - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommandsAsync( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds ).ConfigureAwait( false );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Missing Movies Analysis" );
             }
@@ -98,7 +98,7 @@ namespace Statistics2026.Data
             if( string.IsNullOrEmpty( collectionTmbdId ) )
                 return ([],[]);
 
-            string isoCode = await HelperFuncs.GetCountryCodeAsync( _embyInterfaces!.HttpClient(), _cancellationToken: CancellationToken );
+            string isoCode = await HelperFuncs.GetCountryCodeAsync( _embyInterfaces!.HttpClient(), _cancellationToken: CancellationToken ).ConfigureAwait( false );
 
             TmdbCollection? tmdbCollection = null;
             try

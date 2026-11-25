@@ -4,7 +4,6 @@ using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.Dto;
 using ServiceStack;
 using Statistics2026.Data;
-using System.Collections.Generic;
 
 namespace Statistics2026.Utilities
 {
@@ -34,7 +33,7 @@ namespace Statistics2026.Utilities
 
                 _PlaybackTracker[ key ] = retVal;
 
-                await retVal.LoadPlaybackStateAsync( embyInterfaces );
+                await retVal.LoadPlaybackStateAsync( embyInterfaces ).ConfigureAwait( false );
             }
 
             if( session.PlayState.PositionTicks != null )
@@ -162,11 +161,12 @@ namespace Statistics2026.Utilities
 
         public async Task LoadPlaybackStateAsync( EmbyInterfaces embyInterfaces )
         {
-            await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( embyInterfaces, GetType().Name );
-
-            long? totalTicksPlayed = await db.GetTotalTicksPlayedAsync( UserId, ItemId );
-
-            TotalTicksPlayed = totalTicksPlayed ?? 0;
+            Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( embyInterfaces, GetType().Name ).ConfigureAwait( false );
+            await using( db.ConfigureAwait( false ) )
+            {
+                long? totalTicksPlayed = await db.GetTotalTicksPlayedAsync( UserId, ItemId ).ConfigureAwait( false );
+                TotalTicksPlayed = totalTicksPlayed ?? 0;
+            }
         }
 
         public void setPlaybackPosition( long? ticks )
@@ -186,11 +186,14 @@ namespace Statistics2026.Utilities
                 return;
 
             TotalTicksPlayed += SessionCurrTickPos.Value - SessionStartTickPos.Value;
-            await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( embyInterfaces, GetType().Name );
-            await db.UpdateTotalTicksPlayedAsync( UserId, ItemId, TotalTicksPlayed );
+            Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( embyInterfaces, GetType().Name ).ConfigureAwait( false );
+            await using( db.ConfigureAwait( false ) )
+            {
+                await db.UpdateTotalTicksPlayedAsync( UserId, ItemId, TotalTicksPlayed ).ConfigureAwait( false );
 
-            SessionStartTickPos = SessionCurrTickPos;
-            SessionCurrTickPos = null;
+                SessionStartTickPos = SessionCurrTickPos;
+                SessionCurrTickPos = null;
+            }
         }
 
         private bool hasInitialPlaybackPosition()

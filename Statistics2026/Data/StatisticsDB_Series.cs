@@ -60,7 +60,7 @@ namespace Statistics2026.Data
 
                     seriesInfoMap[ seriesInfo.id ] = seriesInfo;
                     return Task.FromResult( true );
-                } );
+                } ).ConfigureAwait( false );
 
             foreach( Series series in seriesList )
             {
@@ -84,12 +84,12 @@ namespace Statistics2026.Data
                 return;
 
             SetProgress( 0 );
-            await DeleteAllInvalidAsync( seriesList.ConvertAll( item => (BaseItem)item ), "Series", "ItemId" );
+            await DeleteAllInvalidAsync( seriesList.ConvertAll( item => (BaseItem)item ), "Series", "ItemId" ).ConfigureAwait( false );
 
-            (ConcurrentDictionary<string, SeriesInfo>? seriesInfoMap, List<object>? validSeriesIds) = await ComputeSeriesInfoAsync( seriesList );
+            (ConcurrentDictionary<string, SeriesInfo>? seriesInfoMap, List<object>? validSeriesIds) = await ComputeSeriesInfoAsync( seriesList ).ConfigureAwait( false );
 
             var sqlCmds = new List<SQLCmdDef>();
-            sqlCmds.AddRange( await UpdateSeriesFilterAsync() );
+            sqlCmds.AddRange( await UpdateSeriesFilterAsync().ConfigureAwait( false ) );
 
             int completedCount = 0;
 
@@ -118,7 +118,7 @@ namespace Statistics2026.Data
                 } ) );
 
                 CancellationToken?.ThrowIfCancellationRequested();
-                (int index, Series item, List<SQLCmdDef?> cmds)[] unsortedResults = await Task.WhenAll( pool );
+                (int index, Series item, List<SQLCmdDef?> cmds)[] unsortedResults = await Task.WhenAll( pool ).ConfigureAwait( false );
                 sqlCmds = unsortedResults
                             .Where( item => item.cmds != null )
                             .OrderBy( item => item.index )
@@ -133,7 +133,7 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Series - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommandsAsync( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds ).ConfigureAwait( false );
                 SetProgress( 100 );
                 CancellationToken?.ThrowIfCancellationRequested();
                 Logger().Debug( $"Finished Series Analysis" );
@@ -166,7 +166,7 @@ namespace Statistics2026.Data
                     }
 
                     return Task.FromResult( false );
-                } );
+                } ).ConfigureAwait( false );
 
                 cmd = new SQLCmdDef( $"SELECT NumSpecials FROM Series WHERE ItemId=@SeriesId",
                             [
@@ -182,7 +182,7 @@ namespace Statistics2026.Data
                     }
 
                     return Task.FromResult( false );
-                } );
+                } ).ConfigureAwait( false );
             }
 
             if( episodes == 0 && specials == 0 ) // Series hasnt been setup yet
@@ -201,7 +201,7 @@ namespace Statistics2026.Data
                     }
 
                     return Task.FromResult( false );
-                } );
+                } ).ConfigureAwait( false );
 
                 cmd = new SQLCmdDef( $"SELECT SUM(NumEpisodes) FROM Media WHERE SeriesId=@SeriesId AND IsEpisode AND IsTVSpecial",
                             [
@@ -217,7 +217,7 @@ namespace Statistics2026.Data
                     }
 
                     return Task.FromResult( false );
-                } );
+                } ).ConfigureAwait( false );
             }
 
             return (episodes, specials);

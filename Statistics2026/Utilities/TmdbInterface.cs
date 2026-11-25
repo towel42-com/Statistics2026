@@ -44,7 +44,7 @@ namespace Statistics2026.Utilities
             var retVal = new TmdbInterface( embyInterfaces, cancellationToken );
             retVal.CheckIsValidWithThrow();
 
-            await retVal.LoginAsync();
+            await retVal.LoginAsync().ConfigureAwait( false );
 
             return retVal;
         }

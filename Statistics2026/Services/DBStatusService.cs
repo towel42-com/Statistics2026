@@ -2,9 +2,6 @@
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Net;
 using MediaBrowser.Controller.Notifications;
@@ -18,9 +15,6 @@ using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Responses;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Statistics2026.Services
 {
@@ -71,7 +65,7 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetDatabaseStatus request )
         {
-            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, ( timer ) =>
+            return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, ( timer, db ) =>
             {
                 GetDatabaseStatusReponse retVal = Plugin.Instance == null
                     ? new GetDatabaseStatusReponse()

@@ -20,7 +20,7 @@ namespace Statistics2026.Data
             return ExecuteCommandAsync( cmd, async (statement) =>
             {
                 IResultSet row = statement.Current;
-                return await onRow( row );
+                return await onRow( row ).ConfigureAwait( false );
             } );
         }
 
@@ -37,7 +37,7 @@ namespace Statistics2026.Data
                     long count = row.GetInt64( 0 );
                     retVal = formatter?.Invoke( count ) ?? count.ToString();
                     return Task.FromResult( false );
-                } );
+                } ).ConfigureAwait( false );
             return retVal;
         }
 
@@ -46,7 +46,7 @@ namespace Statistics2026.Data
             CheckIsValid( ECheckLevel.eReport );
 
             var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eCompact );
-            string value = await GetSingleValueFromSQLAsync( sql, parameters, formatter );
+            string value = await GetSingleValueFromSQLAsync( sql, parameters, formatter ).ConfigureAwait( false );
             retVal.AddLine( value, false );
             return retVal;
         }

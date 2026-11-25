@@ -78,11 +78,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetTotalCollectionCount request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
-
-                StatCard groupData = await db.TotalCollectionCountAsync();
+                StatCard groupData = await db.TotalCollectionCountAsync().ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -93,11 +91,9 @@ namespace Statistics2026.Services
 
         public Task<object> Get( GetMultiCollectionMovies request )
         {
-            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer) =>
+            return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async (timer,db) =>
             {
-                await using Statistics2026DB db = await Statistics2026DB.GetInstanceAsync( _embyInterfaces, request.GetType().Name );
-
-                StatCard groupData = await db.MultiCollectionMoviesAsync();
+                StatCard groupData = await db.MultiCollectionMoviesAsync().ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 

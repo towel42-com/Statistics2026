@@ -67,7 +67,7 @@ namespace Statistics2026.Utilities
                 retVal.Value = Value( row, 3 );
                 retVal.SecondValue = SecondValue( row, 3 );
                 return Task.FromResult(false);
-            } );
+            } ).ConfigureAwait( false );
             return retVal;
         }
 
@@ -77,7 +77,7 @@ namespace Statistics2026.Utilities
             string help = Help();
             var retVal = new TextBasedStatCard( title, help, EStatCardStyle.eDetailed );
 
-            StatCardValues statCardValues = await GetStatCardValuesAsync();
+            StatCardValues statCardValues = await GetStatCardValuesAsync().ConfigureAwait( false );
 
             retVal.AddLine( statCardValues.Value, false );
             if( statCardValues.SecondValue.IsNullOrEmpty() )

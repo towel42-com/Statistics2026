@@ -122,7 +122,7 @@ namespace Statistics2026.EventMonitorEntryPoints
         private async void OnTimerElapsed( object sender, ElapsedEventArgs e )
         {
             _embyInterfaces.Logger().Debug( $"Timer Expired" );
-            await HelperFuncs.CheckForOODAsync( _embyInterfaces, Reasons, GetType(), false );
+            await HelperFuncs.CheckForOODAsync( _embyInterfaces, Reasons, GetType(), false ).ConfigureAwait( false );
             Reasons.Clear();
             _debounceTimer.Stop();
         }

@@ -513,7 +513,7 @@ namespace Statistics2026.Utilities
             }
             if( lastAdded != null && lastAdded != DateTimeOffset.MinValue )
             {
-                await db.SetLastUpdatedAsync( Statistics2026DB.EAction.LastMediaOrUserAdded, reason, 0, lastAdded.Value );
+                await db.SetLastUpdatedAsync( Statistics2026DB.EAction.LastMediaOrUserAdded, reason, 0, lastAdded.Value ).ConfigureAwait( false );
             }
         }
 
@@ -597,7 +597,7 @@ namespace Statistics2026.Utilities
 
             List<string> reasons = [];
             bool runFullAnalysis = false;
-            DateTimeOffset? lastAnalysisAdded = ( await db.GetLastUpdatedAsync( EAction.LastMediaOrUserAdded ) ).when;
+            DateTimeOffset? lastAnalysisAdded = ( await db.GetLastUpdatedAsync( EAction.LastMediaOrUserAdded ).ConfigureAwait( false ) ).when;
             if( lastAnalysisAdded == null || lastAnalysisAdded.Value == DateTimeOffset.MinValue )
             {
                 string msg = "Analysis has not been run yet";
@@ -612,7 +612,7 @@ namespace Statistics2026.Utilities
 
             if( !runFullAnalysis )
             {
-                (int curr, int inDB) = await db.TotalMediaCountAsync();
+                (int curr, int inDB) = await db.TotalMediaCountAsync().ConfigureAwait( false );
                 if( curr != inDB )
                 {
                     string msg = $"Media count has changed since last run, re-running Complete Statistical Analysis";
@@ -645,7 +645,7 @@ namespace Statistics2026.Utilities
             }
 
             DateTimeOffset? lastMissingAnalysis = null;
-            DateTimeOffset? lastMissingEpisodeAnalysis = ( await db.GetLastUpdatedAsync( EAction.MissingEpisodesAnalysis ) ).when;
+            DateTimeOffset? lastMissingEpisodeAnalysis = ( await db.GetLastUpdatedAsync( EAction.MissingEpisodesAnalysis ).ConfigureAwait( false ) ).when;
             if( lastMissingEpisodeAnalysis == null || lastMissingEpisodeAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;
@@ -659,7 +659,7 @@ namespace Statistics2026.Utilities
                 logger?.Info( $"Last Missing Episode Analysis run: {lastMissingEpisodeAnalysis.Value.LocalDateTime}" );
             }
 
-            DateTimeOffset? lastMissingMovieAnalysis = (await db.GetLastUpdatedAsync( EAction.MissingMoviesAnalysis ) ).when;
+            DateTimeOffset? lastMissingMovieAnalysis = (await db.GetLastUpdatedAsync( EAction.MissingMoviesAnalysis ).ConfigureAwait( false ) ).when;
             if( lastMissingMovieAnalysis == null || lastMissingMovieAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;

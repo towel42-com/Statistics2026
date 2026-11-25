@@ -20,7 +20,7 @@ namespace Statistics2026.Data
             seriesList.Sort( ( a, b ) => StringComparer.OrdinalIgnoreCase.Compare( a.SortName, b.SortName ) );
             SetProgress( 100 );
 
-            TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken );
+            TmdbInterface reader = await TmdbInterface.CreateAsync( _embyInterfaces, CancellationToken ).ConfigureAwait( false );
 
             double count = seriesList.Count();
             int completedCount = 0;
@@ -35,7 +35,7 @@ namespace Statistics2026.Data
 
                 var pool = seriesList.Select( ( series, index ) => Task.Run( async () =>
                 {
-                    await gatekeeper.WaitAsync();
+                    await gatekeeper.WaitAsync().ConfigureAwait( false );
                     try
                     {
                         (int index, Series item, List<SQLCmdDef> sqlCmds, List<string> missingTMDBids, List<string> nowAvailable) retVal = (index: index, item: series, sqlCmds: new List<SQLCmdDef>(), missingTMDBids: new List<string>(), nowAvailable: new List<string>());
@@ -60,7 +60,7 @@ namespace Statistics2026.Data
                 } ) ).ToList();
 
                 (int index, Series item, List<SQLCmdDef> sqlCmds, List<string> missingTMDBids, List<string> nowAvailable)[] sortedResults = 
-                    (await Task.WhenAll( pool ))
+                    (await Task.WhenAll( pool ).ConfigureAwait( false ) )
                             .Where( item => item.sqlCmds != null )
                             .OrderBy( item => item.index )
                             .ToArray();
@@ -93,20 +93,20 @@ namespace Statistics2026.Data
             using( var timer = new AutoTimer( $"    Analyze Missing Episodes - Executing Commands", Logger() ) )
             {
                 SetProgress( 80 );
-                await ExecuteCommandsAsync( sqlCmds );
+                await ExecuteCommandsAsync( sqlCmds ).ConfigureAwait( false );
                 SetProgress( 100 );
                 Logger().Debug( $"Finished Missing Episodes Analysis" );
             }
 
             if( nowAvailable.Count() != 0 )
             {
-                DateTimeOffset? lastUpdated = ( await GetLastUpdatedAsync( EAction.NotifyAvailableToday ) ).when;
+                DateTimeOffset? lastUpdated = ( await GetLastUpdatedAsync( EAction.NotifyAvailableToday ).ConfigureAwait( false ) ).when;
                 if( lastUpdated == null || lastUpdated.Value.LocalDateTime.Date != DateTimeOffset.Now.LocalDateTime.Date )
                 {
                     NotificationSender.SendEpisodesAvailableNotification( nowAvailable, _embyInterfaces );
                 }
             }
-            await SetLastUpdatedAsync( EAction.NotifyAvailableToday, [ "Task" ], 0 );
+            await SetLastUpdatedAsync( EAction.NotifyAvailableToday, [ "Task" ], 0 ).ConfigureAwait( false );
         }
 
         private async Task<(List<SQLCmdDef> cmds, List<string> missingTMDBids, List<string> episodesNowAvailable)> AnalyzeMissingEpisodesAsync( TmdbInterface reader, Series series )
