@@ -1,4 +1,7 @@
-﻿using MediaBrowser.Common;
+﻿#if DEBUG
+#define DEBUG_NO_PLAYBACKMONITOR
+#endif
+using MediaBrowser.Common;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Configuration;
@@ -14,10 +17,7 @@ using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Tasks;
 using Statistics2026.Data;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading.Tasks;
 using Utilities;
 
 namespace Statistics2026.EventMonitorEntryPoints
@@ -81,6 +81,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
         public void Run()
         {
+#if !DEBUG_NO_PLAYBACKMONITOR
             CheckIsValid();
 
             _embyInterfaces.Logger().Debug( "EventMonitorEntryPoint Running" );
@@ -90,6 +91,7 @@ namespace Statistics2026.EventMonitorEntryPoints
 
             // start playback monitor
             _ = Task.Run( () => PlaybackMonitoringTaskAsync() );
+#endif
         }
 
         [SuppressMessage( "Style", "IDE1006:Naming Styles", Justification = "Event handler cannot return Task" )]
