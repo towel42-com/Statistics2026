@@ -107,13 +107,12 @@
                 const baseId = 'seriesFilter';
                 const baseUrl = "Statistics2026/series_filters";
 
-                Helpers.loadTableDataAsync(view, baseId, baseUrl, getSeriesFilterHeader, getSeriesFilterRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+                Helpers.loadTableData(view, baseId, baseUrl, getSeriesFilterHeader, getSeriesFilterRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
             }
 
             // init code here
             view.addEventListener('viewshow', async function (e) {
                 Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
-                Helpers.injectStyleSheet();
 
                 loadPage(view, params);
                 loadSeriesFilterTable();

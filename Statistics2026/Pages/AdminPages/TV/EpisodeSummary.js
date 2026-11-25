@@ -52,7 +52,6 @@
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
                 Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
-                Helpers.injectStyleSheet();
             });
 
             view.addEventListener('viewhide', function (e) {

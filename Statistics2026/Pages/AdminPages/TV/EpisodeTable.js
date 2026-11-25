@@ -18,7 +18,6 @@
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
                 Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
-                Helpers.injectStyleSheet();
 
                 if (view.getAttribute('data-initialized') === 'true') {
                     return; // Exit and prevent reload
@@ -41,7 +40,7 @@
 
                     Helpers.insertGetLastRunInfo(view, lastRunArray, "lastRunInfo");
                     showStreaming = config.maxNumStreamingProviders != 0;
-                    loadTableDataAsync();
+                    loadTableData();
                 });
             });
 
@@ -67,7 +66,7 @@
                 return Helpers.getMediaRowData(info, showOnServer, showMissing, showStreaming, showStreaming);
             }
 
-            async function loadTableDataAsync() {
+            async function loadTableData() {
                 let configValid = await Helpers.CheckForValidConfig();
                 if (!configValid) {
                     view.querySelector(`#lastRunInfo`).style.display = 'none';
@@ -91,7 +90,7 @@
                     url += "?showOnServer=true&showMissing=true";
                 }
 
-                Helpers.loadTableDataAsync(view, baseId, url, getMediaHeader, getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+                Helpers.loadTableData(view, baseId, url, getMediaHeader, getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
                 view.setAttribute('data-initialized', 'true');
             }
 
@@ -118,7 +117,7 @@
                         Helpers.updateUserPluginConfiguration(config);
                     });
 
-                    loadTableDataAsync();
+                    loadTableData();
                 });
             });
         };
