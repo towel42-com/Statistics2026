@@ -763,11 +763,17 @@ namespace Statistics2026.Utilities
                 .FirstOrDefault( genre => string.Equals( genre.Name, genreName, StringComparison.OrdinalIgnoreCase ) );
         }
 
-        public static string GetExpectedNameForPath( string path )
+        public static string GetExpectedNameForPath( string path, string ns )
         {
             int pos = path.LastIndexOf( '.' );
             string baseName = path;
             string ext = string.Empty;
+
+            while( baseName.StartsWith( ns + "_" ) )
+            {
+                baseName = baseName.Substring( ns.Length + 1 );
+            }
+
             if( pos != -1 )
             {
                 ext = path.Substring( pos ).ToLower();
@@ -781,6 +787,8 @@ namespace Statistics2026.Utilities
                 }
             }
             string retVal = baseName.Replace( ".", "_" ) + ext;
+            if( !retVal.StartsWith( ns + "_" ) )
+                retVal = $"{ns}_{retVal}";
             return retVal;
         }
 
@@ -789,7 +797,7 @@ namespace Statistics2026.Utilities
             List<(string currName, string correctName)> misnamedPages = [];
             foreach( PluginPageInfo page in pages )
             {
-                string nameForPath = GetExpectedNameForPath( page.EmbeddedResourcePath );
+                string nameForPath = GetExpectedNameForPath( page.EmbeddedResourcePath, ns );
 
                 if( !page.Name.StartsWith( ns ) )
                 {
