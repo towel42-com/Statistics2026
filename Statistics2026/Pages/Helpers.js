@@ -311,7 +311,7 @@ define([
                     tooltip: createTextTooltip("DisplayName"),
                     formatter: function (cell) {
                         const data = cell.getRow().getData();
-                        return data.DisplayName ? data.DisplayName.Text : "";
+                        return formatHtmlWithImages(cell, data.DisplayName ? data.DisplayName.Text : "");
                     }
                 },
                 {
@@ -322,7 +322,7 @@ define([
                     tooltip: createTextTooltip("ParentName"),
                     formatter: function (cell) {
                         const data = cell.getRow().getData();
-                        return data.ParentName ? data.ParentName.Text : "";
+                        return formatHtmlWithImages(cell, data.ParentName ? data.ParentName.Text : "");
                     }
                 },
                 {
@@ -1259,7 +1259,12 @@ define([
         })();
 
         function loadTabulatorTable(view, baseId, endpoint, columns, getExtraParamsFn, customOptions) {
-            const container = view.querySelector(`#${baseId}_table`);
+            const selector = `#${baseId}_table`;
+            const container = view.querySelector(selector);
+            if (!container) {
+                console.error(`loadTabulatorTable: Could not find container '${selector}' in view`, view);
+                return null;
+            }
 
             const defaultOptions = {
                 ajaxURL: endpoint,
@@ -1282,7 +1287,7 @@ define([
                         queryParams.SortOrder = reqParams.sort[0].dir === 'desc' ? 'Descending' : 'Ascending';
                     }
 
-                    if (typeof getExtraParamsFn === 'function') {
+                    if (getExtraParamsFn !== undefined && typeof getExtraParamsFn === 'function') {
                         Object.assign(queryParams, getExtraParamsFn(reqParams));
                     }
 
@@ -1326,7 +1331,9 @@ define([
             showDiagnosticInfo,
             initTabSystem,
             loadTabulatorTable,
-            getMediaTabulatorColumns
+            getMediaTabulatorColumns,
+            createTextTooltip,
+            formatHtmlWithImages
         };
     }
 )

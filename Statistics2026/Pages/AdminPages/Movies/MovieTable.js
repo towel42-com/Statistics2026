@@ -16,7 +16,7 @@
         let showStreaming = true;
 
         return function (view, params) {
-            let movieTable = null;
+            let table = null;
 
             view.addEventListener('viewshow', function (e) {
                 Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
@@ -50,9 +50,9 @@
             });
 
             view.addEventListener('viewdestroy', function (e) {
-                if (movieTable) {
-                    movieTable.destroy();
-                    movieTable = null;
+                if (table) {
+                    table.destroy();
+                    table = null;
                 }
             });
 
@@ -94,8 +94,8 @@
 
                 const container = view.querySelector(`#${baseId}_table`);
 
-                if (!movieTable) {
-                    movieTable = Helpers.loadTabulatorTable(
+                if (!table) {
+                    table = Helpers.loadTabulatorTable(
                         view,
                         baseId,
                         baseUrl,
@@ -103,56 +103,12 @@
                         getExtraQueryParams
                     );
                 } else {
-                    movieTable.setColumns(getTabulatorColumns());
-                    movieTable.setData();
+                    table.setColumns(getTabulatorColumns());
+                    table.setData();
                 }
 
                 view.setAttribute('data-initialized', 'true');
             }
-
-            // function getMediaHeader() {
-            //     var showAll = view.querySelector(`input[name="${filterId}"][value="All"]`).checked;
-            //     var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
-            //     var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
-
-            //     return Helpers.getMediaHeader("Collection", showOnServer, showMissing, showStreaming);
-            // }
-
-            // function getMediaRowData(info) {
-            //     var showAll = view.querySelector(`input[name="${filterId}"][value="All"]`).checked;
-            //     var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
-            //     var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
-
-            //     return Helpers.getMediaRowData(info, showOnServer, showMissing, showStreaming);
-            // }
-
-            // async function loadTableData() {
-            //     let configValid = await Helpers.CheckForValidConfig();
-            //     if (!configValid) {
-            //         view.querySelector(`#lastRunInfo`).style.display = 'none';
-            //         view.querySelector(`#${baseId}_status`).style.display = 'none';
-            //         Dashboard.hideLoadingMsg();
-            //         return;
-            //     }
-
-            //     var showOnServer = view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
-            //     var showMissing = view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
-            //     var showAll = view.querySelector(`input[name="${filterId}"][value="All"]`).checked;
-
-            //     var url = baseUrl;
-            //     if (showOnServer) {
-            //         url += "?showOnServer=true";
-            //     }
-            //     if (showMissing) {
-            //         url += "?showMissing=true";
-            //     }
-            //     if (showAll) {
-            //         url += "?showOnServer=true&showMissing=true";
-            //     }
-
-            //     Helpers.loadTableData(view, baseId, url, getMediaHeader, getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
-            //     view.setAttribute('data-initialized', 'true');
-            // }
 
             const radioGroup = view.querySelectorAll(`input[name="${filterId}"]`);
 

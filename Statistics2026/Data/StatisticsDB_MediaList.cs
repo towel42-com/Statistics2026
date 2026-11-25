@@ -168,7 +168,7 @@ namespace Statistics2026.Data
             return SQLCmdDef.CreateCmd( from, columns, joins, whereClauses, groupByClauses, orderBy );
         }
 
-        private string getCollectionListResponseOnServerCmd()
+        private string getCollectionListResponseOnServerCmd( string orderByClause )
         {
             List<string> columns = [];
             columns.Add( "0 AS IsMissing" );
@@ -196,7 +196,7 @@ namespace Statistics2026.Data
             List<string> joins = [];
             List<string> whereClauses = [];
             List<string> groupByClauses = [];
-            List<string> orderBy = new() { "SortName ASC" };
+            List<string> orderBy = string.IsNullOrEmpty( orderByClause ) ? [] : [ orderByClause ];
 
             return SQLCmdDef.CreateCmd( from, columns, joins, whereClauses, groupByClauses, orderBy );
         }
@@ -275,20 +275,56 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<List<MediaItemResponse>> GetCollectionListResponseAsync()
+        public async Task<QueryResult<MediaItemResponse>> GetCollectionListResponseAsync(
+            int startIndex,
+            int limit,
+            string sortBy,
+            string sortOrder )
         {
             if( _embyInterfaces == null )
-                return [];
+                return new QueryResult<MediaItemResponse>();
 
-            string sqlCmd = getCollectionListResponseOnServerCmd();
+            string orderByClause = BuildCollectionOrderByClause( sortBy, sortOrder );
+            string baseSql = getCollectionListResponseOnServerCmd( orderByClause );
+            bool isPaged = limit > 0;
+
+            // 1. Get total count excluding empty collections (NumMovies == 0 && collectedMovies == 0)
+            int totalRecordCount = 0;
+            if( isPaged )
+            {
+                string countSql = $"SELECT COUNT(*) FROM (\n{getCollectionListResponseOnServerCmd( string.Empty )}\n) AS count_subquery\nWHERE NumMovies > 0 OR collectedMovies > 0";
+                await ExecuteCommandAsync( new SQLCmdDef( countSql ), ( statement ) =>
+                {
+                    totalRecordCount = statement.Current.GetInt( 0 );
+                    return Task.FromResult( false );
+                } ).ConfigureAwait( false );
+            }
+
+            // 2. Filter empty collections and apply LIMIT/OFFSET
+            string pagedSql = $"SELECT * FROM (\n{baseSql}\n) AS paged_subquery\nWHERE NumMovies > 0 OR collectedMovies > 0";
+
+            if( isPaged )
+            {
+                int safeOffset = Math.Max( 0, startIndex );
+                pagedSql += $"\nLIMIT {limit} OFFSET {safeOffset}";
+            }
 
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommandAsync( new SQLCmdDef( sqlCmd ), async ( statement ) =>
+            await ExecuteCommandAsync( new SQLCmdDef( pagedSql ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, false, isoCode, null, null, null, _embyInterfaces, this ).ConfigureAwait( false );
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync(
+                    row,
+                    false,
+                    isoCode,
+                    null,
+                    null,
+                    null,
+                    _embyInterfaces,
+                    this ).ConfigureAwait( false );
+
                 if( mediaInfoResponse != null )
                 {
                     int pos = ( (int)EMediaListResponseColumns.eParentId ) + 1;
@@ -314,15 +350,25 @@ namespace Statistics2026.Data
                 return true;
             } ).ConfigureAwait( false );
 
+            return new QueryResult<MediaItemResponse>
+            {
+                Items = retVal.ToArray(),
+                TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
+            };
+        }
 
-            retVal.Sort(
-                ( x, y ) =>
-                {
-                    string lhs = x.DisplayName.SortBy;
-                    string rhs = y.DisplayName.SortBy;
-                    return lhs.CompareTo( rhs );
-                } );
-            return retVal;
+        private static string BuildCollectionOrderByClause( string sortBy, string sortOrder )
+        {
+            string direction = string.Equals( sortOrder, "Descending", StringComparison.OrdinalIgnoreCase )
+                ? "DESC"
+                : "ASC";
+
+            if( string.Equals( sortBy, "CollectionProgress", StringComparison.OrdinalIgnoreCase ) )
+            {
+                return $"(CASE WHEN NumMovies = 0 THEN 100.0 ELSE (100.0 * collectedMovies / CAST(NumMovies AS REAL)) END) {direction}, SortName COLLATE NOCASE ASC";
+            }
+
+            return $"SortName COLLATE NOCASE {direction}";
         }
 
         public async Task<List<MediaItemResponse>> GetSeriesListResponseAsync()
