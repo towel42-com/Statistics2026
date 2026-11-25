@@ -25,7 +25,8 @@
                     view.querySelector("#numFavoriteYears").value = config.userReportSettings.numFavoriteYears;
                     view.querySelector("#numGenresToReport").value = config.userReportSettings.numGenresToReport;
                     view.querySelector("#numLastSeenToReport").value = config.userReportSettings.numLastSeenToReport;
-                    view.querySelector("#numMostWatchedToReport").value = config.userReportSettings.numMostWatchedToReport;
+                    view.querySelector("#numWatchedToReport").value = config.userReportSettings.numWatchedToReport;
+                    view.querySelector("#numTiedToReport").value = config.userReportSettings.numTiedToReport;
                 }
             );
         }
@@ -134,20 +135,36 @@
                     Helpers.showInfo("Number of Last Seen", "The default is 5, but when reporting a list of last seen videos, how many should be shown?");
                 });
 
-            view.querySelector("#numMostWatchedToReport").addEventListener("input",
+            view.querySelector("#numWatchedToReport").addEventListener("input",
                 function () {
                     ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
-                        const parsed = parseInt(view.querySelector("#numMostWatchedToReport").value);
+                        const parsed = parseInt(view.querySelector("#numWatchedToReport").value);
                         const value = Number.isNaN(parsed) ? 5 : parsed;
 
-                        config.userReportSettings.numMostWatchedToReport = value;
+                        config.userReportSettings.numWatchedToReport = value;
                         ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
                     });
                 }
             );
-            view.querySelector("#numMostWatchedToReportHelp").addEventListener("click",
+            view.querySelector("#numWatchedToReportHelp").addEventListener("click",
                 function () {
                     Helpers.showInfo("Number of Most Watched", "The default is 5, but when reporting a list of most watched videos, how many should be shown?");
+                });
+
+            view.querySelector("#numTiedToReport").addEventListener("input",
+                function () {
+                    ApiClient.getPluginConfiguration(Helpers.pluginId).then(function (config) {
+                        const parsed = parseInt(view.querySelector("#numTiedToReport").value);
+                        const value = Number.isNaN(parsed) ? 5 : parsed;
+
+                        config.userReportSettings.numTiedToReport = value;
+                        ApiClient.updatePluginConfiguration(Helpers.pluginId, config);
+                    });
+                }
+            );
+            view.querySelector("#numTiedToReportHelp").addEventListener("click",
+                function () {
+                    Helpers.showInfo("Number of Tied Movies", "The default is 5, but when reporting a list of movies, and the value is tied how many do you want to show?");
                 });
         };
     }

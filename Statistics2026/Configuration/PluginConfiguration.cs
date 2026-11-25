@@ -291,7 +291,8 @@ namespace Statistics2026.Configuration
         public int numFavoriteYears { get; set; } = 5;
         public int numGenresToReport { get; set; } = 5;
         public int numLastSeenToReport { get; set; } = 5;
-        public int numMostWatchedToReport { get; set; } = 5;
+        public int numWatchedToReport { get; set; } = 5;
+        public int numTiedToReport { get; set; } = 5;
 
 
         public void CopyData( UserReportSettings dataSource )
@@ -302,7 +303,8 @@ namespace Statistics2026.Configuration
             numFavoriteYears = dataSource.numFavoriteYears;
             numGenresToReport = dataSource.numGenresToReport;
             numLastSeenToReport = dataSource.numLastSeenToReport;
-            numMostWatchedToReport = dataSource.numMostWatchedToReport;
+            numWatchedToReport = dataSource.numWatchedToReport;
+            numTiedToReport = dataSource.numTiedToReport;
         }
     }
 
@@ -433,6 +435,8 @@ namespace Statistics2026.Configuration
                     return target.tvSettings.numWatchedToReport;
                 case EReportType.eMovieReport:
                     return target.movieSettings.numWatchedToReport;
+                case EReportType.eUserReport:
+                    return target.userReportSettings.numWatchedToReport;
             }
             return 0;
         }
@@ -445,6 +449,9 @@ namespace Statistics2026.Configuration
                     return target.tvSettings.numTiedToReport;
                 case EReportType.eMovieReport:
                     return target.movieSettings.numTiedToReport;
+                case EReportType.eUserReport:
+                    return target.userReportSettings.numTiedToReport;
+
             }
             return 0;
         }

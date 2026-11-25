@@ -125,11 +125,7 @@ namespace Statistics2026.Data
 
                 string allProvidersJSON = JsonSerializer.Serialize( allProviders );
                 string sql = string.Empty;
-                if( baseItem is Movie )
-                {
-                    sql = "UPDATE Media SET StreamingProviders=@StreamingProviders WHERE ItemId=@ItemId";
-                }
-                else if( baseItem is Episode )
+                if( ( baseItem is Movie ) || ( baseItem is Episode ) )
                 {
                     sql = "UPDATE Media SET StreamingProviders=@StreamingProviders WHERE ItemId=@ItemId";
                 }

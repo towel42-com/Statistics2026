@@ -686,8 +686,9 @@ namespace Statistics2026.Data
 
             var sortedMapping = new SortedDictionary<long, List<WatchedMediaValue>>();
 
-            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.NumWatchedToReport( ( mediaType == EMediaType.eMovie ) ? EReportType.eMovieReport : EReportType.eTVReport );
-            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.NumTiedToReport( ( mediaType == EMediaType.eMovie ) ? EReportType.eMovieReport : EReportType.eTVReport );
+            EReportType reportType = ( user != null ) ? EReportType.eUserReport : ( ( mediaType == EMediaType.eMovie ) ? EReportType.eMovieReport : EReportType.eTVReport );
+            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.NumWatchedToReport( reportType );
+            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.NumTiedToReport( reportType );
 
             foreach( (string id, string name, long playCount, long denominator, double playCountPerUser) curr in playMap.Values )
             {
