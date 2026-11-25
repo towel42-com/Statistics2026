@@ -678,3 +678,178 @@ ol.range-list {
         #dynamicSubTabs.subTabsNativeBar .emby-tab-button-active .emby-button-foreground {
             color: inherit !important;
         }
+
+
+/* ==========================================================================
+   12. Customize Tabulator Style (Matched to .sortable-table-styled)
+   ========================================================================== */
+.tabulator {
+    background-color: var(--local-background);
+    border: 1px solid var(--line-background);
+    border-radius: var(--card-border-radius, 4px);
+    color: var(--local-text-normal);
+    font-family: inherit;
+    font-size: inherit;
+}
+
+    /* Header Bar & Column Headings */
+    .tabulator .tabulator-header {
+        background-color: var(--local-theme-background-accent);
+        border-bottom: 1px solid var(--line-background);
+        color: var(--local-text-muted);
+        font-weight: 500;
+    }
+
+        .tabulator .tabulator-header .tabulator-col {
+            background-color: var(--local-theme-background-accent);
+            border-right: 1px solid var(--line-background);
+        }
+
+            .tabulator .tabulator-header .tabulator-col:last-child {
+                border-right: none;
+            }
+
+            .tabulator .tabulator-header .tabulator-col.tabulator-sortable:hover {
+                background-color: var(--local-item-selection);
+            }
+
+            .tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+                padding: 12px 10px;
+            }
+
+            /* Sort Arrows (Matched to .sortable-table-styled th .sort-icon) */
+            .tabulator .tabulator-header .tabulator-col.tabulator-sortable .tabulator-col-title {
+                padding-right: 20px;
+            }
+
+            .tabulator .tabulator-header .tabulator-col .tabulator-arrow {
+                border-bottom-color: var(--local-text-muted);
+                opacity: 0.35;
+            }
+
+            .tabulator .tabulator-header .tabulator-col[aria-sort="ascending"] .tabulator-arrow {
+                border-bottom-color: var(--local-theme-primary-color);
+                opacity: 1;
+            }
+
+            .tabulator .tabulator-header .tabulator-col[aria-sort="descending"] .tabulator-arrow {
+                border-top-color: var(--local-theme-primary-color);
+                opacity: 1;
+            }
+
+    /* Table Body & Rows */
+    .tabulator .tabulator-tableholder {
+        background-color: var(--local-background);
+    }
+
+        .tabulator .tabulator-tableholder .tabulator-table {
+            background-color: transparent;
+            color: var(--local-text-normal);
+        }
+
+.tabulator-row {
+    background-color: transparent;
+    color: var(--local-text-normal);
+    border-bottom: 1px solid var(--line-background);
+}
+
+    .tabulator-row.tabulator-row-even {
+        background-color: rgba(128, 128, 128, 0.04);
+    }
+
+    .tabulator-row.tabulator-selectable:hover {
+        background-color: var(--local-item-selection) !important;
+    }
+
+    /* Data Cells (Matched to .sortable-table-styled td) */
+    .tabulator-row .tabulator-cell {
+        padding: 12px 10px;
+        border-right: 1px solid var(--line-background);
+        color: var(--local-text-normal);
+        display: inline-flex;
+        align-items: center;
+    }
+
+        .tabulator-row .tabulator-cell:last-child {
+            border-right: none;
+        }
+
+        /* Ensure links inside cells inherit Emby theme accent/text cleanly */
+        .tabulator-row .tabulator-cell a {
+            color: var(--local-theme-primary-color);
+            text-decoration: none;
+        }
+
+            .tabulator-row .tabulator-cell a:hover {
+                text-decoration: underline;
+            }
+
+        /* Preserve your section 7 status colors (.progress-green, .progress-red, etc.) on PremiereDate cells */
+        .tabulator-row .tabulator-cell[class*="progress-"] {
+            color: #FFFFFF;
+        }
+
+        .tabulator-row .tabulator-cell.progress-yellow,
+        .tabulator-row .tabulator-cell.progress-orange {
+            color: #111111;
+        }
+
+/* Pagination Footer */
+.tabulator .tabulator-footer {
+    background-color: var(--local-theme-background-accent);
+    border-top: 1px solid var(--line-background);
+    color: var(--local-text-muted);
+    padding: 8px 10px;
+    font-weight: normal;
+}
+
+    .tabulator .tabulator-footer .tabulator-page-size {
+        background-color: var(--local-background);
+        color: var(--local-text-normal);
+        border: 1px solid var(--line-background);
+        border-radius: var(--card-border-radius, 4px);
+        padding: 4px 8px;
+    }
+
+    .tabulator .tabulator-footer .tabulator-page {
+        background-color: transparent;
+        color: var(--local-text-normal);
+        border: 1px solid var(--line-background);
+        border-radius: var(--card-border-radius, 4px);
+        padding: 4px 10px;
+        margin: 0 2px;
+        transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+        .tabulator .tabulator-footer .tabulator-page:not(:disabled):hover {
+            background-color: var(--local-item-selection);
+        }
+
+        .tabulator .tabulator-footer .tabulator-page.active {
+            background-color: var(--local-theme-primary-color);
+            border-color: var(--local-theme-primary-color);
+            color: var(--local-statcard-text, #FFFFFF);
+            font-weight: 600;
+        }
+
+        .tabulator .tabulator-footer .tabulator-page:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+
+/* Loading & Empty Placeholder Overlay */
+.tabulator .tabulator-loader {
+    background: rgba(0, 0, 0, 0.45);
+}
+
+    .tabulator .tabulator-loader .tabulator-loader-msg {
+        background-color: var(--local-theme-background-accent);
+        color: var(--local-text-normal);
+        border: 1px solid var(--line-background);
+        border-radius: var(--card-border-radius, 4px);
+    }
+
+.tabulator .tabulator-tableholder .tabulator-placeholder span {
+    color: var(--local-text-muted);
+    font-weight: normal;
+}

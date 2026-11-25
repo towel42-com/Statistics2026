@@ -12,6 +12,7 @@ using MediaBrowser.Controller.Security;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
+using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
@@ -37,10 +38,14 @@ namespace Statistics2026.Services
 
     [Route( "/Statistics2026/movie_list", "GET", Summary = "Gets Movies" )]
     [Authenticated( Roles = "admin" )]
-    public class GetMovieList : IReturn<List<MediaItemResponse>>
+    public class GetMovieList : IReturn<QueryResult<MediaItemResponse>>
     {
-        public bool showOnServer { get; set; } = false;
-        public bool showMissing { get; set; } = false;
+        public int StartIndex { get; set; } = 0;
+        public int Limit { get; set; } = 50;
+        public string SortBy { get; set; } = string.Empty;
+        public string SortOrder { get; set; } = string.Empty;
+        public bool ShowOnServer { get; set; } = false;
+        public bool ShowMissing { get; set; } = false;
     }
 
     [Route( "/Statistics2026/series_list", "GET", Summary = "Gets Series" )]
@@ -142,8 +147,8 @@ namespace Statistics2026.Services
         {
             return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer, db) =>
             {
-                bool showOnServer = request.showOnServer;
-                bool showMissing = request.showMissing;
+                bool showOnServer = request.ShowOnServer;
+                bool showMissing = request.ShowMissing;
 
                 if( !showOnServer && !showMissing )
                 {
@@ -157,7 +162,16 @@ namespace Statistics2026.Services
                 if( showMissing )
                     whichMedia |= EWhichMediaList.eMissing;
 
-                return await db.GetMediaListResponseAsync( whichMedia ).ConfigureAwait( false );
+                int startIndex = Math.Max( 0, request.StartIndex );
+                int limit = ( request.Limit > 0 ) ? request.Limit : 50;
+
+                return await db.GetMediaListResponseAsync(
+                    whichMedia,
+                    startIndex,
+                    limit,
+                    request.SortBy,
+                    request.SortOrder
+                ).ConfigureAwait( false );
             } );
         }
 

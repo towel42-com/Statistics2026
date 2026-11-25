@@ -3,10 +3,11 @@ define([
     'dialogHelper',
     'toast',
     'prompt',
+    Dashboard.getConfigurationPageUrl('Statistics2026_tabulator_tabulator.js'),
     'emby-button',
     'emby-tabs'
 ],
-    function (mainTabsManager, dialogHelper, toast, prompt) {
+    function (mainTabsManager, dialogHelper, toast, prompt, Tabulator) {
         'use strict';
 
         const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
@@ -183,7 +184,7 @@ define([
                 sortTable(1, "progress", 'TVSeriesProgress', showLoadingFunc, hideLoadingFunc, 'desc');
             };
 
-            loadTableDataAsync(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
+            loadTableData(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
         }
 
         function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
@@ -232,6 +233,199 @@ define([
             Promise.allSettled(pendingPromises).finally(() => {
                 hideLoadingFunc();
             });
+        }
+
+        const lazyImageObserver = new IntersectionObserver(function (entries, observer) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    let dataSrc = img.getAttribute("data-src");
+                    if (dataSrc) {
+                        if (!/^(https?:|data:)/i.test(dataSrc)) {
+                            dataSrc = dataSrc.startsWith("/") ? dataSrc : ApiClient.getUrl(dataSrc);
+                            const token = ApiClient.accessToken();
+                            if (token && !/[?&]api_key=/i.test(dataSrc)) {
+                                dataSrc += (dataSrc.includes("?") ? "&" : "?") + "api_key=" + encodeURIComponent(token);
+                            }
+                        }
+
+                        img.src = dataSrc;
+                        img.removeAttribute("data-src");
+                        img.classList.remove("lazy");
+                    }
+                    observer.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: "100px 0px"
+        });
+
+        function formatHtmlWithImages(cell, html) {
+            if (!html) {
+                return "";
+            }
+
+            const wrapper = document.createElement("div");
+            wrapper.innerHTML = html;
+
+            const images = wrapper.querySelectorAll("img");
+            images.forEach(function (img) {
+                img.addEventListener("load", function () {
+                    const row = cell.getRow();
+                    if (row) {
+                        row.normalizeHeight();
+                    }
+
+                    const col = cell.getColumn();
+                    if (col) {
+                        col.setWidth(true);
+                    }
+                }, { once: true });
+
+                if (img.hasAttribute("data-src")) {
+                    lazyImageObserver.observe(img);
+                }
+            });
+
+            return wrapper;
+        }
+
+        function createTextTooltip(dataProperty) {
+            return function (e, cell) {
+                const data = cell.getRow().getData();
+                const prop = data[dataProperty];
+                if (prop && prop.SortBy) {
+                    return prop.SortBy;
+                }
+                return cell.getElement().innerText.trim();
+            };
+        }
+
+        function getMediaTabulatorColumns(parentName, showOnServer, showMissing, showStreaming) {
+            const columns = [
+                {
+                    title: "Name",
+                    field: "Name",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: createTextTooltip("DisplayName"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        return data.DisplayName ? data.DisplayName.Text : "";
+                    }
+                },
+                {
+                    title: parentName,
+                    field: "ParentName",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: createTextTooltip("ParentName"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        return data.ParentName ? data.ParentName.Text : "";
+                    }
+                },
+                {
+                    title: "Premiere Date",
+                    field: "PremiereDate",
+                    sorter: "date",
+                    hozAlign: "left",
+                    tooltip: createTextTooltip("PremiereDate"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        const el = cell.getElement();
+
+                        if (showMissing && data.SearchLocation && data.SearchLocation.Text !== "" && data.PremiereDate) {
+                            const statusClass = calculateMediaStatusClass(new Date(data.PremiereDate));
+                            if (statusClass) {
+                                el.classList.add(statusClass);
+                            }
+                        }
+
+                        return data.PremiereDate || "";
+                    }
+                }
+            ];
+
+            if (showOnServer) {
+                columns.push(
+                    {
+                        title: "Resolution",
+                        field: "Resolution",
+                        sorter: "string",
+                        hozAlign: "left",
+                        tooltip: createTextTooltip("ResolutionDetail"),
+                        formatter: function (cell) {
+                            return cell.getRow().getData().ResolutionDetail || "";
+                        }
+                    },
+                    {
+                        title: "Codec",
+                        field: "Codec",
+                        sorter: "string",
+                        hozAlign: "left",
+                        tooltip: createTextTooltip("Codec"),
+                        formatter: function (cell) {
+                            return cell.getRow().getData().Codec || "";
+                        }
+                    },
+                    {
+                        title: "Dolby Vision Profile",
+                        field: "DolbyVisionProfile",
+                        sorter: "string",
+                        hozAlign: "left",
+                        tooltip: createTextTooltip("DolbyVisionProfile"),
+                        formatter: function (cell) {
+                            return cell.getRow().getData().DolbyVisionProfile || "";
+                        }
+                    }
+                );
+            }
+
+            if (showStreaming) {
+                columns.push({
+                    title: "Streaming Services(s)",
+                    field: "StreamingServies",
+                    sorter: "string",
+                    hozAlign: "left",
+                    variableHeight: true,
+                    tooltip: createTextTooltip("StreamingProviders"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        return formatHtmlWithImages(cell, data.StreamingProviders ? data.StreamingProviders.Text : "");
+                    }
+                });
+            }
+
+            if (showMissing) {
+                columns.push({
+                    title: "Click to Search",
+                    field: "Search",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: createTextTooltip("SearchLocation"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        return data.SearchLocation ? data.SearchLocation.Text : "";
+                    }
+                });
+            }
+
+            if (showOnServer) {
+                columns.push({
+                    title: "Location on Server",
+                    field: "ServerLocation",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: createTextTooltip("ServerLocation"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        return data.ServerLocation ? data.ServerLocation.Text : "";
+                    }
+                });
+            }
+
+            return columns;
         }
 
         function getMediaRowData(info, showOnServer, showMissing, showStreaming) {
@@ -419,7 +613,6 @@ define([
             return -1;
         }
 
-        const STYLE_ID = 'statistics2026-stylesheet';
         function injectImageProxy(target, view) {
             let root = view || document;
 
@@ -448,23 +641,8 @@ define([
             });
         }
 
-        function injectStyleSheet() {
-            if (document.getElementById(STYLE_ID))  // already added
-                return;
-
-            const cssUrl = 'configurationpage?name=Statistics2026_Resources_style.css&v=2';
-            const link = document.createElement('link');
-            link.id = STYLE_ID;
-            link.rel = 'stylesheet';
-            link.type = 'text/css';
-            link.href = cssUrl;
-
-            document.head.appendChild(link);
-        }
-
         const activeLoaders = new Map();
-
-        async function loadTableDataAsync(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
+        async function loadTableData(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
             if (activeLoaders.has(baseId)) {
                 activeLoaders.get(baseId).abort();
                 activeLoaders.delete(baseId);
@@ -492,13 +670,13 @@ define([
                     }
 
                     var errorMessage = "'" + error + "' - '" + url + "'";
-                    console.error("loadTableDataAsync failed:", errorMessage, "url:", url);
+                    console.error("loadTableData failed:", errorMessage, "url:", url);
                     return;
                 });
 
                 if (resultData === undefined || signal.aborted) {
                     if (!signal.aborted)
-                        console.error("loadTableDataAsync failed: result data was undefined", "url:", url);
+                        console.error("loadTableData failed: result data was undefined", "url:", url);
                     return;
                 }
 
@@ -584,7 +762,7 @@ define([
             }
             catch (error) {
                 if (error.name !== 'AbortError') {
-                    console.error("Unexpected error in loadTableDataAsync workflow:", error);
+                    console.error("Unexpected error in loadTableData workflow:", error);
                 }
             }
             finally {
@@ -1050,6 +1228,82 @@ define([
             subTabsWrapper.style.setProperty('margin-right', 'auto', 'important');
         }
 
+        (function injectStyleSheets() {
+            const cssId = 'statistics2026-tabulator-stylesheet';
+            if (!document.getElementById(cssId)) {
+                const link = document.createElement('link');
+                link.id = cssId;
+                link.rel = 'stylesheet';
+                link.type = 'text/css';
+                link.href = ApiClient.getUrl('web/configurationpage', {
+                    name: 'Statistics2026_tabulator_tabulator.css',
+                    v: '2'
+                });
+                document.head.appendChild(link);
+            }
+
+            const STYLE_ID = 'statistics2026-stylesheet';
+            if (!document.getElementById(STYLE_ID)) {
+                const link = document.createElement('link');
+
+                link.id = STYLE_ID;
+                link.rel = 'stylesheet';
+                link.type = 'text/css';
+                link.href = ApiClient.getUrl('web/configurationpage', {
+                    name: 'Statistics2026_Resources_style.css',
+                    v: '2'
+                });
+
+                document.head.appendChild(link);
+            }
+        })();
+
+        function loadTabulatorTable(view, baseId, endpoint, columns, getExtraParamsFn, customOptions) {
+            const container = view.querySelector(`#${baseId}_table`);
+
+            const defaultOptions = {
+                ajaxURL: endpoint,
+                pagination: true,
+                paginationMode: 'remote',
+                paginationSize: 50,
+                paginationSizeSelector: [25, 50, 100, 250, 500],
+                sortMode: 'remote',
+                layout: 'fitDataFill',
+                placeholder: 'No records found',
+                columns: columns,
+                ajaxRequestFunc: function (url, config, reqParams) {
+                    const queryParams = {
+                        StartIndex: (reqParams.page - 1) * reqParams.size,
+                        Limit: reqParams.size
+                    };
+
+                    if (reqParams.sort && reqParams.sort.length > 0) {
+                        queryParams.SortBy = reqParams.sort[0].field;
+                        queryParams.SortOrder = reqParams.sort[0].dir === 'desc' ? 'Descending' : 'Ascending';
+                    }
+
+                    if (typeof getExtraParamsFn === 'function') {
+                        Object.assign(queryParams, getExtraParamsFn(reqParams));
+                    }
+
+                    const apiUrl = ApiClient.getUrl(endpoint, queryParams);
+
+                    return ApiClient.getJSON(apiUrl).then(function (response) {
+                        // Supports both Emby QueryResult { Items, TotalRecordCount } or raw array fallback
+                        const items = Array.isArray(response) ? response : (response.Items || []);
+                        const totalCount = Array.isArray(response) ? response.length : (response.TotalRecordCount || 0);
+
+                        return {
+                            last_page: Math.max(1, Math.ceil(totalCount / reqParams.size)),
+                            data: items
+                        };
+                    });
+                }
+            };
+
+            return new Tabulator(container, Object.assign({}, defaultOptions, customOptions || {}));
+        }
+
         return {
             pluginId,
             CheckForValidConfig,
@@ -1062,8 +1316,7 @@ define([
             insertSystemStatus,
             getTabIndex,
             initCollapsibleTable,
-            injectStyleSheet,
-            loadTableDataAsync,
+            loadTableData,
             loadUsers,
             showInfo,
             showInfoEx,
@@ -1071,7 +1324,9 @@ define([
             updateUserPluginConfiguration,
             isDebugLoggingEnabled,
             showDiagnosticInfo,
-            initTabSystem
+            initTabSystem,
+            loadTabulatorTable,
+            getMediaTabulatorColumns
         };
     }
 )

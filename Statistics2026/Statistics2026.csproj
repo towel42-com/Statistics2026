@@ -101,6 +101,17 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="$(SolutionDir)\tabulator\dist\css\tabulator_simple.min.css">
+			<LogicalName>tabulator.tabulator.css</LogicalName>
+			<Link>tabulator\tabulator.css</Link>
+		</EmbeddedResource>
+		<EmbeddedResource Include="$(SolutionDir)\tabulator\dist\js\tabulator.min.js">
+			<LogicalName>tabulator.tabulator.js</LogicalName>
+			<Link>tabulator\tabulator.js</Link>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
 		<Compile Include="$(SolutionDir)\TimeZoneInfo\TimeZoneNames\src\TimeZoneNames\**\*.cs">
 			<Link>TimeZoneInfo\TimeZoneNames\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</Compile>
@@ -108,7 +119,6 @@
 			<LogicalName>TimeZoneNames.data.json.gz</LogicalName>
 			<Link>TimeZoneInfo\TimeZoneNames\%(RecursiveDir)%(Filename)%(Extension)</Link>
 		</EmbeddedResource>
-
 	</ItemGroup>
 
 	<ItemGroup>

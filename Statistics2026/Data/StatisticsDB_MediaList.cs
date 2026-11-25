@@ -1,4 +1,5 @@
-﻿using ServiceStack;
+﻿using MediaBrowser.Model.Querying;
+using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Responses;
 using Statistics2026.Utilities;
@@ -302,7 +303,7 @@ namespace Statistics2026.Data
                     if( numMovies == 0 )
                         numMovies = moviesCollected;
 
-                    double moviesPercent = (numMovies == 0) ? 100.0 : ( 100.0 * moviesCollected / ( 1.0 * numMovies ) );
+                    double moviesPercent = ( numMovies == 0 ) ? 100.0 : ( 100.0 * moviesCollected / ( 1.0 * numMovies ) );
 
                     string collectionStatus = $"{moviesCollected}/{numMovies} ({moviesPercent:F0}%)";
                     mediaInfoResponse.Extra = collectionStatus;
@@ -374,8 +375,36 @@ namespace Statistics2026.Data
 
         public async Task<List<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia )
         {
+            QueryResult<MediaItemResponse> result = await GetMediaListResponseAsync( whichMedia, -1, -1, string.Empty, string.Empty ).ConfigureAwait(false);
+            return result.Items.ToList();
+        }
+
+        private static string BuildMediaListOrderByClause( string sortBy, string sortOrder )
+        {
+            string direction = string.Equals( sortOrder, "Descending", StringComparison.OrdinalIgnoreCase )
+                ? "DESC"
+                : "ASC";
+
+            // Map Tabulator's field names to your SQL SELECT column aliases
+            string sqlColumn = ( sortBy ?? string.Empty ).ToLowerInvariant() switch
+            {
+                "parentname" => "ParentName",
+                "premieredate" => "PremiereDate",
+                "resolution" => "Resolution",
+                "codec" => "Codec",
+                "dolbyvisionprofile" => "DolbyVisionProfile",
+                "serverlocation" => "Path",
+                _ => "SortName" // Default sort (also matches "name")
+            };
+
+            return $"ORDER BY {sqlColumn} COLLATE NOCASE {direction}";
+        }
+
+
+        public async Task<QueryResult<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia, int startIndex, int limit, string sortBy, string sortOrder )
+        {
             if( _embyInterfaces == null )
-                return [];
+                return new QueryResult<MediaItemResponse>();
 
             List<string> sqlCmds = [];
             if( ( whichMedia & EWhichMediaList.eMissing ) != 0 )
@@ -388,17 +417,51 @@ namespace Statistics2026.Data
                 sqlCmds.Add( getMediaListResponseOnServerCmd( whichMedia ) );
             }
 
-            string sqlCmd = sqlCmds.Join( "\nUNION\n" );
+            if( sqlCmds.Count == 0 )
+            {
+                return new QueryResult<MediaItemResponse>();
+            }
+
+            string unionSqlCmd = sqlCmds.Join( "\nUNION\n" );
+            bool isPaged = limit > 0;
+
+            int totalRecordCount = 0;
+            if( isPaged )
+            {
+                string countSql = $"SELECT COUNT(*) FROM (\n{unionSqlCmd}\n) AS count_subquery";
+                await ExecuteCommandAsync( new SQLCmdDef( countSql ), ( statement ) =>
+                {
+                    totalRecordCount = statement.Current.GetInt( 0 );
+                    return Task.FromResult( false );
+                } ).ConfigureAwait( false );
+            }
+
+            string orderByClause = BuildMediaListOrderByClause( sortBy, sortOrder );
+            string pagedSql = $"SELECT * FROM (\n{unionSqlCmd}\n) AS paged_subquery\n{orderByClause}";
+            
+            if( isPaged )
+            {
+                int safeOffset = Math.Max( 0, startIndex );
+                pagedSql += $"\nLIMIT {limit} OFFSET {safeOffset}";
+            }
 
             bool episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
-
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommandAsync( new SQLCmdDef( sqlCmd ), async ( statement ) =>
+            await ExecuteCommandAsync( new SQLCmdDef( pagedSql ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, episodes, isoCode, IsFilteredSeriesAsync, IsFilteredCollection, GetCollectionNameAsync, _embyInterfaces, this ).ConfigureAwait( false );
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( 
+                    row, 
+                    episodes, 
+                    isoCode, 
+                    IsFilteredSeriesAsync, 
+                    IsFilteredCollection, 
+                    GetCollectionNameAsync, 
+                    _embyInterfaces, 
+                    this ).ConfigureAwait( false );
+
                 if( mediaInfoResponse != null )
                 {
                     retVal.Add( mediaInfoResponse );
@@ -407,15 +470,11 @@ namespace Statistics2026.Data
                 return true;
             } ).ConfigureAwait( false );
 
-
-            retVal.Sort(
-                ( x, y ) =>
-                {
-                    string lhs = x.DisplayName.SortBy;
-                    string rhs = y.DisplayName.SortBy;
-                    return lhs.CompareTo( rhs );
-                } );
-            return retVal;
+            return new QueryResult<MediaItemResponse>
+            {
+                Items = retVal.ToArray(),
+                TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
+            };
         }
     }
 }
