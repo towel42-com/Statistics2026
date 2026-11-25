@@ -99,7 +99,7 @@ namespace Statistics2026
 #if !DEBUG_PLUGIN
             var debouncer = new Debouncer();
 
-            debouncer.RunLaterAsync( 500, async ( cancellationToken ) => {
+            debouncer.RunLater( 500, async ( cancellationToken ) => {
                 await HelperFuncs.CheckForOODAsync( _embyInterfaces, [ "Startup" ], GetType(), true ).ConfigureAwait( false );
                 return false;
             } );
