@@ -452,7 +452,7 @@ define([
             if (document.getElementById(STYLE_ID))  // already added
                 return;
 
-            const cssUrl = 'configurationpage?name=Stats2026_style.css&v=2';
+            const cssUrl = 'configurationpage?name=Statistics2026_Resources_style.css&v=2';
             const link = document.createElement('link');
             link.id = STYLE_ID;
             link.rel = 'stylesheet';
@@ -899,7 +899,7 @@ define([
         }
 
         function getRequestedConfigurationPageName() {
-            // 1. Check hash query string first (standard Emby SPA route: #!/configurationpage?name=Stats2026_Movies)
+            // 1. Check hash query string first (standard Emby SPA route: #!/configurationpage?name=Statistics2026_Pages_Movies)
             const hash = window.location.hash || '';
             const hashQueryIndex = hash.indexOf('?');
             if (hashQueryIndex !== -1) {
@@ -910,7 +910,7 @@ define([
                 }
             }
 
-            // 2. Fallback to standard window.location.search (?name=Stats2026_Movies)
+            // 2. Fallback to standard window.location.search (?name=Statistics2026_Pages_Movies)
             const searchParams = new URLSearchParams(window.location.search || '');
             return searchParams.get('name') || '';
         }

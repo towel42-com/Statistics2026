@@ -6,44 +6,44 @@ define(function () {
             {
                 id: 'overview',
                 name: 'Overview',
-                href: Dashboard.getConfigurationPageUrl('Stats2026_SystemSummary'),
+                href: Dashboard.getConfigurationPageUrl('Statistics2026_Pages_AdminPages_System_SystemSummary'),
                 subTabs: [
-                    { page: 'Stats2026_SystemSummary', name: 'Summary' },
-                    { page: 'Stats2026_SystemStatus', name: 'System Status' },
-                    { page: 'Stats2026_SystemSettings', name: 'Settings' }
+                    { page: 'Statistics2026_Pages_AdminPages_System_SystemSummary', name: 'Summary' },
+                    { page: 'Statistics2026_Pages_AdminPages_System_SystemStatus', name: 'System Status' },
+                    { page: 'Statistics2026_Pages_AdminPages_System_SystemSettings', name: 'Settings' }
                 ]
             },
             {
                 id: 'movies',
                 name: 'Movies',
-                href: Dashboard.getConfigurationPageUrl('Stats2026_MovieSummary'),
+                href: Dashboard.getConfigurationPageUrl('Statistics2026_Pages_AdminPages_Movies_MovieSummary'),
                 subTabs: [
-                    { page: 'Stats2026_MovieSummary', name: 'Movie Summary' },
-                    { page: 'Stats2026_CollectionsTable', name: 'Collections' },
-                    { page: 'Stats2026_MovieTable', name: 'Movies' },
-                    { page: 'Stats2026_MovieSettings', name: 'Settings' }
+                    { page: 'Statistics2026_Pages_AdminPages_Movies_MovieSummary', name: 'Movie Summary' },
+                    { page: 'Statistics2026_Pages_AdminPages_Movies_CollectionsTable', name: 'Collections' },
+                    { page: 'Statistics2026_Pages_AdminPages_Movies_MovieTable', name: 'Movies' },
+                    { page: 'Statistics2026_Pages_AdminPages_Movies_MovieSettings', name: 'Settings' }
                 ]
             },
             {
                 id: 'tv',
                 name: 'TV Shows',
-                href: Dashboard.getConfigurationPageUrl('Stats2026_SeriesSummary'),
+                href: Dashboard.getConfigurationPageUrl('Statistics2026_Pages_AdminPages_TV_SeriesSummary'),
                 subTabs: [
-                    { page: 'Stats2026_SeriesSummary', name: 'Series Summary' },
-                    { page: 'Stats2026_EpisodeSummary', name: 'Episode Summary' },
-                    { page: 'Stats2026_SeriesTable', name: 'Series' },
-                    { page: 'Stats2026_EpisodeTable', name: 'Episodes' },
-                    { page: 'Stats2026_TVSettings', name: 'Settings' }
+                    { page: 'Statistics2026_Pages_AdminPages_TV_SeriesSummary', name: 'Series Summary' },
+                    { page: 'Statistics2026_Pages_AdminPages_TV_EpisodeSummary', name: 'Episode Summary' },
+                    { page: 'Statistics2026_Pages_AdminPages_TV_SeriesTable', name: 'Series' },
+                    { page: 'Statistics2026_Pages_AdminPages_TV_EpisodeTable', name: 'Episodes' },
+                    { page: 'Statistics2026_Pages_AdminPages_TV_TVSettings', name: 'Settings' }
                 ]
             },
             {
                 id: 'users',
                 name: 'User Info',
-                href: Dashboard.getConfigurationPageUrl('Stats2026_UserStats'),
+                href: Dashboard.getConfigurationPageUrl('Statistics2026_Pages_AdminPages_User_UserStats'),
                 subTabs: [
-                    { page: 'Stats2026_UserStats', name: 'User Stats' },
-                    { page: 'Stats2026_TVSeriesProgress', name: 'TV Series Progress' },
-                    { page: 'Stats2026_UserReportSettings', name: 'Settings' }
+                    { page: 'Statistics2026_Pages_AdminPages_User_UserStats', name: 'User Stats' },
+                    { page: 'Statistics2026_Pages_AdminPages_User_TVSeriesProgress', name: 'TV Series Progress' },
+                    { page: 'Statistics2026_Pages_AdminPages_User_UserReportSettings', name: 'Settings' }
                 ]
             },
         ];

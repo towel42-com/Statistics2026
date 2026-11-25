@@ -1,8 +1,8 @@
 ﻿define([
     'mainTabsManager',
     'appRouter',
-    Dashboard.getConfigurationResourceUrl('Stats2026_AdminHelpers.js'),
-    Dashboard.getConfigurationResourceUrl('Stats2026_Helpers.js'),
+    Dashboard.getConfigurationResourceUrl('Statistics2026_Pages_AdminPages_AdminHelpers.js'),
+    Dashboard.getConfigurationResourceUrl('Statistics2026_Pages_Helpers.js'),
     'emby-linkbutton'
 ],
     function (mainTabsManager, appRouter, AdminHelpers, Helpers) {
@@ -11,7 +11,7 @@
         const baseId = 'collection_results';
         const filterId = 'collectionDisplay';
         const baseUrl = "Statistics2026/collection_list";
-        const tabName = "Stats2026_CollectionsTable";
+        const tabName = "Statistics2026_Pages_AdminPages_Movies_CollectionsTable";
         const lastRunArray = ["MediaAnalysis", "CollectionAnalysis"];
         let showStreaming = true;
 
