@@ -96,7 +96,7 @@ namespace Statistics2026.ScheduledTasks
                     await db.ClearLastUpdatedAsync( Statistics2026DB.EAction.System ).ConfigureAwait( false );
 
                     var overAllTimer = new AutoTimer( $"Adding All Data", _embyInterfaces.Logger(), false );
-                    List<TaskDef>? tasks = TaskDef.GetKnownTasks( false );
+                    List<TaskDef>? tasks = TaskDef.GetKnownTasks( ETaskGroups.eAllButRunAll );
 
                     for( int ii = 0; ii < tasks?.Count; ii++ )
                     {

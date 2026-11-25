@@ -1,28 +1,28 @@
-﻿using MediaBrowser.Common.Plugins;
-using MediaBrowser.Model.Plugins;
-using MediaBrowser.Model.Tasks;
-using ServiceStack.Text;
-using Statistics2026.Configuration;
+﻿using MediaBrowser.Model.Tasks;
 using Statistics2026.EventMonitorEntryPoints;
 using Statistics2026.ScheduledTasks;
-using Statistics2026.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 
 
 namespace Statistics2026.Utilities
 {
+    public enum ETaskGroups
+    {
+        eNone         = 0x00,
+        eMissing      = 0x01,
+        eAllButRunAll = 0x02,
+        eRunAll       = 0x04,
+        eAllOrMissing = 0x03,
+        eAll          = 0x06,
+    };
+
     public class TaskDef
     {
         public static List<string> DefaultTaskReasons = new List<string> { "Task" };
 
         public TaskDef() { }
-        public TaskDef( string name, string description, Type typeOf )
+        public TaskDef( int pos, string name, string description, Type typeOf )
         {
+            Pos = pos;
             Name = name;
             Description = description;
             TaskType = typeOf;
@@ -42,6 +42,7 @@ namespace Statistics2026.Utilities
             }
         }
 
+        public int Pos { get; private set; } = -1;
         public string Name { get; private set; } = string.Empty;
         public string Description { get; private set; } = string.Empty;
         public Type? TaskType { get; private set; } = null;
@@ -109,7 +110,7 @@ namespace Statistics2026.Utilities
             {
                 okIfRunning.AddRange( [ typeof( ItemAddedMonitorEntryPoint ), typeof( RunAllTasksTask ) ] );
             }
-            List<TaskDef> knownTasks = TaskDef.GetKnownTasks( true );
+            List<TaskDef> knownTasks = TaskDef.GetKnownTasks( ETaskGroups.eAll );
 
             IScheduledTaskWorker[] allTasks = embyInterfaces.TaskManager().ScheduledTasks;
             foreach( IScheduledTaskWorker? task in allTasks )
@@ -133,7 +134,7 @@ namespace Statistics2026.Utilities
                     }
 
                     if( okToBeRunning )
-                        continue;
+                        break;
 
                     if( currTask.TaskType == task.ScheduledTask.GetType() )
                     {
@@ -145,69 +146,52 @@ namespace Statistics2026.Utilities
             return false;
         }
 
-        public static TaskDef? GetTaskDef( Type taskType, ref int pos )
-        {
-            pos = -1;
-            List<TaskDef> tasks = GetKnownTasks( true );
-            for( int ii = 0; ii < tasks.Count(); ++ii )
-            {
-                TaskDef task = tasks[ ii ];
-                if( task.TaskType == taskType )
-                {
-                    pos = ii;
-                    return task;
-                }
-            }
-            return null;
-        }
-
-        public static TaskDef? GetTaskDef( Type taskType )
-        {
-            int pos = -1;
-            return GetTaskDef( taskType, ref pos );
-        }
-
         public static string GetTaskName( Type taskType )
         {
-            int pos = -1;
-            TaskDef? task = GetTaskDef( taskType, ref pos );
-            if( task == null )
-                throw new Exception( $"Could not find task defintion for type '{taskType}'" );
+            TaskDef task = GetTaskDef( taskType );
 
-            if( taskType != typeof( RunAllTasksTask ) )
-                return $"\u2022 {pos + 1} - {task.Name}";
+            if( ( taskType != typeof( RunAllTasksTask ) ) && ( task.Pos != -1 ) )
+                return $"\u2022 {task.Pos} - {task.Name}";
             return task.Name;
         }
 
         public static string GetTaskDescription( Type taskType )
         {
-            TaskDef? task = GetTaskDef( taskType );
-            if( task == null )
-                throw new Exception( $"Could not find task defintion for type '{taskType}'" );
-
+            TaskDef task = GetTaskDef( taskType );
             return task.Description;
         }
 
-        public static List<TaskDef> GetKnownTasks( bool includeRunAll )
-        {
-            var tasks = new List<TaskDef>
+        private static Dictionary<Type, (ETaskGroups taskGroup, Func<TaskDef> factory) > sTaskDefMap = new()
             {
-                new($"Analyze User Information", "Analyze the users on the server for use in the analysis.", typeof(AnalyzeUsersTask)),
-                new($"Analyze Media Information", "Analyze the video media on the server for use in the analysis.", typeof(AnalyzeMediaTask)),
-                new($"Analyze Actor Information", "Analyze the actors associated with media on the server use in the analysis.", typeof(AnalyzePeopleTask)),
-                new($"Analyze User Watched Data Information", "Analyze the users watched/played information.", typeof(AnalyzeWatchedMediaDataTask)),
-                new($"Analyze Collection Information", "Analyze the library's collections.", typeof(AnalyzeCollectionsTask)),
-                new($"Analyzing Series Information", "Analyze the library's series.", typeof(AnalyzeSeriesTask)),
-                new($"Analyze Streaming Providers for Media", "Find streaming providers for the media in the library.", typeof(AnalyzeStreamingProvidersTask)),
-                new($"Analyze Missing Episodes", "Analyze the library for missing episodes from existing series.", typeof(AnalyzeMissingEpisodesTask)),
-                new($"Analyze Missing Movies", "Analyze the library for missing movies from existing collections.", typeof(AnalyzeMissingMoviesTask)),
+                { typeof( AnalyzeUsersTask ),              (ETaskGroups.eAllButRunAll, () => { return new TaskDef( 1, $"Analyze User Information", "Analyze the users on the server for use in the analysis.",                     typeof( AnalyzeUsersTask ) ); } ) },
+                { typeof( AnalyzeMediaTask ),              (ETaskGroups.eAllOrMissing, () => { return new TaskDef( 2, $"Analyze Media Information", "Analyze the video media on the server for use in the analysis.",              typeof( AnalyzeMediaTask ) ); } ) },
+                { typeof( AnalyzePeopleTask ),             (ETaskGroups.eAllButRunAll, () => { return new TaskDef( 3, $"Analyze Actor Information", "Analyze the actors associated with media on the server use in the analysis.", typeof( AnalyzePeopleTask ) ); } ) },
+                { typeof( AnalyzeWatchedMediaDataTask ),   (ETaskGroups.eAllButRunAll, () => { return new TaskDef( 4, $"Analyze User Watched Data Information", "Analyze the users watched/played information.",                   typeof( AnalyzeWatchedMediaDataTask ) ); } ) },
+                { typeof( AnalyzeSeriesTask ),             (ETaskGroups.eAllOrMissing, () => { return new TaskDef( 5, $"Analyze Series Information", "Analyze the library's series.",                                              typeof( AnalyzeSeriesTask ) ); } ) },
+                { typeof( AnalyzeMissingEpisodesTask ),    (ETaskGroups.eAllOrMissing, () => { return new TaskDef( 6, $"Analyze Missing Episodes", "Analyze the library for missing episodes from existing series.",               typeof( AnalyzeMissingEpisodesTask ) ); } ) },
+                { typeof( AnalyzeCollectionsTask ),        (ETaskGroups.eAllOrMissing, () => { return new TaskDef( 7, $"Analyze Collection Information", "Analyze the library's collections.",                                     typeof( AnalyzeCollectionsTask ) ); } ) },
+                { typeof( AnalyzeMissingMoviesTask ),      (ETaskGroups.eAllOrMissing, () => { return new TaskDef( 8, $"Analyze Missing Movies", "Analyze the library for missing movies from existing collections.",              typeof( AnalyzeMissingMoviesTask ) ); } ) },
+                { typeof( AnalyzeStreamingProvidersTask ), (ETaskGroups.eAllOrMissing, () => { return new TaskDef( 9, $"Analyze Streaming Providers for Media", "Find streaming providers for the media in the library.",          typeof( AnalyzeStreamingProvidersTask ) ); } ) },
+                { typeof( RunAllTasksTask ),               (ETaskGroups.eRunAll,       () => { return new TaskDef(-1, $"Run all Tasks", "Run All Tasks.",                                                                          typeof( RunAllTasksTask ) ); } ) },
             };
-            if( includeRunAll )
-            {
-                tasks.Add( new TaskDef( $"Run All Statistics 2026 Tasks", "Run all the tasks for Statistical Analysis", typeof( RunAllTasksTask ) ) );
-            }
 
-            return tasks;
+        private static TaskDef GetTaskDef( Type taskType )
+        {
+            if( !sTaskDefMap.TryGetValue( taskType, out (ETaskGroups taskGroup, Func<TaskDef> factory) value ) )
+            {
+                throw new Exception( "Invalid task type" );
+            }
+            return value.factory.Invoke();
+        }
+
+        public static List<TaskDef> GetKnownTasks( ETaskGroups taskGroup )
+         {
+            var retVal = sTaskDefMap
+                .Where( entry => ( entry.Value.taskGroup & taskGroup ) != 0 )
+                .Select( entry => entry.Value.factory.Invoke() )
+                .OrderBy( taskDef => taskDef.Pos )
+                .ToList();
+            return retVal;
         }
 
         public static Task<List<TaskResult>> ExecuteSubTasksAsync( EmbyInterfaces embyInterfaces, List<Type> taskTypes, List<string> reasons, CancellationToken? cancellationToken, bool runAllOkIfRunning )

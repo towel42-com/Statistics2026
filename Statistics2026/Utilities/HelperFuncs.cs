@@ -673,14 +673,14 @@ namespace Statistics2026.Utilities
                     reasons.AddRange( oodReasons );
                     embyInterfaces.Logger().Debug( $"runFullAnalysis=${runFullAnalysis} runMissingAnalysis=${runMissingAnalysis} reasons={string.Join( ", ", reasons )}" );
 
-                    List<Type> tasks = [];
+                    List<TaskDef?> tasks = [];
                     if( ( !runFullAnalysis || !allowRunAll ) && runMissingAnalysis )
                     {
-                        tasks.AddRange( [ typeof( AnalyzeMediaTask ), typeof( AnalyzeSeriesTask ), typeof( AnalyzeCollectionsTask ), typeof( AnalyzeMissingEpisodesTask ), typeof( AnalyzeMissingMoviesTask ) ] );
+                        tasks.AddRange( TaskDef.GetKnownTasks( ETaskGroups.eMissing ) );
                     }
                     else if( runFullAnalysis && allowRunAll )
                     {
-                        tasks.Add( typeof( RunAllTasksTask ) );
+                        tasks.AddRange( TaskDef.GetKnownTasks( ETaskGroups.eRunAll ) );
                     }
 
                     _ = TaskDef.ExecuteSubTasksAsync( embyInterfaces, tasks, reasons, null, false );
