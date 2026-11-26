@@ -3,10 +3,11 @@ define([
     'dialogHelper',
     'toast',
     'prompt',
+    Dashboard.getConfigurationPageUrl('Statistics2026_tabulator_tabulator.js'),
     'emby-button',
     'emby-tabs'
 ],
-    function (mainTabsManager, dialogHelper, toast, prompt) {
+    function (mainTabsManager, dialogHelper, toast, prompt, Tabulator) {
         'use strict';
 
         const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
@@ -152,38 +153,100 @@ define([
                 return `progress-darkRed`;
         }
 
-        function getTVProgressRowData(info) {
-            let progressClass = calculateProgressClass(info.Episodes.Percent);
-            var retVal = `
-            <td style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.Name} (${info.PremiereYear})</td>
-            <td class="center ${progressClass}" style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.Episodes.String}</td>
-            <td style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.ScoreStr}/10</td>
-            <td style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.SeriesStatus}</td>
-            `;
-            return retVal;
+        function getTVProgressTabulatorColumns() {
+            return [
+                {
+                    title: "TV Series (Premiere Year)",
+                    field: "Name",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: function (e, cell) {
+                        const info = cell.getRow().getData();
+                        return `${info.Name} (${info.PremiereYear})`;
+                    },
+                    formatter: function (cell) {
+                        const info = cell.getRow().getData();
+                        return `${info.Name} (${info.PremiereYear})`;
+                    }
+                },
+                {
+                    title: 'Progress <span class="infoBlock" id="episodesInfo" style="margin-left: 6px; cursor: pointer;"><i class="md-icon">info</i></span>',
+                    field: "EpisodeProgess",
+                    sorter: "number",
+                    hozAlign: "left",
+                    tooltip: function (e, cell) {
+                        const info = cell.getRow().getData();
+                        return info.Episodes ? info.Episodes.String : "";
+                    },
+                    formatter: function (cell) {
+                        const info = cell.getRow().getData();
+                        const el = cell.getElement();
+
+                        if (info.Episodes && typeof info.Episodes.Percent === "number") {
+                            const progressClass = calculateProgressClass(info.Episodes.Percent);
+                            if (progressClass) {
+                                el.classList.add(progressClass);
+                            }
+                        }
+
+                        return info.Episodes ? info.Episodes.String : "";
+                    }
+                },
+                {
+                    title: "Score",
+                    field: "Score",
+                    sorter: "number",
+                    hozAlign: "left",
+                    tooltip: function (e, cell) {
+                        const info = cell.getRow().getData();
+                        return `${info.ScoreStr}/10`;
+                    },
+                    formatter: function (cell) {
+                        const info = cell.getRow().getData();
+                        return `${info.ScoreStr}/10`;
+                    }
+                },
+                {
+                    title: "Series Status",
+                    field: "Status",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: function (e, cell) {
+                        return cell.getRow().getData().SeriesStatus || "";
+                    },
+                    formatter: function (cell) {
+                        return cell.getRow().getData().SeriesStatus || "";
+                    }
+                }
+            ];
         }
 
-        function getTVProgressHeader() {
-            var retVal = `
-                <tr style="text-align: left; white-space: nowrap;">
-                    <th data-column="Name" data-type="string" class="info_cell_heading">TV Series (Premiere Year)<span class="sort-icon"></span></th>
-                    <th data-column="EpisodeProgess" data-type="progress" class="info_cell_heading" style="white-space: nowrap;">Progress<span class="sort-icon"></span><span class="infoBlock" id="episodesInfo"><i class="md-icon">info</i></span></th>
-                    <th data-column="Score" data-type="number" class="info_cell_heading">Score<span class="sort-icon"></span></th>
-                    <th data-column="Status" data-type="string" class="info_cell_heading">Series Status<span class="sort-icon"></span></th>
-                </tr>`;
-            return retVal;
-        }
-
-        function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc) {
+        let tvProgressTable = null;
+        function LoadTVProgress(view, userName) {
             view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
 
-            var url = "Statistics2026/tv_series_progress/" + userName;
+            const baseId = "TVSeriesProgress";
+            const endpoint = "Statistics2026/tv_series_progress/" + encodeURIComponent(userName);
 
-            const sortit = () => {
-                sortTable(1, "progress", 'TVSeriesProgress', showLoadingFunc, hideLoadingFunc, 'desc');
+            const customOptions = {
+                initialSort: [
+                    { column: "EpisodeProgess", dir: "desc" }
+                ]
             };
 
-            loadTableDataAsync(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
+            if (tvProgressTable) {
+                tvProgressTable.destroy();
+                tvProgressTable = null;
+            }
+
+            tvProgressTable = loadTabulatorTable(
+                view,
+                baseId,
+                endpoint,
+                getTVProgressTabulatorColumns(),
+                null,
+                customOptions
+            );
         }
 
         function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
@@ -232,6 +295,199 @@ define([
             Promise.allSettled(pendingPromises).finally(() => {
                 hideLoadingFunc();
             });
+        }
+
+        const lazyImageObserver = new IntersectionObserver(function (entries, observer) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    let dataSrc = img.getAttribute("data-src");
+                    if (dataSrc) {
+                        if (!/^(https?:|data:)/i.test(dataSrc)) {
+                            dataSrc = dataSrc.startsWith("/") ? dataSrc : ApiClient.getUrl(dataSrc);
+                            const token = ApiClient.accessToken();
+                            if (token && !/[?&]api_key=/i.test(dataSrc)) {
+                                dataSrc += (dataSrc.includes("?") ? "&" : "?") + "api_key=" + encodeURIComponent(token);
+                            }
+                        }
+
+                        img.src = dataSrc;
+                        img.removeAttribute("data-src");
+                        img.classList.remove("lazy");
+                    }
+                    observer.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: "100px 0px"
+        });
+
+        function formatHtmlWithImages(cell, html) {
+            if (!html) {
+                return "";
+            }
+
+            const wrapper = document.createElement("div");
+            wrapper.innerHTML = html;
+
+            const images = wrapper.querySelectorAll("img");
+            images.forEach(function (img) {
+                img.addEventListener("load", function () {
+                    const row = cell.getRow();
+                    if (row) {
+                        row.normalizeHeight();
+                    }
+
+                    const col = cell.getColumn();
+                    if (col) {
+                        col.setWidth(true);
+                    }
+                }, { once: true });
+
+                if (img.hasAttribute("data-src")) {
+                    lazyImageObserver.observe(img);
+                }
+            });
+
+            return wrapper;
+        }
+
+        function createTextTooltip(dataProperty) {
+            return function (e, cell) {
+                const data = cell.getRow().getData();
+                const prop = data[dataProperty];
+                if (prop && prop.SortBy) {
+                    return prop.SortBy;
+                }
+                return cell.getElement().innerText.trim();
+            };
+        }
+
+        function getMediaTabulatorColumns(parentName, showOnServer, showMissing, showStreaming) {
+            const columns = [
+                {
+                    title: "Name",
+                    field: "Name",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: createTextTooltip("DisplayName"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        return formatHtmlWithImages(cell, data.DisplayName ? data.DisplayName.Text : "");
+                    }
+                },
+                {
+                    title: parentName,
+                    field: "ParentName",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: createTextTooltip("ParentName"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        return formatHtmlWithImages(cell, data.ParentName ? data.ParentName.Text : "");
+                    }
+                },
+                {
+                    title: "Premiere Date",
+                    field: "PremiereDate",
+                    sorter: "date",
+                    hozAlign: "left",
+                    tooltip: createTextTooltip("PremiereDate"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        const el = cell.getElement();
+
+                        if (showMissing && data.SearchLocation && data.SearchLocation.Text !== "" && data.PremiereDate) {
+                            const statusClass = calculateMediaStatusClass(new Date(data.PremiereDate));
+                            if (statusClass) {
+                                el.classList.add(statusClass);
+                            }
+                        }
+
+                        return data.PremiereDate || "";
+                    }
+                }
+            ];
+
+            if (showOnServer) {
+                columns.push(
+                    {
+                        title: "Resolution",
+                        field: "Resolution",
+                        sorter: "string",
+                        hozAlign: "left",
+                        tooltip: createTextTooltip("ResolutionDetail"),
+                        formatter: function (cell) {
+                            return cell.getRow().getData().ResolutionDetail || "";
+                        }
+                    },
+                    {
+                        title: "Codec",
+                        field: "Codec",
+                        sorter: "string",
+                        hozAlign: "left",
+                        tooltip: createTextTooltip("Codec"),
+                        formatter: function (cell) {
+                            return cell.getRow().getData().Codec || "";
+                        }
+                    },
+                    {
+                        title: "Dolby Vision Profile",
+                        field: "DolbyVisionProfile",
+                        sorter: "string",
+                        hozAlign: "left",
+                        tooltip: createTextTooltip("DolbyVisionProfile"),
+                        formatter: function (cell) {
+                            return cell.getRow().getData().DolbyVisionProfile || "";
+                        }
+                    }
+                );
+            }
+
+            if (showStreaming) {
+                columns.push({
+                    title: "Streaming Services(s)",
+                    field: "StreamingServies",
+                    sorter: "string",
+                    hozAlign: "left",
+                    variableHeight: true,
+                    tooltip: createTextTooltip("StreamingProviders"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        return formatHtmlWithImages(cell, data.StreamingProviders ? data.StreamingProviders.Text : "");
+                    }
+                });
+            }
+
+            if (showMissing) {
+                columns.push({
+                    title: "Click to Search",
+                    field: "Search",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: createTextTooltip("SearchLocation"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        return data.SearchLocation ? data.SearchLocation.Text : "";
+                    }
+                });
+            }
+
+            if (showOnServer) {
+                columns.push({
+                    title: "Location on Server",
+                    field: "ServerLocation",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: createTextTooltip("ServerLocation"),
+                    formatter: function (cell) {
+                        const data = cell.getRow().getData();
+                        return data.ServerLocation ? data.ServerLocation.Text : "";
+                    }
+                });
+            }
+
+            return columns;
         }
 
         function getMediaRowData(info, showOnServer, showMissing, showStreaming) {
@@ -419,7 +675,6 @@ define([
             return -1;
         }
 
-        const STYLE_ID = 'statistics2026-stylesheet';
         function injectImageProxy(target, view) {
             let root = view || document;
 
@@ -448,23 +703,8 @@ define([
             });
         }
 
-        function injectStyleSheet() {
-            if (document.getElementById(STYLE_ID))  // already added
-                return;
-
-            const cssUrl = 'configurationpage?name=Stats2026_style.css&v=2';
-            const link = document.createElement('link');
-            link.id = STYLE_ID;
-            link.rel = 'stylesheet';
-            link.type = 'text/css';
-            link.href = cssUrl;
-
-            document.head.appendChild(link);
-        }
-
         const activeLoaders = new Map();
-
-        async function loadTableDataAsync(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
+        async function loadTableData(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
             if (activeLoaders.has(baseId)) {
                 activeLoaders.get(baseId).abort();
                 activeLoaders.delete(baseId);
@@ -492,13 +732,13 @@ define([
                     }
 
                     var errorMessage = "'" + error + "' - '" + url + "'";
-                    console.error("loadTableDataAsync failed:", errorMessage, "url:", url);
+                    console.error("loadTableData failed:", errorMessage, "url:", url);
                     return;
                 });
 
                 if (resultData === undefined || signal.aborted) {
                     if (!signal.aborted)
-                        console.error("loadTableDataAsync failed: result data was undefined", "url:", url);
+                        console.error("loadTableData failed: result data was undefined", "url:", url);
                     return;
                 }
 
@@ -584,7 +824,7 @@ define([
             }
             catch (error) {
                 if (error.name !== 'AbortError') {
-                    console.error("Unexpected error in loadTableDataAsync workflow:", error);
+                    console.error("Unexpected error in loadTableData workflow:", error);
                 }
             }
             finally {
@@ -899,7 +1139,7 @@ define([
         }
 
         function getRequestedConfigurationPageName() {
-            // 1. Check hash query string first (standard Emby SPA route: #!/configurationpage?name=Stats2026_Movies)
+            // 1. Check hash query string first (standard Emby SPA route: #!/configurationpage?name=Statistics2026_Pages_Movies)
             const hash = window.location.hash || '';
             const hashQueryIndex = hash.indexOf('?');
             if (hashQueryIndex !== -1) {
@@ -910,7 +1150,7 @@ define([
                 }
             }
 
-            // 2. Fallback to standard window.location.search (?name=Stats2026_Movies)
+            // 2. Fallback to standard window.location.search (?name=Statistics2026_Pages_Movies)
             const searchParams = new URLSearchParams(window.location.search || '');
             return searchParams.get('name') || '';
         }
@@ -1050,6 +1290,136 @@ define([
             subTabsWrapper.style.setProperty('margin-right', 'auto', 'important');
         }
 
+        (function injectStyleSheets() {
+            const cssId = 'statistics2026-tabulator-stylesheet';
+            if (!document.getElementById(cssId)) {
+                const link = document.createElement('link');
+                link.id = cssId;
+                link.rel = 'stylesheet';
+                link.type = 'text/css';
+                link.href = ApiClient.getUrl('web/configurationpage', {
+                    name: 'Statistics2026_tabulator_tabulator.css',
+                    v: '2'
+                });
+                document.head.appendChild(link);
+            }
+
+            const STYLE_ID = 'statistics2026-stylesheet';
+            if (!document.getElementById(STYLE_ID)) {
+                const link = document.createElement('link');
+
+                link.id = STYLE_ID;
+                link.rel = 'stylesheet';
+                link.type = 'text/css';
+                link.href = ApiClient.getUrl('web/configurationpage', {
+                    name: 'Statistics2026_Resources_style.css',
+                    v: '2'
+                });
+
+                document.head.appendChild(link);
+            }
+        })();
+
+        function attachTopScrollbar(container, table) {
+            const tableHolder = container.querySelector('.tabulator-tableholder');
+            const header = container.querySelector('.tabulator-header');
+            if (!tableHolder || !header) {
+                return;
+            }
+
+            const topScroll = document.createElement('div');
+            topScroll.className = 'tabulator-top-scrollbar';
+
+            const topScrollInner = document.createElement('div');
+            topScrollInner.className = 'tabulator-top-scrollbar-inner';
+            topScroll.appendChild(topScrollInner);
+
+            // Insert directly above the column header bar
+            header.parentNode.insertBefore(topScroll, header);
+
+            let isSyncing = false;
+
+            topScroll.addEventListener('scroll', function () {
+                if (isSyncing) return;
+                isSyncing = true;
+                tableHolder.scrollLeft = topScroll.scrollLeft;
+                isSyncing = false;
+            });
+
+            tableHolder.addEventListener('scroll', function () {
+                if (isSyncing) return;
+                isSyncing = true;
+                topScroll.scrollLeft = tableHolder.scrollLeft;
+                isSyncing = false;
+            });
+
+            function syncWidth() {
+                const tableEl = tableHolder.querySelector('.tabulator-table');
+                const contentWidth = tableEl ? tableEl.scrollWidth : tableHolder.scrollWidth;
+                topScrollInner.style.width = contentWidth + 'px';
+                topScroll.style.display = contentWidth > tableHolder.clientWidth ? 'block' : 'none';
+            }
+
+            table.on('renderComplete', syncWidth);
+            table.on('columnResized', syncWidth);
+            window.addEventListener('resize', syncWidth);
+        }
+
+        function loadTabulatorTable(view, baseId, endpoint, columns, getExtraParamsFn, customOptions) {
+            const selector = `#${baseId}_table`;
+            const container = view.querySelector(selector);
+            if (!container) {
+                console.error(`loadTabulatorTable: Could not find container '${selector}' in view`, view);
+                return null;
+            }
+
+            const defaultOptions = {
+                ajaxURL: endpoint,
+                pagination: true,
+                paginationMode: 'remote',
+                paginationSize: 25,
+                paginationSizeSelector: [25, 50, 100, 250, 500],
+                sortMode: 'remote',
+                layout: 'fitDataFill',
+                placeholder: 'No records found',
+                columns: columns,
+                ajaxRequestFunc: function (url, config, reqParams) {
+                    const queryParams = {
+                        StartIndex: (reqParams.page - 1) * reqParams.size,
+                        Limit: reqParams.size
+                    };
+
+                    if (reqParams.sort && reqParams.sort.length > 0) {
+                        queryParams.SortBy = reqParams.sort[0].field;
+                        queryParams.SortOrder = reqParams.sort[0].dir === 'desc' ? 'Descending' : 'Ascending';
+                    }
+
+                    if (getExtraParamsFn !== undefined && typeof getExtraParamsFn === 'function') {
+                        Object.assign(queryParams, getExtraParamsFn(reqParams));
+                    }
+
+                    const apiUrl = ApiClient.getUrl(endpoint, queryParams);
+
+                    return ApiClient.getJSON(apiUrl).then(function (response) {
+                        // Supports both Emby QueryResult { Items, TotalRecordCount } or raw array fallback
+                        const items = Array.isArray(response) ? response : (response.Items || []);
+                        const totalCount = Array.isArray(response) ? response.length : (response.TotalRecordCount || 0);
+
+                        return {
+                            last_page: Math.max(1, Math.ceil(totalCount / reqParams.size)),
+                            data: items
+                        };
+                    });
+                }
+            };
+
+            const table = new Tabulator(container, Object.assign({}, defaultOptions, customOptions || {}));
+            table.on('tableBuilt', function () {
+                attachTopScrollbar(container, table);
+            });
+            return table;
+        }
+
         return {
             pluginId,
             CheckForValidConfig,
@@ -1062,8 +1432,7 @@ define([
             insertSystemStatus,
             getTabIndex,
             initCollapsibleTable,
-            injectStyleSheet,
-            loadTableDataAsync,
+            loadTableData,
             loadUsers,
             showInfo,
             showInfoEx,
@@ -1071,7 +1440,11 @@ define([
             updateUserPluginConfiguration,
             isDebugLoggingEnabled,
             showDiagnosticInfo,
-            initTabSystem
+            initTabSystem,
+            loadTabulatorTable,
+            getMediaTabulatorColumns,
+            createTextTooltip,
+            formatHtmlWithImages
         };
     }
 )

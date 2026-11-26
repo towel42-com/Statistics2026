@@ -837,5 +837,86 @@ namespace Statistics2026.Utilities
 
             return retVal;
         }
+
+        // returns the maximum line data of a string with end of lines in it
+        // the prefix, will be removed from the string, if empty or only the prefix line length is considered = 0;
+        public static int MaxLineLength( string text, string prefix = "" )
+        {
+            int maxWidth = -1;
+            using( var reader = new StringReader( text ) )
+            {
+                string? line = null;
+                while( ( line = reader.ReadLine() ) != null )
+                {
+                    line = line.Trim();
+                    int currLineLength = line.Length;
+                    if( line == prefix )
+                        currLineLength = 0;
+                    else if( line.StartsWith( prefix ) )
+                        currLineLength -= prefix.Length;
+                    maxWidth = Math.Max( maxWidth, currLineLength );
+                }
+            }
+            return maxWidth;
+        }
+
+        public static void GetTitle( ref StringBuilder builder, string titleText, int width = 50 )
+        {
+            int borderWidth = 4;
+            if( width <= 8 )
+            {
+                borderWidth = 1;
+            }
+            string border = new string( '-', borderWidth );
+            string lhsBorder = border + " ";
+            string rhsBorder = " " + border;
+            borderWidth = lhsBorder.Length;
+
+            width = Math.Max( width, MaxLineLength( titleText ) + 2*(borderWidth) );
+
+            string lineBreak = new string( '-', width );
+            builder.AppendLine( lineBreak );
+
+            using( var reader = new StringReader( titleText ) )
+            {
+                string? line;
+                while( ( line = reader.ReadLine() ) != null )
+                {
+                    line = line.Trim();
+                    string currLine = string.Empty;
+                    if( line == "-" || line.IsEmpty() )
+                    {
+                        currLine = lineBreak;
+                    }
+                    else if( line.StartsWith( "-" ) )
+                    {
+                        line = line.Substring( 1 );
+                        string paddedLine = line.PadCenter( width - ( 2 * borderWidth ) );
+                        currLine = $"{lhsBorder}{paddedLine}{rhsBorder}";
+                    }
+                    else
+                    {
+                        if( char.IsWhiteSpace( line[ 0 ] ) )
+                            currLine = line;
+                        else
+                            currLine = line.PadCenter( width );
+                    }
+                    builder.AppendLine( currLine );
+                }
+            }
+            builder.AppendLine( lineBreak );
+        }
+
+        public static string PadCenter( this string text, int totalWidth, char paddingChar = ' ' )
+        {
+            if( string.IsNullOrEmpty( text ) || text.Length >= totalWidth )
+            {
+                return text;
+            }
+
+            int leftPadding = ( totalWidth - text.Length ) / 2;
+            return text.PadLeft( text.Length + leftPadding, paddingChar )
+                        .PadRight( totalWidth, paddingChar );
+        }
     }
 }

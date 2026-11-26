@@ -1,35 +1,31 @@
 <div data-role="page"
      class="page type-interior pluginConfigurationPage withTabs"
      data-require="emby-button,emby-radio,emby-input,emby-linkbutton"
-     data-controller="__plugin/Stats2026_EpisodeTable.js">
+     data-controller="__plugin/Statistics2026_Pages_AdminPages_TV_EpisodeTable.js">
     <div data-role="content">
         <div class="content-primary" style="padding-top:2px;">
             <h2 style="margin-top: 0px;margin-bottom: 0px;">TV Episodes</h2>
 
-			<div class="radioButtonsContainer" style="display: flex; flex-direction: row; gap: 24px; align-items: center; margin-top: 15px; margin-bottom: 15px;">
-				<label class="radioContainer">
-					<input name="episodeDisplay" is="emby-radio" type="radio" value="OnServer" checked />
-					<span>Show Episodes on Server?</span>
-				</label>
+            <div class="radioButtonsContainer" style="display: flex; flex-direction: row; gap: 24px; align-items: center; margin-top: 15px; margin-bottom: 15px;">
+                <label class="radioContainer">
+                    <input name="episodeDisplay" is="emby-radio" type="radio" value="OnServer" checked />
+                    <span>Show Episodes on Server?</span>
+                </label>
 
-				<label class="radioContainer">
-					<input name="episodeDisplay" is="emby-radio" type="radio" value="Missing" />
-					<span>Show Missing Episodes?</span>
-				</label>
+                <label class="radioContainer">
+                    <input name="episodeDisplay" is="emby-radio" type="radio" value="Missing" />
+                    <span>Show Missing Episodes?</span>
+                </label>
 
-				<label class="radioContainer">
-					<input name="episodeDisplay" is="emby-radio" type="radio" value="All" />
-					<span>Show All?</span>
-				</label>
-			</div>
-				
-                <p name="lastRunInfo" id="lastRunInfo" />
-
-                <div id="episode_results_status">Loading Data...</div>
-                <table class="sortable-table-styled" id="episode_results_table" cellpadding="6" style="width: 95%; padding-bottom: 250px;">
-                    <thead id="episode_results_head"></thead>
-                    <tbody id="episode_results_body"></tbody>
-                </table>
+                <label class="radioContainer">
+                    <input name="episodeDisplay" is="emby-radio" type="radio" value="All" />
+                    <span>Show All?</span>
+                </label>
             </div>
+
+            <p name="lastRunInfo" id="lastRunInfo" />
+
+            <div id="episode_results_table" style="width:95%; margin-bottom: 100px;"></div>
+        </div>
     </div>
 </div>

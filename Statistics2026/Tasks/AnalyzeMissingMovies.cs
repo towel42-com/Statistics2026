@@ -65,7 +65,7 @@ namespace Statistics2026.ScheduledTasks
         public string Description { get; private set; } = "";
         public List<string> ReasonsForExecute { get; set; } = TaskDef.DefaultTaskReasons;
 
-        string IScheduledTask.Key => "Statistics2026_MissingMoviesTask";
+        string IScheduledTask.Key => "Statistics2026_Pages_MissingMoviesTask";
 
         string IScheduledTask.Category => "Statistics 2026";
 

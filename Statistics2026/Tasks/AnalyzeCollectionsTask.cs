@@ -71,7 +71,7 @@ namespace Statistics2026.ScheduledTasks
         public string Description { get; private set; } = "";
         public List<string> ReasonsForExecute { get; set; } = TaskDef.DefaultTaskReasons;
 
-        string IScheduledTask.Key => "Statistics2026_CollectionsTask";
+        string IScheduledTask.Key => "Statistics2026_Pages_CollectionsTask";
 
         string IScheduledTask.Category => "Statistics 2026";
 

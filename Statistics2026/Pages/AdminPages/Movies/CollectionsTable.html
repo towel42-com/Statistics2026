@@ -1,18 +1,14 @@
 <div data-role="page"
      class="page type-interior pluginConfigurationPage withTabs"
      data-require="emby-button,emby-radio,emby-input,emby-linkbutton"
-     data-controller="__plugin/Stats2026_CollectionsTable.js">
+     data-controller="__plugin/Statistics2026_Pages_AdminPages_Movies_CollectionsTable.js">
     <div data-role="content">
         <div class="content-primary" style="padding-top:2px;">
             <h2 style="margin-top: 0px;margin-bottom: 0px;">Movie Collections</h2>
 
                 <p name="lastRunInfo" id="lastRunInfo" />
 
-                <div id="collection_results_status">Loading Data...</div>
-                <table class="sortable-table-styled" id="collection_results_table" cellpadding="6" style="width: 95%; padding-bottom: 250px;">
-                    <thead id="collection_results_head"></thead>
-                    <tbody id="collection_results_body"></tbody>
-                </table>
-            </div>
+			<div id="collection_results_table" style="width:95%; margin-bottom: 100px;"></div>
+		</div>
     </div>
 </div>
