@@ -490,75 +490,6 @@ define([
             return columns;
         }
 
-        function getMediaRowData(info, showOnServer, showMissing, showStreaming) {
-            var retVal = `
-            <td style="text-align:left;" sort-value="${info.DisplayName.SortBy}">${info.DisplayName.Text}</td>
-            <td style="text-align:left;" sort-value="${info.ParentName.SortBy}">${info.ParentName.Text}</td>
-            `;
-            let premiereDateClass = "";
-            if (showMissing && info.SearchLocation.Text != "") {
-                premiereDateClass = `class='${calculateMediaStatusClass(new Date(info.PremiereDate))}'`;
-            }
-
-            retVal += `<td style="text-align:left;" sort-value="${info.PremiereDate}" ${premiereDateClass}> ${info.PremiereDate}</td>`;
-
-            if (showOnServer) {
-                retVal += `
-                <td style="text-align:left;">${info.ResolutionDetail}</td>
-                <td style="text-align:left;">${info.Codec}</td>
-                <td style="text-align:left;">${info.DolbyVisionProfile}</td>
-                `;
-            }
-
-            if (showStreaming) {
-                retVal += `<td style="text-align:left;"  sort-value="${info.StreamingProviders.SortBy}">${info.StreamingProviders.Text}</td>`;
-            }
-
-            if (showMissing) {
-                retVal += `<td style="text-align:left;" sort-value="${info.SearchLocation.SortBy}">${info.SearchLocation.Text}</td>`;
-            }
-
-            if (showOnServer) {
-                retVal += `
-                <td style="text-align:left;" sort-value="${info.ServerLocation.SortBy}">${info.ServerLocation.Text}</td>
-                `;
-            }
-            return retVal;
-        }
-
-        function getMediaHeader(parentName, showOnServer, showMissing, showStreaming) {
-            var retVal =
-                `<tr style="text-align: left;">
-                <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
-                <th data-column="ParentName" data-type="string" class="info_cell_heading">${parentName}<span class="sort-icon"></span></th>
-                <th data-column="PremiereDate" data-type="date" class="info_cell_heading">Premiere Date<span class="sort-icon"></span></th>
-                `;
-
-            if (showOnServer) {
-                retVal += `
-                <th data-column="Resolution" data-type="string" class="info_cell_heading">Resolution<span class="sort-icon"></span></th>
-                <th data-column="Codec" data-type="string" class="info_cell_heading">Codec<span class="sort-icon"></span></th>
-                <th data-column="DolbyVisionProfile" data-type="string" class="info_cell_heading">Dolby Vision Profile<span class="sort-icon"></span></th>
-                `;
-            }
-
-            if (showStreaming) {
-                retVal += `<th data-column="StreamingServies" data-type="string" class="info_cell_heading">Streaming Services(s)<span class="sort-icon"></span></th>`;
-            }
-
-            if (showMissing) {
-                retVal += `<th data-column="Search" data-type="string" class="info_cell_heading">Click to Search<span class="sort-icon"></span></th>`;
-            }
-
-            if (showOnServer) {
-                retVal += `
-                    <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
-                `;
-            }
-            retVal += "</tr>";
-            return retVal;
-        }
-
         async function getSystemStatusAsync() {
             let urlText = `/Statistics2026/get_system_status`;
             console.info("get_system_status - '" + urlText + "'");
@@ -701,135 +632,6 @@ define([
                 img.src = baseUrl + separator + 'api_key=' + encodeURIComponent(token);
                 img.dataset.proxyInjected = 'true';
             });
-        }
-
-        const activeLoaders = new Map();
-        async function loadTableData(view, baseId, apiEndpoint, getHeaderFunc, getRowDataFunc, showLoadingFunc, hideLoadingFunc, onFinished) {
-            if (activeLoaders.has(baseId)) {
-                activeLoaders.get(baseId).abort();
-                activeLoaders.delete(baseId);
-            }
-
-            const abortController = new AbortController();
-            const { signal } = abortController;
-            activeLoaders.set(baseId, abortController);
-
-            var url = ApiClient.getUrl(apiEndpoint);
-
-            var load_status = view.querySelector('#' + baseId + '_status');
-            if (load_status !== undefined && load_status != null) {
-                load_status.style.display = '';
-                load_status.innerHTML = "Loading Data...";
-            }
-
-            showLoadingFunc();
-            try {
-                console.log("url: " + url);
-                let resultData = await getStatistics2026Data(url, { signal }).catch(error => {
-                    if (error.name === 'AbortError') {
-                        console.log(`Load operation for ${baseId} was interrupted during network fetch.`);
-                        return;
-                    }
-
-                    var errorMessage = "'" + error + "' - '" + url + "'";
-                    console.error("loadTableData failed:", errorMessage, "url:", url);
-                    return;
-                });
-
-                if (resultData === undefined || signal.aborted) {
-                    if (!signal.aborted)
-                        console.error("loadTableData failed: result data was undefined", "url:", url);
-                    return;
-                }
-
-                var tbody = view.querySelector('#' + baseId + '_body');
-                tbody.innerHTML = "";
-
-                var thead = view.querySelector('#' + baseId + '_head');
-                thead.innerHTML = getHeaderFunc();
-                setupSortability(view, baseId, showLoadingFunc, hideLoadingFunc);
-
-                let minChunkSize = 50;
-                let chunkSize = Math.min(minChunkSize, Math.trunc(resultData.length / 20));
-                if (chunkSize == 0)
-                    chunkSize = minChunkSize;
-
-                let currentIndex = 0;
-                function renderNextChunk() {
-                    if (signal.aborted) {
-                        console.log(`Rendering loop for ${baseId} was interrupted.`);
-                        return;
-                    }
-
-                    showLoadingFunc();
-                    const endIndex = Math.min(currentIndex + chunkSize, resultData.length);
-                    const fragment = document.createDocumentFragment();
-
-                    if (load_status !== undefined && load_status != null) {
-                        load_status.innerHTML = `Loading Data... ${currentIndex} of ${resultData.length}`;
-                    }
-                    for (var index = currentIndex; index < endIndex; ++index) {
-                        var info = resultData[index];
-
-                        var row_bg_col = "#BBBBBB00";
-                        if (index % 2 == 0) {
-                            row_bg_col = "#BBBBBB1C";
-                        }
-
-                        const tr = document.createElement('tr');
-                        tr.style.backgroundColor = row_bg_col;
-                        tr.innerHTML = getRowDataFunc(info, index, tr);
-                        fragment.appendChild(tr);
-                    }
-
-                    injectImageProxy(fragment);
-                    tbody.appendChild(fragment);
-                    currentIndex = endIndex;
-
-                    if (currentIndex < resultData.length) {
-                        requestAnimationFrame(renderNextChunk);
-                    }
-                    else {
-                        if (activeLoaders.get(baseId) === abortController) {
-                            activeLoaders.delete(baseId);
-                        }
-
-                        getUserPluginConfig().then(function (config) {
-                            var found = false;
-                            config.TableSortEntries.forEach(entry => {
-                                if (entry.TableId == baseId) {
-                                    var headers = thead.querySelectorAll('th');
-                                    headers.forEach((header, index) => {
-                                        if (header.getAttribute('data-column') == entry.ColumnName) {
-                                            var dataType = header.getAttribute('data-type');
-                                            sortTable(index, dataType, entry.TableId, showLoadingFunc, hideLoadingFunc, entry.AscDesc);
-                                            found = true;
-                                        }
-                                    });
-                                }
-                            });
-
-                            if (found == false && onFinished !== undefined) {
-                                onFinished();
-                            }
-                        });
-
-                        if (load_status !== undefined && load_status != null) {
-                            load_status.style.display = 'none';
-                        }
-                        hideLoadingFunc();
-                    }
-                }
-                requestAnimationFrame(renderNextChunk);
-            }
-            catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error("Unexpected error in loadTableData workflow:", error);
-                }
-            }
-            finally {
-                hideLoadingFunc();
-            }
         }
 
         function loadUsers(view, comboBoxId, loadDataFunc) {
@@ -1425,14 +1227,11 @@ define([
             CheckForValidConfig,
             LoadTVProgress,
             LoadUserStats,
-            getMediaHeader,
-            getMediaRowData,
             getSummaryInfo,
             insertGetLastRunInfo,
             insertSystemStatus,
             getTabIndex,
             initCollapsibleTable,
-            loadTableData,
             loadUsers,
             showInfo,
             showInfoEx,
