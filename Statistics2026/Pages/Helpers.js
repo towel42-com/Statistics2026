@@ -369,6 +369,8 @@ define([
                     title: "Name",
                     field: "Name",
                     sorter: "string",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: "Filter name...",
                     hozAlign: "left",
                     tooltip: createTextTooltip("DisplayName"),
                     formatter: function (cell) {
@@ -380,6 +382,8 @@ define([
                     title: parentName,
                     field: "ParentName",
                     sorter: "string",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: `Filter ${parentName}...`,
                     hozAlign: "left",
                     tooltip: createTextTooltip("ParentName"),
                     formatter: function (cell) {
@@ -415,6 +419,8 @@ define([
                         title: "Resolution",
                         field: "Resolution",
                         sorter: "string",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: `Filter resolution...`,
                         hozAlign: "left",
                         tooltip: createTextTooltip("ResolutionDetail"),
                         formatter: function (cell) {
@@ -425,6 +431,8 @@ define([
                         title: "Codec",
                         field: "Codec",
                         sorter: "string",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: `Filter codec...`,
                         hozAlign: "left",
                         tooltip: createTextTooltip("Codec"),
                         formatter: function (cell) {
@@ -435,6 +443,8 @@ define([
                         title: "Dolby Vision Profile",
                         field: "DolbyVisionProfile",
                         sorter: "string",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: `Filter Dolby Vision profile...`,
                         hozAlign: "left",
                         tooltip: createTextTooltip("DolbyVisionProfile"),
                         formatter: function (cell) {
@@ -478,6 +488,8 @@ define([
                     title: "Location on Server",
                     field: "ServerLocation",
                     sorter: "string",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: `Filter location...`,
                     hozAlign: "left",
                     tooltip: createTextTooltip("ServerLocation"),
                     formatter: function (cell) {
@@ -1182,6 +1194,8 @@ define([
                 paginationSize: 25,
                 paginationSizeSelector: [25, 50, 100, 250, 500],
                 sortMode: 'remote',
+                filterMode: 'remote',
+                headerFilterLiveFilterDelay: 350,
                 layout: 'fitDataFill',
                 placeholder: 'No records found',
                 columns: columns,
@@ -1196,6 +1210,18 @@ define([
                         queryParams.SortOrder = reqParams.sort[0].dir === 'desc' ? 'Descending' : 'Ascending';
                     }
 
+                    if (reqParams.filter && reqParams.filter.length > 0) {
+                        const filterMap = {};
+                        reqParams.filter.forEach(function (f) {
+                            if (f.value !== undefined && f.value !== null && String(f.value).trim() !== '') {
+                                filterMap[f.field] = String(f.value).trim();
+                            }
+                        });
+
+                        if (Object.keys(filterMap).length > 0) {
+                            queryParams.Filters = JSON.stringify(filterMap);
+                        }
+                    }
                     if (getExtraParamsFn !== undefined && typeof getExtraParamsFn === 'function') {
                         Object.assign(queryParams, getExtraParamsFn(reqParams));
                     }

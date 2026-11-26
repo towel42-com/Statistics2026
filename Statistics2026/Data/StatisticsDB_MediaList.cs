@@ -2,6 +2,7 @@
 using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Responses;
+using Statistics2026.Services;
 using Statistics2026.Utilities;
 using System.Text.RegularExpressions;
 
@@ -465,13 +466,6 @@ namespace Statistics2026.Data
             };
         }
 
-
-        public async Task<List<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia )
-        {
-            QueryResult<MediaItemResponse> result = await GetMediaListResponseAsync( whichMedia, -1, -1, string.Empty, string.Empty ).ConfigureAwait(false);
-            return result.Items.ToList();
-        }
-
         private static string BuildMediaListOrderByClause( string sortBy, string sortOrder )
         {
             string direction = string.Equals( sortOrder, "Descending", StringComparison.OrdinalIgnoreCase )
@@ -493,8 +487,45 @@ namespace Statistics2026.Data
             return $"ORDER BY {sqlColumn} COLLATE NOCASE {direction}";
         }
 
+        private static readonly Dictionary<string, string> MediaListFilterColumnMap = new( StringComparer.OrdinalIgnoreCase )
+        {
+            [ "Name" ] = "Title",
+            [ "ParentName" ] = "ParentInfo",
+            [ "Resolution" ] = "ResolutionDetail",
+            [ "Codec" ] = "Codec",
+            [ "DolbyVisionProfile" ] = "DolbyVisionProfile",
+            [ "ServerLocation" ] = "ServerLocation"
+        };
 
-        public async Task<QueryResult<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia, int startIndex, int limit, string sortBy, string sortOrder )
+        private static List<string> BuildWhereClausesFromFilterMap(
+            Dictionary<string, string> filterMap,
+            Dictionary<string, string> columnMap,
+            out List<(string name, object? value)> paramList )
+        {
+            List<string> conditions = [];
+            paramList = [];
+            int paramIndex = 0;
+
+            foreach( KeyValuePair<string, string> kvp in filterMap )
+            {
+                if( string.IsNullOrWhiteSpace( kvp.Value ) )
+                    continue;
+
+                if( columnMap.TryGetValue( kvp.Key, out string? sqlColumn ) )
+                {
+                    string paramName = $"@Filter{paramIndex++}";
+                    conditions.Add( $"{sqlColumn} LIKE {paramName} COLLATE NOCASE" );
+                    paramList.Add( (paramName, $"%{kvp.Value.Trim()}%") );
+                }
+            }
+
+            return conditions;
+        }
+
+
+        public async Task<QueryResult<MediaItemResponse>> GetMediaListResponseAsync(
+            EWhichMediaList whichMedia,
+            MediaListTableOptions tableOptions )
         {
             if( _embyInterfaces == null )
                 return new QueryResult<MediaItemResponse>();
@@ -516,43 +547,50 @@ namespace Statistics2026.Data
             }
 
             string unionSqlCmd = sqlCmds.Join( "\nUNION\n" );
-            bool isPaged = limit > 0;
+            List<string> whereClauses = BuildWhereClausesFromFilterMap(
+                tableOptions.GetFilterMap(),
+                MediaListFilterColumnMap,
+                out List<(string name, object? value)> filterParams );
+
+            string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
+
+            bool isPaged = tableOptions.Limit > 0;
 
             int totalRecordCount = 0;
             if( isPaged )
             {
-                string countSql = $"SELECT COUNT(*) FROM (\n{unionSqlCmd}\n) AS count_subquery";
-                await ExecuteCommandAsync( new SQLCmdDef( countSql ), ( statement ) =>
+                string countSql = $"SELECT COUNT(*) FROM (\n{unionSqlCmd}\n) AS count_subquery{whereClause}";
+                await ExecuteCommandAsync( new SQLCmdDef( countSql, filterParams ), ( statement ) =>
                 {
                     totalRecordCount = statement.Current.GetInt( 0 );
                     return Task.FromResult( false );
                 } ).ConfigureAwait( false );
             }
 
-            string orderByClause = BuildMediaListOrderByClause( sortBy, sortOrder );
-            string pagedSql = $"SELECT * FROM (\n{unionSqlCmd}\n) AS paged_subquery\n{orderByClause}";
-            
+            string orderByClause = BuildMediaListOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
+            string pagedSql = $"SELECT * FROM (\n{unionSqlCmd}\n) AS paged_subquery{whereClause}\n{orderByClause}";
+
             if( isPaged )
             {
-                int safeOffset = Math.Max( 0, startIndex );
-                pagedSql += $"\nLIMIT {limit} OFFSET {safeOffset}";
+                int safeOffset = Math.Max( 0, tableOptions.StartIndex );
+                pagedSql += $"\nLIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
             bool episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommandAsync( new SQLCmdDef( pagedSql ), async ( statement ) =>
+            await ExecuteCommandAsync( new SQLCmdDef( pagedSql, filterParams ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( 
-                    row, 
-                    episodes, 
-                    isoCode, 
-                    IsFilteredSeriesAsync, 
-                    IsFilteredCollection, 
-                    GetCollectionNameAsync, 
-                    _embyInterfaces, 
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync(
+                    row,
+                    episodes,
+                    isoCode,
+                    IsFilteredSeriesAsync,
+                    IsFilteredCollection,
+                    GetCollectionNameAsync,
+                    _embyInterfaces,
                     this ).ConfigureAwait( false );
 
                 if( mediaInfoResponse != null )

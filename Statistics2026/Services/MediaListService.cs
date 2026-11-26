@@ -24,30 +24,51 @@ using System.Diagnostics;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using static Statistics2026.Data.Statistics2026DB;
 
 namespace Statistics2026.Services
 {
-    [Route( "/Statistics2026/episode_list", "GET", Summary = "Gets Episodes" )]
-    [Authenticated( Roles = "admin" )]
-    public class GetEpisodeList : IReturn<QueryResult<MediaItemResponse>>
+    public class MediaListTableOptions
     {
         public int StartIndex { get; set; } = 0;
-        public int Limit { get; set; } = 50;
+        public int Limit { get; set; } = 25;
         public string SortBy { get; set; } = string.Empty;
         public string SortOrder { get; set; } = string.Empty;
+        public string Filters { get; set; } = string.Empty;
+
+        public Dictionary<string, string> GetFilterMap()
+        {
+            if( string.IsNullOrWhiteSpace( Filters ) )
+                return new Dictionary<string, string>( StringComparer.OrdinalIgnoreCase );
+
+            try
+            {
+                Dictionary<string, string>? parsed = JsonSerializer.Deserialize<Dictionary<string, string>>( Filters );
+                return parsed != null
+                    ? new Dictionary<string, string>( parsed, StringComparer.OrdinalIgnoreCase )
+                    : new Dictionary<string, string>( StringComparer.OrdinalIgnoreCase );
+            }
+            catch( JsonException )
+            {
+                return new Dictionary<string, string>( StringComparer.OrdinalIgnoreCase );
+            }
+        }
+    }
+
+
+    [Route( "/Statistics2026/episode_list", "GET", Summary = "Gets Episodes" )]
+    [Authenticated( Roles = "admin" )]
+    public class GetEpisodeList : MediaListTableOptions, IReturn<QueryResult<MediaItemResponse>>
+    {
         public bool ShowOnServer { get; set; } = false;
         public bool ShowMissing { get; set; } = false;
     }
 
     [Route( "/Statistics2026/movie_list", "GET", Summary = "Gets Movies" )]
     [Authenticated( Roles = "admin" )]
-    public class GetMovieList : IReturn<QueryResult<MediaItemResponse>>
+    public class GetMovieList : MediaListTableOptions, IReturn<QueryResult<MediaItemResponse>>
     {
-        public int StartIndex { get; set; } = 0;
-        public int Limit { get; set; } = 50;
-        public string SortBy { get; set; } = string.Empty;
-        public string SortOrder { get; set; } = string.Empty;
         public bool ShowOnServer { get; set; } = false;
         public bool ShowMissing { get; set; } = false;
     }
@@ -166,10 +187,7 @@ namespace Statistics2026.Services
 
                 return await db.GetMediaListResponseAsync(
                     whichMedia,
-                    startIndex,
-                    limit,
-                    request.SortBy,
-                    request.SortOrder
+                    request
                 ).ConfigureAwait( false );
             } );
         }
@@ -198,10 +216,7 @@ namespace Statistics2026.Services
 
                 return await db.GetMediaListResponseAsync(
                     whichMedia,
-                    startIndex,
-                    limit,
-                    request.SortBy,
-                    request.SortOrder
+                    request
                 ).ConfigureAwait( false );
             } );
         }
