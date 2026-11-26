@@ -317,8 +317,6 @@ namespace Statistics2026.Data
                     false,
                     isoCode,
                     null,
-                    null,
-                    null,
                     _embyInterfaces,
                     this ).ConfigureAwait( false );
 
@@ -406,8 +404,6 @@ namespace Statistics2026.Data
                     row,
                     null,
                     isoCode,
-                    null,
-                    null,
                     null,
                     _embyInterfaces,
                     this ).ConfigureAwait( false );
@@ -542,6 +538,88 @@ namespace Statistics2026.Data
                 MediaListFilterColumnMap,
                 out List<(string name, object? value)> filterParams );
 
+            if( ( whichMedia & EWhichMediaList.eEpisodes ) != 0 && Plugin.Instance?.Configuration != null )
+            {
+                whereClauses.Add(
+                    "NOT EXISTS (" +
+                    "  SELECT 1 FROM SeriesFilterList sfl" +
+                    "  WHERE sfl.SeriesId = ParentId" +
+                    "    AND (" +
+                    "      sfl.TrackSeries = 0" +
+                    "      OR (SeasonNum = 0 AND sfl.TrackSpecials = 0)" +
+                    "      OR (sfl.MinSeason > 0 AND SeasonNum < sfl.MinSeason)" +
+                    "      OR (sfl.MaxSeason > 0 AND SeasonNum > sfl.MaxSeason)" +
+                    "    )" +
+                    ")"
+                );
+            }
+
+            if( ( whichMedia & EWhichMediaList.eMovies ) != 0 && ( whichMedia & EWhichMediaList.eMissing ) != 0 )
+            {
+                List<Regex> compiledRegexes = GetCompiledCollectionFilterRegexes();
+                if( compiledRegexes.Count > 0 )
+                {
+                    List<string> excludedCollectionIds = [];
+                    await ExecuteCommandAsync( new SQLCmdDef( "SELECT ItemId, Name, SortName FROM Collections" ), statement =>
+                    {
+                        IResultSet row = statement.Current;
+                        string colId = row.GetString( 0 );
+                        string colName = row.GetString( 1 );
+                        string colSortName = row.GetString( 2 );
+
+                        if( IsFilteredCollection( colName, colSortName, string.Empty, compiledRegexes ) )
+                        {
+                            excludedCollectionIds.Add( colId );
+                        }
+                        return Task.FromResult( true );
+                    } ).ConfigureAwait( false );
+
+                    List<string> excludedMissingTitles = [];
+                    await ExecuteCommandAsync( new SQLCmdDef( "SELECT DISTINCT Title FROM Missing WHERE NOT IsEpisode" ), statement =>
+                    {
+                        IResultSet row = statement.Current;
+                        string title = row.GetString( 0 );
+
+                        if( IsFilteredCollection( string.Empty, string.Empty, title, compiledRegexes ) )
+                        {
+                            excludedMissingTitles.Add( title );
+                        }
+                        return Task.FromResult( true );
+                    } ).ConfigureAwait( false );
+
+                    List<string> exclusionParts = [];
+
+                    if( excludedCollectionIds.Count > 0 )
+                    {
+                        List<string> colParams = [];
+                        for( int ii = 0; ii < excludedCollectionIds.Count; ii++ )
+                        {
+                            string paramName = $"@ExCol{ii}";
+                            colParams.Add( paramName );
+                            filterParams.Add( (paramName, excludedCollectionIds[ ii ]) );
+                        }
+                        exclusionParts.Add( $"ParentId IN ({string.Join( ", ", colParams )})" );
+                    }
+
+                    if( excludedMissingTitles.Count > 0 )
+                    {
+                        List<string> titleParams = [];
+                        for( int ii = 0; ii < excludedMissingTitles.Count; ii++ )
+                        {
+                            string paramName = $"@ExTitle{ii}";
+                            titleParams.Add( paramName );
+                            filterParams.Add( (paramName, excludedMissingTitles[ ii ]) );
+                        }
+                        exclusionParts.Add( $"Title IN ({string.Join( ", ", titleParams )})" );
+                    }
+
+                    if( exclusionParts.Count > 0 )
+                    {
+                        whereClauses.Add( $"(IsMissing = 0 OR NOT ({string.Join( " OR ", exclusionParts )}))" );
+                    }
+                }
+            }
+
             string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
 
             bool isPaged = tableOptions.Limit > 0;
@@ -577,8 +655,6 @@ namespace Statistics2026.Data
                     row,
                     episodes,
                     isoCode,
-                    IsFilteredSeriesAsync,
-                    IsFilteredCollection,
                     GetCollectionNameAsync,
                     _embyInterfaces,
                     this ).ConfigureAwait( false );

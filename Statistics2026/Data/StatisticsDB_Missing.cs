@@ -62,7 +62,20 @@ namespace Statistics2026.Data
                 ", StreamingProviders=@StreamingProviders"
                 ;
 
-        private bool IsFilteredCollection( string collectionName )
+        private static List<Regex> GetCompiledCollectionFilterRegexes()
+        {
+            if( Plugin.Instance?.Configuration?.movieSettings?.CollectionFiltersForMissingMovies is not { Count: > 0 } patterns )
+                return [];
+
+            return patterns
+                .Where( pattern => !string.IsNullOrWhiteSpace( pattern ) )
+                .Select( pattern => new Regex( pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled ) )
+                .ToList();
+        }
+
+        // return isCollectionFiltered( name ) || ( ( sortName != name ) && isCollectionFiltered( sortName ) ) || isCollectionFiltered( Missing.Title );
+
+        private bool IsFilteredCollection( string collectionName, string collectionSortName, string missingTitle, List<Regex> compiledRegexes )
         {
             if( Plugin.Instance == null )
                 return false;
@@ -70,16 +83,12 @@ namespace Statistics2026.Data
             if( Plugin.Instance.Configuration == null )
                 return false;
 
-            if( collectionName.IsNullOrEmpty() )
+            if( collectionName.IsNullOrEmpty() && collectionSortName.IsNullOrEmpty() && missingTitle.IsNullOrEmpty() )
                 return false;
 
-            List<string> regexes = Plugin.Instance.Configuration.movieSettings.CollectionFiltersForMissingMovies;
-
-            foreach( string regexPattern in regexes )
+            foreach( Regex regex in compiledRegexes )
             {
-                var regex = new Regex( regexPattern, RegexOptions.IgnoreCase );
-
-                if( regex.IsMatch( collectionName ) )
+                if( ( !collectionName.IsNullOrEmpty() && regex.IsMatch( collectionName ) ) || ( !collectionSortName.IsNullOrEmpty() && regex.IsMatch( collectionSortName ) ) || ( !missingTitle.IsNullOrEmpty() && regex.IsMatch( missingTitle ) ) )
                 {
                     return true;
                 }
@@ -173,16 +182,16 @@ namespace Statistics2026.Data
                     string title = row.GetString( (int)EMediaListResponseColumns.eTitle );
 
                     List<(string id, string name, string sortName, string displayText, string url)>? parentInfos = await MediaItemResponse.GetParentInfoAsync( parentInfoJSON, episodes,
-                        async ( string id, string name, string sortName ) =>
+                        async ( string id, string parentName, string parentSortName ) =>
                         {
-                            if( name.IsEmpty() )
+                            if( parentName.IsEmpty() )
                             {
                                 return true;
                             }
 
                             if( !episodes )
                             {
-                                return IsFilteredCollection( name ) || ( ( sortName != name ) && IsFilteredCollection( sortName ) ) || IsFilteredCollection( title );
+                                return IsFilteredCollection( parentName, parentSortName, title, GetCompiledCollectionFilterRegexes() );
                             }
                             return false;
                         } ).ConfigureAwait( false );
