@@ -11,30 +11,34 @@
         const baseId = 'episode_results';
         const filterId = 'episodeDisplay';
         const baseUrl = "Statistics2026/episode_list";
-        const tabName = "Statistics2026_Pages_Episodes";
         const lastRunArray = ["MediaAnalysis", "MissingEpisodesAnalysis", "NotifyAvailableToday"];
         let showStreaming = true;
 
         return function (view, params) {
+            let episodeTable = null;
+
             view.addEventListener('viewshow', function (e) {
                 Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
 
                 if (view.getAttribute('data-initialized') === 'true') {
-                    return; // Exit and prevent reload
+                    return;
                 }
 
                 Helpers.getUserPluginConfig().then(function (config) {
-                    var found = false;
+                    let found = false;
                     config.TableSortEntries.forEach(entry => {
                         if (entry.TableId == baseId) {
                             if (entry.ExtraFilter != null && entry.ExtraFilter != "") {
-                                view.querySelector(`input[name="${filterId}"][value="${entry.ExtraFilter}"]`).checked = true;
-                                found = true;
+                                const radio = view.querySelector(`input[name="${filterId}"][value="${entry.ExtraFilter}"]`);
+                                if (radio) {
+                                    radio.checked = true;
+                                    found = true;
+                                }
                             }
                         }
                     });
 
-                    if (found == false) {
+                    if (!found) {
                         view.querySelector(`input[name="${filterId}"][value="All"]`).checked = true;
                     }
 
@@ -48,49 +52,61 @@
             });
 
             view.addEventListener('viewdestroy', function (e) {
+                if (episodeTable) {
+                    episodeTable.destroy();
+                    episodeTable = null;
+                }
             });
 
-            function getMediaHeader() {
-                var showAll = view.querySelector(`input[name="${filterId}"][value="All"]`).checked;
-                var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
-                var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
-
-                return Helpers.getMediaHeader("Series", showOnServer, showMissing, showStreaming);
+            function getFilterFlags() {
+                const showAll = view.querySelector(`input[name="${filterId}"][value="All"]`).checked;
+                const showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
+                const showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
+                return { showAll, showOnServer, showMissing };
             }
 
-            function getMediaRowData(info) {
-                var showAll = view.querySelector(`input[name="${filterId}"][value="All"]`).checked;
-                var showOnServer = showAll || view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
-                var showMissing = showAll || view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
+            function getTabulatorColumns() {
+                const flags = getFilterFlags();
+                return Helpers.getMediaTabulatorColumns("Series", flags.showOnServer, flags.showMissing, showStreaming);
+            }
 
-                return Helpers.getMediaRowData(info, showOnServer, showMissing, showStreaming, showStreaming);
+            function getExtraQueryParams() {
+                const flags = getFilterFlags();
+                const queryParams = {};
+                if (flags.showOnServer) {
+                    queryParams.ShowOnServer = true;
+                }
+                if (flags.showMissing) {
+                    queryParams.ShowMissing = true;
+                }
+                return queryParams;
             }
 
             async function loadTableData() {
-                let configValid = await Helpers.CheckForValidConfig();
+                const configValid = await Helpers.CheckForValidConfig();
                 if (!configValid) {
                     view.querySelector(`#lastRunInfo`).style.display = 'none';
-                    view.querySelector(`#${baseId}_status`).style.display = 'none';
+                    const statusEl = view.querySelector(`#${baseId}_status`);
+                    if (statusEl) {
+                        statusEl.style.display = 'none';
+                    }
                     Dashboard.hideLoadingMsg();
                     return;
                 }
 
-                var showOnServer = view.querySelector(`input[name="${filterId}"][value="OnServer"]`).checked;
-                var showMissing = view.querySelector(`input[name="${filterId}"][value="Missing"]`).checked;
-                var showAll = view.querySelector(`input[name="${filterId}"][value="All"]`).checked;
-
-                var url = baseUrl;
-                if (showOnServer) {
-                    url += "?showOnServer=true";
-                }
-                if (showMissing) {
-                    url += "?showMissing=true";
-                }
-                if (showAll) {
-                    url += "?showOnServer=true&showMissing=true";
+                if (!episodeTable) {
+                    episodeTable = Helpers.loadTabulatorTable(
+                        view,
+                        baseId,
+                        baseUrl,
+                        getTabulatorColumns(),
+                        getExtraQueryParams
+                    );
+                } else {
+                    episodeTable.setColumns(getTabulatorColumns());
+                    episodeTable.setData();
                 }
 
-                Helpers.loadTableData(view, baseId, url, getMediaHeader, getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
                 view.setAttribute('data-initialized', 'true');
             }
 

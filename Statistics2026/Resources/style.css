@@ -684,6 +684,8 @@ ol.range-list {
    12. Customize Tabulator Style (Matched to .sortable-table-styled)
    ========================================================================== */
 .tabulator {
+    display: flex;
+    flex-direction: column;
     background-color: var(--local-background);
     border: 1px solid var(--line-background);
     border-radius: var(--card-border-radius, 4px);
@@ -692,8 +694,68 @@ ol.range-list {
     font-size: inherit;
 }
 
-    /* Header Bar & Column Headings */
+    /* 1. Pagination Controls (Positioned at Top) */
+    .tabulator .tabulator-footer {
+        order: 1;
+        background-color: var(--local-theme-background-accent);
+        border-top: none;
+        border-bottom: 1px solid var(--line-background);
+        color: var(--local-text-muted);
+        padding: 8px 10px;
+        font-weight: normal;
+    }
+
+        .tabulator .tabulator-footer .tabulator-page-size {
+            background-color: var(--local-background);
+            color: var(--local-text-normal);
+            border: 1px solid var(--line-background);
+            border-radius: var(--card-border-radius, 4px);
+            padding: 4px 8px;
+        }
+
+        .tabulator .tabulator-footer .tabulator-page {
+            background-color: transparent;
+            color: var(--local-text-normal);
+            border: 1px solid var(--line-background);
+            border-radius: var(--card-border-radius, 4px);
+            padding: 4px 10px;
+            margin: 0 2px;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+
+            .tabulator .tabulator-footer .tabulator-page:not(:disabled):hover {
+                background-color: var(--local-item-selection);
+            }
+
+            .tabulator .tabulator-footer .tabulator-page.active {
+                background-color: var(--local-theme-primary-color);
+                border-color: var(--local-theme-primary-color);
+                color: var(--local-statcard-text, #FFFFFF);
+                font-weight: 600;
+            }
+
+            .tabulator .tabulator-footer .tabulator-page:disabled {
+                opacity: 0.4;
+                cursor: default;
+            }
+
+    /* 2. Synchronized Top Horizontal Scrollbar */
+    .tabulator .tabulator-top-scrollbar {
+        order: 2;
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-bottom: 1px solid var(--line-background);
+        background-color: var(--local-background);
+    }
+
+        .tabulator .tabulator-top-scrollbar .tabulator-top-scrollbar-inner {
+            height: 1px;
+        }
+
+    /* 3. Header Bar & Column Headings */
     .tabulator .tabulator-header {
+        order: 3;
         background-color: var(--local-theme-background-accent);
         border-bottom: 1px solid var(--line-background);
         color: var(--local-text-muted);
@@ -737,8 +799,9 @@ ol.range-list {
                 opacity: 1;
             }
 
-    /* Table Body & Rows */
+    /* 4. Table Body & Rows */
     .tabulator .tabulator-tableholder {
+        order: 4;
         background-color: var(--local-background);
     }
 
@@ -784,7 +847,7 @@ ol.range-list {
                 text-decoration: underline;
             }
 
-        /* Preserve your section 7 status colors (.progress-green, .progress-red, etc.) on PremiereDate cells */
+        /* Preserve Section 7 status colors (.progress-green, .progress-red, etc.) */
         .tabulator-row .tabulator-cell[class*="progress-"] {
             color: #FFFFFF;
         }
@@ -792,49 +855,6 @@ ol.range-list {
         .tabulator-row .tabulator-cell.progress-yellow,
         .tabulator-row .tabulator-cell.progress-orange {
             color: #111111;
-        }
-
-/* Pagination Footer */
-.tabulator .tabulator-footer {
-    background-color: var(--local-theme-background-accent);
-    border-top: 1px solid var(--line-background);
-    color: var(--local-text-muted);
-    padding: 8px 10px;
-    font-weight: normal;
-}
-
-    .tabulator .tabulator-footer .tabulator-page-size {
-        background-color: var(--local-background);
-        color: var(--local-text-normal);
-        border: 1px solid var(--line-background);
-        border-radius: var(--card-border-radius, 4px);
-        padding: 4px 8px;
-    }
-
-    .tabulator .tabulator-footer .tabulator-page {
-        background-color: transparent;
-        color: var(--local-text-normal);
-        border: 1px solid var(--line-background);
-        border-radius: var(--card-border-radius, 4px);
-        padding: 4px 10px;
-        margin: 0 2px;
-        transition: background-color 0.15s ease, color 0.15s ease;
-    }
-
-        .tabulator .tabulator-footer .tabulator-page:not(:disabled):hover {
-            background-color: var(--local-item-selection);
-        }
-
-        .tabulator .tabulator-footer .tabulator-page.active {
-            background-color: var(--local-theme-primary-color);
-            border-color: var(--local-theme-primary-color);
-            color: var(--local-statcard-text, #FFFFFF);
-            font-weight: 600;
-        }
-
-        .tabulator .tabulator-footer .tabulator-page:disabled {
-            opacity: 0.4;
-            cursor: default;
         }
 
 /* Loading & Empty Placeholder Overlay */

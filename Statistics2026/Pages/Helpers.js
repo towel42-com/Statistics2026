@@ -1258,6 +1258,51 @@ define([
             }
         })();
 
+        function attachTopScrollbar(container, table) {
+            const tableHolder = container.querySelector('.tabulator-tableholder');
+            const header = container.querySelector('.tabulator-header');
+            if (!tableHolder || !header) {
+                return;
+            }
+
+            const topScroll = document.createElement('div');
+            topScroll.className = 'tabulator-top-scrollbar';
+
+            const topScrollInner = document.createElement('div');
+            topScrollInner.className = 'tabulator-top-scrollbar-inner';
+            topScroll.appendChild(topScrollInner);
+
+            // Insert directly above the column header bar
+            header.parentNode.insertBefore(topScroll, header);
+
+            let isSyncing = false;
+
+            topScroll.addEventListener('scroll', function () {
+                if (isSyncing) return;
+                isSyncing = true;
+                tableHolder.scrollLeft = topScroll.scrollLeft;
+                isSyncing = false;
+            });
+
+            tableHolder.addEventListener('scroll', function () {
+                if (isSyncing) return;
+                isSyncing = true;
+                topScroll.scrollLeft = tableHolder.scrollLeft;
+                isSyncing = false;
+            });
+
+            function syncWidth() {
+                const tableEl = tableHolder.querySelector('.tabulator-table');
+                const contentWidth = tableEl ? tableEl.scrollWidth : tableHolder.scrollWidth;
+                topScrollInner.style.width = contentWidth + 'px';
+                topScroll.style.display = contentWidth > tableHolder.clientWidth ? 'block' : 'none';
+            }
+
+            table.on('renderComplete', syncWidth);
+            table.on('columnResized', syncWidth);
+            window.addEventListener('resize', syncWidth);
+        }
+
         function loadTabulatorTable(view, baseId, endpoint, columns, getExtraParamsFn, customOptions) {
             const selector = `#${baseId}_table`;
             const container = view.querySelector(selector);
@@ -1270,7 +1315,7 @@ define([
                 ajaxURL: endpoint,
                 pagination: true,
                 paginationMode: 'remote',
-                paginationSize: 50,
+                paginationSize: 25,
                 paginationSizeSelector: [25, 50, 100, 250, 500],
                 sortMode: 'remote',
                 layout: 'fitDataFill',
@@ -1306,7 +1351,11 @@ define([
                 }
             };
 
-            return new Tabulator(container, Object.assign({}, defaultOptions, customOptions || {}));
+            const table = new Tabulator(container, Object.assign({}, defaultOptions, customOptions || {}));
+            table.on('tableBuilt', function () {
+                attachTopScrollbar(container, table);
+            });
+            return table;
         }
 
         return {
