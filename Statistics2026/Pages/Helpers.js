@@ -153,38 +153,100 @@ define([
                 return `progress-darkRed`;
         }
 
-        function getTVProgressRowData(info) {
-            let progressClass = calculateProgressClass(info.Episodes.Percent);
-            var retVal = `
-            <td style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.Name} (${info.PremiereYear})</td>
-            <td class="center ${progressClass}" style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.Episodes.String}</td>
-            <td style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.ScoreStr}/10</td>
-            <td style="vertical-align: middle; white-space: nowrap; text-align:left;">${info.SeriesStatus}</td>
-            `;
-            return retVal;
+        function getTVProgressTabulatorColumns() {
+            return [
+                {
+                    title: "TV Series (Premiere Year)",
+                    field: "Name",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: function (e, cell) {
+                        const info = cell.getRow().getData();
+                        return `${info.Name} (${info.PremiereYear})`;
+                    },
+                    formatter: function (cell) {
+                        const info = cell.getRow().getData();
+                        return `${info.Name} (${info.PremiereYear})`;
+                    }
+                },
+                {
+                    title: 'Progress <span class="infoBlock" id="episodesInfo" style="margin-left: 6px; cursor: pointer;"><i class="md-icon">info</i></span>',
+                    field: "EpisodeProgess",
+                    sorter: "number",
+                    hozAlign: "left",
+                    tooltip: function (e, cell) {
+                        const info = cell.getRow().getData();
+                        return info.Episodes ? info.Episodes.String : "";
+                    },
+                    formatter: function (cell) {
+                        const info = cell.getRow().getData();
+                        const el = cell.getElement();
+
+                        if (info.Episodes && typeof info.Episodes.Percent === "number") {
+                            const progressClass = calculateProgressClass(info.Episodes.Percent);
+                            if (progressClass) {
+                                el.classList.add(progressClass);
+                            }
+                        }
+
+                        return info.Episodes ? info.Episodes.String : "";
+                    }
+                },
+                {
+                    title: "Score",
+                    field: "Score",
+                    sorter: "number",
+                    hozAlign: "left",
+                    tooltip: function (e, cell) {
+                        const info = cell.getRow().getData();
+                        return `${info.ScoreStr}/10`;
+                    },
+                    formatter: function (cell) {
+                        const info = cell.getRow().getData();
+                        return `${info.ScoreStr}/10`;
+                    }
+                },
+                {
+                    title: "Series Status",
+                    field: "Status",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: function (e, cell) {
+                        return cell.getRow().getData().SeriesStatus || "";
+                    },
+                    formatter: function (cell) {
+                        return cell.getRow().getData().SeriesStatus || "";
+                    }
+                }
+            ];
         }
 
-        function getTVProgressHeader() {
-            var retVal = `
-                <tr style="text-align: left; white-space: nowrap;">
-                    <th data-column="Name" data-type="string" class="info_cell_heading">TV Series (Premiere Year)<span class="sort-icon"></span></th>
-                    <th data-column="EpisodeProgess" data-type="progress" class="info_cell_heading" style="white-space: nowrap;">Progress<span class="sort-icon"></span><span class="infoBlock" id="episodesInfo"><i class="md-icon">info</i></span></th>
-                    <th data-column="Score" data-type="number" class="info_cell_heading">Score<span class="sort-icon"></span></th>
-                    <th data-column="Status" data-type="string" class="info_cell_heading">Series Status<span class="sort-icon"></span></th>
-                </tr>`;
-            return retVal;
-        }
-
-        function LoadTVProgress(view, userName, showLoadingFunc, hideLoadingFunc) {
+        let tvProgressTable = null;
+        function LoadTVProgress(view, userName) {
             view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
 
-            var url = "Statistics2026/tv_series_progress/" + userName;
+            const baseId = "TVSeriesProgress";
+            const endpoint = "Statistics2026/tv_series_progress/" + encodeURIComponent(userName);
 
-            const sortit = () => {
-                sortTable(1, "progress", 'TVSeriesProgress', showLoadingFunc, hideLoadingFunc, 'desc');
+            const customOptions = {
+                initialSort: [
+                    { column: "EpisodeProgess", dir: "desc" }
+                ]
             };
 
-            loadTableData(view, 'TVSeriesProgress', url, getTVProgressHeader, getTVProgressRowData, showLoadingFunc, hideLoadingFunc, sortit);
+            if (tvProgressTable) {
+                tvProgressTable.destroy();
+                tvProgressTable = null;
+            }
+
+            tvProgressTable = loadTabulatorTable(
+                view,
+                baseId,
+                endpoint,
+                getTVProgressTabulatorColumns(),
+                null,
+                customOptions
+            );
         }
 
         function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
