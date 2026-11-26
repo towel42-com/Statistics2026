@@ -2,8 +2,8 @@
     'baseView',
     'loading',
     'mainTabsManager',
-    ApiClient.getUrl('web/configurationpage?name=Stats2026_UserPageHelpers.js'),
-    ApiClient.getUrl('web/configurationpage?name=Stats2026_Helpers.js'),
+    ApiClient.getUrl('web/configurationpage?name=Statistics2026_Pages_UserPages_UserHelpers.js'),
+    ApiClient.getUrl('web/configurationpage?name=Statistics2026_Pages_Helpers.js'),
     'emby-input',
     'emby-button',
     'emby-checkbox',
@@ -17,7 +17,6 @@
 
             view.addEventListener('viewshow', function (e) {
                 mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
-                Helpers.injectStyleSheet();
 
                 Helpers.insertGetLastRunInfo(view, ["UserAnalysis", "UserWatchDataAnalysis"], "lastRunInfo");
                 loadData(view, params.userId);
@@ -35,7 +34,6 @@
                 let configValid = await Helpers.CheckForValidConfig();
                 if (!configValid) {
                     view.querySelector(`#lastRunInfo`).style.display = 'none';
-                    view.querySelector(`#TVSeriesProgress_status`).style.display = 'none';
                     loading.hide();
                     return;
                 }

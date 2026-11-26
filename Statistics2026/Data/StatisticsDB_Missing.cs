@@ -3,6 +3,7 @@ using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Entities;
+using MediaBrowser.Model.Querying;
 using RestSharp;
 using ServiceStack;
 using ServiceStack.Text;
@@ -287,8 +288,47 @@ namespace Statistics2026.Data
 
         public async Task<List<SeriesFilterResponse>> GetSeriesFilterAsync( bool updateIfEmpty )
         {
+            QueryResult<SeriesFilterResponse> result = await GetSeriesFilterAsync( updateIfEmpty, -1, -1, string.Empty, string.Empty ).ConfigureAwait( false );
+            return result.Items.ToList();
+        }
+
+        public async Task<QueryResult<SeriesFilterResponse>> GetSeriesFilterAsync(
+            bool updateIfEmpty,
+            int startIndex,
+            int limit,
+            string sortBy,
+            string sortOrder )
+        {
             CheckIsValid( ECheckLevel.eReport );
 
+            string fromAndJoin =
+                " FROM SeriesFilterList" +
+                " JOIN Series ON Series.ItemId = SeriesFilterList.SeriesId";
+
+            bool isPaged = limit > 0;
+            int totalRecordCount = 0;
+
+            if( isPaged )
+            {
+                string countSql = "SELECT COUNT(*)" + fromAndJoin;
+                await ExecuteCommandAsync( new SQLCmdDef( countSql ), statement =>
+                {
+                    totalRecordCount = statement.Current.GetInt( 0 );
+                    return Task.FromResult( false );
+                } ).ConfigureAwait( false );
+
+                if( totalRecordCount == 0 && updateIfEmpty )
+                {
+                    var cmds = ( await UpdateSeriesFilterAsync( true ).ConfigureAwait( false ) )
+                        .Where( cmd => cmd != null )
+                        .Select( cmd => cmd! )
+                        .ToList();
+                    await ExecuteCommandsAsync( cmds ).ConfigureAwait( false );
+                    return await GetSeriesFilterAsync( false, startIndex, limit, sortBy, sortOrder ).ConfigureAwait( false );
+                }
+            }
+
+            string orderByClause = BuildSeriesFilterOrderByClause( sortBy, sortOrder );
             string sql = "SELECT" +
                 "  SeriesFilterList.SeriesId" +
                 ", SeriesFilterList.TrackSeries" +
@@ -300,8 +340,14 @@ namespace Statistics2026.Data
                 ", SeriesFilterList.MaxSeason" +
                 ", Series.HasSpecials" +
                 ", Series.NumSeasons" +
-                " FROM SeriesFilterList" +
-                " JOIN Series ON Series.ItemId=SeriesFilterList.SeriesId";
+                fromAndJoin +
+                $" {orderByClause}";
+
+            if( isPaged )
+            {
+                int safeOffset = Math.Max( 0, startIndex );
+                sql += $" LIMIT {limit} OFFSET {safeOffset}";
+            }
 
             List<SeriesFilterResponse> retVal = [];
             bool found = false;
@@ -327,13 +373,36 @@ namespace Statistics2026.Data
                 retVal.Add( currFilter );
                 return Task.FromResult( true );
             } ).ConfigureAwait( false );
+
             if( !found && updateIfEmpty )
             {
-                var cmds = ( await UpdateSeriesFilterAsync( true ).ConfigureAwait( false ) ).Where( cmd => cmd != null ).Select( cmd => cmd! ).ToList();
+                var cmds = ( await UpdateSeriesFilterAsync( true ).ConfigureAwait( false ) )
+                    .Where( cmd => cmd != null )
+                    .Select( cmd => cmd! )
+                    .ToList();
                 await ExecuteCommandsAsync( cmds ).ConfigureAwait( false );
-                return await GetSeriesFilterAsync( false ).ConfigureAwait( false );
+                return await GetSeriesFilterAsync( false, startIndex, limit, sortBy, sortOrder ).ConfigureAwait( false );
             }
-            return retVal;
+
+            return new QueryResult<SeriesFilterResponse>
+            {
+                Items = retVal.ToArray(),
+                TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
+            };
+        }
+
+        private static string BuildSeriesFilterOrderByClause( string sortBy, string sortOrder )
+        {
+            string direction = string.Equals( sortOrder, "Descending", StringComparison.OrdinalIgnoreCase )
+                ? "DESC"
+                : "ASC";
+
+            return ( sortBy ?? string.Empty ).ToLowerInvariant() switch
+            {
+                "trackseries" => $"ORDER BY SeriesFilterList.TrackSeries {direction}, Series.SortName COLLATE NOCASE ASC",
+                "trackspecials" => $"ORDER BY SeriesFilterList.TrackSpecials {direction}, Series.SortName COLLATE NOCASE ASC",
+                _ => $"ORDER BY Series.SortName COLLATE NOCASE {direction}"
+            };
         }
 
         public async Task<SQLCmdDef> SaveSeriesFilterAsync( SeriesFilterResponse seriesFilter, bool andExecute )

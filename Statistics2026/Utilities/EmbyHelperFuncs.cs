@@ -13,7 +13,9 @@ using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
+using ServiceStack.Text.Common;
 using Statistics2026.Data;
+using System.Reflection;
 using System.Text;
 using static Statistics2026.Data.Statistics2026DB;
 
@@ -659,7 +661,7 @@ namespace Statistics2026.Utilities
                 logger?.Info( $"Last Missing Episode Analysis run: {lastMissingEpisodeAnalysis.Value.LocalDateTime}" );
             }
 
-            DateTimeOffset? lastMissingMovieAnalysis = (await db.GetLastUpdatedAsync( EAction.MissingMoviesAnalysis ).ConfigureAwait( false ) ).when;
+            DateTimeOffset? lastMissingMovieAnalysis = ( await db.GetLastUpdatedAsync( EAction.MissingMoviesAnalysis ).ConfigureAwait( false ) ).when;
             if( lastMissingMovieAnalysis == null || lastMissingMovieAnalysis.Value == DateTimeOffset.MinValue )
             {
                 runMissingAnalysis = true;
@@ -761,8 +763,52 @@ namespace Statistics2026.Utilities
                 .FirstOrDefault( genre => string.Equals( genre.Name, genreName, StringComparison.OrdinalIgnoreCase ) );
         }
 
-        public static void validatePluginResourcePages( IEnumerable<PluginPageInfo> pages, object plugin, EmbyInterfaces embyInterfaces, bool forceShowKnownResources = false )
+        public static string GetExpectedNameForPath( string path, string ns )
         {
+            int pos = path.LastIndexOf( '.' );
+            string baseName = path;
+            string ext = string.Empty;
+
+            while( baseName.StartsWith( ns + "_" ) )
+            {
+                baseName = baseName.Substring( ns.Length + 1 );
+            }
+
+            if( pos != -1 )
+            {
+                ext = path.Substring( pos ).ToLower();
+                if( ( ext == ".css" ) || ( ext == ".js" ) || ( ext == ".html" ) )
+                {
+                    baseName = path.Substring( 0, pos );
+                }
+                if( ext == ".html" )
+                {
+                    ext = "";
+                }
+            }
+            string retVal = baseName.Replace( ".", "_" ) + ext;
+            if( !retVal.StartsWith( ns + "_" ) )
+                retVal = $"{ns}_{retVal}";
+            return retVal;
+        }
+
+        public static void validatePluginResourcePages( IEnumerable<PluginPageInfo> pages, object plugin, string ns, EmbyInterfaces embyInterfaces, bool forceShowKnownResources = false )
+        {
+            List<(string currName, string correctName)> misnamedPages = [];
+            foreach( PluginPageInfo page in pages )
+            {
+                string nameForPath = GetExpectedNameForPath( page.EmbeddedResourcePath, ns );
+
+                if( !page.Name.StartsWith( ns ) )
+                {
+                    misnamedPages.Add( (page.Name, nameForPath) );
+                }
+                else if( page.Name != nameForPath )
+                {
+                    misnamedPages.Add( (page.Name, nameForPath) );
+                }
+            }
+
             List<string> pageMissingInResources = [];
             foreach( PluginPageInfo page in pages )
             {
@@ -797,15 +843,34 @@ namespace Statistics2026.Utilities
                 }
             }
 
-            if( !forceShowKnownResources && ( pageMissingInResources.Count == 0 ) && ( resourceMissingInPages.Count == 0 ) )
+            if( !forceShowKnownResources && ( pageMissingInResources.Count == 0 ) && ( resourceMissingInPages.Count == 0 ) && ( misnamedPages.Count == 0 ) )
                 return;
 
+
             StringBuilder builder = new();
+            if( misnamedPages.Count != 0 )
+            {
+                StringBuilder title = new();
+                title.AppendLine( $"-The following pages are misnamed" );
+                title.AppendLine( $"-The name should be the path with '.'" );
+                title.AppendLine( $"-replaced with '_'." );
+                title.AppendLine( $"-" );
+                title.AppendLine( $"    Current Name => Correct Name" );
+                HelperFuncs.GetTitle( ref builder, title.ToString() );
+
+                foreach( (string currName, string correctName) in misnamedPages )
+                {
+                    builder.AppendLine( $"    {currName} => {correctName}" );
+                }
+            }
+
             if( pageMissingInResources.Count != 0 )
             {
-                builder.AppendLine( $"--------------------------------------------------" );
-                builder.AppendLine( $"---- Could not find {pageMissingInResources.Count} resources ----" );
-                builder.AppendLine( $"--------------------------------------------------" );
+                if( builder.Length != 0 )
+                {
+                    builder.AppendLine( string.Empty );
+                }
+                HelperFuncs.GetTitle( ref builder, $"-Could not find {pageMissingInResources.Count} Pages data in resources" );
                 foreach( string name in pageMissingInResources )
                 {
                     builder.AppendLine( $"    {name}" );
@@ -815,23 +880,29 @@ namespace Statistics2026.Utilities
 
             if( resourceMissingInPages.Count != 0 )
             {
-                builder.AppendLine( $"--------------------------------------------------" );
-                builder.AppendLine( $"---- Could not find {resourceMissingInPages.Count} resources ----" );
-                builder.AppendLine( $"--------------------------------------------------" );
+                if( builder.Length != 0 )
+                {
+                    builder.AppendLine( string.Empty );
+                }
+                HelperFuncs.GetTitle( ref builder, $"-Could not find Page Definitions for {resourceMissingInPages.Count} resources" );
                 foreach( string name in resourceMissingInPages )
                 {
                     builder.AppendLine( $"    {name}" );
                 }
             }
 
-            builder.AppendLine( $"--------------------------------------------------" );
-            builder.AppendLine( $"----           Known Resource Paths           ----" );
-            builder.AppendLine( $"--------------------------------------------------" );
-            foreach( string? name in resourcePaths )
+            if( ( pageMissingInResources.Count != 0 ) || ( resourceMissingInPages.Count != 0 ) )
             {
-                builder.AppendLine( $"    {name}" );
+                if( builder.Length != 0 )
+                {
+                    builder.AppendLine( string.Empty );
+                }
+                HelperFuncs.GetTitle( ref builder, $"-Resource Paths in Assembly" );
+                foreach( string? name in resourcePaths )
+                {
+                    builder.AppendLine( $"    {name}" );
+                }
             }
-
             LogSeverity logSeverity = LogSeverity.Info;
             string severity = "Info";
             if( pageMissingInResources.Count > 0 )
@@ -844,7 +915,11 @@ namespace Statistics2026.Utilities
                 severity = "Warning";
                 logSeverity = LogSeverity.Warn;
             }
-
+            else if( misnamedPages.Count > 0 )
+            {
+                severity = "Warning";
+                logSeverity = LogSeverity.Warn;
+            }
             builder.AppendLine( $"--------------------------------------------------" );
             embyInterfaces.Logger().LogMultiline( $"----         {severity} loading page info          ----", logSeverity, builder );
         }

@@ -1,6 +1,6 @@
 ﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
      data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
-     data-controller="__plugin/Stats2026_TVSettings.js">
+     data-controller="__plugin/Statistics2026_Pages_AdminPages_TV_TVSettings.js">
     <div data-role="content">
         <div class="content-primary" style="padding-top:2px;">
             <h2 style="margin-top: 0px;margin-bottom: 0px;">TV Settings</h2>
@@ -69,14 +69,8 @@
                 Set the seasons to track missing episodes.  Uncheck to no longer track.  Set the minimum and/or maximum season to track.
             </p>
 
-            <div id="seriesFilter_status">Loading Filters...</div>
-            <div class="sortable-table-styled-scrollbox">
-                <table class="sortable-table-styled" id="seriesFilter_table">
-                    <thead id="seriesFilter_head"></thead>
-                    <tbody id="seriesFilter_body"></tbody>
-                </table>
-            </div>
-
+            <div id="seriesFilter_table" style="width:95%; margin-bottom: 100px;"></div>
+            
             <h3 style="margin-top: 10px;">Media Reports</h3>
             <div class="inputContainer">
                 <label class="emby-checkbox-label">

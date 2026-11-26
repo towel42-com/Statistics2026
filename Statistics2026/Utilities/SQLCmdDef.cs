@@ -201,7 +201,11 @@ namespace Statistics2026.Utilities
         public static List<string> joinWithComma( List<string>? values, string? prefix = null )
         {
             List<string> retVal = [];
-            if( values == null || values.Count() == 0 )
+            if( values == null  )                
+                return retVal;
+
+            values.RemoveAll( string.IsNullOrEmpty );
+            if( values.Count == 0 )
                 return retVal;
 
             if( prefix != null )

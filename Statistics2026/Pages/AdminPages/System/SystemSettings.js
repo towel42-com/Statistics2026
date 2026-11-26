@@ -1,7 +1,7 @@
 ﻿define([
     'mainTabsManager',
-    Dashboard.getConfigurationResourceUrl('Stats2026_AdminHelpers.js'),
-    Dashboard.getConfigurationResourceUrl('Stats2026_Helpers.js')
+    Dashboard.getConfigurationResourceUrl('Statistics2026_Pages_AdminPages_AdminHelpers.js'),
+    Dashboard.getConfigurationResourceUrl('Statistics2026_Pages_Helpers.js')
 ],
     function (mainTabsManager, AdminHelpers, Helpers) {
         'use strict';
@@ -34,7 +34,6 @@
             // init code here
             view.addEventListener('viewshow', async function (e) {
                 Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
-                Helpers.injectStyleSheet();
 
                 loadPage(view, params);
 

@@ -1,7 +1,7 @@
 ﻿define([
     'mainTabsManager',
-    Dashboard.getConfigurationResourceUrl('Stats2026_AdminHelpers.js'),
-    Dashboard.getConfigurationResourceUrl('Stats2026_Helpers.js')
+    Dashboard.getConfigurationResourceUrl('Statistics2026_Pages_AdminPages_AdminHelpers.js'),
+    Dashboard.getConfigurationResourceUrl('Statistics2026_Pages_Helpers.js')
 ],
     function (mainTabsManager, AdminHelpers, Helpers) {
         `use strict`;
@@ -9,7 +9,6 @@
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
                 Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
-                Helpers.injectStyleSheet();
 
                 Helpers.insertGetLastRunInfo(view, ["UserAnalysis", "UserWatchDataAnalysis"], "lastRunInfo");
                 Helpers.loadUsers(view, `#selectUser_tvprogress`, loadData);
@@ -32,7 +31,6 @@
                 let configValid = await Helpers.CheckForValidConfig();
                 if (!configValid) {
                     view.querySelector(`#lastRunInfo`).style.display = 'none';
-                    view.querySelector(`#TVSeriesProgress_status`).style.display = 'none';
                     Dashboard.hideLoadingMsg();
                     return;
                 }

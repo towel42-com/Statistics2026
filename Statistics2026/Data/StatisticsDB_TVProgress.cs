@@ -1,40 +1,82 @@
-﻿using MediaBrowser.Controller.Dto;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.Movies;
-using MediaBrowser.Controller.Entities.TV;
-using ServiceStack;
+﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Model.Querying;
 using SQLitePCL.pretty;
 using Statistics2026.Configuration;
 using Statistics2026.Responses;
 using Statistics2026.Utilities;
-using System.Collections.Concurrent;
 
 namespace Statistics2026.Data
 {
     public sealed partial class Statistics2026DB
     {
-        public async Task<List<GetTVSeriesProgressResponse>> GetTVSeriesProgressAsync( User? user )
+        public async Task<QueryResult<GetTVSeriesProgressResponse>> GetTVSeriesProgressAsync(
+            User? user,
+            int startIndex,
+            int limit,
+            string sortBy,
+            string sortOrder )
         {
             CheckIsValid( ECheckLevel.eReport );
 
             if( user == null )
-                throw new ArgumentNullException( "user" );
+                throw new ArgumentNullException( nameof( user ) );
 
-            string getSeriesSQL = "SELECT " +
+            string? tableName = TableDefs().getUserTableName( user );
+            List<(string name, object? value)> paramList = [ ("@UserId", user.Id.ToString()) ];
+
+            bool isPaged = limit > 0;
+            int totalRecordCount = 0;
+
+            // 1. Get total series count when paging is active
+            if( isPaged )
+            {
+                string countSql = "SELECT COUNT(*) FROM Series";
+                await ExecuteCommandAsync( new SQLCmdDef( countSql ), statement =>
+                {
+                    totalRecordCount = statement.Current.GetInt( 0 );
+                    return Task.FromResult( false );
+                } ).ConfigureAwait( false );
+            }
+
+            // 2. Join Series with grouped episode & special counts so SQLite can sort by EpisodeProgess and slice LIMIT/OFFSET
+            string orderByClause = BuildTVSeriesProgressOrderByClause( sortBy, sortOrder );
+            string sql =
+                "SELECT " +
                 "  Series.Name" +
-                ", strftime('%Y', Series.PremiereDate) AS PremiereDate" +
+                ", strftime('%Y', Series.PremiereDate) AS PremiereYear" +
                 ", Series.NumEpisodes" +
                 ", Series.NumSpecials" +
                 ", Series.Rating" +
                 ", Series.Status" +
-                ", Series.ItemId " +
-                ", Series.ImageUrl " +
-                " FROM " +
-                "   Series "
-                ;
+                ", Series.ItemId" +
+                ", Series.ImageUrl" +
+                ", COALESCE(ep.WatchedEpisodes, 0) AS WatchedEpisodes" +
+                ", COALESCE(sp.WatchedSpecials, 0) AS WatchedSpecials" +
+                " FROM Series " +
+                " LEFT JOIN ( " +
+                $"   SELECT SeriesId, SUM(NumEpisodes) AS WatchedEpisodes " +
+                $"   FROM {tableName} " +
+                $"   WHERE IsEpisode AND NOT IsTVSpecial AND IsPlayed AND UserId = @UserId " +
+                "   GROUP BY SeriesId " +
+                " ) ep ON ep.SeriesId = Series.ItemId " +
+                " LEFT JOIN ( " +
+                $"   SELECT SeriesId, SUM(NumEpisodes) AS WatchedSpecials " +
+                $"   FROM {tableName} " +
+                $"   WHERE IsEpisode AND IsTVSpecial AND IsPlayed AND UserId = @UserId " +
+                "   GROUP BY SeriesId " +
+                " ) sp ON sp.SeriesId = Series.ItemId " +
+                $" {orderByClause}";
 
-            var series = new Dictionary<string, GetTVSeriesProgressResponse>();
-            await ExecuteCommandAsync( new SQLCmdDef( getSeriesSQL ), statement =>
+            if( isPaged )
+            {
+                int safeOffset = Math.Max( 0, startIndex );
+                sql += $" LIMIT {limit} OFFSET {safeOffset}";
+            }
+
+            bool showImages = Plugin.Instance!.Configuration.ShowImages( EReportType.eUserReport );
+            List<GetTVSeriesProgressResponse> retVal = [];
+
+            await ExecuteCommandAsync( new SQLCmdDef( sql, paramList ), statement =>
             {
                 IResultSet row = statement.Current;
                 int col = 0;
@@ -46,6 +88,8 @@ namespace Statistics2026.Data
                 string status = row.GetString( col++ );
                 string seriesId = row.GetString( col++ );
                 string imageUrl = row.GetString( col++ );
+                int watchedEpisodes = row.GetInt( col++ );
+                int watchedSpecials = row.GetInt( col++ );
 
                 var curr = new GetTVSeriesProgressResponse()
                 {
@@ -56,73 +100,46 @@ namespace Statistics2026.Data
                     SeriesStatus = status,
                     ItemUrl = imageUrl
                 };
-                if( curr.ItemUrl != null && curr.ItemUrl != string.Empty )
+
+                if( !string.IsNullOrEmpty( curr.ItemUrl ) )
                 {
-                    curr.ItemUrl = GetItemImageUrl.ItemHtmlFromItemId( seriesId, curr.ItemUrl, text:curr.Name, Plugin.Instance!.Configuration.ShowImages( EReportType.eUserReport ) );
+                    curr.ItemUrl = GetItemImageUrl.ItemHtmlFromItemId( seriesId, curr.ItemUrl, text: curr.Name, showImages );
                     curr.Name = curr.ItemUrl;
                 }
 
                 curr.Episodes.Total = totalEpisodes;
+                curr.Episodes.Count = watchedEpisodes;
                 curr.Specials.Total = totalSpecials;
+                curr.Specials.Count = watchedSpecials;
 
-                series[ seriesId ] = curr;
+                retVal.Add( curr );
                 return Task.FromResult( true );
             } ).ConfigureAwait( false );
 
-            string? tableName = TableDefs().getUserTableName( user );
-            string sqlBase = "SELECT " +
-                $"  SUM({tableName}.NumEpisodes) " +
-                $", {tableName}.SeriesId " +
-                $" FROM " +
-                $"   {tableName} " +
-                $" WHERE " +
-                $" {tableName}.IsEpisode AND " +
-                $" <isTVSpecial> AND " +
-                $" {tableName}.IsPlayed AND " +
-                $" {tableName}.UserId=@UserId " +
-                $" GROUP BY {tableName}.SeriesId "
-                ;
-
-            string sqlEpisodes = sqlBase.Replace( "<isTVSpecial>", $"NOT {tableName}.IsTVSpecial" );
-            string sqlSpecials = sqlBase.Replace( "<isTVSpecial>", $"{tableName}.IsTVSpecial" );
-
-            List<(string name, object? value)> paramList = [ ("@UserId", user.Id.ToString()) ];
-
-            await ExecuteCommandAsync( new SQLCmdDef( sqlEpisodes, paramList ), statement =>
+            return new QueryResult<GetTVSeriesProgressResponse>
             {
-                IResultSet row = statement.Current;
-                int col = 0;
-                int watchedCount = row.GetInt( col++ );
-                string seriesId = row.GetString( col++ ); // should be true
+                Items = retVal.ToArray(),
+                TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
+            };
+        }
 
-                if( series.TryGetValue( seriesId, out GetTVSeriesProgressResponse? curr ) )
-                {
-                    curr.Episodes.Count = watchedCount;
-                    series[ seriesId ] = curr;
-                }
+        private static string BuildTVSeriesProgressOrderByClause( string sortBy, string sortOrder )
+        {
+            string direction = string.Equals( sortOrder, "Descending", StringComparison.OrdinalIgnoreCase )
+                ? "DESC"
+                : "ASC";
 
-                return Task.FromResult( true );
-            } ).ConfigureAwait( false );
-
-            await ExecuteCommandAsync( new SQLCmdDef( sqlSpecials, paramList ), statement =>
+            return ( sortBy ?? string.Empty ).ToLowerInvariant() switch
             {
-                IResultSet row = statement.Current;
-                int col = 0;
-                int watchedCount = row.GetInt( col++ );
-                string seriesId = row.GetString( col++ ); // should be true
-
-                if( series.TryGetValue( seriesId, out GetTVSeriesProgressResponse? curr ) )
-                {
-                    curr.Specials.Count = watchedCount;
-                    series[ seriesId ] = curr;
-                }
-
-                return Task.FromResult( true );
-            } ).ConfigureAwait( false );
-
-            var retVal = series.Values.ToList();
-
-            return retVal;
+                "episodeprogess" or "episodeprogress" =>
+                    $"ORDER BY (CASE WHEN Series.NumEpisodes = 0 THEN 0.0 ELSE (100.0 * COALESCE(ep.WatchedEpisodes, 0) / CAST(Series.NumEpisodes AS REAL)) END) {direction}, Series.SortName COLLATE NOCASE ASC",
+                "score" =>
+                    $"ORDER BY Series.Rating {direction}, Series.SortName COLLATE NOCASE ASC",
+                "status" =>
+                    $"ORDER BY Series.Status COLLATE NOCASE {direction}, Series.SortName COLLATE NOCASE ASC",
+                _ =>
+                    $"ORDER BY Series.SortName COLLATE NOCASE {direction}"
+            };
         }
     }
 }
