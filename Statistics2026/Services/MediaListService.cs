@@ -54,8 +54,12 @@ namespace Statistics2026.Services
 
     [Route( "/Statistics2026/series_list", "GET", Summary = "Gets Series" )]
     [Authenticated( Roles = "admin" )]
-    public class GetSeriesList : IReturn<List<MediaItemResponse>>
+    public class GetSeriesList : IReturn<QueryResult<MediaItemResponse>>
     {
+        public int StartIndex { get; set; } = 0;
+        public int Limit { get; set; } = 50;
+        public string SortBy { get; set; } = string.Empty;
+        public string SortOrder { get; set; } = string.Empty;
     }
 
     [Route( "/Statistics2026/collection_list", "GET", Summary = "Gets Collections" )]
@@ -110,9 +114,15 @@ namespace Statistics2026.Services
         {
             return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer, db) =>
             {
-                List<MediaItemResponse> series = await db.GetSeriesListResponseAsync().ConfigureAwait( false );
+                int startIndex = Math.Max( 0, request.StartIndex );
+                int limit = ( request.Limit > 0 ) ? request.Limit : 50;
 
-                return series;
+                return await db.GetSeriesListResponseAsync(
+                    startIndex,
+                    limit,
+                    request.SortBy,
+                    request.SortOrder
+                ).ConfigureAwait( false );
             } );
         }
 

@@ -9,18 +9,18 @@
         'use strict';
 
         const baseId = 'series_results';
-        const filterId = 'seriesDisplay';
         const baseUrl = "Statistics2026/series_list";
-        const tabName = "Statistics2026_Pages_Series";
         const lastRunArray = ["MediaAnalysis", "SeriesAnalysis"];
         let showStreaming = true;
 
         return function (view, params) {
+            let seriesTable = null;
+
             view.addEventListener('viewshow', function (e) {
                 Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
 
                 if (view.getAttribute('data-initialized') === 'true') {
-                    return; // Exit and prevent reload
+                    return;
                 }
 
                 Helpers.getUserPluginConfig().then(function (config) {
@@ -34,57 +34,110 @@
             });
 
             view.addEventListener('viewdestroy', function (e) {
+                if (seriesTable) {
+                    seriesTable.destroy();
+                    seriesTable = null;
+                }
             });
 
-            function getMediaHeader() {
-                var retVal =
-                    `<tr style="text-align: left;">
-                <th data-column="Name" data-type="string" class="info_cell_heading">Name<span class="sort-icon"></span></th>
-                <th data-column="PremiereDate" data-type="date" class="info_cell_heading">Premiere Date<span class="sort-icon"></span></th>
-                <th data-column="CollectedInfoEp" data-type="progress" class="info_cell_heading">Episode Collection Progress<span class="sort-icon"></span></th>
-                <th data-column="CollectedInfoSp" data-type="progress" class="info_cell_heading">Specials Collection Progress<span class="sort-icon"></span></th>
-                <th data-column="ServerLocation" data-type="string" class="info_cell_heading">Location on Server<span class="sort-icon"></span></th>
-                `;
+            function getTabulatorColumns() {
+                const columns = [
+                    {
+                        title: "Name",
+                        field: "Name",
+                        sorter: "string",
+                        hozAlign: "left",
+                        tooltip: Helpers.createTextTooltip("DisplayName"),
+                        formatter: function (cell) {
+                            const data = cell.getRow().getData();
+                            return data.DisplayName ? data.DisplayName.Text : "";
+                        }
+                    },
+                    {
+                        title: "Premiere Date",
+                        field: "PremiereDate",
+                        sorter: "date",
+                        hozAlign: "left",
+                        tooltip: Helpers.createTextTooltip("PremiereDate"),
+                        formatter: function (cell) {
+                            return cell.getRow().getData().PremiereDate || "";
+                        }
+                    },
+                    {
+                        title: "Episode Collection Progress",
+                        field: "CollectedInfoEp",
+                        sorter: "number",
+                        hozAlign: "left",
+                        tooltip: Helpers.createTextTooltip("Extra"),
+                        formatter: function (cell) {
+                            return cell.getRow().getData().Extra || "";
+                        }
+                    },
+                    {
+                        title: "Specials Collection Progress",
+                        field: "CollectedInfoSp",
+                        sorter: "number",
+                        hozAlign: "left",
+                        tooltip: Helpers.createTextTooltip("Extra2"),
+                        formatter: function (cell) {
+                            return cell.getRow().getData().Extra2 || "";
+                        }
+                    },
+                    {
+                        title: "Location on Server",
+                        field: "ServerLocation",
+                        sorter: "string",
+                        hozAlign: "left",
+                        tooltip: Helpers.createTextTooltip("ServerLocation"),
+                        formatter: function (cell) {
+                            const data = cell.getRow().getData();
+                            return data.ServerLocation ? data.ServerLocation.Text : "";
+                        }
+                    }
+                ];
 
                 if (showStreaming) {
-                    retVal += `<th data-column="StreamingServies" data-type="string" class="info_cell_heading">Streaming Services(s)<span class="sort-icon"></span></th>`;
+                    columns.push({
+                        title: "Streaming Services(s)",
+                        field: "StreamingServies",
+                        sorter: "string",
+                        hozAlign: "left",
+                        variableHeight: true,
+                        tooltip: Helpers.createTextTooltip("StreamingProviders"),
+                        formatter: function (cell) {
+                            const data = cell.getRow().getData();
+                            return Helpers.formatHtmlWithImages(cell, data.StreamingProviders ? data.StreamingProviders.Text : "");
+                        }
+                    });
                 }
 
-                retVal += "</tr>";
-                return retVal;
-            }
-
-
-            function getMediaRowData(info) {
-                var retVal = `
-                    <td style="text-align:left;" sort-value="${info.DisplayName.SortBy}">${info.DisplayName.Text}</td>
-                    <td style="text-align:left;" sort-value="${info.PremiereDate}">${info.PremiereDate}</td>
-                    <td style="text-align:left;" sort-value="${info.Extra}">${info.Extra}</td>
-                    <td style="text-align:left;" sort-value="${info.Extra2}">${info.Extra2}</td>
-                    <td style="text-align:left;" sort-value="${info.ServerLocation.SortBy}">${info.ServerLocation.Text}</td>`
-                    ;
-
-                if (showStreaming) {
-                    retVal += `<td style="text-align:left;"  sort-value="${info.StreamingProviders.SortBy}">${info.StreamingProviders.Text}</td>`;
-                }
-
-                // if (showMissing) {
-                //     retVal += `<td style="text-align:left;" sort-value="${info.SearchLocation.SortBy}">${info.SearchLocation.Text}</td>`;
-                // }
-
-                return retVal;
+                return columns;
             }
 
             async function loadTableData() {
-                let configValid = await Helpers.CheckForValidConfig();
+                const configValid = await Helpers.CheckForValidConfig();
                 if (!configValid) {
                     view.querySelector(`#lastRunInfo`).style.display = 'none';
-                    view.querySelector(`#${baseId}_status`).style.display = 'none';
+                    const statusEl = view.querySelector(`#${baseId}_status`);
+                    if (statusEl) {
+                        statusEl.style.display = 'none';
+                    }
                     Dashboard.hideLoadingMsg();
                     return;
                 }
 
-                Helpers.loadTableData(view, baseId, baseUrl, getMediaHeader, getMediaRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+                if (!seriesTable) {
+                    seriesTable = Helpers.loadTabulatorTable(
+                        view,
+                        baseId,
+                        baseUrl,
+                        getTabulatorColumns()
+                    );
+                } else {
+                    seriesTable.setColumns(getTabulatorColumns());
+                    seriesTable.setData();
+                }
+
                 view.setAttribute('data-initialized', 'true');
             }
         };

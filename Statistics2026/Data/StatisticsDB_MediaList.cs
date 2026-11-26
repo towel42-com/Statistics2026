@@ -133,7 +133,7 @@ namespace Statistics2026.Data
             return getMediaListResponseMissingCmd( whichMedia, ref orderBy, filterOutFuture );
         }
 
-        private string getSeriesListResponseOnServerCmd()
+        private string getSeriesListResponseOnServerCmd( string orderByClause )
         {
             List<string> columns = [];
             columns.Add( "0 AS IsMissing" );
@@ -163,7 +163,7 @@ namespace Statistics2026.Data
             List<string> joins = [];
             List<string> whereClauses = [];
             List<string> groupByClauses = [];
-            List<string> orderBy = new() { "SortName ASC" };
+            List<string> orderBy = new() { orderByClause };
 
             return SQLCmdDef.CreateCmd( from, columns, joins, whereClauses, groupByClauses, orderBy );
         }
@@ -371,20 +371,54 @@ namespace Statistics2026.Data
             return $"SortName COLLATE NOCASE {direction}";
         }
 
-        public async Task<List<MediaItemResponse>> GetSeriesListResponseAsync()
+        public async Task<QueryResult<MediaItemResponse>> GetSeriesListResponseAsync(
+            int startIndex,
+            int limit,
+            string sortBy,
+            string sortOrder )
         {
             if( _embyInterfaces == null )
-                return [];
+                return new QueryResult<MediaItemResponse>();
 
-            string sqlCmd = getSeriesListResponseOnServerCmd();
+            string orderByClause = BuildSeriesOrderByClause( sortBy, sortOrder );
+            bool isPaged = limit > 0;
+
+            // 1. Get total record count when paging is active
+            int totalRecordCount = 0;
+            if( isPaged )
+            {
+                string countSql = $"SELECT COUNT(*) FROM (\n{getSeriesListResponseOnServerCmd( string.Empty )}\n) AS count_subquery";
+                await ExecuteCommandAsync( new SQLCmdDef( countSql ), ( statement ) =>
+                {
+                    totalRecordCount = statement.Current.GetInt( 0 );
+                    return Task.FromResult( false );
+                } ).ConfigureAwait( false );
+            }
+
+            // 2. Build ordered query and apply LIMIT/OFFSET
+            string pagedSql = getSeriesListResponseOnServerCmd( orderByClause );
+            if( isPaged )
+            {
+                int safeOffset = Math.Max( 0, startIndex );
+                pagedSql += $"\nLIMIT {limit} OFFSET {safeOffset}";
+            }
 
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommandAsync( new SQLCmdDef( sqlCmd ), async ( statement ) =>
+            await ExecuteCommandAsync( new SQLCmdDef( pagedSql ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( row, null, isoCode, null, null, null, _embyInterfaces, this ).ConfigureAwait( false );
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync(
+                    row,
+                    null,
+                    isoCode,
+                    null,
+                    null,
+                    null,
+                    _embyInterfaces,
+                    this ).ConfigureAwait( false );
+
                 if( mediaInfoResponse != null )
                 {
                     int pos = ( (int)EMediaListResponseColumns.eParentId ) + 1;
@@ -393,12 +427,11 @@ namespace Statistics2026.Data
                     int numSpecials = row.GetInt( pos++ );
                     int specialsCollected = row.GetInt( pos++ );
 
-                    double episodesPercent = 100.0 * episodesCollected / ( 1.0 * numEpisodes );
-
+                    double episodesPercent = ( numEpisodes == 0 ) ? 100.0 : ( 100.0 * episodesCollected / ( 1.0 * numEpisodes ) );
                     string episodeStatus = $"{episodesCollected}/{numEpisodes} ({episodesPercent:F0}%)";
                     mediaInfoResponse.Extra = episodeStatus;
 
-                    double specialsPercent = 100.0 * specialsCollected / ( 1.0 * numSpecials );
+                    double specialsPercent = ( numSpecials == 0 ) ? 100.0 : ( 100.0 * specialsCollected / ( 1.0 * numSpecials ) );
                     string specialsStatus = $"{specialsCollected}/{numSpecials} ({specialsPercent:F0}%)";
                     mediaInfoResponse.Extra2 = specialsStatus;
 
@@ -408,16 +441,30 @@ namespace Statistics2026.Data
                 return true;
             } ).ConfigureAwait( false );
 
-
-            retVal.Sort(
-                ( x, y ) =>
-                {
-                    string lhs = x.DisplayName.SortBy;
-                    string rhs = y.DisplayName.SortBy;
-                    return lhs.CompareTo( rhs );
-                } );
-            return retVal;
+            return new QueryResult<MediaItemResponse>
+            {
+                Items = retVal.ToArray(),
+                TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
+            };
         }
+
+        private static string BuildSeriesOrderByClause( string sortBy, string sortOrder )
+        {
+            string direction = string.Equals( sortOrder, "Descending", StringComparison.OrdinalIgnoreCase )
+                ? "DESC"
+                : "ASC";
+
+            return ( sortBy ?? string.Empty ).ToLowerInvariant() switch
+            {
+                "premieredate" => $"PremiereDate {direction}, SortName COLLATE NOCASE ASC",
+                "collectedinfoep" => $"(CASE WHEN NumEpisodes = 0 THEN 100.0 ELSE (100.0 * EpisodesCollected / CAST(NumEpisodes AS REAL)) END) {direction}, SortName COLLATE NOCASE ASC",
+                "collectedinfosp" => $"(CASE WHEN NumSpecials = 0 THEN 100.0 ELSE (100.0 * SpecialsCollected / CAST(NumSpecials AS REAL)) END) {direction}, SortName COLLATE NOCASE ASC",
+                "serverlocation" => $"ServerLocation COLLATE NOCASE {direction}, SortName COLLATE NOCASE ASC",
+                "streamingservies" => $"StreamingProviders COLLATE NOCASE {direction}, SortName COLLATE NOCASE ASC",
+                _ => $"SortName COLLATE NOCASE {direction}"
+            };
+        }
+
 
         public async Task<List<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia )
         {
