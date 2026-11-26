@@ -11,6 +11,7 @@ using MediaBrowser.Controller.Security;
 using MediaBrowser.Controller.Session;
 using MediaBrowser.Model.IO;
 using MediaBrowser.Model.Logging;
+using MediaBrowser.Model.Querying;
 using MediaBrowser.Model.Serialization;
 using MediaBrowser.Model.Services;
 using MediaBrowser.Model.Tasks;
@@ -34,8 +35,12 @@ namespace Statistics2026.Services
 
     [Route( "/Statistics2026/series_filters", "GET", Summary = "Gets Series Filter" )]
     [Authenticated( Roles = "admin" )]
-    public class GetSeriesFilter : IReturn<List<SeriesFilterResponse>>
+    public class GetSeriesFilter : IReturn<QueryResult<SeriesFilterResponse>>
     {
+        public int StartIndex { get; set; } = 0;
+        public int Limit { get; set; } = 50;
+        public string SortBy { get; set; } = string.Empty;
+        public string SortOrder { get; set; } = string.Empty;
     }
 
     [Route( "/Statistics2026/set_series_filter", "POST", Summary = "Sets a Series Filter" )]
@@ -117,7 +122,16 @@ namespace Statistics2026.Services
         {
             return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer, db) =>
             {
-                return await db.GetSeriesFilterAsync( true ).ConfigureAwait( false );
+                int startIndex = Math.Max( 0, request.StartIndex );
+                int limit = ( request.Limit > 0 ) ? request.Limit : 50;
+
+                return await db.GetSeriesFilterAsync( 
+                    true,
+                    startIndex,
+                    limit,
+                    request.SortBy,
+                    request.SortOrder
+                ).ConfigureAwait( false );
             } );
         }
 

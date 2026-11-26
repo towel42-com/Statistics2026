@@ -22,11 +22,11 @@
                     view.querySelector("#showSearchTheMovieDB").checked = config.tvSettings.showSearchTheMovieDB;
 
                     const searchLocations = config.tvSettings.searchLocations || [];
-                    view.querySelector("#searchLocations").value = searchLocations.join('\n');;
+                    view.querySelector("#searchLocations").value = searchLocations.join('\n');
 
                     view.querySelector("#showFilteredMissingSummaries").checked = config.tvSettings.showFilteredMissingSummaries;
                     view.querySelector("#reportOnMissingSpecials").checked = config.tvSettings.reportOnMissingSpecials;
-                
+
                     view.querySelector("#alwaysShowJustWatch").checked = config.tvSettings.alwaysShowJustWatch;
                     view.querySelector("#maxNumStreamingProviders").value = config.tvSettings.maxNumStreamingProviders;
 
@@ -39,59 +39,160 @@
             );
         }
 
-        function getSeriesFilterHeader() {
-            var retVal =
-                `
-                <tr style="text-align: left;">
-                    <th data-column="SeriesName"    data-type="string"   class="info_cell_heading" style="padding: 8px; white-space: nowrap; cursor: pointer;">Series Name (Year) <span class=\"sort-icon\"></span></th>
-                    <th data-column="TrackSeries"   data-type="checkbox" class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap; cursor: pointer;">Track Series? <span class=\"sort-icon\"></span></th>
-                    <th data-column="TrackSpecials" data-type="checkbox" class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Track Specials? <span class=\"sort-icon\"></span></th>
-                    <th data-column="MinSeason"                          class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Min Season Number</th>
-                    <th data-column="MaxSeason"                          class="info_cell_heading" style="width: 15%; padding: 8px; white-space: nowrap;">Max Season Number</th>
-                </tr>
-                `;
-            return retVal;
-        }
+        function getSeriesFilterTabulatorColumns(onItemChanged) {
+            return [
+                {
+                    title: "Series Name (Year)",
+                    field: "SeriesName",
+                    sorter: "string",
+                    hozAlign: "left",
+                    tooltip: function (e, cell) {
+                        const item = cell.getRow().getData();
+                        return item.PremiereYear && item.PremiereYear > 0
+                            ? `${item.Name} (${item.PremiereYear})`
+                            : item.Name;
+                    },
+                    formatter: function (cell) {
+                        const item = cell.getRow().getData();
+                        const yearString = (item.PremiereYear && item.PremiereYear > 0)
+                            ? `(${item.PremiereYear})`
+                            : "";
 
-        function getSeriesFilterRowData(item, index, tr) {
-            const chkTrackId = 'chkTrack_' + index;
-            const chkSpecialsId = 'chkSpecials_' + index;
+                        const wrapper = document.createElement("span");
+                        wrapper.style.fontWeight = "500";
+                        wrapper.innerHTML = `${item.Name} <span style="opacity: 0.6; font-size: 0.9em; margin-left: 4px;">${yearString}</span>`;
+                        return wrapper;
+                    }
+                },
+                {
+                    title: "Track Series?",
+                    field: "TrackSeries",
+                    sorter: "boolean",
+                    hozAlign: "left",
+                    formatter: function (cell) {
+                        const item = cell.getRow().getData();
+                        const label = document.createElement("label");
+                        label.className = "emby-checkbox-label";
 
-            const nameKey = `${item.PremiereYear || ''}_${item.SortName}`
-            const trackSeriesLabel = item.TrackSeries ? 'Yes' : 'No';
-            const trackSpecialsLabel = item.TrackSpecials ? 'Yes' : 'No';
+                        const checkbox = document.createElement("input");
+                        checkbox.setAttribute("is", "emby-checkbox");
+                        checkbox.type = "checkbox";
+                        checkbox.className = "seriesfilter-trackseries";
+                        checkbox.checked = !!item.TrackSeries;
 
-            tr._seriesFilterItem = item;
-            tr.setAttribute('data-index', index);
+                        const textSpan = document.createElement("span");
+                        textSpan.className = "checkboxLabel";
+                        textSpan.textContent = item.TrackSeries ? "Yes" : "No";
 
-            let yearString = ``;
-            if (item.PremiereYear && (item.PremiereYear > 0))
-                yearString = `(${item.PremiereYear})`
-            var retVal = `
-                    <td style="padding: 8px; vertical-align: middle; font-weight: 500;" sort-value='${nameKey}'>
-                        ${item.Name} <span style="opacity: 0.6; font-size: 0.9em; margin-left: 4px;">${yearString}</span>
-                    </td>
-                    <td style="padding: 8px; vertical-align: middle;">
-                        <label class="emby-checkbox-label">
-                            <input id="${chkTrackId}" is="emby-checkbox" type="checkbox" class="seriesfilter-trackseries" ${item.TrackSeries ? 'checked' : ''} />
-                            <span class="checkboxLabel textLabel_${index}_trackseries">${trackSeriesLabel}</span>
-                        </label>
+                        checkbox.addEventListener("change", function () {
+                            item.TrackSeries = checkbox.checked;
+                            textSpan.textContent = item.TrackSeries ? "Yes" : "No";
+                            if (typeof onItemChanged === "function") {
+                                onItemChanged(item, "TrackSeries");
+                            }
+                        });
 
-                    <td style="padding: 8px; vertical-align: middle;">
-                        <label class="emby-checkbox-label">
-                            <input id="${chkSpecialsId}" is="emby-checkbox" type="checkbox" class="seriesfilter-trackspecials" ${item.TrackSpecials ? 'checked' : ''} />
-                            <span class="checkboxLabel textLabel_${index}_trackspecials">${trackSpecialsLabel}</span>
-                        </label>
-                    </td>
-                    <td style="padding: 8px; vertical-align: middle;">
-                        <input is="emby-input" type="number" class="seriesfilter-minseason" min="1" max="${item.NumSeasons}" value="${item.MinSeason !== -1 ? item.MinSeason : ''}" style="width: 100%; margin: 0;" placeholder="Min Season"/>
-                    </td>
-                    <td style="padding: 8px; vertical-align: middle;">
-                        <input is="emby-input" type="number" class="seriesfilter-maxseason" min="1" max="${item.NumSeasons}" value="${item.MaxSeason !== -1 ? item.MaxSeason : ''}" style="width: 100%; margin: 0;" placeholder="Max Season"/>
-                    </td>
-                `;
+                        label.appendChild(checkbox);
+                        label.appendChild(textSpan);
+                        return label;
+                    }
+                },
+                {
+                    title: "Track Specials?",
+                    field: "TrackSpecials",
+                    sorter: "boolean",
+                    hozAlign: "left",
+                    formatter: function (cell) {
+                        const item = cell.getRow().getData();
+                        const label = document.createElement("label");
+                        label.className = "emby-checkbox-label";
 
-            return retVal;
+                        const checkbox = document.createElement("input");
+                        checkbox.setAttribute("is", "emby-checkbox");
+                        checkbox.type = "checkbox";
+                        checkbox.className = "seriesfilter-trackspecials";
+                        checkbox.checked = !!item.TrackSpecials;
+
+                        const textSpan = document.createElement("span");
+                        textSpan.className = "checkboxLabel";
+                        textSpan.textContent = item.TrackSpecials ? "Yes" : "No";
+
+                        checkbox.addEventListener("change", function () {
+                            item.TrackSpecials = checkbox.checked;
+                            textSpan.textContent = item.TrackSpecials ? "Yes" : "No";
+                            if (typeof onItemChanged === "function") {
+                                onItemChanged(item, "TrackSpecials");
+                            }
+                        });
+
+                        label.appendChild(checkbox);
+                        label.appendChild(textSpan);
+                        return label;
+                    }
+                },
+                {
+                    title: "Min Season Number",
+                    field: "MinSeason",
+                    headerSort: false,
+                    hozAlign: "left",
+                    formatter: function (cell) {
+                        const item = cell.getRow().getData();
+                        const input = document.createElement("input");
+                        input.setAttribute("is", "emby-input");
+                        input.type = "number";
+                        input.className = "seriesfilter-minseason";
+                        input.min = "1";
+                        if (item.NumSeasons) {
+                            input.max = String(item.NumSeasons);
+                        }
+                        input.value = (item.MinSeason !== undefined && item.MinSeason !== -1) ? String(item.MinSeason) : "";
+                        input.placeholder = "Min Season";
+                        input.style.width = "100%";
+                        input.style.margin = "0";
+
+                        input.addEventListener("change", function () {
+                            const parsed = parseInt(input.value, 10);
+                            item.MinSeason = isNaN(parsed) ? -1 : parsed;
+                            if (typeof onItemChanged === "function") {
+                                onItemChanged(item, "MinSeason");
+                            }
+                        });
+
+                        return input;
+                    }
+                },
+                {
+                    title: "Max Season Number",
+                    field: "MaxSeason",
+                    headerSort: false,
+                    hozAlign: "left",
+                    formatter: function (cell) {
+                        const item = cell.getRow().getData();
+                        const input = document.createElement("input");
+                        input.setAttribute("is", "emby-input");
+                        input.type = "number";
+                        input.className = "seriesfilter-maxseason";
+                        input.min = "1";
+                        if (item.NumSeasons) {
+                            input.max = String(item.NumSeasons);
+                        }
+                        input.value = (item.MaxSeason !== undefined && item.MaxSeason !== -1) ? String(item.MaxSeason) : "";
+                        input.placeholder = "Max Season";
+                        input.style.width = "100%";
+                        input.style.margin = "0";
+
+                        input.addEventListener("change", function () {
+                            const parsed = parseInt(input.value, 10);
+                            item.MaxSeason = isNaN(parsed) ? -1 : parsed;
+                            if (typeof onItemChanged === "function") {
+                                onItemChanged(item, "MaxSeason");
+                            }
+                        });
+
+                        return input;
+                    }
+                }
+            ];
         }
 
         function debounce(func, delay) {
@@ -103,11 +204,34 @@
         }
 
         return function (view, params) {
+            let seriesFilterTable = null;
+
+            function onSeriesFilterItemChanged(item, fieldName) {
+                saveSeriesFilterItem(item);
+            }
+
             function loadSeriesFilterTable() {
                 const baseId = 'seriesFilter';
                 const baseUrl = "Statistics2026/series_filters";
 
-                Helpers.loadTableData(view, baseId, baseUrl, getSeriesFilterHeader, getSeriesFilterRowData, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+                const customOptions = {
+                    paginationSize: 5,
+                    paginationSizeSelector: [5, 10, 25, 50, 100, 250]
+                };
+
+                if (!seriesFilterTable) {
+                    seriesFilterTable = Helpers.loadTabulatorTable(
+                        view,
+                        baseId,
+                        baseUrl,
+                        getSeriesFilterTabulatorColumns(onSeriesFilterItemChanged),
+                        null,
+                        customOptions
+                    );
+                } else {
+                    seriesFilterTable.setColumns(getSeriesFilterTabulatorColumns(onSeriesFilterItemChanged));
+                    seriesFilterTable.setData();
+                }
             }
 
             // init code here
@@ -130,7 +254,7 @@
                 };
 
                 const queryString = new URLSearchParams(params).toString();
-                const finalUrl = `${baseUrl}?${queryString}`
+                const finalUrl = `${baseUrl}?${queryString}`;
 
                 ApiClient.ajax({
                     type: 'POST', // or 'GET'
@@ -204,50 +328,16 @@
                     Helpers.showInfo("Search Locations for Missing Videos", "URLs to the search location for missing videos ie \"https://www.google.com/search?q=\"");
                 });
 
-            // Handle saving instantly when a checkbox column is clicked or checked
-            view.querySelector('#seriesFilter_body').addEventListener('change', function (e) {
-                const row = e.target.closest('tr');
-                if (!row || !row._seriesFilterItem)
-                    return;
-
-                const index = parseInt(row.getAttribute('data-index'), 10);
-
-                if (e.target.classList.contains('seriesfilter-trackseries')) {
-                    row._seriesFilterItem.TrackSeries = e.target.checked;
-
-                    const lbl = row.querySelector(`.textLabel_${index}_trackseries`);
-                    if (lbl)
-                        lbl.textContent = e.target.checked ? 'Yes' : 'No';
-                }
-
-                if (e.target.classList.contains('seriesfilter-trackspecials')) {
-                    row._seriesFilterItem.TrackSpecials = e.target.checked;
-                    const lbl = row.querySelector(`.textLabel_${index}_trackspecials`);
-                    if (lbl)
-                        lbl.textContent = e.target.checked ? 'Yes' : 'No';
-                }
-
-                if (e.target.classList.contains('seriesfilter-minseason')) {
-                    const val = e.target.value;
-                    row._seriesFilterItem.MinSeason = val === '' ? -1 : parseInt(val, 10);
-                }
-
-                if (e.target.classList.contains('seriesfilter-maxseason')) {
-                    const val = e.target.value;
-                    row._seriesFilterItem.MaxSeason = val === '' ? -1 : parseInt(val, 10);
-                }
-
-                saveSeriesFilterItem(row._seriesFilterItem);
-            });
-
             view.addEventListener('viewhide', function (e) {
 
             });
 
             view.addEventListener('viewdestroy', function (e) {
-
+                if (seriesFilterTable) {
+                    seriesFilterTable.destroy();
+                    seriesFilterTable = null;
+                }
             });
-
 
             view.querySelector("#numDaysFutureForMissing").addEventListener("input",
                 function () {
@@ -409,4 +499,3 @@
         };
     }
 );
-
