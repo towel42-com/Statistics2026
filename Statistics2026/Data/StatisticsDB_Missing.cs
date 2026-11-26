@@ -1,30 +1,12 @@
-﻿using MediaBrowser.Controller.Channels;
-using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Model.Entities;
+﻿using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Querying;
-using RestSharp;
 using ServiceStack;
 using ServiceStack.Text;
-using SQLitePCL;
 using SQLitePCL.pretty;
-using Statistics2026.Configuration;
 using Statistics2026.Responses;
+using Statistics2026.Services;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.SymbolStore;
-using System.Globalization;
-using System.Linq;
-using System.Net;
-using System.Reflection;
-using System.Runtime.InteropServices.ComTypes;
-using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using static ServiceStack.Diagnostics;
 
 namespace Statistics2026.Data
 {
@@ -169,7 +151,7 @@ namespace Statistics2026.Data
             return filtered;
         }
 
-        private async Task<( int numItems, int numParents)> MediaMissingInfoAsync( bool episodes, bool filteredResults )
+        private async Task<(int numItems, int numParents)> MediaMissingInfoAsync( bool episodes, bool filteredResults )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -181,7 +163,7 @@ namespace Statistics2026.Data
                 HashSet<string> filteredParents = [];
                 string sql = getMediaListResponseMissingCmd( episodes ? EWhichMediaList.eEpisodesMissing : EWhichMediaList.eMoviesMissing, true );
 
-                await RunSQLOnRowAsync( sql, async( row )  =>
+                await RunSQLOnRowAsync( sql, async ( row ) =>
                 {
                     HashSet<string> currParentIds = [];
                     bool filtered = false;
@@ -288,16 +270,18 @@ namespace Statistics2026.Data
 
         public async Task<List<SeriesFilterResponse>> GetSeriesFilterAsync( bool updateIfEmpty )
         {
-            QueryResult<SeriesFilterResponse> result = await GetSeriesFilterAsync( updateIfEmpty, -1, -1, string.Empty, string.Empty ).ConfigureAwait( false );
+            QueryResult<SeriesFilterResponse> result = await GetSeriesFilterAsync( updateIfEmpty,
+                new TabulatorTableOptions()
+                {
+                    StartIndex = -1,
+                    Limit = -1,
+                    SortBy = string.Empty,
+                    SortOrder = string.Empty
+                } ).ConfigureAwait( false );
             return result.Items.ToList();
         }
 
-        public async Task<QueryResult<SeriesFilterResponse>> GetSeriesFilterAsync(
-            bool updateIfEmpty,
-            int startIndex,
-            int limit,
-            string sortBy,
-            string sortOrder )
+        public async Task<QueryResult<SeriesFilterResponse>> GetSeriesFilterAsync( bool updateIfEmpty, TabulatorTableOptions tableOptions )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -305,7 +289,7 @@ namespace Statistics2026.Data
                 " FROM SeriesFilterList" +
                 " JOIN Series ON Series.ItemId = SeriesFilterList.SeriesId";
 
-            bool isPaged = limit > 0;
+            bool isPaged = tableOptions.Limit > 0;
             int totalRecordCount = 0;
 
             if( isPaged )
@@ -324,11 +308,11 @@ namespace Statistics2026.Data
                         .Select( cmd => cmd! )
                         .ToList();
                     await ExecuteCommandsAsync( cmds ).ConfigureAwait( false );
-                    return await GetSeriesFilterAsync( false, startIndex, limit, sortBy, sortOrder ).ConfigureAwait( false );
+                    return await GetSeriesFilterAsync( false, tableOptions ).ConfigureAwait( false );
                 }
             }
 
-            string orderByClause = BuildSeriesFilterOrderByClause( sortBy, sortOrder );
+            string orderByClause = BuildSeriesFilterOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
             string sql = "SELECT" +
                 "  SeriesFilterList.SeriesId" +
                 ", SeriesFilterList.TrackSeries" +
@@ -345,8 +329,8 @@ namespace Statistics2026.Data
 
             if( isPaged )
             {
-                int safeOffset = Math.Max( 0, startIndex );
-                sql += $" LIMIT {limit} OFFSET {safeOffset}";
+                int safeOffset = Math.Max( 0, tableOptions.StartIndex );
+                sql += $" LIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
             List<SeriesFilterResponse> retVal = [];
@@ -381,7 +365,7 @@ namespace Statistics2026.Data
                     .Select( cmd => cmd! )
                     .ToList();
                 await ExecuteCommandsAsync( cmds ).ConfigureAwait( false );
-                return await GetSeriesFilterAsync( false, startIndex, limit, sortBy, sortOrder ).ConfigureAwait( false );
+                return await GetSeriesFilterAsync( false, tableOptions ).ConfigureAwait( false );
             }
 
             return new QueryResult<SeriesFilterResponse>
@@ -485,7 +469,7 @@ namespace Statistics2026.Data
                 list.Add( series );
             }
 
-            var currFilterMap = (await GetSeriesFilterAsync( false ).ConfigureAwait( false ) ).ToDictionary( p => p.SeriesId );
+            var currFilterMap = ( await GetSeriesFilterAsync( false ).ConfigureAwait( false ) ).ToDictionary( p => p.SeriesId );
 
             var changedFilterMap = new List<SeriesFilterResponse>();
 

@@ -35,12 +35,8 @@ namespace Statistics2026.Services
 
     [Route( "/Statistics2026/series_filters", "GET", Summary = "Gets Series Filter" )]
     [Authenticated( Roles = "admin" )]
-    public class GetSeriesFilter : IReturn<QueryResult<SeriesFilterResponse>>
+    public class GetSeriesFilter : TabulatorTableOptions, IReturn<QueryResult<SeriesFilterResponse>>
     {
-        public int StartIndex { get; set; } = 0;
-        public int Limit { get; set; } = 50;
-        public string SortBy { get; set; } = string.Empty;
-        public string SortOrder { get; set; } = string.Empty;
     }
 
     [Route( "/Statistics2026/set_series_filter", "POST", Summary = "Sets a Series Filter" )]
@@ -125,13 +121,7 @@ namespace Statistics2026.Services
                 int startIndex = Math.Max( 0, request.StartIndex );
                 int limit = ( request.Limit > 0 ) ? request.Limit : 50;
 
-                return await db.GetSeriesFilterAsync( 
-                    true,
-                    startIndex,
-                    limit,
-                    request.SortBy,
-                    request.SortOrder
-                ).ConfigureAwait( false );
+                return await db.GetSeriesFilterAsync( true, request ).ConfigureAwait( false );
             } );
         }
 

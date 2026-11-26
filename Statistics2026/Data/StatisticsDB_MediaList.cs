@@ -276,18 +276,14 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<QueryResult<MediaItemResponse>> GetCollectionListResponseAsync(
-            int startIndex,
-            int limit,
-            string sortBy,
-            string sortOrder )
+        public async Task<QueryResult<MediaItemResponse>> GetCollectionListResponseAsync( TabulatorTableOptions tableOptions )
         {
             if( _embyInterfaces == null )
                 return new QueryResult<MediaItemResponse>();
 
-            string orderByClause = BuildCollectionOrderByClause( sortBy, sortOrder );
+            string orderByClause = BuildCollectionOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
             string baseSql = getCollectionListResponseOnServerCmd( orderByClause );
-            bool isPaged = limit > 0;
+            bool isPaged = tableOptions.Limit > 0;
 
             // 1. Get total count excluding empty collections (NumMovies == 0 && collectedMovies == 0)
             int totalRecordCount = 0;
@@ -306,8 +302,8 @@ namespace Statistics2026.Data
 
             if( isPaged )
             {
-                int safeOffset = Math.Max( 0, startIndex );
-                pagedSql += $"\nLIMIT {limit} OFFSET {safeOffset}";
+                int safeOffset = Math.Max( 0, tableOptions.StartIndex );
+                pagedSql += $"\nLIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
@@ -372,17 +368,13 @@ namespace Statistics2026.Data
             return $"SortName COLLATE NOCASE {direction}";
         }
 
-        public async Task<QueryResult<MediaItemResponse>> GetSeriesListResponseAsync(
-            int startIndex,
-            int limit,
-            string sortBy,
-            string sortOrder )
+        public async Task<QueryResult<MediaItemResponse>> GetSeriesListResponseAsync( TabulatorTableOptions tableOptions )
         {
             if( _embyInterfaces == null )
                 return new QueryResult<MediaItemResponse>();
 
-            string orderByClause = BuildSeriesOrderByClause( sortBy, sortOrder );
-            bool isPaged = limit > 0;
+            string orderByClause = BuildSeriesOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
+            bool isPaged = tableOptions.Limit > 0;
 
             // 1. Get total record count when paging is active
             int totalRecordCount = 0;
@@ -400,8 +392,8 @@ namespace Statistics2026.Data
             string pagedSql = getSeriesListResponseOnServerCmd( orderByClause );
             if( isPaged )
             {
-                int safeOffset = Math.Max( 0, startIndex );
-                pagedSql += $"\nLIMIT {limit} OFFSET {safeOffset}";
+                int safeOffset = Math.Max( 0, tableOptions.StartIndex );
+                pagedSql += $"\nLIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
@@ -523,9 +515,7 @@ namespace Statistics2026.Data
         }
 
 
-        public async Task<QueryResult<MediaItemResponse>> GetMediaListResponseAsync(
-            EWhichMediaList whichMedia,
-            MediaListTableOptions tableOptions )
+        public async Task<QueryResult<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia, TabulatorTableOptions tableOptions )
         {
             if( _embyInterfaces == null )
                 return new QueryResult<MediaItemResponse>();
