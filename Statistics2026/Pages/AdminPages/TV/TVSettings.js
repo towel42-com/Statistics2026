@@ -46,6 +46,7 @@
                     field: "SeriesName",
                     sorter: "string",
                     hozAlign: "left",
+                    vertAlign: "middle",
                     headerFilter: "input",
                     headerFilterPlaceholder: "Filter Series...",
                     tooltip: function (e, cell) {
@@ -71,6 +72,7 @@
                     field: "TrackSeries",
                     sorter: "boolean",
                     hozAlign: "left",
+                    vertAlign: "middle",
                     headerFilter: "list",
                     headerFilterParams: { values: { "": "All", "1": "Yes", "0": "No" } },
                     formatter: function (cell) {
@@ -101,6 +103,7 @@
                     field: "TrackSpecials",
                     sorter: "boolean",
                     hozAlign: "left",
+                    vertAlign: "middle",
                     headerFilter: "list",
                     headerFilterParams: { values: { "": "All", "1": "Yes", "0": "No" } },
                     formatter: function (cell) {
@@ -131,6 +134,7 @@
                     field: "MinSeason",
                     headerSort: false,
                     hozAlign: "left",
+                    vertAlign: "middle",
                     formatter: function (cell) {
                         const item = cell.getRow().getData();
                         const maxAttr = item.NumSeasons ? `max="${item.NumSeasons}"` : "";
@@ -157,6 +161,7 @@
                     field: "MaxSeason",
                     headerSort: false,
                     hozAlign: "left",
+                    vertAlign: "middle",
                     formatter: function (cell) {
                         const item = cell.getRow().getData();
                         const maxAttr = item.NumSeasons ? `max="${item.NumSeasons}"` : "";

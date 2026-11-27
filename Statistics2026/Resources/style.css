@@ -799,6 +799,25 @@ ol.range-list {
                 opacity: 1;
             }
 
+            /* Header Filter Inputs */
+            .tabulator .tabulator-header .tabulator-col .tabulator-header-filter input {
+                background-color: var(--local-background);
+                color: var(--local-text-normal);
+                border: 1px solid var(--line-background);
+                border-radius: var(--card-border-radius, 4px);
+                padding: 4px 6px;
+                margin-top: 6px;
+                width: 100%;
+                box-sizing: border-box;
+                font-family: inherit;
+                font-size: 0.9em;
+            }
+
+                .tabulator .tabulator-header .tabulator-col .tabulator-header-filter input:focus {
+                    outline: none;
+                    border-color: var(--local-theme-primary-color);
+                }
+
     /* 4. Table Body & Rows */
     .tabulator .tabulator-tableholder {
         order: 4;
@@ -855,6 +874,35 @@ ol.range-list {
         .tabulator-row .tabulator-cell.progress-yellow,
         .tabulator-row .tabulator-cell.progress-orange {
             color: #111111;
+        }
+
+        /* Keep inline emby-input and emby-checkbox vertically aligned inside Tabulator cells */
+        .pluginConfigurationPage .tabulator-row .tabulator-cell .inputContainer,
+        .tabulator-row .tabulator-cell .inputContainer {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .pluginConfigurationPage .tabulator-row .tabulator-cell .inputLabel,
+        .tabulator-row .tabulator-cell .inputLabel {
+            display: none !important;
+        }
+
+        .pluginConfigurationPage .tabulator-row .tabulator-cell .emby-input,
+        .tabulator-row .tabulator-cell .emby-input {
+            margin: 0 !important;
+            padding-top: 4px !important;
+            padding-bottom: 4px !important;
+        }
+
+        .pluginConfigurationPage .tabulator-row .tabulator-cell .emby-checkbox-label,
+        .tabulator-row .tabulator-cell .emby-checkbox-label {
+            margin: 0 !important;
+            display: inline-flex;
+            align-items: center;
         }
 
 /* Loading & Empty Placeholder Overlay */
