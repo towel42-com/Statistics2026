@@ -77,16 +77,13 @@
                         const item = cell.getRow().getData();
                         const label = document.createElement("label");
                         label.className = "emby-checkbox-label";
+                        label.innerHTML = `
+            <input is="emby-checkbox" type="checkbox" class="seriesfilter-trackseries" ${item.TrackSeries ? "checked" : ""} />
+            <span class="checkboxLabel">${item.TrackSeries ? "Yes" : "No"}</span>
+        `;
 
-                        const checkbox = document.createElement("input");
-                        checkbox.setAttribute("is", "emby-checkbox");
-                        checkbox.type = "checkbox";
-                        checkbox.className = "seriesfilter-trackseries";
-                        checkbox.checked = !!item.TrackSeries;
-
-                        const textSpan = document.createElement("span");
-                        textSpan.className = "checkboxLabel";
-                        textSpan.textContent = item.TrackSeries ? "Yes" : "No";
+                        const checkbox = label.querySelector("input");
+                        const textSpan = label.querySelector(".checkboxLabel");
 
                         checkbox.addEventListener("change", function () {
                             item.TrackSeries = checkbox.checked;
@@ -96,8 +93,6 @@
                             }
                         });
 
-                        label.appendChild(checkbox);
-                        label.appendChild(textSpan);
                         return label;
                     }
                 },
@@ -112,16 +107,13 @@
                         const item = cell.getRow().getData();
                         const label = document.createElement("label");
                         label.className = "emby-checkbox-label";
+                        label.innerHTML = `
+            <input is="emby-checkbox" type="checkbox" class="seriesfilter-trackspecials" ${item.TrackSpecials ? "checked" : ""} />
+            <span class="checkboxLabel">${item.TrackSpecials ? "Yes" : "No"}</span>
+        `;
 
-                        const checkbox = document.createElement("input");
-                        checkbox.setAttribute("is", "emby-checkbox");
-                        checkbox.type = "checkbox";
-                        checkbox.className = "seriesfilter-trackspecials";
-                        checkbox.checked = !!item.TrackSpecials;
-
-                        const textSpan = document.createElement("span");
-                        textSpan.className = "checkboxLabel";
-                        textSpan.textContent = item.TrackSpecials ? "Yes" : "No";
+                        const checkbox = label.querySelector("input");
+                        const textSpan = label.querySelector(".checkboxLabel");
 
                         checkbox.addEventListener("change", function () {
                             item.TrackSpecials = checkbox.checked;
@@ -131,8 +123,6 @@
                             }
                         });
 
-                        label.appendChild(checkbox);
-                        label.appendChild(textSpan);
                         return label;
                     }
                 },
@@ -143,19 +133,14 @@
                     hozAlign: "left",
                     formatter: function (cell) {
                         const item = cell.getRow().getData();
-                        const input = document.createElement("input");
-                        input.setAttribute("is", "emby-input");
-                        input.type = "number";
-                        input.className = "seriesfilter-minseason";
-                        input.min = "1";
-                        if (item.NumSeasons) {
-                            input.max = String(item.NumSeasons);
-                        }
-                        input.value = (item.MinSeason !== undefined && item.MinSeason !== -1) ? String(item.MinSeason) : "";
-                        input.placeholder = "Min Season";
-                        input.style.width = "100%";
-                        input.style.margin = "0";
+                        const maxAttr = item.NumSeasons ? `max="${item.NumSeasons}"` : "";
+                        const valAttr = (item.MinSeason !== undefined && item.MinSeason !== -1) ? `value="${item.MinSeason}"` : "";
 
+                        const wrapper = document.createElement("div");
+                        wrapper.style.width = "100%";
+                        wrapper.innerHTML = `<input is="emby-input" type="number" class="seriesfilter-minseason" min="1" ${maxAttr} ${valAttr} style="width: 100%; margin: 0;" placeholder="Min Season" />`;
+
+                        const input = wrapper.querySelector("input");
                         input.addEventListener("change", function () {
                             const parsed = parseInt(input.value, 10);
                             item.MinSeason = isNaN(parsed) ? -1 : parsed;
@@ -164,7 +149,7 @@
                             }
                         });
 
-                        return input;
+                        return wrapper;
                     }
                 },
                 {
@@ -174,19 +159,14 @@
                     hozAlign: "left",
                     formatter: function (cell) {
                         const item = cell.getRow().getData();
-                        const input = document.createElement("input");
-                        input.setAttribute("is", "emby-input");
-                        input.type = "number";
-                        input.className = "seriesfilter-maxseason";
-                        input.min = "1";
-                        if (item.NumSeasons) {
-                            input.max = String(item.NumSeasons);
-                        }
-                        input.value = (item.MaxSeason !== undefined && item.MaxSeason !== -1) ? String(item.MaxSeason) : "";
-                        input.placeholder = "Max Season";
-                        input.style.width = "100%";
-                        input.style.margin = "0";
+                        const maxAttr = item.NumSeasons ? `max="${item.NumSeasons}"` : "";
+                        const valAttr = (item.MaxSeason !== undefined && item.MaxSeason !== -1) ? `value="${item.MaxSeason}"` : "";
 
+                        const wrapper = document.createElement("div");
+                        wrapper.style.width = "100%";
+                        wrapper.innerHTML = `<input is="emby-input" type="number" class="seriesfilter-maxseason" min="1" ${maxAttr} ${valAttr} style="width: 100%; margin: 0;" placeholder="Max Season" />`;
+
+                        const input = wrapper.querySelector("input");
                         input.addEventListener("change", function () {
                             const parsed = parseInt(input.value, 10);
                             item.MaxSeason = isNaN(parsed) ? -1 : parsed;
@@ -195,7 +175,7 @@
                             }
                         });
 
-                        return input;
+                        return wrapper;
                     }
                 }
             ];
