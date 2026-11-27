@@ -285,12 +285,20 @@ namespace Statistics2026.Data
             string baseSql = getCollectionListResponseOnServerCmd( orderByClause );
             bool isPaged = tableOptions.Limit > 0;
 
+            List<string> whereClauses = BuildWhereClausesFromFilterMap(
+                tableOptions.GetFilterMap(),
+                CollectionListFilterColumnMap,
+                out List<(string name, object? value)> filterParams );
+
+            whereClauses.Insert( 0, "(NumMovies > 0 OR collectedMovies > 0)" );
+            string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
+
             // 1. Get total count excluding empty collections (NumMovies == 0 && collectedMovies == 0)
             int totalRecordCount = 0;
             if( isPaged )
             {
-                string countSql = $"SELECT COUNT(*) FROM (\n{getCollectionListResponseOnServerCmd( string.Empty )}\n) AS count_subquery\nWHERE NumMovies > 0 OR collectedMovies > 0";
-                await ExecuteCommandAsync( new SQLCmdDef( countSql ), ( statement ) =>
+                string countSql = $"SELECT COUNT(*) FROM (\n{getCollectionListResponseOnServerCmd( string.Empty )}\n) AS count_subquery\n{whereClause}";
+                await ExecuteCommandAsync( new SQLCmdDef( countSql, filterParams ), ( statement ) =>
                 {
                     totalRecordCount = statement.Current.GetInt( 0 );
                     return Task.FromResult( false );
@@ -298,7 +306,7 @@ namespace Statistics2026.Data
             }
 
             // 2. Filter empty collections and apply LIMIT/OFFSET
-            string pagedSql = $"SELECT * FROM (\n{baseSql}\n) AS paged_subquery\nWHERE NumMovies > 0 OR collectedMovies > 0";
+            string pagedSql = $"SELECT * FROM (\n{baseSql}\n) AS paged_subquery{whereClause}";
 
             if( isPaged )
             {
@@ -309,7 +317,7 @@ namespace Statistics2026.Data
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommandAsync( new SQLCmdDef( pagedSql ), async ( statement ) =>
+            await ExecuteCommandAsync( new SQLCmdDef( pagedSql, filterParams ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
                 MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync(
@@ -351,6 +359,11 @@ namespace Statistics2026.Data
                 TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
             };
         }
+
+        private static readonly Dictionary<string, string> CollectionListFilterColumnMap = new( StringComparer.OrdinalIgnoreCase )
+        {
+            [ "Name" ] = "Title"
+        };
 
         private static string BuildCollectionOrderByClause( string sortBy, string sortOrder )
         {
