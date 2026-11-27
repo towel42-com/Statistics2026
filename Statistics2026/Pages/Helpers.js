@@ -471,7 +471,7 @@ define([
 
             if (showMissing) {
                 columns.push({
-                    title: "Click to Search",
+                    title: "Search Locations",
                     field: "Search",
                     sorter: "string",
                     hozAlign: "left",
