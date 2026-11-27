@@ -387,12 +387,19 @@ namespace Statistics2026.Data
             string orderByClause = BuildSeriesOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
             bool isPaged = tableOptions.Limit > 0;
 
+            List<string> whereClauses = BuildWhereClausesFromFilterMap(
+                tableOptions.GetFilterMap(),
+                SeriesListFilterColumnMap,
+                out List<(string name, object? value)> filterParams );
+            
+            string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
+
             // 1. Get total record count when paging is active
             int totalRecordCount = 0;
             if( isPaged )
             {
-                string countSql = $"SELECT COUNT(*) FROM (\n{getSeriesListResponseOnServerCmd( string.Empty )}\n) AS count_subquery";
-                await ExecuteCommandAsync( new SQLCmdDef( countSql ), ( statement ) =>
+                string countSql = $"SELECT COUNT(*) FROM (\n{getSeriesListResponseOnServerCmd( string.Empty )}\n) AS count_subquery{whereClause}";
+                await ExecuteCommandAsync( new SQLCmdDef( countSql, filterParams ), ( statement ) =>
                 {
                     totalRecordCount = statement.Current.GetInt( 0 );
                     return Task.FromResult( false );
@@ -400,7 +407,7 @@ namespace Statistics2026.Data
             }
 
             // 2. Build ordered query and apply LIMIT/OFFSET
-            string pagedSql = getSeriesListResponseOnServerCmd( orderByClause );
+            string pagedSql = $"SELECT * FROM (\n{getSeriesListResponseOnServerCmd( orderByClause )}\n) AS paged_subquery{whereClause}";
             if( isPaged )
             {
                 int safeOffset = Math.Max( 0, tableOptions.StartIndex );
@@ -410,7 +417,7 @@ namespace Statistics2026.Data
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommandAsync( new SQLCmdDef( pagedSql ), async ( statement ) =>
+            await ExecuteCommandAsync( new SQLCmdDef( pagedSql, filterParams ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
                 MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync(
@@ -449,6 +456,12 @@ namespace Statistics2026.Data
                 TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
             };
         }
+
+        private static readonly Dictionary<string, string> SeriesListFilterColumnMap = new( StringComparer.OrdinalIgnoreCase )
+        {
+            [ "Name" ] = "Title",
+            [ "ServerLocation" ] = "ServerLocation"
+        };
 
         private static string BuildSeriesOrderByClause( string sortBy, string sortOrder )
         {

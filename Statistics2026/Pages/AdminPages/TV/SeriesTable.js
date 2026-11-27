@@ -47,6 +47,8 @@
                         field: "Name",
                         sorter: "string",
                         hozAlign: "left",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: "Filter Series...",
                         tooltip: Helpers.createTextTooltip("DisplayName"),
                         formatter: function (cell) {
                             const data = cell.getRow().getData();
@@ -88,6 +90,8 @@
                         field: "ServerLocation",
                         sorter: "string",
                         hozAlign: "left",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: "Filter location...",
                         tooltip: Helpers.createTextTooltip("ServerLocation"),
                         formatter: function (cell) {
                             const data = cell.getRow().getData();
