@@ -271,11 +271,6 @@
 
             function saveConfigData() {
                 // Visual indicator: show subtle amber text during network request
-                const collectionAutosaveStatus = view.querySelector('#collectionAutosaveStatus');
-                collectionAutosaveStatus.textContent = "Saving...";
-                collectionAutosaveStatus.style.color = "#ffb703";
-                collectionAutosaveStatus.style.opacity = "1";
-
                 const searchLocationsAutosaveStatus = view.querySelector('#searchLocationsAutosaveStatus');
                 searchLocationsAutosaveStatus.textContent = "Saving...";
                 searchLocationsAutosaveStatus.style.color = "#ffb703";
@@ -291,16 +286,11 @@
                     config.tvSettings.searchLocations = searchUrls;
 
                     ApiClient.updatePluginConfiguration(Helpers.pluginId, config).then(function (result) {
-                        // Visual indicator: show green confirmation text
-                        collectionAutosaveStatus.textContent = "Saved";
-                        collectionAutosaveStatus.style.color = "#52b788";
-
                         searchLocationsAutosaveStatus.textContent = "Saved";
                         searchLocationsAutosaveStatus.style.color = "#52b788";
 
                         // Fade the "Saved" text away after 2 seconds
                         setTimeout(() => {
-                            collectionAutosaveStatus.style.opacity = "0";
                             searchLocationsAutosaveStatus.style.opacity = "0";
                         }, 2000);
 
