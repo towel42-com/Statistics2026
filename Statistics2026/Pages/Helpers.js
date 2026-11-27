@@ -160,13 +160,22 @@ define([
                     field: "Name",
                     sorter: "string",
                     hozAlign: "left",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: "Filter series...",
                     tooltip: function (e, cell) {
                         const info = cell.getRow().getData();
                         return `${info.Name} (${info.PremiereYear})`;
                     },
                     formatter: function (cell) {
-                        const info = cell.getRow().getData();
-                        return `${info.Name} (${info.PremiereYear})`;
+                        const item = cell.getRow().getData();
+                        const yearString = (item.PremiereYear && item.PremiereYear > 0)
+                            ? `(${item.PremiereYear})`
+                            : "";
+
+                        const wrapper = document.createElement("span");
+                        wrapper.style.fontWeight = "500";
+                        wrapper.innerHTML = `${item.Name} <span style="opacity: 0.6; font-size: 0.9em; margin-left: 4px;">${yearString}</span>`;
+                        return wrapper;
                     }
                 },
                 {
@@ -211,6 +220,14 @@ define([
                     field: "Status",
                     sorter: "string",
                     hozAlign: "left",
+                    headerFilter: "list",
+                    headerFilterParams: {
+                        values: {
+                            "": "All",
+                            "Continuing": "Continuing",
+                            "Ended": "Ended"
+                        }
+                    },
                     tooltip: function (e, cell) {
                         return cell.getRow().getData().SeriesStatus || "";
                     },
@@ -369,6 +386,8 @@ define([
                     title: "Name",
                     field: "Name",
                     sorter: "string",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: "Filter name...",
                     hozAlign: "left",
                     tooltip: createTextTooltip("DisplayName"),
                     formatter: function (cell) {
@@ -380,6 +399,8 @@ define([
                     title: parentName,
                     field: "ParentName",
                     sorter: "string",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: `Filter ${parentName}...`,
                     hozAlign: "left",
                     tooltip: createTextTooltip("ParentName"),
                     formatter: function (cell) {
@@ -415,6 +436,8 @@ define([
                         title: "Resolution",
                         field: "Resolution",
                         sorter: "string",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: `Filter resolution...`,
                         hozAlign: "left",
                         tooltip: createTextTooltip("ResolutionDetail"),
                         formatter: function (cell) {
@@ -425,6 +448,8 @@ define([
                         title: "Codec",
                         field: "Codec",
                         sorter: "string",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: `Filter codec...`,
                         hozAlign: "left",
                         tooltip: createTextTooltip("Codec"),
                         formatter: function (cell) {
@@ -435,6 +460,8 @@ define([
                         title: "Dolby Vision Profile",
                         field: "DolbyVisionProfile",
                         sorter: "string",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: `Filter Dolby Vision profile...`,
                         hozAlign: "left",
                         tooltip: createTextTooltip("DolbyVisionProfile"),
                         formatter: function (cell) {
@@ -461,7 +488,7 @@ define([
 
             if (showMissing) {
                 columns.push({
-                    title: "Click to Search",
+                    title: "Search Locations",
                     field: "Search",
                     sorter: "string",
                     hozAlign: "left",
@@ -478,6 +505,8 @@ define([
                     title: "Location on Server",
                     field: "ServerLocation",
                     sorter: "string",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: `Filter location...`,
                     hozAlign: "left",
                     tooltip: createTextTooltip("ServerLocation"),
                     formatter: function (cell) {
@@ -957,10 +986,63 @@ define([
             return searchParams.get('name') || '';
         }
 
+        function alignSubTabsToHeader(view) {
+            const root = (view && typeof view.querySelector === 'function') ? view : document;
+            const subTabsWrapper = root.querySelector('#dynamicSubTabs');
+            const contentPrimary = root.querySelector('.content-primary');
+
+            // Find the currently visible active tab inside .skinHeader
+            const allActiveTopTabs = document.querySelectorAll('.skinHeader .emby-tab-button-active');
+            let activeTopTab = null;
+            for (let ii = 0; ii < allActiveTopTabs.length; ii++) {
+                if (allActiveTopTabs[ii].offsetParent !== null) {
+                    activeTopTab = allActiveTopTabs[ii];
+                    break;
+                }
+            }
+
+            const headerSlider = activeTopTab ? activeTopTab.closest('.emby-tabs-slider') : null;
+
+            if (!subTabsWrapper || !contentPrimary || !activeTopTab || !subTabsWrapper.isConnected) {
+                return;
+            }
+
+            // Reset margin first to measure natural width cleanly
+            subTabsWrapper.style.setProperty('margin-left', '0px', 'important');
+
+            const topTabRect = activeTopTab.getBoundingClientRect();
+            const containerRect = contentPrimary.getBoundingClientRect();
+            const subBarWidth = subTabsWrapper.getBoundingClientRect().width;
+
+            // Ignore measurements if the view is hidden (display: none)
+            if (containerRect.width === 0 || topTabRect.width === 0) {
+                return;
+            }
+
+            const headerRight = headerSlider
+                ? Math.min(headerSlider.getBoundingClientRect().right, containerRect.right)
+                : containerRect.right;
+
+            // Default: align left edge of sub-tabs with left edge of active main tab
+            let offsetLeft = topTabRect.left - containerRect.left;
+
+            // If left-aligning overflows past the right edge, align right edge with active main tab's right edge
+            if (topTabRect.left + subBarWidth > headerRight) {
+                offsetLeft = topTabRect.right - subBarWidth - containerRect.left;
+            }
+
+            // Clamp within .content-primary bounds so it never clips off either edge
+            const maxOffset = Math.max(0, containerRect.width - subBarWidth);
+            offsetLeft = Math.max(0, Math.min(offsetLeft, maxOffset));
+
+            subTabsWrapper.style.setProperty('margin-left', `${Math.round(offsetLeft)}px`, 'important');
+            subTabsWrapper.style.setProperty('margin-right', 'auto', 'important');
+        }
+
         function initTabSystem(view, hierarchyFn, tabsFn) {
-            const hierarchy = hierarchyFn()
+            const hierarchy = hierarchyFn();
             let activeGroupIndex = 0;
-            let activeGroup = hierarchy;
+            let activeGroup = hierarchy[0];
 
             const currentPageName = getRequestedConfigurationPageName();
 
@@ -975,8 +1057,10 @@ define([
                 }
             }
 
+            // 1. Set Row 1 (Emby Header Tabs)
             mainTabsManager.setTabs(view, activeGroupIndex, tabsFn);
 
+            // 2. Build Row 2 inside .content-primary
             const contentPrimary = view.querySelector('.content-primary');
             if (!contentPrimary) {
                 return;
@@ -987,15 +1071,27 @@ define([
                 subTabsWrapper.remove();
             }
 
-            const subTabs = activeGroup.subTabs || [];
+            const subTabs = (activeGroup && activeGroup.subTabs) ? activeGroup.subTabs : [];
             if (subTabs.length <= 1) {
                 return;
             }
 
-            // Read live colors from Emby's top header tab bar so Row 2 matches 100% in any theme
-            const headerSlider = document.querySelector('.skinHeader .emby-tabs-slider');
-            const headerActiveBtn = document.querySelector('.skinHeader .emby-tab-button-active');
-            const headerInactiveBtn = document.querySelector('.skinHeader .emby-tab-button:not(.emby-tab-button-active)');
+            // Read live colors from the currently visible top header tab bar
+            const allHeaderSliders = document.querySelectorAll('.skinHeader .emby-tabs-slider');
+            let headerSlider = null;
+            for (let ii = 0; ii < allHeaderSliders.length; ii++) {
+                if (allHeaderSliders[ii].offsetParent !== null) {
+                    headerSlider = allHeaderSliders[ii];
+                    break;
+                }
+            }
+
+            const headerActiveBtn = headerSlider
+                ? headerSlider.querySelector('.emby-tab-button-active')
+                : document.querySelector('.skinHeader .emby-tab-button-active');
+            const headerInactiveBtn = headerSlider
+                ? headerSlider.querySelector('.emby-tab-button:not(.emby-tab-button-active)')
+                : document.querySelector('.skinHeader .emby-tab-button:not(.emby-tab-button-active)');
 
             const trackBg = headerSlider ? window.getComputedStyle(headerSlider).backgroundColor : '';
             const activeBg = headerActiveBtn ? window.getComputedStyle(headerActiveBtn).backgroundColor : '';
@@ -1052,44 +1148,33 @@ define([
             subTabsWrapper.appendChild(slider);
             contentPrimary.insertBefore(subTabsWrapper, contentPrimary.firstChild);
 
-            // Run after layout settles, and keep aligned on window resize
-            requestAnimationFrame(() => alignSubTabsToHeader(view));
-            window.removeEventListener('resize', view._subTabResizeHandler);
-            view._subTabResizeHandler = alignSubTabsToHeader;
-            window.addEventListener('resize', alignSubTabsToHeader);
-        }
-
-        function alignSubTabsToHeader(view) {
-            const subTabsWrapper = view.querySelector('#dynamicSubTabs');
-            const contentPrimary = view.querySelector('.content-primary');
-            const activeTopTab = document.querySelector('.skinHeader .emby-tab-button-active');
-            const headerSlider = document.querySelector('.skinHeader .emby-tabs-slider');
-
-            if (!subTabsWrapper || !contentPrimary || !activeTopTab || !subTabsWrapper.isConnected) {
-                return;
+            // Clean up any previous observers/listeners on this view
+            if (view._subTabResizeObserver) {
+                view._subTabResizeObserver.disconnect();
+            }
+            if (view._subTabResizeHandler) {
+                window.removeEventListener('resize', view._subTabResizeHandler);
             }
 
-            subTabsWrapper.style.marginLeft = '0px';
+            const scheduleAlign = () => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => alignSubTabsToHeader(view));
+                });
+            };
 
-            const topTabRect = activeTopTab.getBoundingClientRect();
-            const containerRect = contentPrimary.getBoundingClientRect();
-            const subBarWidth = subTabsWrapper.getBoundingClientRect().width;
-
-            const headerRight = headerSlider
-                ? Math.min(headerSlider.getBoundingClientRect().right, containerRect.right)
-                : containerRect.right;
-
-            let offsetLeft = topTabRect.left - containerRect.left;
-
-            if (topTabRect.left + subBarWidth > headerRight) {
-                offsetLeft = topTabRect.right - subBarWidth - containerRect.left;
+            if (typeof ResizeObserver !== 'undefined') {
+                const observer = new ResizeObserver(scheduleAlign);
+                if (headerSlider) {
+                    observer.observe(headerSlider);
+                }
+                observer.observe(contentPrimary);
+                view._subTabResizeObserver = observer;
             }
 
-            const maxOffset = Math.max(0, containerRect.width - subBarWidth);
-            offsetLeft = Math.max(0, Math.min(offsetLeft, maxOffset));
+            view._subTabResizeHandler = scheduleAlign;
+            window.addEventListener('resize', scheduleAlign);
 
-            subTabsWrapper.style.setProperty('margin-left', `${Math.round(offsetLeft)}px`, 'important');
-            subTabsWrapper.style.setProperty('margin-right', 'auto', 'important');
+            scheduleAlign();
         }
 
         (function injectStyleSheets() {
@@ -1182,6 +1267,8 @@ define([
                 paginationSize: 25,
                 paginationSizeSelector: [25, 50, 100, 250, 500],
                 sortMode: 'remote',
+                filterMode: 'remote',
+                headerFilterLiveFilterDelay: 350,
                 layout: 'fitDataFill',
                 placeholder: 'No records found',
                 columns: columns,
@@ -1196,6 +1283,18 @@ define([
                         queryParams.SortOrder = reqParams.sort[0].dir === 'desc' ? 'Descending' : 'Ascending';
                     }
 
+                    if (reqParams.filter && reqParams.filter.length > 0) {
+                        const filterMap = {};
+                        reqParams.filter.forEach(function (f) {
+                            if (f.value !== undefined && f.value !== null && String(f.value).trim() !== '') {
+                                filterMap[f.field] = String(f.value).trim();
+                            }
+                        });
+
+                        if (Object.keys(filterMap).length > 0) {
+                            queryParams.Filters = JSON.stringify(filterMap);
+                        }
+                    }
                     if (getExtraParamsFn !== undefined && typeof getExtraParamsFn === 'function') {
                         Object.assign(queryParams, getExtraParamsFn(reqParams));
                     }

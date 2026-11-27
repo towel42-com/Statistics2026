@@ -168,7 +168,7 @@ namespace Statistics2026.Responses
             return retVal;
         }
 
-        private static MediaItemResponse? SetMissingData( MediaItemResponse retVal, IResultSet row, ref int col, DateTimeOffset? premiereDate, bool isEpisode, Func<string, int, Task<bool>> isSeriesFiltered, Func<string, bool> isCollectionFiltered, Func<string, Task<SortByText?>> getCollectionName )
+        private static MediaItemResponse? SetMissingData( MediaItemResponse retVal, IResultSet row, ref int col, DateTimeOffset? premiereDate, bool isEpisode, Func<string, Task<SortByText?>> getCollectionName )
         {
             if( col != (int)Statistics2026DB.EMediaListResponseColumns.ePosterPath )
                 throw new Exception( "SetMissingData called with the wrong column" );
@@ -331,7 +331,7 @@ namespace Statistics2026.Responses
         }
 
         // if isEpisode is null its a series item, true its an episode item, false movie
-        public static async Task<MediaItemResponse?> CreateFromStatementRowAsync( IResultSet row, bool? isEpisode, string isoCode, Func<string, int, Task<bool>>? isSeriesFiltered, Func<string, bool>? isCollectionFiltered, Func<string, Task<SortByText?>>? getCollectionName, EmbyInterfaces? embyInterfaces, Statistics2026DB db )
+        public static async Task<MediaItemResponse?> CreateFromStatementRowAsync( IResultSet row, bool? isEpisode, string isoCode, Func<string, Task<SortByText?>>? getCollectionName, EmbyInterfaces? embyInterfaces, Statistics2026DB db )
         {
             if( embyInterfaces == null )
                 return null;
@@ -376,14 +376,14 @@ namespace Statistics2026.Responses
                 {
                     if( isMissing && ( isEpisode != null ) )
                     {
-                        if( isEpisode.Value && ( isSeriesFiltered != null ) )
-                        {
-                            return await isSeriesFiltered( id, seasonNum ).ConfigureAwait( false );
-                        }
-                        else if( isCollectionFiltered != null )
-                        {
-                            return isCollectionFiltered( name ) || ( ( sortName != name ) && isCollectionFiltered( sortName ) ) || isCollectionFiltered( title );
-                        }
+                        //if( isEpisode.Value && ( isSeriesFiltered != null ) )
+                        //{
+                        //    return await isSeriesFiltered( id, seasonNum ).ConfigureAwait( false );
+                        //}
+                        //else if( isCollectionFiltered != null )
+                        //{
+                        //    return isCollectionFiltered( name ) || ( ( sortName != name ) && isCollectionFiltered( sortName ) ) || isCollectionFiltered( title );
+                        //}
                     }
                     return false;
                 }
@@ -399,7 +399,7 @@ namespace Statistics2026.Responses
 
             if( isMissing && isEpisode != null )
             {
-                retVal = SetMissingData( retVal, row, ref col, premiereDate, isEpisode.Value, isSeriesFiltered!, isCollectionFiltered!, getCollectionName! );
+                retVal = SetMissingData( retVal, row, ref col, premiereDate, isEpisode.Value, getCollectionName! );
                 if( retVal == null )
                     return null;
             }

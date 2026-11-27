@@ -1,30 +1,12 @@
-﻿using MediaBrowser.Controller.Channels;
-using MediaBrowser.Controller.Configuration;
-using MediaBrowser.Controller.Entities;
-using MediaBrowser.Controller.Entities.TV;
-using MediaBrowser.Model.Entities;
+﻿using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Querying;
-using RestSharp;
 using ServiceStack;
 using ServiceStack.Text;
-using SQLitePCL;
 using SQLitePCL.pretty;
-using Statistics2026.Configuration;
 using Statistics2026.Responses;
+using Statistics2026.Services;
 using Statistics2026.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.SymbolStore;
-using System.Globalization;
-using System.Linq;
-using System.Net;
-using System.Reflection;
-using System.Runtime.InteropServices.ComTypes;
-using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using static ServiceStack.Diagnostics;
 
 namespace Statistics2026.Data
 {
@@ -80,7 +62,20 @@ namespace Statistics2026.Data
                 ", StreamingProviders=@StreamingProviders"
                 ;
 
-        private bool IsFilteredCollection( string collectionName )
+        private static List<Regex> GetCompiledCollectionFilterRegexes()
+        {
+            if( Plugin.Instance?.Configuration?.movieSettings?.CollectionFiltersForMissingMovies is not { Count: > 0 } patterns )
+                return [];
+
+            return patterns
+                .Where( pattern => !string.IsNullOrWhiteSpace( pattern ) )
+                .Select( pattern => new Regex( pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled ) )
+                .ToList();
+        }
+
+        // return isCollectionFiltered( name ) || ( ( sortName != name ) && isCollectionFiltered( sortName ) ) || isCollectionFiltered( Missing.Title );
+
+        private bool IsFilteredCollection( string collectionName, string collectionSortName, string missingTitle, List<Regex> compiledRegexes )
         {
             if( Plugin.Instance == null )
                 return false;
@@ -88,16 +83,12 @@ namespace Statistics2026.Data
             if( Plugin.Instance.Configuration == null )
                 return false;
 
-            if( collectionName.IsNullOrEmpty() )
+            if( collectionName.IsNullOrEmpty() && collectionSortName.IsNullOrEmpty() && missingTitle.IsNullOrEmpty() )
                 return false;
 
-            List<string> regexes = Plugin.Instance.Configuration.movieSettings.CollectionFiltersForMissingMovies;
-
-            foreach( string regexPattern in regexes )
+            foreach( Regex regex in compiledRegexes )
             {
-                var regex = new Regex( regexPattern, RegexOptions.IgnoreCase );
-
-                if( regex.IsMatch( collectionName ) )
+                if( ( !collectionName.IsNullOrEmpty() && regex.IsMatch( collectionName ) ) || ( !collectionSortName.IsNullOrEmpty() && regex.IsMatch( collectionSortName ) ) || ( !missingTitle.IsNullOrEmpty() && regex.IsMatch( missingTitle ) ) )
                 {
                     return true;
                 }
@@ -169,7 +160,7 @@ namespace Statistics2026.Data
             return filtered;
         }
 
-        private async Task<( int numItems, int numParents)> MediaMissingInfoAsync( bool episodes, bool filteredResults )
+        private async Task<(int numItems, int numParents)> MediaMissingInfoAsync( bool episodes, bool filteredResults )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -181,7 +172,7 @@ namespace Statistics2026.Data
                 HashSet<string> filteredParents = [];
                 string sql = getMediaListResponseMissingCmd( episodes ? EWhichMediaList.eEpisodesMissing : EWhichMediaList.eMoviesMissing, true );
 
-                await RunSQLOnRowAsync( sql, async( row )  =>
+                await RunSQLOnRowAsync( sql, async ( row ) =>
                 {
                     HashSet<string> currParentIds = [];
                     bool filtered = false;
@@ -191,16 +182,16 @@ namespace Statistics2026.Data
                     string title = row.GetString( (int)EMediaListResponseColumns.eTitle );
 
                     List<(string id, string name, string sortName, string displayText, string url)>? parentInfos = await MediaItemResponse.GetParentInfoAsync( parentInfoJSON, episodes,
-                        async ( string id, string name, string sortName ) =>
+                        async ( string id, string parentName, string parentSortName ) =>
                         {
-                            if( name.IsEmpty() )
+                            if( parentName.IsEmpty() )
                             {
                                 return true;
                             }
 
                             if( !episodes )
                             {
-                                return IsFilteredCollection( name ) || ( ( sortName != name ) && IsFilteredCollection( sortName ) ) || IsFilteredCollection( title );
+                                return IsFilteredCollection( parentName, parentSortName, title, GetCompiledCollectionFilterRegexes() );
                             }
                             return false;
                         } ).ConfigureAwait( false );
@@ -288,47 +279,70 @@ namespace Statistics2026.Data
 
         public async Task<List<SeriesFilterResponse>> GetSeriesFilterAsync( bool updateIfEmpty )
         {
-            QueryResult<SeriesFilterResponse> result = await GetSeriesFilterAsync( updateIfEmpty, -1, -1, string.Empty, string.Empty ).ConfigureAwait( false );
+            QueryResult<SeriesFilterResponse> result = await GetSeriesFilterAsync( updateIfEmpty,
+                new TabulatorTableOptions()
+                {
+                    StartIndex = -1,
+                    Limit = -1,
+                    SortBy = string.Empty,
+                    SortOrder = string.Empty
+                } ).ConfigureAwait( false );
             return result.Items.ToList();
         }
 
         public async Task<QueryResult<SeriesFilterResponse>> GetSeriesFilterAsync(
             bool updateIfEmpty,
-            int startIndex,
-            int limit,
-            string sortBy,
-            string sortOrder )
+            TabulatorTableOptions tableOptions )
         {
             CheckIsValid( ECheckLevel.eReport );
+
+            Dictionary<string, string> filterMap = tableOptions.GetFilterMap();
+            List<string> whereClauses = BuildWhereClausesFromFilterMap(
+                filterMap,
+                SeriesFilterTextColumnMap,
+                out List<(string name, object? value)> filterParams );
+
+            if( filterMap.TryGetValue( "TrackSeries", out string? trackSeriesVal ) && ( trackSeriesVal == "0" || trackSeriesVal == "1" ) )
+            {
+                whereClauses.Add( "SeriesFilterList.TrackSeries = @FilterTrackSeries" );
+                filterParams.Add( ("@FilterTrackSeries", int.Parse( trackSeriesVal )) );
+            }
+
+            if( filterMap.TryGetValue( "TrackSpecials", out string? trackSpecialsVal ) && ( trackSpecialsVal == "0" || trackSpecialsVal == "1" ) )
+            {
+                whereClauses.Add( "SeriesFilterList.TrackSpecials = @FilterTrackSpecials" );
+                filterParams.Add( ("@FilterTrackSpecials", int.Parse( trackSpecialsVal )) );
+            }
 
             string fromAndJoin =
                 " FROM SeriesFilterList" +
                 " JOIN Series ON Series.ItemId = SeriesFilterList.SeriesId";
 
-            bool isPaged = limit > 0;
+            string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
+            bool isPaged = tableOptions.Limit > 0;
             int totalRecordCount = 0;
 
             if( isPaged )
             {
-                string countSql = "SELECT COUNT(*)" + fromAndJoin;
-                await ExecuteCommandAsync( new SQLCmdDef( countSql ), statement =>
+                string countSql = "SELECT COUNT(*)" + fromAndJoin + whereClause;
+                await ExecuteCommandAsync( new SQLCmdDef( countSql, filterParams ), statement =>
                 {
                     totalRecordCount = statement.Current.GetInt( 0 );
                     return Task.FromResult( false );
                 } ).ConfigureAwait( false );
 
-                if( totalRecordCount == 0 && updateIfEmpty )
+                if( totalRecordCount == 0 && whereClauses.Count == 0 && updateIfEmpty )
                 {
                     var cmds = ( await UpdateSeriesFilterAsync( true ).ConfigureAwait( false ) )
                         .Where( cmd => cmd != null )
                         .Select( cmd => cmd! )
                         .ToList();
                     await ExecuteCommandsAsync( cmds ).ConfigureAwait( false );
-                    return await GetSeriesFilterAsync( false, startIndex, limit, sortBy, sortOrder ).ConfigureAwait( false );
+                    return await GetSeriesFilterAsync( false, tableOptions ).ConfigureAwait( false );
                 }
             }
 
-            string orderByClause = BuildSeriesFilterOrderByClause( sortBy, sortOrder );
+            string orderByClause = BuildSeriesFilterOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
             string sql = "SELECT" +
                 "  SeriesFilterList.SeriesId" +
                 ", SeriesFilterList.TrackSeries" +
@@ -341,17 +355,18 @@ namespace Statistics2026.Data
                 ", Series.HasSpecials" +
                 ", Series.NumSeasons" +
                 fromAndJoin +
+                whereClause +
                 $" {orderByClause}";
 
             if( isPaged )
             {
-                int safeOffset = Math.Max( 0, startIndex );
-                sql += $" LIMIT {limit} OFFSET {safeOffset}";
+                int safeOffset = Math.Max( 0, tableOptions.StartIndex );
+                sql += $" LIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
             List<SeriesFilterResponse> retVal = [];
             bool found = false;
-            await ExecuteCommandAsync( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sql, filterParams ), statement =>
             {
                 found = true;
                 IResultSet row = statement.Current;
@@ -374,14 +389,14 @@ namespace Statistics2026.Data
                 return Task.FromResult( true );
             } ).ConfigureAwait( false );
 
-            if( !found && updateIfEmpty )
+            if( !found && whereClauses.Count == 0 && updateIfEmpty )
             {
                 var cmds = ( await UpdateSeriesFilterAsync( true ).ConfigureAwait( false ) )
                     .Where( cmd => cmd != null )
                     .Select( cmd => cmd! )
                     .ToList();
                 await ExecuteCommandsAsync( cmds ).ConfigureAwait( false );
-                return await GetSeriesFilterAsync( false, startIndex, limit, sortBy, sortOrder ).ConfigureAwait( false );
+                return await GetSeriesFilterAsync( false, tableOptions ).ConfigureAwait( false );
             }
 
             return new QueryResult<SeriesFilterResponse>
@@ -390,6 +405,11 @@ namespace Statistics2026.Data
                 TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
             };
         }
+
+        private static readonly Dictionary<string, string> SeriesFilterTextColumnMap = new( StringComparer.OrdinalIgnoreCase )
+        {
+            [ "SeriesName" ] = "Series.Name"
+        };
 
         private static string BuildSeriesFilterOrderByClause( string sortBy, string sortOrder )
         {
@@ -485,7 +505,7 @@ namespace Statistics2026.Data
                 list.Add( series );
             }
 
-            var currFilterMap = (await GetSeriesFilterAsync( false ).ConfigureAwait( false ) ).ToDictionary( p => p.SeriesId );
+            var currFilterMap = ( await GetSeriesFilterAsync( false ).ConfigureAwait( false ) ).ToDictionary( p => p.SeriesId );
 
             var changedFilterMap = new List<SeriesFilterResponse>();
 

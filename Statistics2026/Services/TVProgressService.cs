@@ -22,13 +22,9 @@ namespace Statistics2026.Services
 {
     [Route( "/Statistics2026/tv_series_progress/{User}", "GET", Summary = "Gets the tv series progress for the user" )]
     [Authenticated]
-    public class GetTVSeriesProgress : IReturn<QueryResult<GetTVSeriesProgressResponse>>
+    public class GetTVSeriesProgress : TabulatorTableOptions, IReturn<QueryResult<GetTVSeriesProgressResponse>>
     {
         public string user { get; set; } = string.Empty;
-        public int StartIndex { get; set; } = 0;
-        public int Limit { get; set; } = 50;
-        public string SortBy { get; set; } = string.Empty;
-        public string SortOrder { get; set; } = string.Empty;
     }
 
     public class TVProgressService : BaseService
@@ -81,13 +77,7 @@ namespace Statistics2026.Services
                 int startIndex = Math.Max( 0, request.StartIndex );
                 int limit = ( request.Limit > 0 ) ? request.Limit : 50;
 
-                return await db.GetTVSeriesProgressAsync(
-                    user,
-                    startIndex,
-                    limit,
-                    request.SortBy,
-                    request.SortOrder
-                ).ConfigureAwait( false );
+                return await db.GetTVSeriesProgressAsync( user, request ).ConfigureAwait( false );
             } );
         }
     }

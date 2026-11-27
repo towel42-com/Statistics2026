@@ -466,7 +466,7 @@ namespace Statistics2026.Data
                     if( withTransaction )
                     {
                         try
-                        { 
+                        {
                             connection.Execute( "ROLLBACK;" );
                         }
                         catch { }

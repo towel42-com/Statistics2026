@@ -3,6 +3,7 @@ using MediaBrowser.Model.Querying;
 using SQLitePCL.pretty;
 using Statistics2026.Configuration;
 using Statistics2026.Responses;
+using Statistics2026.Services;
 using Statistics2026.Utilities;
 
 namespace Statistics2026.Data
@@ -11,10 +12,7 @@ namespace Statistics2026.Data
     {
         public async Task<QueryResult<GetTVSeriesProgressResponse>> GetTVSeriesProgressAsync(
             User? user,
-            int startIndex,
-            int limit,
-            string sortBy,
-            string sortOrder )
+            TabulatorTableOptions tableOptions )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -22,24 +20,30 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException( nameof( user ) );
 
             string? tableName = TableDefs().getUserTableName( user );
-            List<(string name, object? value)> paramList = [ ("@UserId", user.Id.ToString()) ];
+            List<string> whereClauses = BuildWhereClausesFromFilterMap(
+                tableOptions.GetFilterMap(),
+                TVSeriesProgressFilterColumnMap,
+                out List<(string name, object? value)> paramList );
 
-            bool isPaged = limit > 0;
+            paramList.Add( ("@UserId", user.Id.ToString()) );
+            string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
+
+            bool isPaged = tableOptions.Limit > 0;
             int totalRecordCount = 0;
 
-            // 1. Get total series count when paging is active
+            // 1. Get total series count with active filters
             if( isPaged )
             {
-                string countSql = "SELECT COUNT(*) FROM Series";
-                await ExecuteCommandAsync( new SQLCmdDef( countSql ), statement =>
+                string countSql = $"SELECT COUNT(*) FROM Series{whereClause}";
+                await ExecuteCommandAsync( new SQLCmdDef( countSql, paramList ), statement =>
                 {
                     totalRecordCount = statement.Current.GetInt( 0 );
                     return Task.FromResult( false );
                 } ).ConfigureAwait( false );
             }
 
-            // 2. Join Series with grouped episode & special counts so SQLite can sort by EpisodeProgess and slice LIMIT/OFFSET
-            string orderByClause = BuildTVSeriesProgressOrderByClause( sortBy, sortOrder );
+            // 2. Join Series with grouped episode & special counts, apply WHERE, ORDER BY, and LIMIT/OFFSET
+            string orderByClause = BuildTVSeriesProgressOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
             string sql =
                 "SELECT " +
                 "  Series.Name" +
@@ -65,12 +69,13 @@ namespace Statistics2026.Data
                 $"   WHERE IsEpisode AND IsTVSpecial AND IsPlayed AND UserId = @UserId " +
                 "   GROUP BY SeriesId " +
                 " ) sp ON sp.SeriesId = Series.ItemId " +
-                $" {orderByClause}";
+                $"{whereClause} " +
+                $"{orderByClause}";
 
             if( isPaged )
             {
-                int safeOffset = Math.Max( 0, startIndex );
-                sql += $" LIMIT {limit} OFFSET {safeOffset}";
+                int safeOffset = Math.Max( 0, tableOptions.StartIndex );
+                sql += $" LIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
             bool showImages = Plugin.Instance!.Configuration.ShowImages( EReportType.eUserReport );
@@ -122,6 +127,12 @@ namespace Statistics2026.Data
                 TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
             };
         }
+
+        private static readonly Dictionary<string, string> TVSeriesProgressFilterColumnMap = new( StringComparer.OrdinalIgnoreCase )
+        {
+            [ "Name" ] = "Series.Name",
+            [ "Status" ] = "Series.Status"
+        };
 
         private static string BuildTVSeriesProgressOrderByClause( string sortBy, string sortOrder )
         {

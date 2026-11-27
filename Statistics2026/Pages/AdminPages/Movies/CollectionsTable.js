@@ -45,6 +45,8 @@
                         field: "Name",
                         sorter: "string",
                         hozAlign: "left",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: "Filter Collection...",
                         tooltip: Helpers.createTextTooltip("DisplayName"),
                         formatter: function (cell) {
                             const data = cell.getRow().getData();

@@ -46,6 +46,9 @@
                     field: "SeriesName",
                     sorter: "string",
                     hozAlign: "left",
+                    vertAlign: "middle",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: "Filter Series...",
                     tooltip: function (e, cell) {
                         const item = cell.getRow().getData();
                         return item.PremiereYear && item.PremiereYear > 0
@@ -69,20 +72,20 @@
                     field: "TrackSeries",
                     sorter: "boolean",
                     hozAlign: "left",
+                    vertAlign: "middle",
+                    headerFilter: "list",
+                    headerFilterParams: { values: { "": "All", "1": "Yes", "0": "No" } },
                     formatter: function (cell) {
                         const item = cell.getRow().getData();
                         const label = document.createElement("label");
                         label.className = "emby-checkbox-label";
+                        label.innerHTML = `
+            <input is="emby-checkbox" type="checkbox" class="seriesfilter-trackseries" ${item.TrackSeries ? "checked" : ""} />
+            <span class="checkboxLabel">${item.TrackSeries ? "Yes" : "No"}</span>
+        `;
 
-                        const checkbox = document.createElement("input");
-                        checkbox.setAttribute("is", "emby-checkbox");
-                        checkbox.type = "checkbox";
-                        checkbox.className = "seriesfilter-trackseries";
-                        checkbox.checked = !!item.TrackSeries;
-
-                        const textSpan = document.createElement("span");
-                        textSpan.className = "checkboxLabel";
-                        textSpan.textContent = item.TrackSeries ? "Yes" : "No";
+                        const checkbox = label.querySelector("input");
+                        const textSpan = label.querySelector(".checkboxLabel");
 
                         checkbox.addEventListener("change", function () {
                             item.TrackSeries = checkbox.checked;
@@ -92,8 +95,6 @@
                             }
                         });
 
-                        label.appendChild(checkbox);
-                        label.appendChild(textSpan);
                         return label;
                     }
                 },
@@ -102,20 +103,20 @@
                     field: "TrackSpecials",
                     sorter: "boolean",
                     hozAlign: "left",
+                    vertAlign: "middle",
+                    headerFilter: "list",
+                    headerFilterParams: { values: { "": "All", "1": "Yes", "0": "No" } },
                     formatter: function (cell) {
                         const item = cell.getRow().getData();
                         const label = document.createElement("label");
                         label.className = "emby-checkbox-label";
+                        label.innerHTML = `
+            <input is="emby-checkbox" type="checkbox" class="seriesfilter-trackspecials" ${item.TrackSpecials ? "checked" : ""} />
+            <span class="checkboxLabel">${item.TrackSpecials ? "Yes" : "No"}</span>
+        `;
 
-                        const checkbox = document.createElement("input");
-                        checkbox.setAttribute("is", "emby-checkbox");
-                        checkbox.type = "checkbox";
-                        checkbox.className = "seriesfilter-trackspecials";
-                        checkbox.checked = !!item.TrackSpecials;
-
-                        const textSpan = document.createElement("span");
-                        textSpan.className = "checkboxLabel";
-                        textSpan.textContent = item.TrackSpecials ? "Yes" : "No";
+                        const checkbox = label.querySelector("input");
+                        const textSpan = label.querySelector(".checkboxLabel");
 
                         checkbox.addEventListener("change", function () {
                             item.TrackSpecials = checkbox.checked;
@@ -125,8 +126,6 @@
                             }
                         });
 
-                        label.appendChild(checkbox);
-                        label.appendChild(textSpan);
                         return label;
                     }
                 },
@@ -135,21 +134,17 @@
                     field: "MinSeason",
                     headerSort: false,
                     hozAlign: "left",
+                    vertAlign: "middle",
                     formatter: function (cell) {
                         const item = cell.getRow().getData();
-                        const input = document.createElement("input");
-                        input.setAttribute("is", "emby-input");
-                        input.type = "number";
-                        input.className = "seriesfilter-minseason";
-                        input.min = "1";
-                        if (item.NumSeasons) {
-                            input.max = String(item.NumSeasons);
-                        }
-                        input.value = (item.MinSeason !== undefined && item.MinSeason !== -1) ? String(item.MinSeason) : "";
-                        input.placeholder = "Min Season";
-                        input.style.width = "100%";
-                        input.style.margin = "0";
+                        const maxAttr = item.NumSeasons ? `max="${item.NumSeasons}"` : "";
+                        const valAttr = (item.MinSeason !== undefined && item.MinSeason !== -1) ? `value="${item.MinSeason}"` : "";
 
+                        const wrapper = document.createElement("div");
+                        wrapper.style.width = "100%";
+                        wrapper.innerHTML = `<input is="emby-input" type="number" class="seriesfilter-minseason" min="1" ${maxAttr} ${valAttr} style="width: 100%; margin: 0;" placeholder="Min Season" />`;
+
+                        const input = wrapper.querySelector("input");
                         input.addEventListener("change", function () {
                             const parsed = parseInt(input.value, 10);
                             item.MinSeason = isNaN(parsed) ? -1 : parsed;
@@ -158,7 +153,7 @@
                             }
                         });
 
-                        return input;
+                        return wrapper;
                     }
                 },
                 {
@@ -166,21 +161,17 @@
                     field: "MaxSeason",
                     headerSort: false,
                     hozAlign: "left",
+                    vertAlign: "middle",
                     formatter: function (cell) {
                         const item = cell.getRow().getData();
-                        const input = document.createElement("input");
-                        input.setAttribute("is", "emby-input");
-                        input.type = "number";
-                        input.className = "seriesfilter-maxseason";
-                        input.min = "1";
-                        if (item.NumSeasons) {
-                            input.max = String(item.NumSeasons);
-                        }
-                        input.value = (item.MaxSeason !== undefined && item.MaxSeason !== -1) ? String(item.MaxSeason) : "";
-                        input.placeholder = "Max Season";
-                        input.style.width = "100%";
-                        input.style.margin = "0";
+                        const maxAttr = item.NumSeasons ? `max="${item.NumSeasons}"` : "";
+                        const valAttr = (item.MaxSeason !== undefined && item.MaxSeason !== -1) ? `value="${item.MaxSeason}"` : "";
 
+                        const wrapper = document.createElement("div");
+                        wrapper.style.width = "100%";
+                        wrapper.innerHTML = `<input is="emby-input" type="number" class="seriesfilter-maxseason" min="1" ${maxAttr} ${valAttr} style="width: 100%; margin: 0;" placeholder="Max Season" />`;
+
+                        const input = wrapper.querySelector("input");
                         input.addEventListener("change", function () {
                             const parsed = parseInt(input.value, 10);
                             item.MaxSeason = isNaN(parsed) ? -1 : parsed;
@@ -189,7 +180,7 @@
                             }
                         });
 
-                        return input;
+                        return wrapper;
                     }
                 }
             ];
@@ -271,11 +262,6 @@
 
             function saveConfigData() {
                 // Visual indicator: show subtle amber text during network request
-                const collectionAutosaveStatus = view.querySelector('#collectionAutosaveStatus');
-                collectionAutosaveStatus.textContent = "Saving...";
-                collectionAutosaveStatus.style.color = "#ffb703";
-                collectionAutosaveStatus.style.opacity = "1";
-
                 const searchLocationsAutosaveStatus = view.querySelector('#searchLocationsAutosaveStatus');
                 searchLocationsAutosaveStatus.textContent = "Saving...";
                 searchLocationsAutosaveStatus.style.color = "#ffb703";
@@ -291,16 +277,11 @@
                     config.tvSettings.searchLocations = searchUrls;
 
                     ApiClient.updatePluginConfiguration(Helpers.pluginId, config).then(function (result) {
-                        // Visual indicator: show green confirmation text
-                        collectionAutosaveStatus.textContent = "Saved";
-                        collectionAutosaveStatus.style.color = "#52b788";
-
                         searchLocationsAutosaveStatus.textContent = "Saved";
                         searchLocationsAutosaveStatus.style.color = "#52b788";
 
                         // Fade the "Saved" text away after 2 seconds
                         setTimeout(() => {
-                            collectionAutosaveStatus.style.opacity = "0";
                             searchLocationsAutosaveStatus.style.opacity = "0";
                         }, 2000);
 
