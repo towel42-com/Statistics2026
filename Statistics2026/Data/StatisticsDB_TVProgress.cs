@@ -3,18 +3,14 @@ using MediaBrowser.Model.Querying;
 using SQLitePCL.pretty;
 using Statistics2026.Configuration;
 using Statistics2026.Responses;
+using Statistics2026.Services;
 using Statistics2026.Utilities;
 
 namespace Statistics2026.Data
 {
     public sealed partial class Statistics2026DB
     {
-        public async Task<QueryResult<GetTVSeriesProgressResponse>> GetTVSeriesProgressAsync(
-            User? user,
-            int startIndex,
-            int limit,
-            string sortBy,
-            string sortOrder )
+        public async Task<QueryResult<GetTVSeriesProgressResponse>> GetTVSeriesProgressAsync( User? user, TabulatorTableOptions tableOptions )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -24,7 +20,7 @@ namespace Statistics2026.Data
             string? tableName = TableDefs().getUserTableName( user );
             List<(string name, object? value)> paramList = [ ("@UserId", user.Id.ToString()) ];
 
-            bool isPaged = limit > 0;
+            bool isPaged = tableOptions.Limit > 0;
             int totalRecordCount = 0;
 
             // 1. Get total series count when paging is active
@@ -39,7 +35,7 @@ namespace Statistics2026.Data
             }
 
             // 2. Join Series with grouped episode & special counts so SQLite can sort by EpisodeProgess and slice LIMIT/OFFSET
-            string orderByClause = BuildTVSeriesProgressOrderByClause( sortBy, sortOrder );
+            string orderByClause = BuildTVSeriesProgressOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
             string sql =
                 "SELECT " +
                 "  Series.Name" +
@@ -69,8 +65,8 @@ namespace Statistics2026.Data
 
             if( isPaged )
             {
-                int safeOffset = Math.Max( 0, startIndex );
-                sql += $" LIMIT {limit} OFFSET {safeOffset}";
+                int safeOffset = Math.Max( 0, tableOptions.StartIndex );
+                sql += $" LIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
             bool showImages = Plugin.Instance!.Configuration.ShowImages( EReportType.eUserReport );

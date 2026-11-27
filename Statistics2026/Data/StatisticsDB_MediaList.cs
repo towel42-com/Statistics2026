@@ -2,6 +2,7 @@
 using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Responses;
+using Statistics2026.Services;
 using Statistics2026.Utilities;
 using System.Text.RegularExpressions;
 
@@ -275,18 +276,14 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<QueryResult<MediaItemResponse>> GetCollectionListResponseAsync(
-            int startIndex,
-            int limit,
-            string sortBy,
-            string sortOrder )
+        public async Task<QueryResult<MediaItemResponse>> GetCollectionListResponseAsync( TabulatorTableOptions tableOptions )
         {
             if( _embyInterfaces == null )
                 return new QueryResult<MediaItemResponse>();
 
-            string orderByClause = BuildCollectionOrderByClause( sortBy, sortOrder );
+            string orderByClause = BuildCollectionOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
             string baseSql = getCollectionListResponseOnServerCmd( orderByClause );
-            bool isPaged = limit > 0;
+            bool isPaged = tableOptions.Limit > 0;
 
             // 1. Get total count excluding empty collections (NumMovies == 0 && collectedMovies == 0)
             int totalRecordCount = 0;
@@ -305,8 +302,8 @@ namespace Statistics2026.Data
 
             if( isPaged )
             {
-                int safeOffset = Math.Max( 0, startIndex );
-                pagedSql += $"\nLIMIT {limit} OFFSET {safeOffset}";
+                int safeOffset = Math.Max( 0, tableOptions.StartIndex );
+                pagedSql += $"\nLIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
@@ -319,8 +316,6 @@ namespace Statistics2026.Data
                     row,
                     false,
                     isoCode,
-                    null,
-                    null,
                     null,
                     _embyInterfaces,
                     this ).ConfigureAwait( false );
@@ -371,17 +366,13 @@ namespace Statistics2026.Data
             return $"SortName COLLATE NOCASE {direction}";
         }
 
-        public async Task<QueryResult<MediaItemResponse>> GetSeriesListResponseAsync(
-            int startIndex,
-            int limit,
-            string sortBy,
-            string sortOrder )
+        public async Task<QueryResult<MediaItemResponse>> GetSeriesListResponseAsync( TabulatorTableOptions tableOptions )
         {
             if( _embyInterfaces == null )
                 return new QueryResult<MediaItemResponse>();
 
-            string orderByClause = BuildSeriesOrderByClause( sortBy, sortOrder );
-            bool isPaged = limit > 0;
+            string orderByClause = BuildSeriesOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
+            bool isPaged = tableOptions.Limit > 0;
 
             // 1. Get total record count when paging is active
             int totalRecordCount = 0;
@@ -399,8 +390,8 @@ namespace Statistics2026.Data
             string pagedSql = getSeriesListResponseOnServerCmd( orderByClause );
             if( isPaged )
             {
-                int safeOffset = Math.Max( 0, startIndex );
-                pagedSql += $"\nLIMIT {limit} OFFSET {safeOffset}";
+                int safeOffset = Math.Max( 0, tableOptions.StartIndex );
+                pagedSql += $"\nLIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
@@ -413,8 +404,6 @@ namespace Statistics2026.Data
                     row,
                     null,
                     isoCode,
-                    null,
-                    null,
                     null,
                     _embyInterfaces,
                     this ).ConfigureAwait( false );
@@ -465,13 +454,6 @@ namespace Statistics2026.Data
             };
         }
 
-
-        public async Task<List<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia )
-        {
-            QueryResult<MediaItemResponse> result = await GetMediaListResponseAsync( whichMedia, -1, -1, string.Empty, string.Empty ).ConfigureAwait(false);
-            return result.Items.ToList();
-        }
-
         private static string BuildMediaListOrderByClause( string sortBy, string sortOrder )
         {
             string direction = string.Equals( sortOrder, "Descending", StringComparison.OrdinalIgnoreCase )
@@ -493,8 +475,43 @@ namespace Statistics2026.Data
             return $"ORDER BY {sqlColumn} COLLATE NOCASE {direction}";
         }
 
+        private static readonly Dictionary<string, string> MediaListFilterColumnMap = new( StringComparer.OrdinalIgnoreCase )
+        {
+            [ "Name" ] = "Title",
+            [ "ParentName" ] = "ParentInfo",
+            [ "Resolution" ] = "ResolutionDetail",
+            [ "Codec" ] = "Codec",
+            [ "DolbyVisionProfile" ] = "DolbyVisionProfile",
+            [ "ServerLocation" ] = "ServerLocation"
+        };
 
-        public async Task<QueryResult<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia, int startIndex, int limit, string sortBy, string sortOrder )
+        private static List<string> BuildWhereClausesFromFilterMap(
+            Dictionary<string, string> filterMap,
+            Dictionary<string, string> columnMap,
+            out List<(string name, object? value)> paramList )
+        {
+            List<string> conditions = [];
+            paramList = [];
+            int paramIndex = 0;
+
+            foreach( KeyValuePair<string, string> kvp in filterMap )
+            {
+                if( string.IsNullOrWhiteSpace( kvp.Value ) )
+                    continue;
+
+                if( columnMap.TryGetValue( kvp.Key, out string? sqlColumn ) )
+                {
+                    string paramName = $"@Filter{paramIndex++}";
+                    conditions.Add( $"{sqlColumn} LIKE {paramName} COLLATE NOCASE" );
+                    paramList.Add( (paramName, $"%{kvp.Value.Trim()}%") );
+                }
+            }
+
+            return conditions;
+        }
+
+
+        public async Task<QueryResult<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia, TabulatorTableOptions tableOptions )
         {
             if( _embyInterfaces == null )
                 return new QueryResult<MediaItemResponse>();
@@ -516,43 +533,130 @@ namespace Statistics2026.Data
             }
 
             string unionSqlCmd = sqlCmds.Join( "\nUNION\n" );
-            bool isPaged = limit > 0;
+            List<string> whereClauses = BuildWhereClausesFromFilterMap(
+                tableOptions.GetFilterMap(),
+                MediaListFilterColumnMap,
+                out List<(string name, object? value)> filterParams );
+
+            if( ( whichMedia & EWhichMediaList.eEpisodes ) != 0 && Plugin.Instance?.Configuration != null )
+            {
+                whereClauses.Add(
+                    "NOT EXISTS (" +
+                    "  SELECT 1 FROM SeriesFilterList sfl" +
+                    "  WHERE sfl.SeriesId = ParentId" +
+                    "    AND (" +
+                    "      sfl.TrackSeries = 0" +
+                    "      OR (SeasonNum = 0 AND sfl.TrackSpecials = 0)" +
+                    "      OR (sfl.MinSeason > 0 AND SeasonNum < sfl.MinSeason)" +
+                    "      OR (sfl.MaxSeason > 0 AND SeasonNum > sfl.MaxSeason)" +
+                    "    )" +
+                    ")"
+                );
+            }
+
+            if( ( whichMedia & EWhichMediaList.eMovies ) != 0 && ( whichMedia & EWhichMediaList.eMissing ) != 0 )
+            {
+                List<Regex> compiledRegexes = GetCompiledCollectionFilterRegexes();
+                if( compiledRegexes.Count > 0 )
+                {
+                    List<string> excludedCollectionIds = [];
+                    await ExecuteCommandAsync( new SQLCmdDef( "SELECT ItemId, Name, SortName FROM Collections" ), statement =>
+                    {
+                        IResultSet row = statement.Current;
+                        string colId = row.GetString( 0 );
+                        string colName = row.GetString( 1 );
+                        string colSortName = row.GetString( 2 );
+
+                        if( IsFilteredCollection( colName, colSortName, string.Empty, compiledRegexes ) )
+                        {
+                            excludedCollectionIds.Add( colId );
+                        }
+                        return Task.FromResult( true );
+                    } ).ConfigureAwait( false );
+
+                    List<string> excludedMissingTitles = [];
+                    await ExecuteCommandAsync( new SQLCmdDef( "SELECT DISTINCT Title FROM Missing WHERE NOT IsEpisode" ), statement =>
+                    {
+                        IResultSet row = statement.Current;
+                        string title = row.GetString( 0 );
+
+                        if( IsFilteredCollection( string.Empty, string.Empty, title, compiledRegexes ) )
+                        {
+                            excludedMissingTitles.Add( title );
+                        }
+                        return Task.FromResult( true );
+                    } ).ConfigureAwait( false );
+
+                    List<string> exclusionParts = [];
+
+                    if( excludedCollectionIds.Count > 0 )
+                    {
+                        List<string> colParams = [];
+                        for( int ii = 0; ii < excludedCollectionIds.Count; ii++ )
+                        {
+                            string paramName = $"@ExCol{ii}";
+                            colParams.Add( paramName );
+                            filterParams.Add( (paramName, excludedCollectionIds[ ii ]) );
+                        }
+                        exclusionParts.Add( $"ParentId IN ({string.Join( ", ", colParams )})" );
+                    }
+
+                    if( excludedMissingTitles.Count > 0 )
+                    {
+                        List<string> titleParams = [];
+                        for( int ii = 0; ii < excludedMissingTitles.Count; ii++ )
+                        {
+                            string paramName = $"@ExTitle{ii}";
+                            titleParams.Add( paramName );
+                            filterParams.Add( (paramName, excludedMissingTitles[ ii ]) );
+                        }
+                        exclusionParts.Add( $"Title IN ({string.Join( ", ", titleParams )})" );
+                    }
+
+                    if( exclusionParts.Count > 0 )
+                    {
+                        whereClauses.Add( $"(IsMissing = 0 OR NOT ({string.Join( " OR ", exclusionParts )}))" );
+                    }
+                }
+            }
+
+            string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
+
+            bool isPaged = tableOptions.Limit > 0;
 
             int totalRecordCount = 0;
             if( isPaged )
             {
-                string countSql = $"SELECT COUNT(*) FROM (\n{unionSqlCmd}\n) AS count_subquery";
-                await ExecuteCommandAsync( new SQLCmdDef( countSql ), ( statement ) =>
+                string countSql = $"SELECT COUNT(*) FROM (\n{unionSqlCmd}\n) AS count_subquery{whereClause}";
+                await ExecuteCommandAsync( new SQLCmdDef( countSql, filterParams ), ( statement ) =>
                 {
                     totalRecordCount = statement.Current.GetInt( 0 );
                     return Task.FromResult( false );
                 } ).ConfigureAwait( false );
             }
 
-            string orderByClause = BuildMediaListOrderByClause( sortBy, sortOrder );
-            string pagedSql = $"SELECT * FROM (\n{unionSqlCmd}\n) AS paged_subquery\n{orderByClause}";
-            
+            string orderByClause = BuildMediaListOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
+            string pagedSql = $"SELECT * FROM (\n{unionSqlCmd}\n) AS paged_subquery{whereClause}\n{orderByClause}";
+
             if( isPaged )
             {
-                int safeOffset = Math.Max( 0, startIndex );
-                pagedSql += $"\nLIMIT {limit} OFFSET {safeOffset}";
+                int safeOffset = Math.Max( 0, tableOptions.StartIndex );
+                pagedSql += $"\nLIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
             bool episodes = ( whichMedia & EWhichMediaList.eEpisodes ) != 0;
             string isoCode = HelperFuncs.GetCountryCode( _embyInterfaces!.HttpClient(), CancellationToken );
 
             List<MediaItemResponse> retVal = [];
-            await ExecuteCommandAsync( new SQLCmdDef( pagedSql ), async ( statement ) =>
+            await ExecuteCommandAsync( new SQLCmdDef( pagedSql, filterParams ), async ( statement ) =>
             {
                 IResultSet row = statement.Current;
-                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync( 
-                    row, 
-                    episodes, 
-                    isoCode, 
-                    IsFilteredSeriesAsync, 
-                    IsFilteredCollection, 
-                    GetCollectionNameAsync, 
-                    _embyInterfaces, 
+                MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync(
+                    row,
+                    episodes,
+                    isoCode,
+                    GetCollectionNameAsync,
+                    _embyInterfaces,
                     this ).ConfigureAwait( false );
 
                 if( mediaInfoResponse != null )
