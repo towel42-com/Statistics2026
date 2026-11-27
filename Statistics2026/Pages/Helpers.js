@@ -989,7 +989,7 @@ define([
         function initTabSystem(view, hierarchyFn, tabsFn) {
             const hierarchy = hierarchyFn()
             let activeGroupIndex = 0;
-            let activeGroup = hierarchy;
+            let activeGroup = hierarchy[0];
 
             const currentPageName = getRequestedConfigurationPageName();
 
@@ -1082,15 +1082,19 @@ define([
             contentPrimary.insertBefore(subTabsWrapper, contentPrimary.firstChild);
 
             // Run after layout settles, and keep aligned on window resize
-            requestAnimationFrame(() => alignSubTabsToHeader(view));
+            const onResize = () => alignSubTabsToHeader(view);
+            requestAnimationFrame(onResize);
             window.removeEventListener('resize', view._subTabResizeHandler);
-            view._subTabResizeHandler = alignSubTabsToHeader;
-            window.addEventListener('resize', alignSubTabsToHeader);
+            view._subTabResizeHandler = onResize;
+            window.addEventListener('resize', onResize);
         }
 
         function alignSubTabsToHeader(view) {
-            const subTabsWrapper = view.querySelector('#dynamicSubTabs');
-            const contentPrimary = view.querySelector('.content-primary');
+            // Fallback to document if view is undefined or an Event object (e.g., from window resize)
+            const root = (view && typeof view.querySelector === 'function') ? view : document;
+
+            const subTabsWrapper = root.querySelector('#dynamicSubTabs');
+            const contentPrimary = root.querySelector('.content-primary');
             const activeTopTab = document.querySelector('.skinHeader .emby-tab-button-active');
             const headerSlider = document.querySelector('.skinHeader .emby-tabs-slider');
 
