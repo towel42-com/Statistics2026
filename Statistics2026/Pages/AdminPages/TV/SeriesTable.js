@@ -84,19 +84,6 @@
                         formatter: function (cell) {
                             return cell.getRow().getData().Extra2 || "";
                         }
-                    },
-                    {
-                        title: "Location on Server",
-                        field: "ServerLocation",
-                        sorter: "string",
-                        hozAlign: "left",
-                        headerFilter: "input",
-                        headerFilterPlaceholder: "Filter location...",
-                        tooltip: Helpers.createTextTooltip("ServerLocation"),
-                        formatter: function (cell) {
-                            const data = cell.getRow().getData();
-                            return data.ServerLocation ? data.ServerLocation.Text : "";
-                        }
                     }
                 ];
 
@@ -114,6 +101,21 @@
                         }
                     });
                 }
+
+                columns.push(
+                    {
+                        title: "Location on Server",
+                        field: "ServerLocation",
+                        sorter: "string",
+                        hozAlign: "left",
+                        headerFilter: "input",
+                        headerFilterPlaceholder: "Filter location...",
+                        tooltip: Helpers.createTextTooltip("ServerLocation"),
+                        formatter: function (cell) {
+                            const data = cell.getRow().getData();
+                            return data.ServerLocation ? data.ServerLocation.Text : "";
+                        }
+                    });
 
                 return columns;
             }

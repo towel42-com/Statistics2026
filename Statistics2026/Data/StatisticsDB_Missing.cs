@@ -290,27 +290,48 @@ namespace Statistics2026.Data
             return result.Items.ToList();
         }
 
-        public async Task<QueryResult<SeriesFilterResponse>> GetSeriesFilterAsync( bool updateIfEmpty, TabulatorTableOptions tableOptions )
+        public async Task<QueryResult<SeriesFilterResponse>> GetSeriesFilterAsync(
+            bool updateIfEmpty,
+            TabulatorTableOptions tableOptions )
         {
             CheckIsValid( ECheckLevel.eReport );
+
+            Dictionary<string, string> filterMap = tableOptions.GetFilterMap();
+            List<string> whereClauses = BuildWhereClausesFromFilterMap(
+                filterMap,
+                SeriesFilterTextColumnMap,
+                out List<(string name, object? value)> filterParams );
+
+            if( filterMap.TryGetValue( "TrackSeries", out string? trackSeriesVal ) && ( trackSeriesVal == "0" || trackSeriesVal == "1" ) )
+            {
+                whereClauses.Add( "SeriesFilterList.TrackSeries = @FilterTrackSeries" );
+                filterParams.Add( ("@FilterTrackSeries", int.Parse( trackSeriesVal )) );
+            }
+
+            if( filterMap.TryGetValue( "TrackSpecials", out string? trackSpecialsVal ) && ( trackSpecialsVal == "0" || trackSpecialsVal == "1" ) )
+            {
+                whereClauses.Add( "SeriesFilterList.TrackSpecials = @FilterTrackSpecials" );
+                filterParams.Add( ("@FilterTrackSpecials", int.Parse( trackSpecialsVal )) );
+            }
 
             string fromAndJoin =
                 " FROM SeriesFilterList" +
                 " JOIN Series ON Series.ItemId = SeriesFilterList.SeriesId";
 
+            string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
             bool isPaged = tableOptions.Limit > 0;
             int totalRecordCount = 0;
 
             if( isPaged )
             {
-                string countSql = "SELECT COUNT(*)" + fromAndJoin;
-                await ExecuteCommandAsync( new SQLCmdDef( countSql ), statement =>
+                string countSql = "SELECT COUNT(*)" + fromAndJoin + whereClause;
+                await ExecuteCommandAsync( new SQLCmdDef( countSql, filterParams ), statement =>
                 {
                     totalRecordCount = statement.Current.GetInt( 0 );
                     return Task.FromResult( false );
                 } ).ConfigureAwait( false );
 
-                if( totalRecordCount == 0 && updateIfEmpty )
+                if( totalRecordCount == 0 && whereClauses.Count == 0 && updateIfEmpty )
                 {
                     var cmds = ( await UpdateSeriesFilterAsync( true ).ConfigureAwait( false ) )
                         .Where( cmd => cmd != null )
@@ -334,6 +355,7 @@ namespace Statistics2026.Data
                 ", Series.HasSpecials" +
                 ", Series.NumSeasons" +
                 fromAndJoin +
+                whereClause +
                 $" {orderByClause}";
 
             if( isPaged )
@@ -344,7 +366,7 @@ namespace Statistics2026.Data
 
             List<SeriesFilterResponse> retVal = [];
             bool found = false;
-            await ExecuteCommandAsync( new SQLCmdDef( sql ), statement =>
+            await ExecuteCommandAsync( new SQLCmdDef( sql, filterParams ), statement =>
             {
                 found = true;
                 IResultSet row = statement.Current;
@@ -367,7 +389,7 @@ namespace Statistics2026.Data
                 return Task.FromResult( true );
             } ).ConfigureAwait( false );
 
-            if( !found && updateIfEmpty )
+            if( !found && whereClauses.Count == 0 && updateIfEmpty )
             {
                 var cmds = ( await UpdateSeriesFilterAsync( true ).ConfigureAwait( false ) )
                     .Where( cmd => cmd != null )
@@ -383,6 +405,11 @@ namespace Statistics2026.Data
                 TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
             };
         }
+
+        private static readonly Dictionary<string, string> SeriesFilterTextColumnMap = new( StringComparer.OrdinalIgnoreCase )
+        {
+            [ "SeriesName" ] = "Series.Name"
+        };
 
         private static string BuildSeriesFilterOrderByClause( string sortBy, string sortOrder )
         {

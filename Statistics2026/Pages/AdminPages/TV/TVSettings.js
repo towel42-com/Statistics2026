@@ -46,6 +46,8 @@
                     field: "SeriesName",
                     sorter: "string",
                     hozAlign: "left",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: "Filter Series...",
                     tooltip: function (e, cell) {
                         const item = cell.getRow().getData();
                         return item.PremiereYear && item.PremiereYear > 0
@@ -69,6 +71,8 @@
                     field: "TrackSeries",
                     sorter: "boolean",
                     hozAlign: "left",
+                    headerFilter: "list",
+                    headerFilterParams: { values: { "": "All", "1": "Yes", "0": "No" } },
                     formatter: function (cell) {
                         const item = cell.getRow().getData();
                         const label = document.createElement("label");
@@ -102,6 +106,8 @@
                     field: "TrackSpecials",
                     sorter: "boolean",
                     hozAlign: "left",
+                    headerFilter: "list",
+                    headerFilterParams: { values: { "": "All", "1": "Yes", "0": "No" } },
                     formatter: function (cell) {
                         const item = cell.getRow().getData();
                         const label = document.createElement("label");
