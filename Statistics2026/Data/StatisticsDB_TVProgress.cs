@@ -10,7 +10,9 @@ namespace Statistics2026.Data
 {
     public sealed partial class Statistics2026DB
     {
-        public async Task<QueryResult<GetTVSeriesProgressResponse>> GetTVSeriesProgressAsync( User? user, TabulatorTableOptions tableOptions )
+        public async Task<QueryResult<GetTVSeriesProgressResponse>> GetTVSeriesProgressAsync(
+            User? user,
+            TabulatorTableOptions tableOptions )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -18,23 +20,29 @@ namespace Statistics2026.Data
                 throw new ArgumentNullException( nameof( user ) );
 
             string? tableName = TableDefs().getUserTableName( user );
-            List<(string name, object? value)> paramList = [ ("@UserId", user.Id.ToString()) ];
+            List<string> whereClauses = BuildWhereClausesFromFilterMap(
+                tableOptions.GetFilterMap(),
+                TVSeriesProgressFilterColumnMap,
+                out List<(string name, object? value)> paramList );
+
+            paramList.Add( ("@UserId", user.Id.ToString()) );
+            string whereClause = HelperFuncs.JoinWhereClauses( whereClauses );
 
             bool isPaged = tableOptions.Limit > 0;
             int totalRecordCount = 0;
 
-            // 1. Get total series count when paging is active
+            // 1. Get total series count with active filters
             if( isPaged )
             {
-                string countSql = "SELECT COUNT(*) FROM Series";
-                await ExecuteCommandAsync( new SQLCmdDef( countSql ), statement =>
+                string countSql = $"SELECT COUNT(*) FROM Series{whereClause}";
+                await ExecuteCommandAsync( new SQLCmdDef( countSql, paramList ), statement =>
                 {
                     totalRecordCount = statement.Current.GetInt( 0 );
                     return Task.FromResult( false );
                 } ).ConfigureAwait( false );
             }
 
-            // 2. Join Series with grouped episode & special counts so SQLite can sort by EpisodeProgess and slice LIMIT/OFFSET
+            // 2. Join Series with grouped episode & special counts, apply WHERE, ORDER BY, and LIMIT/OFFSET
             string orderByClause = BuildTVSeriesProgressOrderByClause( tableOptions.SortBy, tableOptions.SortOrder );
             string sql =
                 "SELECT " +
@@ -61,7 +69,8 @@ namespace Statistics2026.Data
                 $"   WHERE IsEpisode AND IsTVSpecial AND IsPlayed AND UserId = @UserId " +
                 "   GROUP BY SeriesId " +
                 " ) sp ON sp.SeriesId = Series.ItemId " +
-                $" {orderByClause}";
+                $"{whereClause} " +
+                $"{orderByClause}";
 
             if( isPaged )
             {
@@ -118,6 +127,12 @@ namespace Statistics2026.Data
                 TotalRecordCount = isPaged ? totalRecordCount : retVal.Count
             };
         }
+
+        private static readonly Dictionary<string, string> TVSeriesProgressFilterColumnMap = new( StringComparer.OrdinalIgnoreCase )
+        {
+            [ "Name" ] = "Series.Name",
+            [ "Status" ] = "Series.Status"
+        };
 
         private static string BuildTVSeriesProgressOrderByClause( string sortBy, string sortOrder )
         {

@@ -160,13 +160,22 @@ define([
                     field: "Name",
                     sorter: "string",
                     hozAlign: "left",
+                    headerFilter: "input",
+                    headerFilterPlaceholder: "Filter series...",
                     tooltip: function (e, cell) {
                         const info = cell.getRow().getData();
                         return `${info.Name} (${info.PremiereYear})`;
                     },
                     formatter: function (cell) {
-                        const info = cell.getRow().getData();
-                        return `${info.Name} (${info.PremiereYear})`;
+                        const item = cell.getRow().getData();
+                        const yearString = (item.PremiereYear && item.PremiereYear > 0)
+                            ? `(${item.PremiereYear})`
+                            : "";
+
+                        const wrapper = document.createElement("span");
+                        wrapper.style.fontWeight = "500";
+                        wrapper.innerHTML = `${item.Name} <span style="opacity: 0.6; font-size: 0.9em; margin-left: 4px;">${yearString}</span>`;
+                        return wrapper;
                     }
                 },
                 {
@@ -211,6 +220,14 @@ define([
                     field: "Status",
                     sorter: "string",
                     hozAlign: "left",
+                    headerFilter: "list",
+                    headerFilterParams: {
+                        values: {
+                            "": "All",
+                            "Continuing": "Continuing",
+                            "Ended": "Ended"
+                        }
+                    },
                     tooltip: function (e, cell) {
                         return cell.getRow().getData().SeriesStatus || "";
                     },
