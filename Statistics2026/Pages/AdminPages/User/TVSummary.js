@@ -7,11 +7,18 @@
         'use strict';
 
         return function (view, params) {
-            view.addEventListener('viewshow', function (e) {
+            view.addEventListener('viewshow', async function (e) {
                 Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
 
+                let configValid = await Helpers.CheckForValidConfig();
+                if (!configValid) {
+                    view.querySelector(`#lastRunInfo`).style.display = 'none';
+                    Dashboard.hideLoadingMsg();
+                    return;
+                }
+
                 Helpers.insertGetLastRunInfo(view, ["UserAnalysis", "UserWatchDataAnalysis"], "lastRunInfo");
-                Helpers.loadUsers(view, `#selectUser_userstats`, loadData);
+                Helpers.loadUsers(view, `#selectUser_TVSummary`, loadData);
             });
 
             view.addEventListener('viewhide', function (e) {
@@ -22,21 +29,15 @@
 
             });
 
-            view.querySelector("#selectUser_userstats").addEventListener(`change`, function () {
+            view.querySelector("#selectUser_TVSummary").addEventListener(`change`, function () {
                 const userId = this.options[this.selectedIndex].value;
+                Helpers.setAdminPagesSelectedUserId(userId);
                 loadData(view, userId);
             });
 
             async function loadData(view, userId) {
-                let configValid = await Helpers.CheckForValidConfig();
-                if (!configValid) {
-                    view.querySelector(`#lastRunInfo`).style.display = 'none';
-                    Dashboard.hideLoadingMsg();
-                    return;
-                }
-
                 ApiClient.getUser(userId).then(function (user) {
-                    Helpers.LoadUserStats(view, user.Name, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
+                    Helpers.LoadUserTVSummaryStats(view, user.Name, Dashboard.showLoadingMsg, Dashboard.hideLoadingMsg);
                 });
             }
         }

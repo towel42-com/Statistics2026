@@ -1,0 +1,29 @@
+﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
+     data-controller="__plugin/Statistics2026_Pages_AdminPages_User_UserSummary.js">
+    <div data-role="content">
+        <div class="content-primary" style="padding-top:2px;">
+            <h1>User-based statistics</h1>
+            <p name="lastRunInfo" id="lastRunInfo" />
+
+            <div style="max-width: 900px;">
+                <div class="selectContainer">
+                    <label class="selectLabel selectLabelUnfocused" for="selectUser_UserSummary">Load statistics for:</label>
+                    <div class="emby-select-wrapper emby-select-wrapper-smaller">
+                        <select is="emby-select" id="selectUser_UserSummary" label="Load statistics for:" class="emby-select-backdropfilter emby-select"></select>
+                        <div class="selectArrowContainer">
+                            <div style="visibility: hidden;">0</div>
+                            <i class="md-icon selectArrow"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h2 id="UserTitle"></h2>
+
+            <h3>Summary</h3>
+            <div class="statRow" id="generalStats"></div>
+        </div>
+    </div>
+
+</div>

@@ -266,13 +266,11 @@ define([
             );
         }
 
-        function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
+        function LoadUserSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc) {
             showLoadingFunc();
 
             view.querySelector("#UserTitle").innerHTML = "User statistics for " + userName;
             view.querySelector("#generalStats").innerHTML = "";
-            view.querySelector("#movieStats").innerHTML = "";
-            view.querySelector("#showStats").innerHTML = "";
 
             var pendingPromises = [];
 
@@ -280,6 +278,19 @@ define([
             generalStats += getSummaryInfo(view, "total_time_watched", { user: userName, parameters: "?episodes=all", promises: pendingPromises });
             generalStats += getSummaryInfo(view, "total_watchable_time", { user: userName, parameters: "?episodes=all", promises: pendingPromises });
             view.querySelector("#generalStats").innerHTML = generalStats;
+
+            Promise.allSettled(pendingPromises).finally(() => {
+                hideLoadingFunc();
+            });
+        }
+
+        function LoadUserMovieSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc) {
+            showLoadingFunc();
+
+            view.querySelector("#UserTitle").innerHTML = "Movie Summary statistics for " + userName;
+            view.querySelector("#movieStats").innerHTML = "";
+
+            var pendingPromises = [];
 
             var movieStats = "";
             movieStats += getSummaryInfo(view, "total_movie_count", { user: userName, promises: pendingPromises });
@@ -294,6 +305,19 @@ define([
             movieMostWatchedStats += getSummaryInfo(view, "last_seen", { user: userName, parameters: "?episodes=false", promises: pendingPromises }, "last_seen_movies");
             movieMostWatchedStats += getSummaryInfo(view, "most_watched_movies", { user: userName, promises: pendingPromises });
             view.querySelector("#movieMostWatchedStats").innerHTML = movieMostWatchedStats;
+
+            Promise.allSettled(pendingPromises).finally(() => {
+                hideLoadingFunc();
+            });
+        }
+
+        function LoadUserTVSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc) {
+            showLoadingFunc();
+
+            view.querySelector("#UserTitle").innerHTML = "TV Summary statistics for " + userName;
+            view.querySelector("#showStats").innerHTML = "";
+
+            var pendingPromises = [];
 
             var showStats = "";
             showStats += getSummaryInfo(view, "total_tv_count", { user: userName, promises: pendingPromises });
@@ -312,6 +336,16 @@ define([
             Promise.allSettled(pendingPromises).finally(() => {
                 hideLoadingFunc();
             });
+        }
+
+        function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
+            showLoadingFunc();
+
+            LoadUserMovieSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc);
+            showLoadingFunc();
+            LoadUserTVSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc);
+            showLoadingFunc();
+            LoadUserSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc);
         }
 
         const lazyImageObserver = new IntersectionObserver(function (entries, observer) {
@@ -663,18 +697,40 @@ define([
             });
         }
 
+        let adminPagesSelectedUserId = sessionStorage.getItem("Statistics2026_AdminPages_SelectedUserId");
+        function setAdminPagesSelectedUserId(userId) {
+            adminPagesSelectedUserId = userId;
+            if (userId) {
+                sessionStorage.setItem('Statistics2026_AdminPages_SelectedUserId', userId);
+            }
+        }
+
+        function getAdminPagesSelectedUserId() {
+            return adminPagesSelectedUserId;
+        }
+
         function loadUsers(view, comboBoxId, loadDataFunc) {
             ApiClient.getUsers().then(function (users) {
                 console.log(`users: ${users}`);
                 var select = view.querySelector(comboBoxId);
+                if (!select)
+                    return;
+
                 users.forEach((user) => {
                     var option = document.createElement(`option`);
                     option.value = user.Id;
                     option.innerHTML = user.Name;
                     select.appendChild(option);
                 });
-                if (users.length > 0) {
-                    loadDataFunc(view, users[0].Id);
+
+                if (adminPagesSelectedUserId && select.querySelector(`option[value="${adminPagesSelectedUserId}"]`)) {
+                    select.value = adminPagesSelectedUserId;
+                } else if (users.length > 0) {
+                    setAdminPagesSelectedUserId(users[0].Id);
+                }
+
+                if (typeof loadDataFunc === 'function' && select.value) {
+                    loadDataFunc(view, select.value);
                 }
             });
         }
@@ -1326,12 +1382,17 @@ define([
             CheckForValidConfig,
             LoadTVProgress,
             LoadUserStats,
+            LoadUserMovieSummaryStats,
+            LoadUserTVSummaryStats,
+            LoadUserSummaryStats,
             getSummaryInfo,
             insertGetLastRunInfo,
             insertSystemStatus,
             getTabIndex,
             initCollapsibleTable,
             loadUsers,
+            setAdminPagesSelectedUserId,
+            getAdminPagesSelectedUserId,
             showInfo,
             showInfoEx,
             getUserPluginConfig,

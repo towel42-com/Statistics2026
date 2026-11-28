@@ -39,9 +39,11 @@ define(function () {
             {
                 id: 'users',
                 name: 'User Info',
-                href: Dashboard.getConfigurationPageUrl('Statistics2026_Pages_AdminPages_User_UserStats'),
+                href: Dashboard.getConfigurationPageUrl('Statistics2026_Pages_AdminPages_User_UserSummary'),
                 subTabs: [
-                    { page: 'Statistics2026_Pages_AdminPages_User_UserStats', name: 'User Stats' },
+                    { page: 'Statistics2026_Pages_AdminPages_User_UserSummary', name: 'Summary' },
+                    { page: 'Statistics2026_Pages_AdminPages_User_MovieSummary', name: 'Movie Summary' },
+                    { page: 'Statistics2026_Pages_AdminPages_User_TVSummary', name: 'TV Summary' },
                     { page: 'Statistics2026_Pages_AdminPages_User_TVSeriesProgress', name: 'TV Series Progress' },
                     { page: 'Statistics2026_Pages_AdminPages_User_UserReportSettings', name: 'Settings' }
                 ]

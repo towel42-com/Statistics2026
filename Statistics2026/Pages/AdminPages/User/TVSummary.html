@@ -1,6 +1,6 @@
 ﻿<div data-role="page" class="page type-interior pluginConfigurationPage withTabs"
      data-require="emby-button,emby-select,emby-checkbox,emby-linkbutton"
-     data-controller="__plugin/Statistics2026_Pages_AdminPages_User_UserStats.js">
+     data-controller="__plugin/Statistics2026_Pages_AdminPages_User_TVSummary.js">
     <div data-role="content">
         <div class="content-primary" style="padding-top:2px;">
             <h1>User-based statistics</h1>
@@ -8,9 +8,9 @@
 
             <div style="max-width: 900px;">
                 <div class="selectContainer">
-                    <label class="selectLabel selectLabelUnfocused" for="selectUser_userstats">Load statistics for:</label>
+                    <label class="selectLabel selectLabelUnfocused" for="selectUser_TVSummary">Load statistics for:</label>
                     <div class="emby-select-wrapper emby-select-wrapper-smaller">
-                        <select is="emby-select" id="selectUser_userstats" label="Load statistics for:" class="emby-select-backdropfilter emby-select"></select>
+                        <select is="emby-select" id="selectUser_TVSummary" label="Load statistics for:" class="emby-select-backdropfilter emby-select"></select>
                         <div class="selectArrowContainer">
                             <div style="visibility: hidden;">0</div>
                             <i class="md-icon selectArrow"></i>
@@ -21,14 +21,7 @@
 
             <h2 id="UserTitle"></h2>
 
-            <h3>General statistics</h3>
-            <div class="statRow" id="generalStats"></div>
-
-            <h3>Movie statistics</h3>
-            <div class="statRow" id="movieStats"></div>
-            <div class="statRow" name="movieMostWatchedStats" id="movieMostWatchedStats"></div>
-
-            <h3>Series Statistics</h3>
+            <h3>TV Episode & Series Statistics</h3>
             <div class="statRow" id="showStats"></div>
             <div class="statRow" name="seriesMostWatchedStats" id="seriesMostWatchedStats"></div>
 
