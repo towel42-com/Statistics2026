@@ -3,7 +3,7 @@ define([
     'dialogHelper',
     'toast',
     'prompt',
-    Dashboard.getConfigurationPageUrl('Statistics2026_tabulator_tabulator.js'),
+    ApiClient.getUrl('web/configurationpage?name=Statistics2026_tabulator_tabulator.js'),
     'emby-button',
     'emby-tabs'
 ],
