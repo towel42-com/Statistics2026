@@ -14,7 +14,9 @@ define(function () {
                 name: 'Movies',
                 href: getTabPageUrl('Statistics2026_Pages_UserPages_MovieSummary'),
                 subTabs: [
-                    { page: 'Statistics2026_Pages_UserPages_MovieSummary', name: 'Movies' }
+                    { page: 'Statistics2026_Pages_UserPages_MovieSummary', name: 'Movie Summary' },
+                    { page: 'Statistics2026_Pages_UserPages_CollectionsTable', name: 'Collections' },
+                    { page: 'Statistics2026_Pages_UserPages_MovieTable', name: 'Movies' },
                 ]
             },
             {
@@ -23,6 +25,8 @@ define(function () {
                 href: getTabPageUrl('Statistics2026_Pages_UserPages_TVSummary'),
                 subTabs: [
                     { page: 'Statistics2026_Pages_UserPages_TVSummary', name: 'TV Summary' },
+                    { page: 'Statistics2026_Pages_UserPages_SeriesTable', name: 'Series' },
+                    { page: 'Statistics2026_Pages_UserPages_EpisodeTable', name: 'Episodes' },
                     { page: 'Statistics2026_Pages_UserPages_TVSeriesProgress', name: 'TV Series Progress' },
                 ]
             },

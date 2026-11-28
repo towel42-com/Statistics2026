@@ -30,7 +30,7 @@ using static Statistics2026.Data.Statistics2026DB;
 namespace Statistics2026.Services
 {
     [Route( "/Statistics2026/episode_list", "GET", Summary = "Gets Episodes" )]
-    [Authenticated( Roles = "admin" )]
+    [Authenticated]
     public class GetEpisodeList : TabulatorTableOptions, IReturn<QueryResult<MediaItemResponse>>
     {
         public bool ShowOnServer { get; set; } = false;
@@ -38,7 +38,7 @@ namespace Statistics2026.Services
     }
 
     [Route( "/Statistics2026/movie_list", "GET", Summary = "Gets Movies" )]
-    [Authenticated( Roles = "admin" )]
+    [Authenticated]
     public class GetMovieList : TabulatorTableOptions, IReturn<QueryResult<MediaItemResponse>>
     {
         public bool ShowOnServer { get; set; } = false;
@@ -46,13 +46,13 @@ namespace Statistics2026.Services
     }
 
     [Route( "/Statistics2026/series_list", "GET", Summary = "Gets Series" )]
-    [Authenticated( Roles = "admin" )]
+    [Authenticated]
     public class GetSeriesList : TabulatorTableOptions, IReturn<QueryResult<MediaItemResponse>>
     {
     }
 
     [Route( "/Statistics2026/collection_list", "GET", Summary = "Gets Collections" )]
-    [Authenticated( Roles = "admin" )]
+    [Authenticated]
     public class GetCollectionList : TabulatorTableOptions, IReturn<QueryResult<MediaItemResponse>>
     {
     }

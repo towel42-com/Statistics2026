@@ -405,7 +405,7 @@ define([
             };
         }
 
-        function getMediaTabulatorColumns(parentName, showOnServer, showMissing, showStreaming) {
+        function getMediaTabulatorColumns(parentName, showOnServer, showMissing, showStreaming, isUserBasedTable=false) {
             const columns = [
                 {
                     title: "Name",
@@ -496,7 +496,7 @@ define([
                 );
             }
 
-            if (showStreaming) {
+            if (showStreaming && !isUserBasedTable) {
                 columns.push({
                     title: "Streaming Services(s)",
                     field: "StreamingServies",
@@ -511,7 +511,7 @@ define([
                 });
             }
 
-            if (showMissing) {
+            if (showMissing && !isUserBasedTable) {
                 columns.push({
                     title: "Search Locations",
                     field: "Search",
@@ -525,7 +525,7 @@ define([
                 });
             }
 
-            if (showOnServer) {
+            if (showOnServer && !isUserBasedTable) {
                 columns.push({
                     title: "Location on Server",
                     field: "ServerLocation",
@@ -873,7 +873,7 @@ define([
             getUserPluginConfig().then(function (config) {
                 let columnName = table.querySelectorAll("th")[columnIndex].getAttribute('data-column');
 
-                var found = false;
+                let found = false;
                 config.TableSortEntries.forEach(entry => {
                     if (entry.TableId == baseId) {
                         entry.ColumnName = columnName;

@@ -15,7 +15,7 @@
         let showStreaming = true;
 
         return function (view, params) {
-            let episodeTable = null;
+            let table = null;
 
             view.addEventListener('viewshow', function (e) {
                 Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, Dashboard.getConfigurationPageUrl);
@@ -52,9 +52,9 @@
             });
 
             view.addEventListener('viewdestroy', function (e) {
-                if (episodeTable) {
-                    episodeTable.destroy();
-                    episodeTable = null;
+                if (table) {
+                    table.destroy();
+                    table = null;
                 }
             });
 
@@ -94,8 +94,8 @@
                     return;
                 }
 
-                if (!episodeTable) {
-                    episodeTable = Helpers.loadTabulatorTable(
+                if (!table) {
+                    table = Helpers.loadTabulatorTable(
                         view,
                         baseId,
                         baseUrl,
@@ -103,8 +103,8 @@
                         getExtraQueryParams
                     );
                 } else {
-                    episodeTable.setColumns(getTabulatorColumns());
-                    episodeTable.setData();
+                    table.setColumns(getTabulatorColumns());
+                    table.setData();
                 }
 
                 view.setAttribute('data-initialized', 'true');

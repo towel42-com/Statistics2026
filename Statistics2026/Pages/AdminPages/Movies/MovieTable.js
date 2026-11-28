@@ -11,7 +11,6 @@
         const baseId = 'movie_results';
         const filterId = 'movieDisplay';
         const baseUrl = "Statistics2026/movie_list";
-        const tabName = "Statistics2026_Pages_Movies";
         const lastRunArray = ["MediaAnalysis", "MissingMoviesAnalysis"];
         let showStreaming = true;
 
@@ -26,7 +25,7 @@
                 }
 
                 Helpers.getUserPluginConfig().then(function (config) {
-                    var found = false;
+                    let found = false;
                     config.TableSortEntries.forEach(entry => {
                         if (entry.TableId == baseId) {
                             if (entry.ExtraFilter != null && entry.ExtraFilter != "") {
@@ -91,8 +90,6 @@
                     Dashboard.hideLoadingMsg();
                     return;
                 }
-
-                const container = view.querySelector(`#${baseId}_table`);
 
                 if (!table) {
                     table = Helpers.loadTabulatorTable(
