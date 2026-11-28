@@ -10,6 +10,7 @@ using MediaBrowser.Model.Logging;
 using ServiceStack;
 using SQLitePCL.pretty;
 using Statistics2026.Utilities;
+using System.Reflection;
 using System.Text;
 
 namespace Statistics2026.Data
@@ -66,7 +67,7 @@ namespace Statistics2026.Data
                 return retVal;
             }
 
-            private void CreateConnection( Statistics2026DB db )
+            private string moveDBFromOldLocation( Statistics2026DB db )
             {
                 string oldFileName = Path.Combine( db.ConfigManager().ApplicationPaths.DataPath, "Statistics2026.db" );
                 string newFileName = Path.Combine( db.ConfigManager().ApplicationPaths.PluginConfigurationsPath, "Statistics2026.db" );
@@ -104,7 +105,82 @@ namespace Statistics2026.Data
                         db.Logger().Error( $"   Failed to be delete - {ex.Message}" );
                     }
                 }
+                return newFileName;
+            }
 
+            private void MoveConfigFile( Statistics2026DB db )
+            {
+                string version = Assembly.GetExecutingAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split( '+' ).FirstOrDefault() ?? String.Empty;
+
+                string currConfigXml = Path.Combine( db.ConfigManager().ApplicationPaths.PluginConfigurationsPath, $"Statistics2026.{version}.xml" );
+                if( File.Exists( currConfigXml ) )
+                {
+                    return;
+                }
+
+                int count = 0;
+                string prevConfigXml = string.Empty;
+                do
+                {
+                    string[] versionParts = version.Split( '.' );
+                    int pos = versionParts.Count() - 1;
+                    bool carry = false;
+                    while( pos >= 0 )
+                    {
+                        if( !int.TryParse( versionParts[ pos ], out int currValue ) )
+                            return;
+
+                        if( carry )
+                        {
+                            if( currValue > 0 )
+                            {
+                                currValue--;
+                                carry = false;
+                            }
+                        }
+                        else if( currValue > 0 )
+                        {
+                            currValue--;
+                            carry = false;
+                        }
+                        else
+                            carry = true;
+                        versionParts[ pos ] = currValue.ToString();
+
+                        if( carry == false )
+                            break;
+                        pos--;
+                    }
+
+                    string prevVersion = versionParts.Join( "." );
+                    prevConfigXml = Path.Combine( db.ConfigManager().ApplicationPaths.PluginConfigurationsPath, $"Statistics2026.{prevVersion}.xml" );
+                    version = prevVersion;
+                    count++;
+                } while( count <= 5 && !prevConfigXml.IsEmpty() && !File.Exists( prevConfigXml ) );
+
+                if ( File.Exists( prevConfigXml ) )
+                {
+                    try
+                    {
+                        db.Logger().Info( "Xml config file does not exist, previous does" );
+                        File.Move( prevConfigXml, currConfigXml );
+                        db.Logger().Info( "   Moved successfully" );
+                    }
+                    catch( IOException ex )
+                    {
+                        db.Logger().Error( $"   Failed to be moved - {ex.Message}" );
+                    }
+                    catch( UnauthorizedAccessException ex )
+                    {
+                        db.Logger().Error( $"   Failed to be moved - Check Permissions - {ex.Message}" );
+                    }
+                }
+            }
+
+            private void CreateConnection( Statistics2026DB db )
+            {
+                MoveConfigFile( db );
+                string newFileName = moveDBFromOldLocation( db );
                 CreateConnection( db, newFileName );
             }
 
