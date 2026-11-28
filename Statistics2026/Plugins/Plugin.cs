@@ -122,10 +122,10 @@ namespace Statistics2026
 
             Dictionary<string, (string menuSection, string displayName)> userPages = new Dictionary<string, (string menuSection, string displayName)>()
             {
-                { $"{prefix}_Pages_UserPages_User_UserStats", ("User Statistics", "Statistics 2026") },
-                { $"{prefix}_Pages_UserPages_User_MovieSummary", ("User Statistics", "Movies") },
-                { $"{prefix}_Pages_UserPages_User_TVSummary", ("User Statistics", "TV") },
-                { $"{prefix}_Pages_UserPages_User_TVSeriesProgress", ("User Statistics", "TV Progress") }
+                { $"{prefix}_Pages_UserPages_UserStats", ("User Statistics", "Statistics 2026") },
+                { $"{prefix}_Pages_UserPages_MovieSummary", ("User Statistics", "Movies") },
+                { $"{prefix}_Pages_UserPages_TVSummary", ("User Statistics", "TV") },
+                { $"{prefix}_Pages_UserPages_TVSeriesProgress", ("User Statistics", "TV Progress") }
             };
 
             HashSet<string> userMenuPages = new HashSet<string>()

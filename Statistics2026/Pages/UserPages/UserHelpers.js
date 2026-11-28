@@ -2,11 +2,11 @@ define(function () {
     function getTabs() {
         var tabs = [
             {
-                href: getTabPageUrl('Statistics2026_Pages_UserPages_User_UserStats'),
+                href: getTabPageUrl('Statistics2026_Pages_UserPages_UserStats'),
                 name: 'User Stats'
             },
             {
-                href: getTabPageUrl('Statistics2026_Pages_UserPages_User_TVSeriesProgress'),
+                href: getTabPageUrl('Statistics2026_Pages_UserPages_TVSeriesProgress'),
                 name: 'TV Series Progress'
             }
 
