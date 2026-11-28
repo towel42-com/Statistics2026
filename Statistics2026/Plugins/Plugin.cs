@@ -24,6 +24,7 @@ using Statistics2026.Data;
 using Statistics2026.Features;
 using Statistics2026.ScheduledTasks;
 using Statistics2026.Utilities;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Statistics2026
 {
@@ -109,186 +110,38 @@ namespace Statistics2026
         public IEnumerable<PluginPageInfo> GetPages()
         {
             string prefix = GetType().Namespace;
-            var retVal = new PluginPageInfo[]
+
+            HashSet<string> knownPagePrefixes = new HashSet<string>()
             {
-                new() {
-                    Name = $"{prefix}_Resources_style.css",
-                    EmbeddedResourcePath = $"{prefix}.Resources.style.css"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_Helpers.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.Helpers.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_AdminHelpers.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.AdminHelpers.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_System_SystemSummary",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.System.SystemSummary.html",
-                    EnableInMainMenu = true
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_System_SystemSummary.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.System.SystemSummary.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_System_SystemStatus",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.System.SystemStatus.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_System_SystemStatus.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.System.SystemStatus.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_System_SystemSettings",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.System.SystemSettings.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_System_SystemSettings.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.System.SystemSettings.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_Movies_MovieSummary",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.Movies.MovieSummary.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_Movies_MovieSummary.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.Movies.MovieSummary.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_Movies_CollectionsTable",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.Movies.CollectionsTable.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_Movies_CollectionsTable.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.Movies.CollectionsTable.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_Movies_MovieTable",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.Movies.MovieTable.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_Movies_MovieTable.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.Movies.MovieTable.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_Movies_MovieSettings",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.Movies.MovieSettings.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_Movies_MovieSettings.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.Movies.MovieSettings.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_TV_SeriesSummary",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.TV.SeriesSummary.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_TV_SeriesSummary.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.TV.SeriesSummary.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_TV_EpisodeSummary",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.TV.EpisodeSummary.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_TV_EpisodeSummary.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.TV.EpisodeSummary.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_TV_SeriesTable",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.TV.SeriesTable.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_TV_SeriesTable.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.TV.SeriesTable.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_TV_EpisodeTable",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.TV.EpisodeTable.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_TV_EpisodeTable.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.TV.EpisodeTable.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_TV_TVSettings",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.TV.TVSettings.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_TV_TVSettings.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.TV.TVSettings.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_User_UserStats",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.User.UserStats.html"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_User_UserStats.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.User.UserStats.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_User_TVSeriesProgress",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.User.TVSeriesProgress.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_User_TVSeriesProgress.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.User.TVSeriesProgress.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_User_UserReportSettings",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.User.UserReportSettings.html",
-                },
-                new() {
-                    Name = $"{prefix}_Pages_AdminPages_User_UserReportSettings.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.AdminPages.User.UserReportSettings.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_UserPages_UserHelpers.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.UserPages.UserHelpers.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_UserPages_User_UserStats",
-                    EmbeddedResourcePath = $"{prefix}.Pages.UserPages.User.UserStats.html",
-                    EnableInUserMenu = true,
-                    MenuSection = "User Statistics",
-                    DisplayName = "User Statistics",
-                    FeatureId = Feature.StaticId
-                },
-                new() {
-                    Name = $"{prefix}_Pages_UserPages_User_UserStats.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.UserPages.User.UserStats.js"
-                },
-                new() {
-                    Name = $"{prefix}_Pages_UserPages_User_TVSeriesProgress",
-                    EmbeddedResourcePath = $"{prefix}.Pages.UserPages.User.TVSeriesProgress.html",
-                    MenuSection = "User Statistics",
-                    DisplayName = "TV Progress",
-                    FeatureId = Feature.StaticId
-                },
-                new() {
-                    Name = $"{prefix}_Pages_UserPages_User_TVSeriesProgress.js",
-                    EmbeddedResourcePath = $"{prefix}.Pages.UserPages.User.TVSeriesProgress.js",
-                    FeatureId = Feature.StaticId
-                },
-                new () {
-                    Name = $"{prefix}_tabulator_tabulator.js",
-                    EmbeddedResourcePath = $"tabulator.tabulator.js"
-                },
-                new () {
-                    Name = $"{prefix}_tabulator_tabulator.css",
-                    EmbeddedResourcePath = $"tabulator.tabulator.css"
-                }
+                $"{prefix}.Resources",
+                $"{prefix}.Pages",
+                $"tabulator"
             };
+
+            HashSet<string> mainMenuPages = new HashSet<string>() { $"{prefix}_Pages_AdminPages_System_SystemSummary" };
+
+            Dictionary<string, (string menuSection, string displayName)> userPages = new Dictionary<string, (string menuSection, string displayName)>()
+            {
+                { $"{prefix}_Pages_UserPages_User_UserSummary", ("User Statistics", "Summary") },
+                { $"{prefix}_Pages_UserPages_User_MovieSummary", ("User Statistics", "Movies") },
+                { $"{prefix}_Pages_UserPages_User_TVSummary", ("User Statistics", "TV") },
+                { $"{prefix}_Pages_UserPages_User_TVSeriesProgress", ("User Statistics", "TV Progress") }
+            };
+
+            HashSet<string> userMenuPages = new HashSet<string>()
+            {
+                $"{prefix}_Pages_UserPages_User_UserSummary"
+            };
+
+            List<PluginPageInfo> generatedPages = EmbyHelperFuncs.GeneratePages( this, knownPagePrefixes, mainMenuPages, userPages, userMenuPages );
 
             if( !_beenValidated )
             {
-                EmbyHelperFuncs.validatePluginResourcePages( retVal, this, GetType().Namespace, _embyInterfaces );
+                EmbyHelperFuncs.validatePluginResourcePages( generatedPages, this, GetType().Namespace, _embyInterfaces );
                 _beenValidated = true;
             }
 
-            return retVal;
+            return generatedPages;
         }
 
         public override Guid Id => new( "23ADB024-F759-438F-B9A7-D5912A75596C" );

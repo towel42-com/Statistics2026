@@ -15,6 +15,7 @@ using MediaBrowser.Model.Querying;
 using ServiceStack;
 using ServiceStack.Text.Common;
 using Statistics2026.Data;
+using Statistics2026.Features;
 using System.Reflection;
 using System.Text;
 using static Statistics2026.Data.Statistics2026DB;
@@ -763,7 +764,7 @@ namespace Statistics2026.Utilities
                 .FirstOrDefault( genre => string.Equals( genre.Name, genreName, StringComparison.OrdinalIgnoreCase ) );
         }
 
-        public static string GetExpectedNameForPath( string path, string ns )
+        public static string GetExpectedNameForResourcePath( string path, string ns )
         {
             int pos = path.LastIndexOf( '.' );
             string baseName = path;
@@ -797,7 +798,7 @@ namespace Statistics2026.Utilities
             List<(string currName, string correctName)> misnamedPages = [];
             foreach( PluginPageInfo page in pages )
             {
-                string nameForPath = GetExpectedNameForPath( page.EmbeddedResourcePath, ns );
+                string nameForPath = GetExpectedNameForResourcePath( page.EmbeddedResourcePath, ns );
 
                 if( !page.Name.StartsWith( ns ) )
                 {
@@ -922,6 +923,99 @@ namespace Statistics2026.Utilities
             }
             builder.AppendLine( $"--------------------------------------------------" );
             embyInterfaces.Logger().LogMultiline( $"----         {severity} loading page info          ----", logSeverity, builder );
+        }
+
+        public static bool PagesEqual( PluginPageInfo lhs, PluginPageInfo rhs )
+        {
+            bool retVal = true;
+
+            retVal = retVal && lhs.Name == rhs.Name;
+            retVal = retVal && lhs.DisplayName == rhs.DisplayName;
+            retVal = retVal && lhs.EmbeddedResourcePath == rhs.EmbeddedResourcePath;
+            retVal = retVal && lhs.EnableInMainMenu == rhs.EnableInMainMenu;
+            retVal = retVal && lhs.EnableInUserMenu == rhs.EnableInUserMenu;
+            retVal = retVal && lhs.MenuSection == rhs.MenuSection;
+            retVal = retVal && lhs.FeatureId == rhs.FeatureId;
+            retVal = retVal && lhs.MenuIcon == rhs.MenuIcon;
+            retVal = retVal && lhs.IsMainConfigPage == rhs.IsMainConfigPage;
+
+            return retVal;
+        }
+
+        public static List<PluginPageInfo> GeneratePages( object obj, HashSet<string> knownPagePrefixes, HashSet<string> mainMenuPages, Dictionary<string, (string menuSection, string displayName)> userPages, HashSet<string> userMenuPages, HashSet<string>? allowedExtensions = null )
+        {
+            allowedExtensions ??= new HashSet<string>() { ".css", ".js", ".html" };
+
+            string ns = obj.GetType().Namespace;
+            string[] resourcePaths = obj.GetType().Assembly.GetManifestResourceNames();
+
+            int maxNumSeparators = 1;
+            foreach( string currPrefix in knownPagePrefixes )
+            {
+                int currNum = currPrefix.Count( c => c == '.' );
+                maxNumSeparators = Math.Max( maxNumSeparators, currNum );
+            }
+
+            bool isKnownPath( string path, int maxNumSeparators )
+            {
+                int separatorCount = 0;
+                int pos = 0;
+                while( separatorCount < maxNumSeparators )
+                {
+                    pos = path.IndexOf( '.', pos + 1 );
+                    if( pos == -1 )
+                        break;
+                    string currPrefix = path.Substring( 0, pos );
+                    if( knownPagePrefixes.Contains( currPrefix ) )
+                        return true;
+                    separatorCount++;
+                }
+                return false;
+            }
+
+            List<PluginPageInfo> retVal = [];
+
+            foreach( string path in resourcePaths )
+            {
+                string ext = Path.GetExtension( path );
+                if( !allowedExtensions.Contains( ext ) )
+                {
+                    continue;
+                }
+
+                if( !isKnownPath( path, maxNumSeparators + 1 ) )
+                {
+                    continue;
+                }
+
+                string pageName = EmbyHelperFuncs.GetExpectedNameForResourcePath( path, ns );
+                PluginPageInfo currPage = new PluginPageInfo()
+                {
+                    Name = pageName,
+                    EmbeddedResourcePath = path,
+                    FeatureId = Feature.StaticId
+                };
+
+                if( mainMenuPages.Contains( pageName ) )
+                {
+                    currPage.EnableInMainMenu = true;
+                }
+
+                if( userPages.TryGetValue( pageName, out (string menuSection, string displayName) pageInfo ) )
+                {
+                    currPage.MenuSection = pageInfo.menuSection;
+                    currPage.DisplayName = pageInfo.displayName;
+                    currPage.FeatureId = Feature.StaticId;
+                }
+
+                if( userMenuPages.Contains( pageName ) )
+                {
+                    currPage.EnableInUserMenu = true;
+                }
+                retVal.Add( currPage );
+            }
+
+            return retVal;
         }
     }
 }
