@@ -132,7 +132,7 @@ namespace Statistics2026.Data
             return GroupedMediaKeyCountValuesAsync( "ActorIds", true, user, movies, playedOnly );
         }
 
-        public async Task<StatCard> ActorsListAsync( bool movies, bool? series )
+        public async Task<StatCard> ActorsListAsync( User? user, bool movies, bool? series )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -171,7 +171,7 @@ namespace Statistics2026.Data
                     else
                         text = $"{person.Name}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}";
 
-                    text = GetItemImageUrl.ItemHtmlFromItem( person, text: text, Plugin.Instance!.Configuration.ShowImages( movies ? EReportType.eMovieReport : EReportType.eTVReport ) );
+                    text = GetItemImageUrl.ItemHtmlFromItem( person, text: text, Plugin.Instance!.Configuration.ShowImages( user, movies ? EReportType.eMovieReport : EReportType.eTVReport ) );
                     retVal.AddLine( person.Name, text, false );
                 }
                 catch( Exception )

@@ -4,10 +4,11 @@ define([
     'toast',
     'prompt',
     ApiClient.getUrl('web/configurationpage?name=Statistics2026_tabulator_tabulator.js'),
+    'appRouter',
     'emby-button',
     'emby-tabs'
 ],
-    function (mainTabsManager, dialogHelper, toast, prompt, Tabulator) {
+    function (mainTabsManager, dialogHelper, toast, prompt, Tabulator, appRouter) {
         'use strict';
 
         const pluginId = "23ADB024-F759-438F-B9A7-D5912A75596C";
@@ -240,7 +241,7 @@ define([
 
         let tvProgressTable = null;
         function LoadTVProgress(view, userName) {
-            view.querySelector("#UserTitle").innerHTML = "TV Series Progress for " + userName;
+            view.querySelector("#UserTitle").innerHTML = "TV Series Progress for: " + userName;
 
             const baseId = "TVSeriesProgress";
             const endpoint = "Statistics2026/tv_series_progress/" + encodeURIComponent(userName);
@@ -269,7 +270,7 @@ define([
         function LoadUserSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc) {
             showLoadingFunc();
 
-            view.querySelector("#UserTitle").innerHTML = "User statistics for " + userName;
+            view.querySelector("#UserTitle").innerHTML = "User Statistics for: " + userName;
             view.querySelector("#generalStats").innerHTML = "";
 
             var pendingPromises = [];
@@ -287,7 +288,7 @@ define([
         function LoadUserMovieSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc) {
             showLoadingFunc();
 
-            view.querySelector("#UserTitle").innerHTML = "Movie Summary statistics for " + userName;
+            view.querySelector("#UserTitle").innerHTML = "Movie Summary Statistics for: " + userName;
             view.querySelector("#movieStats").innerHTML = "";
 
             var pendingPromises = [];
@@ -314,7 +315,7 @@ define([
         function LoadUserTVSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc) {
             showLoadingFunc();
 
-            view.querySelector("#UserTitle").innerHTML = "TV Summary statistics for " + userName;
+            view.querySelector("#UserTitle").innerHTML = "TV Summary Statistics for: " + userName;
             view.querySelector("#showStats").innerHTML = "";
 
             var pendingPromises = [];
@@ -336,16 +337,6 @@ define([
             Promise.allSettled(pendingPromises).finally(() => {
                 hideLoadingFunc();
             });
-        }
-
-        function LoadUserStats(view, userName, showLoadingFunc, hideLoadingFunc) {
-            showLoadingFunc();
-
-            LoadUserMovieSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc);
-            showLoadingFunc();
-            LoadUserTVSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc);
-            showLoadingFunc();
-            LoadUserSummaryStats(view, userName, showLoadingFunc, hideLoadingFunc);
         }
 
         const lazyImageObserver = new IntersectionObserver(function (entries, observer) {
@@ -654,19 +645,6 @@ define([
             }
 
             return `<div name="${div}" id="${div}"></div>`;
-        }
-
-        function getTabIndex(tab_name, getTabsFn) {
-            var index = 0;
-
-            var tabs = getTabsFn();
-            for (index = 0; index < tabs.length; ++index) {
-                var path = tabs[index].href;
-                if (path.endsWith("=" + tab_name)) {
-                    return index;
-                }
-            }
-            return -1;
         }
 
         function injectImageProxy(target, view) {
@@ -1095,7 +1073,16 @@ define([
             subTabsWrapper.style.setProperty('margin-right', 'auto', 'important');
         }
 
-        function initTabSystem(view, hierarchyFn, tabsFn) {
+        function getTabsForHierarchy(hierarchy) {
+            return hierarchy.map(function (group) {
+                return {
+                    href: group.href,
+                    name: group.name
+                };
+            });
+        }
+
+        function initTabSystem(view, hierarchyFn, getTabUrlFn) {
             const hierarchy = hierarchyFn();
             let activeGroupIndex = 0;
             let activeGroup = hierarchy[0];
@@ -1113,8 +1100,12 @@ define([
                 }
             }
 
+            function getTabs() {
+                return getTabsForHierarchy(hierarchy);
+            }
+
             // 1. Set Row 1 (Emby Header Tabs)
-            mainTabsManager.setTabs(view, activeGroupIndex, tabsFn);
+            mainTabsManager.setTabs(view, activeGroupIndex, getTabs);
 
             // 2. Build Row 2 inside .content-primary
             const contentPrimary = view.querySelector('.content-primary');
@@ -1194,7 +1185,7 @@ define([
                 btn.addEventListener('click', function () {
                     if (!isCurrent) {
                         console.log(`Page requested: ${ii} - '${subTab.page}' - '${subTab.name}'`);
-                        Dashboard.navigate(Dashboard.getConfigurationPageUrl(subTab.page));
+                        appRouter.show(getTabUrlFn(subTab.page));
                     }
                 });
 
@@ -1381,14 +1372,12 @@ define([
             pluginId,
             CheckForValidConfig,
             LoadTVProgress,
-            LoadUserStats,
             LoadUserMovieSummaryStats,
             LoadUserTVSummaryStats,
             LoadUserSummaryStats,
             getSummaryInfo,
             insertGetLastRunInfo,
             insertSystemStatus,
-            getTabIndex,
             initCollapsibleTable,
             loadUsers,
             setAdminPagesSelectedUserId,

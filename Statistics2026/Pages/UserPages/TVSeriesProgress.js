@@ -14,9 +14,15 @@
         `use strict`;
 
         return function (view, params) {
+            view.addEventListener('viewshow', async function (e) {
+                Helpers.initTabSystem(view, UserPageHelpers.getTabHierarchy, UserPageHelpers.getRelativeTabPageUrl);
 
-            view.addEventListener('viewshow', function (e) {
-                mainTabsManager.setTabs(this, Helpers.getTabIndex("TVSeriesProgress_UserPage", UserPageHelpers.getTabs), UserPageHelpers.getTabs);
+                let configValid = await Helpers.CheckForValidConfig();
+                if (!configValid) {
+                    view.querySelector(`#lastRunInfo`).style.display = 'none';
+                    loading.hide();
+                    return;
+                }
 
                 Helpers.insertGetLastRunInfo(view, ["UserAnalysis", "UserWatchDataAnalysis"], "lastRunInfo");
                 loadData(view, params.userId);
@@ -31,13 +37,6 @@
             });
 
             async function loadData(view, userId) {
-                let configValid = await Helpers.CheckForValidConfig();
-                if (!configValid) {
-                    view.querySelector(`#lastRunInfo`).style.display = 'none';
-                    loading.hide();
-                    return;
-                }
-
                 ApiClient.getUser(userId).then(function (user) {
                     Helpers.LoadTVProgress(view, user.Name, loading.show, loading.hide);
                 });

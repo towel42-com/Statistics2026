@@ -99,7 +99,7 @@ namespace Statistics2026.Services
         {
             return HelperFuncs.HandleRequestAsync<object>( request.GetType().Name, _embyInterfaces, async (timer, db) =>
             {
-                return await db.GetSeriesListResponseAsync( request ).ConfigureAwait( false );
+                return await db.GetSeriesListResponseAsync( null, request ).ConfigureAwait( false );
             } );
         }
 
@@ -110,7 +110,7 @@ namespace Statistics2026.Services
                 int startIndex = Math.Max( 0, request.StartIndex );
                 int limit = ( request.Limit > 0 ) ? request.Limit : 50;
 
-                return await db.GetCollectionListResponseAsync( request ).ConfigureAwait( false );
+                return await db.GetCollectionListResponseAsync( null, request ).ConfigureAwait( false );
             } );
         }
 
@@ -137,6 +137,7 @@ namespace Statistics2026.Services
                 int limit = ( request.Limit > 0 ) ? request.Limit : 50;
 
                 return await db.GetMediaListResponseAsync(
+                    null,
                     whichMedia,
                     request
                 ).ConfigureAwait( false );
@@ -166,6 +167,7 @@ namespace Statistics2026.Services
                 int limit = ( request.Limit > 0 ) ? request.Limit : 50;
 
                 return await db.GetMediaListResponseAsync(
+                    null, 
                     whichMedia,
                     request
                 ).ConfigureAwait( false );

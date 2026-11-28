@@ -19,7 +19,7 @@
             let table = null;
 
             view.addEventListener('viewshow', function (e) {
-                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
+                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, Dashboard.getConfigurationPageUrl);
 
                 if (view.getAttribute('data-initialized') === 'true') {
                     return; // Exit and prevent reload

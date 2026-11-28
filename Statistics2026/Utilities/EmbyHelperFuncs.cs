@@ -1003,7 +1003,7 @@ namespace Statistics2026.Utilities
 
                 if( userPages.TryGetValue( pageName, out (string menuSection, string displayName) pageInfo ) )
                 {
-                    currPage.MenuSection = pageInfo.menuSection;
+                    //currPage.MenuSection = pageInfo.menuSection;
                     currPage.DisplayName = pageInfo.displayName;
                     currPage.FeatureId = Feature.StaticId;
                 }

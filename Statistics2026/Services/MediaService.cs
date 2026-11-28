@@ -301,7 +301,7 @@ namespace Statistics2026.Services
         {
             return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async ( timer, db ) =>
             {
-                StatCard groupData = await db.GenreListAsync( true ).ConfigureAwait( false );
+                StatCard groupData = await db.GenreListAsync( null, true ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -314,7 +314,7 @@ namespace Statistics2026.Services
         {
             return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async ( timer, db ) =>
             {
-                StatCard groupData = await db.GenreListAsync( false, true ).ConfigureAwait( false );
+                StatCard groupData = await db.GenreListAsync( null, false, true ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -327,7 +327,7 @@ namespace Statistics2026.Services
         {
             return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async ( timer, db ) =>
             {
-                StatCard groupData = await db.GenreListAsync( false, false ).ConfigureAwait( false );
+                StatCard groupData = await db.GenreListAsync( null, false, false ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -342,7 +342,7 @@ namespace Statistics2026.Services
         {
             return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async ( timer, db ) =>
             {
-                StatCard groupData = await db.ActorsListAsync( true, null ).ConfigureAwait( false );
+                StatCard groupData = await db.ActorsListAsync( null, true, null ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -355,7 +355,7 @@ namespace Statistics2026.Services
         {
             return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async ( timer, db ) =>
             {
-                StatCard groupData = await db.ActorsListAsync( false, true ).ConfigureAwait( false );
+                StatCard groupData = await db.ActorsListAsync( null, false, true ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 
@@ -369,7 +369,7 @@ namespace Statistics2026.Services
         {
             return HelperFuncs.HandleRequestAsync( request.GetType().Name, _embyInterfaces, async ( timer, db ) =>
             {
-                StatCard groupData = await db.ActorsListAsync( false, false ).ConfigureAwait( false );
+                StatCard groupData = await db.ActorsListAsync( null, false, false ).ConfigureAwait( false );
                 if( groupData == null )
                     return new StatCardResponse();
 

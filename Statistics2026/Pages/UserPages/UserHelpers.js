@@ -1,31 +1,63 @@
 define(function () {
-    function getTabs() {
-        var tabs = [
+    function getTabHierarchy() {
+        return [
             {
-                href: getTabPageUrl('Statistics2026_Pages_UserPages_UserStats'),
-                name: 'User Stats'
+                id: 'summary',
+                name: 'Summary',
+                href: getTabPageUrl('Statistics2026_Pages_UserPages_UserSummary'),
+                subTabs: [
+                    { page: 'Statistics2026_Pages_UserPages_UserSummary', name: 'Summary' }
+                ]
             },
             {
-                href: getTabPageUrl('Statistics2026_Pages_UserPages_TVSeriesProgress'),
-                name: 'TV Series Progress'
+                id: 'movies',
+                name: 'Movies',
+                href: getTabPageUrl('Statistics2026_Pages_UserPages_MovieSummary'),
+                subTabs: [
+                    { page: 'Statistics2026_Pages_UserPages_MovieSummary', name: 'Movies' }
+                ]
+            },
+            {
+                id: 'tv',
+                name: 'TV Shows',
+                href: getTabPageUrl('Statistics2026_Pages_UserPages_TVSummary'),
+                subTabs: [
+                    { page: 'Statistics2026_Pages_UserPages_TVSummary', name: 'TV Summary' },
+                    { page: 'Statistics2026_Pages_UserPages_TVSeriesProgress', name: 'TV Series Progress' },
+                ]
+            },
+            {
+                id: 'settings',
+                name: 'Settings',
+                href: getTabPageUrl('Statistics2026_Pages_UserPages_UserReportSettings'),
+                subTabs: [
+                    { page: 'Statistics2026_Pages_UserPages_UserReportSettings', name: 'Settings' }
+                ]
             }
-
         ];
-        return tabs;
     }
 
+    function getRelativeTabPageUrl(pageName) {
+        const userId = ApiClient.getCurrentUserId();
+        const url = `configurationpage?name=${pageName}&userId=${userId}`;
+        return url;
+    }    
+
     function getTabPageUrl(pageName) {
-        var url = ApiClient.getUrl('configurationpage?name=' + pageName + '&userId=' + ApiClient.getCurrentUserId());
+        let url = ApiClient.getUrl(getRelativeTabPageUrl(pageName));
         url = url.replace("/emby", "");
         return url;
     }
 
     function getConfigPageUrl(pageName) {
-        return ApiClient.getUrl('web/configurationpage?name=' + pageName + '&userId=' + ApiClient.getCurrentUserId());
+        const relUrl = getRelativeTabPageUrl(pageName);
+        return ApiClient.getUrl(`web/${relUrl}`);
     }
 
     return {
-        getTabs,
+        getRelativeTabPageUrl,
+        getTabHierarchy,
+        getTabPageUrl,
         getConfigPageUrl
     };
 

@@ -4,6 +4,7 @@ using SQLitePCL.pretty;
 using Statistics2026.Responses;
 using Statistics2026.Services;
 using Statistics2026.Utilities;
+using MediaBrowser.Controller.Entities;
 using System.Text.RegularExpressions;
 
 namespace Statistics2026.Data
@@ -276,7 +277,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        public async Task<QueryResult<MediaItemResponse>> GetCollectionListResponseAsync( TabulatorTableOptions tableOptions )
+        public async Task<QueryResult<MediaItemResponse>> GetCollectionListResponseAsync( User? user, TabulatorTableOptions tableOptions )
         {
             if( _embyInterfaces == null )
                 return new QueryResult<MediaItemResponse>();
@@ -321,6 +322,7 @@ namespace Statistics2026.Data
             {
                 IResultSet row = statement.Current;
                 MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync(
+                    user,
                     row,
                     false,
                     isoCode,
@@ -379,7 +381,7 @@ namespace Statistics2026.Data
             return $"SortName COLLATE NOCASE {direction}";
         }
 
-        public async Task<QueryResult<MediaItemResponse>> GetSeriesListResponseAsync( TabulatorTableOptions tableOptions )
+        public async Task<QueryResult<MediaItemResponse>> GetSeriesListResponseAsync( User? user, TabulatorTableOptions tableOptions )
         {
             if( _embyInterfaces == null )
                 return new QueryResult<MediaItemResponse>();
@@ -421,6 +423,7 @@ namespace Statistics2026.Data
             {
                 IResultSet row = statement.Current;
                 MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync(
+                    user, 
                     row,
                     null,
                     isoCode,
@@ -537,7 +540,7 @@ namespace Statistics2026.Data
         }
 
 
-        public async Task<QueryResult<MediaItemResponse>> GetMediaListResponseAsync( EWhichMediaList whichMedia, TabulatorTableOptions tableOptions )
+        public async Task<QueryResult<MediaItemResponse>> GetMediaListResponseAsync( User? user, EWhichMediaList whichMedia, TabulatorTableOptions tableOptions )
         {
             if( _embyInterfaces == null )
                 return new QueryResult<MediaItemResponse>();
@@ -678,6 +681,7 @@ namespace Statistics2026.Data
             {
                 IResultSet row = statement.Current;
                 MediaItemResponse? mediaInfoResponse = await MediaItemResponse.CreateFromStatementRowAsync(
+                    user, 
                     row,
                     episodes,
                     isoCode,

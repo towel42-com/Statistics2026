@@ -122,15 +122,16 @@ namespace Statistics2026
 
             Dictionary<string, (string menuSection, string displayName)> userPages = new Dictionary<string, (string menuSection, string displayName)>()
             {
-                { $"{prefix}_Pages_UserPages_UserStats", ("User Statistics", "Statistics 2026") },
+                { $"{prefix}_Pages_UserPages_UserSummary", ("User Statistics", "Statistics 2026") },
                 { $"{prefix}_Pages_UserPages_MovieSummary", ("User Statistics", "Movies") },
                 { $"{prefix}_Pages_UserPages_TVSummary", ("User Statistics", "TV") },
-                { $"{prefix}_Pages_UserPages_TVSeriesProgress", ("User Statistics", "TV Progress") }
+                { $"{prefix}_Pages_UserPages_TVSeriesProgress", ("User Statistics", "TV Progress") },
+                { $"{prefix}_Pages_UserPages_UserReportSettings", ("User Statistics", "Settings") }
             };
 
             HashSet<string> userMenuPages = new HashSet<string>()
             {
-                $"{prefix}_Pages_UserPages_User_UserStats"
+                $"{prefix}_Pages_UserPages_UserSummary"
             };
 
             List<PluginPageInfo> generatedPages = EmbyHelperFuncs.GeneratePages( this, knownPagePrefixes, mainMenuPages, userPages, userMenuPages );

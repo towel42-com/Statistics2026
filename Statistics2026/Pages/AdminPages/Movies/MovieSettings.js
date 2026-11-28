@@ -51,7 +51,7 @@
         return function (view, params) {
             // init code here
             view.addEventListener('viewshow', async function (e) {
-                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
+                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, Dashboard.getConfigurationPageUrl);
 
                 loadPage(view, params);
             });

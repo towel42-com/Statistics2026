@@ -2,6 +2,7 @@
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Model.Plugins;
 using ServiceStack;
+using ServiceStack.Text;
 using Statistics2026.Utilities;
 using System.Reflection;
 
@@ -328,8 +329,30 @@ namespace Statistics2026.Configuration
 
     public static class DataForConfigExtensions
     {
-        public static bool ShowImages( this IDataForConfig target, EReportType reportType )
+        public static int GetNumLastSeenToReport( this IDataForConfig target, User? user )
         {
+            if( user != null )
+            {
+                target = Plugin.Instance!.Configuration.ConfigForUser( user );
+            }
+            return target.userReportSettings.numLastSeenToReport;
+        }
+
+        public static int GetNumFavoriteYears( this IDataForConfig target, User? user )
+        {
+            if( user != null )
+            {
+                target = Plugin.Instance!.Configuration.ConfigForUser( user );
+            }
+            return target.userReportSettings.numFavoriteYears;
+        }
+
+        public static bool ShowImages( this IDataForConfig target, User? user, EReportType reportType )
+        {
+            if( user != null )
+            {
+                target = Plugin.Instance!.Configuration.ConfigForUser( user );
+            }
             switch( reportType )
             {
                 case EReportType.eTVReport:
@@ -401,8 +424,13 @@ namespace Statistics2026.Configuration
             return 0;
         }
 
-        public static int NumGenresToReport( this IDataForConfig target, EReportType reportType )
+        public static int NumGenresToReport( this IDataForConfig target, User? user, EReportType reportType )
         {
+            if( user != null )
+            {
+                target = Plugin.Instance!.Configuration.ConfigForUser( user );
+            }
+
             switch( reportType )
             {
                 case EReportType.eTVReport:
@@ -427,8 +455,13 @@ namespace Statistics2026.Configuration
             return 0;
         }
 
-        public static int NumWatchedToReport( this IDataForConfig target, EReportType reportType )
+        public static int NumWatchedToReport( this IDataForConfig target, User? user, EReportType reportType )
         {
+            if( user != null )
+            {
+                target = Plugin.Instance!.Configuration.ConfigForUser( user );
+            }
+
             switch( reportType )
             {
                 case EReportType.eTVReport:
@@ -441,8 +474,12 @@ namespace Statistics2026.Configuration
             return 0;
         }
 
-        public static int NumTiedToReport( this IDataForConfig target, EReportType reportType )
+        public static int NumTiedToReport( this IDataForConfig target, User? user, EReportType reportType )
         {
+            if( user != null )
+            {
+                target = Plugin.Instance!.Configuration.ConfigForUser( user );
+            }
             switch( reportType )
             {
                 case EReportType.eTVReport:
@@ -530,10 +567,32 @@ namespace Statistics2026.Configuration
             {
                 retVal = new UserConfig { UserId = user.Id.ToString() };
                 UserConfigs.Add( retVal );
+                retVal.CopyData( this );
             }
-            retVal.CopyData( this ); // the user does NOT have the ability to customize the global config data
 
             return retVal;
+        }
+
+        public void SetConfigForUser( User user, UserConfig config )
+        {
+            if( user == null )
+                throw new UnauthorizedAccessException( "User likely is not authenticated." );
+
+            bool found = false;
+            for( int ii = 0; ii < UserConfigs.Count; ++ii )
+            {
+                if ( UserConfigs[ ii ].UserId == user.Id.ToString() )
+                {
+                    found = true;
+                    UserConfigs[ ii ] = config;
+                    break;
+                }
+            }
+
+            if( !found )
+            {
+                UserConfigs.Add( config );
+            }
         }
 
         public bool ShowDebugInfo( EmbyInterfaces embyInterfaces )

@@ -74,7 +74,7 @@
 
         return function (view, params) {
             view.addEventListener('viewshow', function (e) {
-                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, AdminHelpers.getTabs);
+                Helpers.initTabSystem(view, AdminHelpers.getTabHierarchy, Dashboard.getConfigurationPageUrl);
             });
 
             view.addEventListener('viewhide', function (e) {

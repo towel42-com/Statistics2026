@@ -78,7 +78,7 @@ namespace Statistics2026.Data
                 sql += $" LIMIT {tableOptions.Limit} OFFSET {safeOffset}";
             }
 
-            bool showImages = Plugin.Instance!.Configuration.ShowImages( EReportType.eUserReport );
+            bool showImages = Plugin.Instance!.Configuration.ShowImages( user, EReportType.eUserReport );
             List<GetTVSeriesProgressResponse> retVal = [];
 
             await ExecuteCommandAsync( new SQLCmdDef( sql, paramList ), statement =>

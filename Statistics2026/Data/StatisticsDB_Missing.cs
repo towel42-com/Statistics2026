@@ -1,4 +1,5 @@
-﻿using MediaBrowser.Controller.Entities.TV;
+﻿using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Model.Querying;
 using ServiceStack;
 using ServiceStack.Text;
@@ -160,7 +161,7 @@ namespace Statistics2026.Data
             return filtered;
         }
 
-        private async Task<(int numItems, int numParents)> MediaMissingInfoAsync( bool episodes, bool filteredResults )
+        private async Task<(int numItems, int numParents)> MediaMissingInfoAsync( User? user, bool episodes, bool filteredResults )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -181,7 +182,7 @@ namespace Statistics2026.Data
                     string parentInfoJSON = row.GetString( (int)EMediaListResponseColumns.eParentInfoJSON );
                     string title = row.GetString( (int)EMediaListResponseColumns.eTitle );
 
-                    List<(string id, string name, string sortName, string displayText, string url)>? parentInfos = await MediaItemResponse.GetParentInfoAsync( parentInfoJSON, episodes,
+                    List<(string id, string name, string sortName, string displayText, string url)>? parentInfos = await MediaItemResponse.GetParentInfoAsync( user, parentInfoJSON, episodes,
                         async ( string id, string parentName, string parentSortName ) =>
                         {
                             if( parentName.IsEmpty() )
@@ -255,7 +256,7 @@ namespace Statistics2026.Data
         {
             CheckIsValid( ECheckLevel.eReport );
 
-            (int numItems, int numParents) info = await MediaMissingInfoAsync( episodes, Plugin.Instance!.Configuration.tvSettings.showFilteredMissingSummaries ).ConfigureAwait( false );
+            (int numItems, int numParents) info = await MediaMissingInfoAsync( null, episodes, Plugin.Instance!.Configuration.tvSettings.showFilteredMissingSummaries ).ConfigureAwait( false );
 
             string title = episodes ? Constants.MissingEpisodes : Constants.MissingMovies;
             string infoFormat = episodes ? "{0} Episodes from {1} Series" : "{0} Movies from {1} Collections";

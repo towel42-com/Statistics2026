@@ -687,8 +687,8 @@ namespace Statistics2026.Data
             var sortedMapping = new SortedDictionary<long, List<WatchedMediaValue>>();
 
             EReportType reportType = ( user != null ) ? EReportType.eUserReport : ( ( mediaType == EMediaType.eMovie ) ? EReportType.eMovieReport : EReportType.eTVReport );
-            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.NumWatchedToReport( reportType );
-            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.NumTiedToReport( reportType );
+            int numResultsToGet = Statistics2026.Plugin.Instance!.Configuration.NumWatchedToReport( user, reportType );
+            int maxPerGroup = Statistics2026.Plugin.Instance!.Configuration.NumTiedToReport( user, reportType );
 
             foreach( (string id, string name, long playCount, long denominator, double playCountPerUser) curr in playMap.Values )
             {
@@ -782,7 +782,7 @@ namespace Statistics2026.Data
             };
 
             EReportType reportType = ( user != null ) ? EReportType.eUserReport : ( isForTV ? EReportType.eTVReport : EReportType.eMovieReport );
-            bool showImages = Plugin.Instance!.Configuration.ShowImages( reportType );
+            bool showImages = Plugin.Instance!.Configuration.ShowImages( user, reportType );
             foreach( List<WatchedMediaValue> currList in watchedMedia )
             {
                 foreach( WatchedMediaValue curr in currList )
@@ -895,7 +895,7 @@ namespace Statistics2026.Data
                 sql += "NOT";
             sql += $" {tableName}.IsEpisode " +
                $"ORDER BY {tableName}.LastPlayedDate DESC " +
-               $"LIMIT {Plugin.Instance!.Configuration.userReportSettings.numLastSeenToReport} "
+               $"LIMIT {Plugin.Instance!.Configuration.GetNumLastSeenToReport(user)} "
                ;
 
             var sqlCmd = new SQLCmdDef( sql,
@@ -952,7 +952,7 @@ namespace Statistics2026.Data
 
             foreach( (string name, string itemId, string url, DateTimeOffset lastPlayed) in values )
             {
-                string text = GetItemImageUrl.ItemHtmlFromItemId( itemId, url, $"{name} - {lastPlayed:d}", Plugin.Instance!.Configuration.ShowImages( EReportType.eUserReport ), "50px" );
+                string text = GetItemImageUrl.ItemHtmlFromItemId( itemId, url, $"{name} - {lastPlayed:d}", Plugin.Instance!.Configuration.ShowImages( user, EReportType.eUserReport ), "50px" );
                 retVal.AddLine( text, false );
             }
 

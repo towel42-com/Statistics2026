@@ -531,7 +531,7 @@ namespace Statistics2026.Data
                 "AND UserId=@UserId AND IsPlayed "
               + "GROUP BY StartYear "
               + "ORDER BY NumVideos DESC, StartYear ASC "
-              + $"LIMIT {Plugin.Instance!.Configuration.userReportSettings.numFavoriteYears} "
+              + $"LIMIT {Plugin.Instance!.Configuration.GetNumFavoriteYears(user)} "
               ;
 
             var sqlCmd = new SQLCmdDef( sql,
@@ -673,7 +673,7 @@ namespace Statistics2026.Data
             var sortedGenre = genreMap.OrderByDescending( kvp => kvp.Value.total ).ToList();
 
             EReportType reportType = user != null ? EReportType.eUserReport : ( movies ? EReportType.eMovieReport : EReportType.eTVReport );
-            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( reportType ) ); ++ii )
+            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( user, reportType ) ); ++ii )
             {
                 KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedGenre[ ii ];
                 retVal.addRow( curr.Key, [ curr.Value.total ] );
@@ -715,7 +715,7 @@ namespace Statistics2026.Data
             return (currentCount, inDBCount);
         }
 
-        public async Task<StatCard> GenreListAsync( bool movies, bool? series = null )
+        public async Task<StatCard> GenreListAsync( User? user, bool movies, bool? series = null )
         {
             CheckIsValid( ECheckLevel.eReport );
 
@@ -738,7 +738,7 @@ namespace Statistics2026.Data
                 }
             ).ToList();
 
-            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( movies ? EReportType.eMovieReport : EReportType.eTVReport ) ); ++ii )
+            for( int ii = 0; ( ii < sortedGenre.Count() ) && ( ii < Plugin.Instance!.Configuration.NumGenresToReport( user, movies ? EReportType.eMovieReport : EReportType.eTVReport ) ); ++ii )
             {
                 KeyValuePair<string, (int total, Dictionary<string, int> parentToChildMapping)> curr = sortedGenre[ ii ];
 
@@ -753,7 +753,7 @@ namespace Statistics2026.Data
                 else
                     text = $"{curr.Key}: {curr.Value.total} Episode{( ( curr.Value.total == 1 ) ? "" : "s" )}";
 
-                text = GetItemImageUrl.ItemHtmlFromItem( genre, text, Plugin.Instance!.Configuration.ShowImages( movies ? EReportType.eMovieReport : EReportType.eTVReport ) );
+                text = GetItemImageUrl.ItemHtmlFromItem( genre, text, Plugin.Instance!.Configuration.ShowImages( user, movies ? EReportType.eMovieReport : EReportType.eTVReport ) );
 
                 retVal.AddLine( curr.Key, text, false );
             }

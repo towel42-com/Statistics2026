@@ -338,7 +338,7 @@ namespace Statistics2026.Data
             return retVal;
         }
 
-        private async Task<SortByText?> GetCollectionsForMovieAsync( string movieId, bool includeImage )
+        private async Task<SortByText?> GetCollectionsForMovieAsync( User? user, string movieId, bool includeImage )
         {
             CheckIsValid( ECheckLevel.eReport );
             string sql = "SELECT " +
@@ -375,7 +375,7 @@ namespace Statistics2026.Data
                 {
                     string collectionId = row.GetString( col++ );
                     string collectionUrl = row.GetString( col++ );
-                    images.Add( GetItemImageUrl.ItemHtmlFromItemId( collectionId, collectionUrl, text: name, Plugin.Instance!.Configuration.ShowImages( EReportType.eMovieReport ) ) );
+                    images.Add( GetItemImageUrl.ItemHtmlFromItemId( collectionId, collectionUrl, text: name, Plugin.Instance!.Configuration.ShowImages( user, EReportType.eMovieReport ) ) );
                 }
                 return Task.FromResult( true );
             }, false ).ConfigureAwait( false );

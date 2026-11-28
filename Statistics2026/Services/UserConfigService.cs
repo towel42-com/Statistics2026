@@ -107,9 +107,11 @@ namespace Statistics2026.Services
             User user = GetCurrentUser();
             PluginConfiguration config = Plugin.Instance!.Configuration;
 
-            UserConfig userConfig = config.ConfigForUser( user );
+            UserConfig targetConfig = config.ConfigForUser( user );
+            targetConfig.CopyData( request );
 
-            userConfig.TableSortEntries = request.TableSortEntries;
+            config.SetConfigForUser( user, targetConfig );
+
             Plugin.Instance.SaveConfiguration();
         }
     }

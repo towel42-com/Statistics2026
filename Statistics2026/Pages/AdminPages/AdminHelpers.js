@@ -51,17 +51,7 @@ define(function () {
         ];
     }
 
-    function getTabs() {
-        return getTabHierarchy().map(function (group) {
-            return {
-                href: group.href,
-                name: group.name
-            };
-        });
-    }
-
     return {
-        getTabHierarchy,
-        getTabs
+        getTabHierarchy
     };
 });
